@@ -1,7 +1,7 @@
 /** Build one release target with matching Electron and mmp architecture. */
 
 import { spawn } from 'node:child_process'
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { join, resolve } from 'node:path'
 import {
@@ -521,9 +521,13 @@ export async function packageTarget(
       if (process.platform === target.platform && process.arch === target.arch) {
         await executePreparation(['--dir', 'native/system', 'run', 'build:native'], buildEnv, REPOSITORY_ROOT)
         await executePreparation(['--dir', nativeDir, 'pack', '--pack-destination', buildPaths.packedLandlock], buildEnv, REPOSITORY_ROOT)
+      } else if (existsSync(join(REPOSITORY_ROOT, nativeDir, 'bin', 'system.node'))) {
+        // A locally cross-compiled target addon is as trustworthy as the host build:
+        // pack it through the same manifest/prepack guard instead of the registry.
+        await executePreparation(['--dir', nativeDir, 'pack', '--pack-destination', buildPaths.packedLandlock], buildEnv, REPOSITORY_ROOT)
       } else {
-        // Cross-architecture builds cannot compile the addon here; take the
-        // published platform tarball of the same family version instead.
+        // Cross-architecture builds without a local addon take the published
+        // platform tarball of the same family version instead.
         const nativeManifest = JSON.parse(readFileSync(join(REPOSITORY_ROOT, nativeDir, 'package.json'), 'utf8')) as { version?: unknown }
         if (typeof nativeManifest.version !== 'string') throw new Error(`desktop package: ${nativeName} has no version`)
         await packRegistryPackage(`${nativeName}@${nativeManifest.version}`, buildPaths.packedLandlock, resolveNpmRegistry(environment))
