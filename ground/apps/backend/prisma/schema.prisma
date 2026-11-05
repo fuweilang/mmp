@@ -1,0 +1,588 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TenantType {
+  PLATFORM
+  AGENCY
+  ENTERPRISE
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum RoleScope {
+  PLATFORM
+  ORG_PRESET
+  /** 企业自建角色：必须挂 tenant_id，权限仅限 portal_console + Octop 业务包。 */
+  ORG_CUSTOM
+}
+
+enum AccessScope {
+  ALL
+  SELECTED
+}
+
+enum KbStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+model User {
+  id               String      @id @default(cuid())
+  phone            String      @unique
+  email            String?     @unique
+  passwordHash     String      @map("password_hash")
+  name             String
+  isPlatformAdmin  Boolean     @default(false) @map("is_platform_admin")
+  status           String      @default("active")
+  peecaiUserId     String?     @unique @map("peecai_user_id")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  memberships      OrgMember[]
+  agentGrants      AgentGrant[]
+  kbGrants         KbGrant[]
+  roles            UserRole[]
+  tokenUsageTurns  TokenUsageTurn[]
+
+  @@map("user")
+}
+
+model Tenant {
+  id               String      @id @default(cuid())
+  name             String
+  slug             String      @unique
+  type             TenantType
+  status           String      @default("active")
+  logoUrl          String?     @map("logo_url")
+  welcomeMessage   String      @default("") @map("welcome_message")
+  defaultAgentId   String?     @map("default_agent_id")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  members          OrgMember[]
+  roles            Role[]
+  parents          OrgTree[]    @relation("ChildTenant")
+  children         OrgTree[]    @relation("ParentTenant")
+  agents           AgentRef[]
+  kbFolders        KbFolder[]
+  kbDocuments      KbDocument[]
+  kbChunks         KbChunk[]
+  usageEvents      UsageEvent[]
+  quota            Quota?
+  aiWallet         TenantAiWallet?
+  aiRechargeOrders AiRechargeOrder[]
+  tokenUsageTurns  TokenUsageTurn[]
+  orgPresetOverrides OrgPresetOverride[]
+  llmModelAssignments LlmTenantModel[]
+
+  @@map("tenant")
+}
+
+model OrgTree {
+  id        String   @id @default(cuid())
+  parentId  String   @map("parent_id")
+  childId   String   @map("child_id")
+  parent    Tenant   @relation("ParentTenant", fields: [parentId], references: [id], onDelete: Cascade)
+  child     Tenant   @relation("ChildTenant", fields: [childId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([parentId, childId])
+  @@index([parentId])
+  @@index([childId])
+  @@map("org_tree")
+}
+
+model OrgMember {
+  id        String     @id @default(cuid())
+  userId    String     @map("user_id")
+  tenantId  String     @map("tenant_id")
+  /** 历史枚举，保留兼容；实际角色看 user_role。 */
+  role      MemberRole @default(MEMBER)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@map("org_member")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String?  @map("tenant_id")
+  userId    String?  @map("user_id")
+  action    String
+  ip        String?
+  meta      Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@index([userId])
+  @@map("audit_log")
+}
+
+model AgentRef {
+  id          String      @id @default(cuid())
+  tenantId    String      @map("tenant_id")
+  name        String
+  persona     String      @default("")
+  enabled     Boolean     @default(true)
+  visibility  AccessScope @default(ALL)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  grants      AgentGrant[]
+
+  @@index([tenantId])
+  @@map("agent_ref")
+}
+
+model AgentGrant {
+  id      String   @id @default(cuid())
+  agentId String   @map("agent_id")
+  userId  String   @map("user_id")
+  agent   AgentRef @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, userId])
+  @@index([userId])
+  @@map("agent_grant")
+}
+
+model KbFolder {
+  id         String       @id @default(cuid())
+  tenantId   String       @map("tenant_id")
+  name       String
+  createdAt  DateTime     @default(now()) @map("created_at")
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documents  KbDocument[]
+
+  @@index([tenantId])
+  @@map("kb_folder")
+}
+
+model KbDocument {
+  id           String      @id @default(cuid())
+  tenantId     String      @map("tenant_id")
+  folderId     String?     @map("folder_id")
+  name         String
+  originalName String      @map("original_name")
+  mimeType     String      @map("mime_type")
+  sizeBytes    Int         @map("size_bytes")
+  storagePath  String      @map("storage_path")
+  status       KbStatus    @default(PENDING)
+  visibility   AccessScope @default(ALL)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  folder       KbFolder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  grants       KbGrant[]
+  chunks       KbChunk[]
+
+  @@index([tenantId])
+  @@index([folderId])
+  @@map("kb_document")
+}
+
+model KbGrant {
+  id         String     @id @default(cuid())
+  documentId String     @map("document_id")
+  userId     String     @map("user_id")
+  document   KbDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, userId])
+  @@index([userId])
+  @@map("kb_grant")
+}
+
+model KbChunk {
+  id         String     @id @default(cuid())
+  tenantId   String     @map("tenant_id")
+  documentId String     @map("document_id")
+  ordinal    Int
+  content    String
+  createdAt  DateTime   @default(now()) @map("created_at")
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document   KbDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([documentId])
+  @@map("kb_chunk")
+}
+
+model UsageEvent {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  userId    String?  @map("user_id")
+  kind      String
+  quantity  Int      @default(1)
+  meta      Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([userId])
+  @@map("usage_event")
+}
+
+model Quota {
+  id            String   @id @default(cuid())
+  tenantId      String   @unique @map("tenant_id")
+  monthlyTurns  Int      @default(1000) @map("monthly_turns")
+  monthlyTokens Int      @default(0) @map("monthly_tokens")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("quota")
+}
+
+/// 用户级月度 Token 额度（0 = 不限），企业级见 Quota.monthlyTokens。
+model UserTokenQuota {
+  id            String   @id @default(cuid())
+  tenantId      String   @map("tenant_id")
+  userId        String   @map("user_id")
+  monthlyTokens Int      @default(0) @map("monthly_tokens")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, userId])
+  @@map("user_token_quota")
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  name        String
+  description String?
+  scope       RoleScope
+  builtIn     Boolean          @default(true) @map("built_in")
+  editable    Boolean          @default(false)
+  /** ORG_CUSTOM 必填：角色归属企业，跨企业不可见。 */
+  tenantId    String?          @map("tenant_id")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  permissions RolePermission[]
+  users       UserRole[]
+  tenant      Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([scope])
+  @@index([tenantId])
+  @@map("role")
+}
+
+model RolePermission {
+  id        String   @id @default(cuid())
+  roleId    String   @map("role_id")
+  permKey   String   @map("perm_key")
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([roleId, permKey])
+  @@index([permKey])
+  @@map("role_permission")
+}
+
+/// 用户的角色：可以有多个，权限取并集；所属企业另外由 org_member 表示（只能一家）。
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  roleId    String   @map("role_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, roleId])
+  @@index([roleId])
+  @@map("user_role")
+}
+
+/// 平台计费配置（单行 id=default）：售价倍率 + 1 AI币兑换 token 数。
+model PlatformBillingConfig {
+  id                  String   @id @default("default")
+  /// 售价倍率，例如 1.5 表示按 token 折算后再乘 1.5
+  sellPriceMultiplier Decimal  @default(1.5) @map("sell_price_multiplier") @db.Decimal(12, 4)
+  /// 1 AI币 = N token
+  tokensPerAiCoin     Int      @default(1000) @map("tokens_per_ai_coin")
+  /// 1 元人民币兑换多少 AI 币（充值用）
+  aiCoinsPerYuan      Int      @default(10000) @map("ai_coins_per_yuan")
+  /// 新企业开户赠送金额（元）；0 = 不赠送。giftCoins = floor(welcomeGiftYuan * aiCoinsPerYuan)
+  welcomeGiftYuan     Decimal  @default(5) @map("welcome_gift_yuan") @db.Decimal(12, 2)
+  /// 上游采购单价 JSON：按 modelId（兼容遗留 deepseek/kimi）→ {input,output}，单位 ¥/1M tokens
+  vendorUnitPrices    Json?    @map("vendor_unit_prices")
+  /// 按 provider/model 配置采购价与可选售价倍率。
+  modelUnitPrices     Json?    @map("model_unit_prices")
+  /// 系统核验价格，跨重启保留有效参考价。
+  systemPriceCatalog  Json?    @map("system_price_catalog")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  updatedByUserId     String?  @map("updated_by_user_id")
+
+  @@map("platform_billing_config")
+}
+
+/// 企业 AI 币钱包（一企一账）。
+model TenantAiWallet {
+  id               String           @id @default(cuid())
+  tenantId         String           @unique @map("tenant_id")
+  balanceCoins     Int              @default(0) @map("balance_coins")
+  totalCredited    Int              @default(0) @map("total_credited")
+  totalDebited     Int              @default(0) @map("total_debited")
+  status           String           @default("active")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledgers          TenantAiLedger[]
+
+  @@map("tenant_ai_wallet")
+}
+
+/// 企业 AI 币流水。
+model TenantAiLedger {
+  id                    String         @id @default(cuid())
+  tenantId              String         @map("tenant_id")
+  walletId              String         @map("wallet_id")
+  /// manual_adjust | chat_consume | qr_topup(任务2预留)
+  type                  String
+  /// in | out
+  direction             String
+  coins                 Int
+  balanceAfter          Int            @map("balance_after")
+  tokens                Int?
+  sellPriceMultiplier   Decimal?       @map("sell_price_multiplier") @db.Decimal(12, 4)
+  tokensPerAiCoin       Int?           @map("tokens_per_ai_coin")
+  idempotencyKey        String         @unique @map("idempotency_key")
+  remark                String?
+  operatorUserId        String?        @map("operator_user_id")
+  actorUserId           String?        @map("actor_user_id")
+  meta                  Json?
+  createdAt             DateTime       @default(now()) @map("created_at")
+  wallet                TenantAiWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([type, createdAt])
+  @@map("tenant_ai_ledger")
+}
+
+/// 企业 AI 币扫码充值单（任务2）。
+model AiRechargeOrder {
+  id                    String    @id @default(cuid())
+  tenantId              String    @map("tenant_id")
+  orderNo               String    @unique @map("order_no")
+  amountYuan            Decimal   @map("amount_yuan") @db.Decimal(12, 2)
+  aiCoins               Int       @map("ai_coins")
+  status                String    @default("pending")
+  channel               String    @default("")
+  outTradeNo            String    @default("") @map("out_trade_no")
+  codeUrl               String    @default("") @map("code_url") @db.Text
+  expireAt              DateTime? @map("expire_at")
+  transactionId         String    @default("") @map("transaction_id")
+  paidAt                DateTime? @map("paid_at")
+  confirmedAt           DateTime? @map("confirmed_at")
+  confirmedBy           String    @default("") @map("confirmed_by")
+  confirmIdempotencyKey String?   @unique @map("confirm_idempotency_key")
+  requestIdempotencyKey String?   @unique @map("request_idempotency_key")
+  createdByUserId       String?   @map("created_by_user_id")
+  remark                String    @default("")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
+  @@index([outTradeNo])
+  @@map("ai_recharge_order")
+}
+
+/// 对话轮次物理 Token 用量（Web/桌面上报；Admin Token 统计主数据源）。
+model TokenUsageTurn {
+  id             String    @id @default(cuid())
+  tenantId       String?   @map("tenant_id")
+  userId         String    @map("user_id")
+  model          String    @default("")
+  inputTokens    Int       @default(0) @map("input_tokens")
+  outputTokens   Int       @default(0) @map("output_tokens")
+  totalTokens    Int       @default(0) @map("total_tokens")
+  modelCalls     Int       @default(1) @map("model_calls")
+  threadId       String    @default("") @map("thread_id")
+  agentId        String    @default("") @map("agent_id")
+  /// web | desktop | unknown
+  clientKind     String    @default("unknown") @map("client_kind")
+  source         String    @default("chat")
+  idempotencyKey String    @unique @map("idempotency_key")
+  occurredAt     DateTime  @default(now()) @map("occurred_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  meta           Json?
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([model, occurredAt])
+  @@map("token_usage_turn")
+}
+
+/// 企业侧对平台 ORG_PRESET 的租户覆盖（当前仅 org_member；永不改写共享 Role 行）。
+model OrgPresetOverride {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  /** 目前仅 org_member */
+  presetKey   String   @map("preset_key")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions OrgPresetOverridePermission[]
+
+  @@unique([tenantId, presetKey])
+  @@index([presetKey])
+  @@map("org_preset_override")
+}
+
+model OrgPresetOverridePermission {
+  id         String            @id @default(cuid())
+  overrideId String            @map("override_id")
+  permKey    String            @map("perm_key")
+  override   OrgPresetOverride @relation(fields: [overrideId], references: [id], onDelete: Cascade)
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  @@unique([overrideId, permKey])
+  @@index([permKey])
+  @@map("org_preset_override_permission")
+}
+
+
+/// 平台上游 LLM 厂商（方案1：Key 只存 Ground，Admin 采购配置）。
+model LlmProvider {
+  id          String     @id @default(cuid())
+  /// 短名，用于 model_ref：deepseek / kimi
+  name        String     @unique
+  displayName String     @map("display_name")
+  /// openai_compatible | 其它扩展
+  kind        String     @default("openai_compatible")
+  baseUrl     String?    @map("base_url")
+  /// AES-256-GCM 密文；API 永不回传明文
+  apiKeyEnc   String?    @map("api_key_enc") @db.Text
+  /// 展示用掩码提示，如 sk-…abcd
+  apiKeyHint  String?    @map("api_key_hint")
+  note        String?    @db.Text
+  enabled     Boolean    @default(true)
+  sortOrder   Int        @default(0) @map("sort_order")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  health      LlmHealthState?
+  models      LlmModel[]
+
+  @@index([enabled, sortOrder])
+  @@map("llm_provider")
+}
+
+/// 上游模型条目；启用后进入平台可用池（后续网关/Harness 消费）。
+model LlmModel {
+  id          String      @id @default(cuid())
+  providerId  String      @map("provider_id")
+  /// 上游 model id，如 deepseek-chat
+  modelId     String      @map("model_id")
+  displayName String      @map("display_name")
+  enabled     Boolean     @default(true)
+  /// 是否让上游开启 thinking；Flash 默认关，以降低首字延迟
+  thinkingEnabled Boolean @default(false) @map("thinking_enabled")
+  /// 平台首选（星标）；全局至多一个 true
+  isPreferred Boolean     @default(false) @map("is_preferred")
+  sortOrder   Int         @default(0) @map("sort_order")
+  meta        Json?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  provider    LlmProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  health LlmHealthState?
+  tenantAssignments LlmTenantModel[]
+
+  @@unique([providerId, modelId])
+  @@index([enabled, sortOrder])
+  @@index([isPreferred])
+  @@map("llm_model")
+}
+
+
+/// 企业模型例外：启用模型默认全员可用；本表只记停用与默认。
+model LlmTenantModel {
+  id         String   @id @default(cuid())
+  tenantId   String   @map("tenant_id")
+  modelRowId String   @map("model_row_id")
+  /// 该企业停用此模型（不出现在客户端列表、不可调用）
+  blocked    Boolean  @default(false)
+  /// 该企业默认模型（每租户至多一个 true，且不可与 blocked 同时为 true）
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  model      LlmModel @relation(fields: [modelRowId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, modelRowId])
+  @@index([tenantId, isDefault])
+  @@index([modelRowId])
+  @@map("llm_tenant_model")
+}
+
+/// Manual enablement is independent from automatically observed health.
+model LlmHealthState {
+  id         String @id
+  modelId    String? @unique @map("model_id")
+  providerId String? @unique @map("provider_id")
+  status     String @default("unchecked")
+  failures   Int @default(0)
+  checkedAt  DateTime? @map("checked_at")
+  retryAt    DateTime? @map("retry_at")
+  reason     String?
+  latencyMs  Int? @map("latency_ms")
+  model      LlmModel? @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  provider   LlmProvider? @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  @@map("llm_health_state")
+}
+
+/// Read-only cross-device conversation replica. Ownership always comes from the authenticated request.
+model SyncedConversation {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  tenantId        String?  @map("tenant_id")
+  tenantScope     String   @map("tenant_scope")
+  deviceId        String   @map("device_id")
+  sessionId       String   @map("session_id")
+  deviceName      String   @map("device_name")
+  clientKind      String   @map("client_kind")
+  title           String
+  projectName     String   @map("project_name")
+  sourceCreatedAt DateTime @map("source_created_at")
+  sourceUpdatedAt DateTime @map("source_updated_at")
+  sourceRevision  Int      @default(-1) @map("source_revision")
+  state           String   @default("idle")
+  syncing         Boolean  @default(true)
+  files           Json     @default("[]")
+  lastSyncedAt    DateTime? @map("last_synced_at")
+  deviceSeenAt    DateTime @default(now()) @map("device_seen_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  messages        SyncedConversationMessage[]
+
+  @@unique([userId, tenantScope, deviceId, sessionId])
+  @@index([userId, tenantScope, sourceUpdatedAt, id])
+  @@map("synced_conversation")
+}
+
+model SyncedConversationMessage {
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  sourceSeq      Int      @map("source_seq")
+  role           String
+  text           String   @db.Text
+  sourceTime     DateTime @map("source_time")
+  conversation   SyncedConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, sourceSeq])
+  @@map("synced_conversation_message")
+}

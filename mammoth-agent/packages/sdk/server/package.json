@@ -1,0 +1,85 @@
+{
+  "name": "@mammoth-ai/mmp-sdk-jsonrpc-server",
+  "description": "Stdio JSON-RPC server plugin for out-of-process DeepSeek Harness SDK clients",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/sdk/server"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/schemastery": "workspace:~"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-commands": "workspace:*",
+    "@mammoth-ai/mmp-goal": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-llm-deepseek-api-key": "workspace:*",
+    "@mammoth-ai/mmp-schedule": "workspace:*",
+    "@mammoth-ai/mmp-scope": "workspace:*",
+    "@mammoth-ai/mmp-sdk-protocol": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-user-approval": "workspace:*",
+    "@mammoth-ai/mmp-user-questions": "workspace:*",
+    "@mammoth-ai/mmp-working-directory": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-agent-loop": "workspace:*",
+    "@mammoth-ai/mmp-agent-loop-testkit": "workspace:*",
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-command-compact": "workspace:*",
+    "@mammoth-ai/mmp-command-goal": "workspace:*",
+    "@mammoth-ai/mmp-commands": "workspace:*",
+    "@mammoth-ai/mmp-compaction-basic": "workspace:*",
+    "@mammoth-ai/mmp-goal": "workspace:*",
+    "@mammoth-ai/mmp-goal-round-driver": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-llm-deepseek-api-key": "workspace:*",
+    "@mammoth-ai/mmp-permission-presets": "workspace:*",
+    "@mammoth-ai/mmp-plan-mode": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*",
+    "@mammoth-ai/mmp-schedule": "workspace:*",
+    "@mammoth-ai/mmp-scope": "workspace:*",
+    "@mammoth-ai/mmp-sdk-protocol": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence-jsonl": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-shell": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-token-meter": "workspace:*",
+    "@mammoth-ai/mmp-tool-goal": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-user-approval": "workspace:*",
+    "@mammoth-ai/mmp-user-questions": "workspace:*",
+    "@mammoth-ai/mmp-working-directory": "workspace:*"
+  }
+}

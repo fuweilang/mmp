@@ -1,0 +1,11 @@
+## ADDED Requirements
+
+### Requirement: PeecAI-style QR top-up UI
+Console `/console/billing` SHALL present a recharge dialog matching PeecAI wallet recharge UX: fixed amount chips + custom amount, WeChat/Alipay branded channel buttons (or mock), QR render, status polling until confirmed. Closing the dialog SHALL NOT cancel a paid order. Seat/membership packages SHALL NOT appear in this version.
+
+### Requirement: Vendor usage cost reconcile
+Platform admin SHALL configure DeepSeek/Kimi purchase unit prices (¥ per 1M input/output tokens). Admin billing SHALL show usage totals split into DeepSeek / Kimi / other from charge ledger meta (provider/model), estimate cost from those prices, and disclose that figures may differ from Octop TokenUsage and vendor consoles and require manual reconcile.
+
+
+### Requirement: Provider-level upstream unit prices
+Platform admin `/admin/pricing-config` SHALL configure upstream purchase unit prices (提问价/回复价, ¥ per 1M tokens) at **provider level only**. Vendor rows SHALL auto-sync from enabled chat providers in `/agent/admin/models` (Octop providers DB), so new vendors such as zhipu appear with empty or default 提问/回复价 slots without manual vendor add. Prices SHALL NOT be keyed by modelId. Model enablement remains on `/agent/admin/models` and SHALL NOT be migrated into Admin in this change. Saving SHALL persist JSON `vendorUnitPrices` as a map of `{ [vendorKey]: {input,output} }` (at least deepseek/kimi when present; additional keys like zhipu allowed). On read, legacy per-modelId keys SHALL be migrated into the matching provider pair (average when multiple). Field hints SHALL remind using official refs when available, otherwise the current采购单价 (or a hand-fill prompt). Suggested recharge N SHALL use a single vendor mid=(input+output)/2 with priority: (1) ActiveModelPool preferred/star vendor when that model is in the enabled chat pool; (2) otherwise the vendor of the first usable chat model in `model_pool_order` (leftovers keep relative order when order is empty/partial); (3) otherwise 0. N = floor(1e6 / mid). SHALL NOT average across all vendors or hardcode DeepSeek. Sell-price multiplier SHALL NOT participate in suggested N. Shown as an editable suggestion. Debit remains 1 token = 1 AI币; sellPriceMultiplier is Admin-only for cost/recon and SHALL NOT stack into enterprise charge.

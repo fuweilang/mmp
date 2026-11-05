@@ -1,0 +1,29 @@
+# Workspace-context snapshot patch: the harness exports MMP_HOME=<cwd>/.mmp and
+# MMP_AGENTS_HOME=<cwd>/.agents, so project-root and both user-global root
+# discoveries stay inside the scenario's temporary cwd.
+- id: agent-default-model
+  name: '@mammoth-ai/mmp-agent-default-model'
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-pro
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: !!js 'process.env.MMP_SNAPSHOT === undefined ? ''zstd'' : ''none'''
+
+- id: agent-instructions
+  name: '@mammoth-ai/mmp-agent-instructions'
+  config:
+    maxBytes: 700
+    projectRootMarkers:
+      - .mmp-project
+
+- id: system-prompt
+  name: '@mammoth-ai/mmp-system-prompt'
+  config:
+    personaPrefix: |
+      You are a coding assistant powered by the {{model}} model.
+
+      Verify your work by running the code or tests. Keep answers brief and factual.

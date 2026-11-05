@@ -1,0 +1,77 @@
+{
+  "name": "@mammoth-ai/mmp-plan-mode",
+  "description": "Logged per-agent plan mode with deployment guidance, a direct slash command, and a user-reviewed exit",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/plan/plan-mode"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./client": {
+      "types": "./lib/types/client.d.ts",
+      "default": "./lib/types/client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-commands": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-user-questions": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "peerDependenciesMeta": {
+    "@mammoth-ai/mmp-commands": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-agent-loop": "workspace:*",
+    "@mammoth-ai/mmp-ptc-runtime": "workspace:*",
+    "@mammoth-ai/mmp-commands": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-native": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-ptc": "workspace:*",
+    "@mammoth-ai/mmp-tool-testkit": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-user-questions": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-agent-loop-testkit": "workspace:*"
+  }
+}

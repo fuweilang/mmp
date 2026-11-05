@@ -1,0 +1,44 @@
+{
+  "name": "@mammoth-ai/mmp-desktop-host",
+  "description": "Private Node-mode host process for the Electron desktop application",
+  "version": "0.2.2-alpha.2",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib/index.js",
+    "lib/cli.js"
+  ],
+  "dependencies": {
+    "koffi": "3.1.1",
+    "@deepseek-ai/libreoffice-kit": "^0.1.5",
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp": "workspace:*",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-app-boot": "workspace:*",
+    "@mammoth-ai/mmp-client-connection": "workspace:*",
+    "@mammoth-ai/mmp-host-webserver": "workspace:*",
+    "@mammoth-ai/mmp-home-paths": "workspace:*",
+    "@mammoth-ai/mmp-jobs": "workspace:*",
+    "@mammoth-ai/mmp-schedule": "workspace:*",
+    "@mammoth-ai/mmp-tool-workspace-dependencies": "workspace:*",
+    "@mammoth-ai/mmp-skill-office": "workspace:*",
+    "@mammoth-ai/mmp-deepseek-account": "workspace:*",
+    "@mammoth-ai/mmp-workspace": "workspace:*",
+    "@mammoth-ai/mmp-plugin-manager": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/cordis-plugin-include": "workspace:~",
+    "@mammoth-ai/mmp-skill": "workspace:*",
+    "@mammoth-ai/mmp-fs": "workspace:*",
+    "@mammoth-ai/mmp-fs-local": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*",
+    "@mammoth-ai/mmp-util-workspace-path": "workspace:*",
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-native": "workspace:*"
+  }
+}

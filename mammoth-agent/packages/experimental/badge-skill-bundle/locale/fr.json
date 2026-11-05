@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Compétence du badge MMP",
+    "description": "Laissez les agents ajouter un badge « propulsé par mmp » aux documents, demandes d'extraction et autres sorties.",
+    "detail": "docs/DETAIL.md"
+  }
+}

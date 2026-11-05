@@ -1,0 +1,5 @@
+# 本地网关从这里提供桌面端安装包：
+#   mammoth-agent-mac-arm64.dmg
+#   mammoth-agent-mac-x64.dmg
+#   mammoth-agent-win.exe
+# 生产放到 /www/mammoth/downloads/，见 infra/baota/nginx-mammoth.conf

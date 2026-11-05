@@ -1,0 +1,43 @@
+{
+  "name": "mammoth-console",
+  "private": true,
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/dev-stack.mjs",
+    "dev:api": "pnpm --filter @mammoth/backend start:dev",
+    "dev:web": "pnpm --filter @mammoth/frontend dev",
+    "dev:gateway": "node scripts/dev-gateway.mjs",
+    "build": "pnpm --filter @mammoth/shared build && pnpm --filter @mammoth/backend build && pnpm --filter @mammoth/frontend build",
+    "verify": "pnpm verify:web && pnpm verify:api",
+    "verify:web": "pnpm --filter @mammoth/shared build && pnpm --filter @mammoth/frontend typecheck && pnpm --filter @mammoth/frontend build",
+    "verify:api": "pnpm --filter @mammoth/backend build",
+    "setup": "pnpm setup:deps && pnpm setup:db && pnpm build",
+    "setup:deps": "pnpm install",
+    "setup:db": "docker info >/dev/null 2>&1 || { printf '%s\\n' 'Docker/Colima 没开，Postgres :5433 起不来。先 colima start（或打开 Docker Desktop），再重跑。' >&2; exit 1; } && test -f apps/backend/.env || cp apps/backend/.env.example apps/backend/.env && pnpm db:up && docker compose -f infra/docker-compose.yml up -d --wait && pnpm db:deploy && pnpm db:seed",
+    "db:up": "docker compose -f infra/docker-compose.yml up -d",
+    "db:down": "docker compose -f infra/docker-compose.yml down",
+    "db:migrate": "pnpm --filter @mammoth/backend prisma:migrate",
+    "db:deploy": "pnpm --filter @mammoth/backend exec prisma migrate deploy",
+    "db:seed": "pnpm --filter @mammoth/backend prisma:seed",
+    "version:sync": "node scripts/sync-mammoth-version.mjs",
+    "version:bump": "node scripts/bump-version.mjs",
+    "version:check": "node scripts/check-version.mjs"
+  },
+  "devDependencies": {
+    "http-proxy": "^1.18.1",
+    "typescript": "~5.7.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma",
+      "vue-demi"
+    ]
+  }
+}

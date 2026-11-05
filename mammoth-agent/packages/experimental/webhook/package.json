@@ -1,0 +1,64 @@
+{
+  "name": "@mammoth-ai/mmp-webhook",
+  "description": "Fire-and-forget webhook rule runtime that creates Workspace-backed DeepSeek Harness Sessions",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/experimental/webhook"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./src/*": "./src/*",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-agent-default-model": "workspace:*",
+    "@mammoth-ai/mmp-agent-preset-registry": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-permission-presets": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-title": "workspace:*",
+    "@mammoth-ai/mmp-workspace": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/cordis-plugin-include": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-agent-default-model": "workspace:*",
+    "@mammoth-ai/mmp-agent-preset-registry": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-permission-presets": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-title": "workspace:*",
+    "@mammoth-ai/mmp-workspace": "workspace:*"
+  },
+  "dependencies": {
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/mmp-util-values": "workspace:*"
+  }
+}

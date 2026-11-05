@@ -1,0 +1,60 @@
+{
+  "name": "@mammoth-ai/mmp-webhook-github",
+  "description": "Signed GitHub HTTP webhook adapter for the DeepSeek Harness webhook runtime",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/experimental/webhook-github"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./src/*": "./src/*",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json",
+    "./examples/*": "./examples/*"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "examples/github-review/cordis.yml",
+    "examples/github-review/github-ready-review-rule.mjs",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-credentials": "workspace:*",
+    "@mammoth-ai/mmp-host-webserver": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-webhook": "workspace:*"
+  },
+  "dependencies": {
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@mammoth-ai/schemastery": "workspace:~",
+    "@octokit/webhooks": "^14.2.0"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/cordis-plugin-include": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-credentials": "workspace:*",
+    "@mammoth-ai/mmp-host-webserver": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-webhook": "workspace:*"
+  }
+}

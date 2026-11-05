@@ -1,0 +1,100 @@
+{
+  "name": "@mammoth-ai/mmp-agent-preset-registry",
+  "description": "Declarative Agent preset registry and profile-backed editing",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/preset/agent-preset-registry"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./display": {
+      "types": "./lib/types/display.d.ts",
+      "default": "./lib/types/display.js"
+    },
+    "./typert": {
+      "types": "./lib/typert.host.d.ts",
+      "default": "./lib/typert.host.js"
+    },
+    "./remote": {
+      "types": "./lib/typert.remote-client.d.ts",
+      "default": "./lib/typert.remote-client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts",
+    "lib/typert.host.js",
+    "lib/typert.host.d.ts",
+    "lib/typert.remote-client.js",
+    "lib/typert.remote-client.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/cordis-plugin-include": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-scope": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-settings": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-typert-protocol": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "dependencies": {
+    "@mammoth-ai/mmp-app-boot": "workspace:*",
+    "@mammoth-ai/schemastery": "workspace:~",
+    "zod": "4.4.3",
+    "js-yaml": "^4.3.2"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis-plugin-group": "workspace:~",
+    "@mammoth-ai/cordis-plugin-include": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-agent-loop": "workspace:*",
+    "@mammoth-ai/mmp-atomic-write": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-scope": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-settings": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-native": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-ptc": "workspace:*",
+    "@mammoth-ai/mmp-tool-testkit": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-typert-protocol": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-fs-local": "workspace:*",
+    "@mammoth-ai/mmp-hmr": "workspace:*",
+    "@mammoth-ai/mmp-ptc-runtime": "workspace:*",
+    "@mammoth-ai/mmp-sandbox": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*",
+    "@mammoth-ai/mmp-user-approval": "workspace:*",
+    "@mammoth-ai/mmp-agent-preset": "workspace:*",
+    "@mammoth-ai/mmp-working-directory": "workspace:*",
+    "@types/js-yaml": "^4.0.9"
+  }
+}

@@ -1,0 +1,63 @@
+import type { IconProps } from './icons/props.ts'
+
+/** Display options for the official brand wordmark. */
+export interface BrandWordmarkProps extends IconProps {
+  /** Whether to include the leading mammoth mark; defaults to true. */
+  includeMark?: boolean | undefined
+}
+
+/** Embedded 48px mammoth mark. */
+const MAMMOTH_MARK_DATA_URI = 'data:image/png;base64,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'
+
+/**
+ * Render the full brand wordmark (猛犸智能体).
+ * @param props.size - height in px (default 24; width follows the selected artwork).
+ * @param props.className - extra class for layout placement.
+ * @param props.includeMark - whether to include the leading mark.
+ * @returns the wordmark (aria-hidden decorative brand art).
+ */
+export function BrandWordmark({ size = 24, className, includeMark = true }: BrandWordmarkProps) {
+  const mark = includeMark ? size : 0
+  const gap = includeMark ? size * 0.35 : 0
+  // Approximate text width for 「猛犸智能体」 at font-size ~= size * 0.85
+  const textWidth = size * 4.6
+  const width = mark + gap + textWidth
+  return (
+    <span
+      className={className}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: size,
+        width,
+        gap,
+        color: 'currentColor',
+        lineHeight: 1,
+        userSelect: 'none',
+      }}
+      aria-hidden="true"
+    >
+      {includeMark ? (
+        <img
+          src={MAMMOTH_MARK_DATA_URI}
+          width={size}
+          height={size}
+          alt=""
+          draggable={false}
+          style={{ display: 'block', flex: '0 0 auto' }}
+        />
+      ) : null}
+      <span
+        style={{
+          fontFamily: '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+          fontSize: size * 0.85,
+          fontWeight: 600,
+          letterSpacing: '0.02em',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        猛犸智能体
+      </span>
+    </span>
+  )
+}

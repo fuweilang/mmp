@@ -1,0 +1,160 @@
+# Per-launch SDK customization: retain only persistent Bash and the string
+# editor as model-facing tools, with process-local providers and an explicit
+# danger-full-access / never-ask policy.
+
+- insert:
+    - id: tool-str-replace-editor
+      name: '@mammoth-ai/mmp-tool-str-replace-editor'
+      config:
+        maxOutputChars: 16000
+
+- id: llm-deepseek
+  name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+  config:
+    apiKeyEnv: DEEPSEEK_API_KEY
+    streamIdleTimeoutMs: 172800000
+    models:
+      - id: !!js process.env.MMP_MODEL ?? 'deepseek-v4-flash'
+        contextWindow: !!js Number(process.env.MMP_CONTEXT_WINDOW ?? 1000000)
+
+- id: sandbox-policy
+  name: '@mammoth-ai/mmp-sandbox-policy'
+  config:
+    mode: danger-full-access
+    workspaceRoot: !!js process.cwd()
+
+- id: approval
+  name: '@mammoth-ai/mmp-user-approval'
+  config:
+    policy: never
+
+- id: permission
+  name: '@mammoth-ai/mmp-permission-presets'
+  disabled: true
+
+- id: bash-sandbox
+  name: '@mammoth-ai/mmp-bash-sandbox'
+  disabled: true
+
+- id: pwsh-sandbox
+  name: '@mammoth-ai/mmp-pwsh-sandbox'
+  disabled: true
+
+- id: fs-sandbox
+  name: '@mammoth-ai/mmp-fs-sandbox'
+  disabled: true
+
+- id: tool-bash
+  name: '@mammoth-ai/mmp-tool-bash'
+  disabled: true
+
+- id: tool-pwsh
+  name: '@mammoth-ai/mmp-tool-pwsh'
+  disabled: true
+
+- id: agent-instructions
+  name: '@mammoth-ai/mmp-agent-instructions'
+  disabled: true
+
+- id: skill
+  name: '@mammoth-ai/mmp-skill'
+  disabled: true
+
+- id: skill-filesystem
+  name: '@mammoth-ai/mmp-skill-filesystem'
+  disabled: true
+
+- id: tool-skill
+  name: '@mammoth-ai/mmp-tool-skill'
+  disabled: true
+
+- id: tool-jobs
+  name: '@mammoth-ai/mmp-tool-jobs'
+  disabled: true
+
+- id: tool-fs
+  name: '@mammoth-ai/mmp-tool-fs'
+  disabled: true
+
+- id: tool-fs-search
+  name: '@mammoth-ai/mmp-tool-fs-search'
+  disabled: true
+
+- id: tool-subagent-control
+  name: '@mammoth-ai/mmp-tool-subagent-control'
+  disabled: true
+
+- id: tool-subagent
+  name: '@mammoth-ai/mmp-tool-subagent'
+  disabled: true
+
+- id: tool-subagent-fork
+  name: '@mammoth-ai/mmp-tool-subagent'
+  disabled: true
+
+- id: tool-workflow
+  name: '@mammoth-ai/mmp-tool-workflow'
+  disabled: true
+
+- id: tool-todo
+  name: '@mammoth-ai/mmp-tool-todo'
+  disabled: true
+
+- id: tool-goal
+  name: '@mammoth-ai/mmp-tool-goal'
+  disabled: true
+
+- id: tool-web
+  name: '@mammoth-ai/mmp-tool-web'
+  disabled: true
+
+- id: plan-mode
+  name: '@mammoth-ai/mmp-plan-mode'
+  disabled: true
+
+- id: system-prompt
+  name: '@mammoth-ai/mmp-system-prompt'
+  config:
+    includeHarnessIdentity: false
+    personaPrefix: !!js process.env.MMP_SYSTEM_PROMPT ?? 'You are a helpful software engineer assistant.'
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: none
+
+- insert:
+    - id: bash-local
+      name: '@mammoth-ai/mmp-bash-local'
+
+    - id: fs-local
+      name: '@mammoth-ai/mmp-fs-local'
+      config:
+        cwd: !!js process.cwd()
+
+    - id: terminal
+      name: '@mammoth-ai/mmp-terminal'
+
+    - id: terminal-bash
+      name: '@mammoth-ai/mmp-terminal-bash'
+      config:
+        timeoutMs: 300000
+
+    - id: persistent-bash
+      name: '@mammoth-ai/mmp-tool-bash-persistent'
+      config:
+        timeoutMs: 300000
+        description: |-
+          Run commands in a bash shell
+          * When invoking this tool, the contents of the "command" parameter does NOT need to be XML-escaped.
+          * You don't have access to the internet via this tool.
+          * You do have access to a mirror of common linux and python packages via apt and pip.
+          * State is persistent across command calls and discussions with the user.
+          * To inspect a particular line range of a file, e.g. lines 10-25, try 'sed -n 10,25p /path/to/the/file'.
+          * Please avoid commands that may produce a very large amount of output.
+          * Please run long lived commands in the background, e.g. 'sleep 10 &' or start a server in the background.
+
+- id: session-log-deepseek
+  config:
+    enabled: false

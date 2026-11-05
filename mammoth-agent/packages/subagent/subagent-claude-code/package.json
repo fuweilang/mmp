@@ -1,0 +1,76 @@
+{
+  "name": "@mammoth-ai/mmp-subagent-claude-code",
+  "description": "One-shot Claude Code subagent provider over the official Agent SDK",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/subagent/subagent-claude-code"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "icon.svg",
+    "locale/*.json",
+    "lib/index.js",
+    "cordis.patch.yml",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "mmp": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-subprocess": "workspace:*",
+    "@mammoth-ai/mmp-timeout": "workspace:*"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.263",
+    "@anthropic-ai/sdk": "0.93.0",
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/schemastery": "workspace:~",
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "zod": "4.4.3",
+    "@mammoth-ai/mmp-tool-subagent": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-app-boot": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-loader-smoke": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-checkpoint-policy": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence-jsonl": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-subagent-codex": "workspace:*",
+    "@mammoth-ai/mmp-subprocess": "workspace:*",
+    "@mammoth-ai/mmp-subprocess-local": "workspace:*",
+    "@mammoth-ai/mmp-timeout": "workspace:*",
+    "@mammoth-ai/mmp-tool-jobs": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-agent-loop-testkit": "workspace:*"
+  },
+  "icon": "./icon.svg"
+}

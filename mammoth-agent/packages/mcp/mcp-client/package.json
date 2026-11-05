@@ -1,0 +1,75 @@
+{
+  "name": "@mammoth-ai/mmp-mcp-client",
+  "description": "MCP client bridge: connects to MCP servers and registers their tools on ctx.tools",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/mcp/mcp-client"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-scope": "workspace:*",
+    "@mammoth-ai/mmp-subprocess": "workspace:*",
+    "@mammoth-ai/mmp-timeout": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-mcp-resources": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*"
+  },
+  "dependencies": {
+    "@mammoth-ai/schemastery": "workspace:~",
+    "@modelcontextprotocol/client": "2.2.0",
+    "@mammoth-ai/mmp-util-values": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-attachment-local": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-scope": "workspace:*",
+    "@mammoth-ai/mmp-subprocess": "workspace:*",
+    "@mammoth-ai/mmp-timeout": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-native": "workspace:*",
+    "@mammoth-ai/mmp-tool-testkit": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@modelcontextprotocol/server-everything": "^2026.8.31",
+    "@modelcontextprotocol/server-filesystem": "^2026.8.31",
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-http-proxy": "workspace:*",
+    "@modelcontextprotocol/server": "2.2.0",
+    "@modelcontextprotocol/node": "2.0.0",
+    "zod": "4.4.3",
+    "@mammoth-ai/mmp-mcp-resources": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@mammoth-ai/mmp-mcp-resources": {
+      "optional": true
+    },
+    "@mammoth-ai/mmp-system-prompt": {
+      "optional": true
+    }
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "name": "@mammoth-ai/mmp-plugin-manager",
+  "description": "Current-profile plugin and bundle management shared by mmp CLI, Web and agent tools",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/boot/plugin-manager"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./registry": {
+      "types": "./lib/types/registry.d.ts",
+      "default": "./lib/types/registry.js"
+    },
+    "./typert": {
+      "types": "./lib/typert.host.d.ts",
+      "default": "./lib/typert.host.js"
+    },
+    "./remote": {
+      "types": "./lib/typert.remote-client.d.ts",
+      "default": "./lib/typert.remote-client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./operations": {
+      "types": "./lib/types/operations.d.ts",
+      "default": "./lib/types/operations.js"
+    },
+    "./tools": {
+      "types": "./lib/types/tools.d.ts",
+      "default": "./lib/types/tools.js"
+    },
+    "./tools/locale/*.json": "./locale/tools/*.json",
+    "./locale/*.json": "./locale/*.json",
+    "./diagnostic": {
+      "types": "./lib/types/diagnostic.d.ts",
+      "default": "./lib/types/diagnostic.js"
+    }
+  },
+  "files": [
+    "locale/*.json",
+    "locale/tools/*.json",
+    "lib/index.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts",
+    "lib/typert.host.js",
+    "lib/typert.host.d.ts",
+    "lib/typert.remote-client.js",
+    "lib/typert.remote-client.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@mammoth-ai/mmp-app-boot": "workspace:*",
+    "@mammoth-ai/mmp-atomic-write": "workspace:*",
+    "@mammoth-ai/mmp-official-bundles": "workspace:*",
+    "@mammoth-ai/schemastery": "workspace:~",
+    "execa": "^10.0.1",
+    "semver": "^7.8.5",
+    "yaml": "^2.9.0",
+    "zod": "4.4.3",
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@mammoth-ai/mmp-plugin-detail": "workspace:*",
+    "@mammoth-ai/mmp-timeout": "workspace:*",
+    "hosted-git-info": "^9.0.3"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-host-plugin-inventory": "workspace:*",
+    "@mammoth-ai/mmp-subprocess": "workspace:*",
+    "@mammoth-ai/mmp-typert-protocol": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-hmr": "workspace:*",
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*",
+    "@mammoth-ai/mmp-sandbox": "workspace:*",
+    "@mammoth-ai/mmp-user-approval": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@mammoth-ai/mmp-hmr": {
+      "optional": true
+    },
+    "@mammoth-ai/mmp-user-approval": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "chokidar": "^4.0.3",
+    "@types/semver": "^7.8.0",
+    "@mammoth-ai/mmp-package-manifest": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-host-plugin-inventory": "workspace:*",
+    "@mammoth-ai/mmp-subprocess": "workspace:*",
+    "@mammoth-ai/mmp-typert-protocol": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-native": "workspace:*",
+    "@mammoth-ai/mmp-tool-testkit": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*",
+    "@mammoth-ai/mmp-hmr": "workspace:*",
+    "@mammoth-ai/cordis-plugin-timer": "workspace:~",
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-sandbox": "workspace:*",
+    "@mammoth-ai/mmp-user-approval": "workspace:*",
+    "@mammoth-ai/mmp-client-connection": "workspace:*",
+    "@types/hosted-git-info": "^3.0.5"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "MMP badge skill",
+    "description": "Let agents add a “powered by mmp” badge to documents, pull requests, and other outputs.",
+    "detail": "docs/DETAIL.md"
+  }
+}

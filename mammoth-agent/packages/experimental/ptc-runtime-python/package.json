@@ -1,0 +1,53 @@
+{
+  "name": "@mammoth-ai/mmp-experimental-ptc-runtime-python",
+  "description": "CPython subprocess implementation of the DeepSeek Harness PTC execution seam",
+  "version": "0.2.2-alpha.2",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/experimental/ptc-runtime-python"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "py/**/*.py",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/mmp-ptc-runtime": "workspace:*",
+    "@mammoth-ai/mmp-timeout": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@mammoth-ai/mmp-sandbox": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/mmp-ptc-runtime": "workspace:*",
+    "@mammoth-ai/mmp-timeout": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@mammoth-ai/mmp-sandbox": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-local": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*"
+  },
+  "dependencies": {
+    "@mammoth-ai/schemastery": "workspace:~"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

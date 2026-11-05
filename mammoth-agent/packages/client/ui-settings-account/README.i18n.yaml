@@ -1,0 +1,43 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/client/ui-settings-account/README.md
+/:
+  en: 13d891a226092817
+  zh: 90bf6ff56dd3c096
+/mammoth-ai-mmp-client-ui-settings-account:
+  en: c9e50cda4bb5ee66
+  zh: d01c78ccd7c88dbc
+/mammoth-ai-mmp-client-ui-settings-account/summary:
+  en: b01e9f771749785c
+  zh: 80d7a82041c10102
+/mammoth-ai-mmp-client-ui-settings-account/table-of-contents:
+  en: c26f81e8adf0128b
+  zh: e11ab371f51f66bc
+/mammoth-ai-mmp-client-ui-settings-account/use-this-package:
+  en: 93fbff9c359f93b6
+  zh: ddd05741975a52e0
+/mammoth-ai-mmp-client-ui-settings-account/use-this-package/desktop-onboarding:
+  en: 7ae4e68f9491b068
+  zh: f7478269bf8d28b3
+/mammoth-ai-mmp-client-ui-settings-account/understand-the-implementation:
+  en: 186b2046cfb5ef76
+  zh: 57b042a618fb612e
+/mammoth-ai-mmp-client-ui-settings-account/further-exploration:
+  en: b2491748d0503bdb
+  zh: 5deafc869e07d8d9
+/mammoth-ai-mmp-client-ui-settings-account/model-experience:
+  en: ee1df7ca3467ee3f
+  zh: 84904a5148da3862
+/mammoth-ai-mmp-client-ui-settings-account/model-experience/kv-cache-effect:
+  en: ca3015e252db0114
+  zh: ebca9253cf15e8e9
+/mammoth-ai-mmp-client-ui-settings-account/known-limitations-and-deferred-work:
+  en: 1da6dcdcd29c4f18
+  zh: 47b963a2973ecb80
+/mammoth-ai-mmp-client-ui-settings-account/known-limitations-and-deferred-work/dev-note:
+  en: 88fd7598760766c2
+  zh: d4613a7e8d92ed68
+/mammoth-ai-mmp-client-ui-settings-account/cross-device-history:
+  en: 897e6bf7daceed53
+  zh: b64ecdd895755da6

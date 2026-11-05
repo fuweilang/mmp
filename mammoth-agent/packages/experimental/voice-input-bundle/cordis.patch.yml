@@ -1,0 +1,13 @@
+- insert:
+    - id: speech-to-text
+      name: '@mammoth-ai/mmp-experimental-speech-to-text'
+      config:
+        defaultProvider: sensevoice-local
+    - id: speech-to-text-sensevoice
+      name: '@mammoth-ai/mmp-experimental-speech-to-text-sensevoice'
+      config:
+        dataRoot: !!js mmpHomePath('speech-to-text', 'sensevoice')
+    - id: api-speech-to-text
+      name: '@mammoth-ai/mmp-experimental-api-speech-to-text'
+    - id: ui-voice-input
+      name: '@mammoth-ai/mmp-experimental-client-ui-voice-input'

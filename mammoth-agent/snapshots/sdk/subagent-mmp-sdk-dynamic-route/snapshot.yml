@@ -1,0 +1,10 @@
+version: 1
+scenario: subagent-mmp-sdk-dynamic-route
+profile: sdk
+composition: sdk-mmp-sdk-dynamic-route
+recording: authored
+header:
+  class: sdk-mmp-sdk-dynamic-route
+  pin: true
+  childSystemPrompts: [1]
+  childToolSchemas: [1]

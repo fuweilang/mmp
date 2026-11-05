@@ -1,0 +1,17 @@
+schema: spec-driven
+
+context: |
+  猛犸智能体：中台 NestJS+Vue3（apps/）+ Octop 白标运行时（Octop/）。
+  浏览器只开 http://127.0.0.1:5201（或局域网 IP:5201）。
+  新会话先读 docs/ARCHITECTURE.md、AGENTS.md、本目录当前 change。
+  说话中文、短；不擅自 commit/push；Octop 只改必要 UI/SSO 胶水。
+  主功能做到哪算哪：AI 对话、专家、自动化、模型配置。
+
+rules:
+  proposal:
+    - 写清已落地 vs 待做，避免把未做写成需求
+    - 必须有非目标
+  tasks:
+    - 已完成打勾；下一窗口只捡未勾项
+  spec:
+    - 只规范本 change 已拍板或已实现的行为

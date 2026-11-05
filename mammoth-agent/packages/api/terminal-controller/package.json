@@ -1,0 +1,100 @@
+{
+  "name": "@mammoth-ai/mmp-api-terminal-controller",
+  "description": "Session-owned interactive terminals with shell discovery, screen recovery and typed Remote control",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/api/terminal-controller"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./typert": {
+      "types": "./lib/typert.host.d.ts",
+      "default": "./lib/typert.host.js"
+    },
+    "./remote": {
+      "types": "./lib/typert.remote-client.d.ts",
+      "default": "./lib/typert.remote-client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "mmp": {
+    "client": {
+      "inject": [
+        "@mammoth-ai/mmp-api-gateway"
+      ],
+      "external": [
+        "@mammoth-ai/mmp-api-gateway/client"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@mammoth-ai/mmp-deque": "workspace:*",
+    "@mammoth-ai/mmp-lazy-require": "workspace:*",
+    "@mammoth-ai/mmp-typert-protocol": "workspace:*",
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@mammoth-ai/schemastery": "workspace:~",
+    "@xterm/addon-serialize": "^0.14.0",
+    "@xterm/headless": "^6.0.0",
+    "zod": "4.4.3"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/mmp-subprocess": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-api-gateway": "workspace:*",
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/mmp-client-connection": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
+    "@mammoth-ai/mmp-fs": "workspace:*",
+    "@mammoth-ai/mmp-remote-mock": "workspace:*",
+    "@mammoth-ai/mmp-sandbox": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-subprocess": "workspace:*",
+    "@mammoth-ai/mmp-subprocess-local": "workspace:*",
+    "@mammoth-ai/mmp-util-crypto": "workspace:*",
+    "@mammoth-ai/mmp-working-directory": "workspace:*"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/client.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts",
+    "lib/typert.host.js",
+    "lib/typert.host.d.ts",
+    "lib/typert.remote-client.js",
+    "lib/typert.remote-client.d.ts"
+  ]
+}

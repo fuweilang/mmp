@@ -1,0 +1,79 @@
+{
+  "name": "@mammoth-ai/mmp-spill-policy",
+  "description": "Token-budgeted tool-result retention with recoverable text and image paths",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/spill/spill-policy"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./notice": {
+      "types": "./lib/types/notice.d.ts",
+      "default": "./lib/types/notice.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-output-retention": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-spill": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-fs": "workspace:*",
+    "@mammoth-ai/mmp-token-meter": "workspace:*"
+  },
+  "dependencies": {
+    "@mammoth-ai/schemastery": "workspace:~"
+  },
+  "devDependencies": {
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-ptc-runtime-node": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-output-retention": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-spill": "workspace:*",
+    "@mammoth-ai/mmp-tool-testkit": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-fs-local": "workspace:*",
+    "@mammoth-ai/mmp-subprocess-local": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-local": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-fs": "workspace:*",
+    "@mammoth-ai/mmp-token-meter": "workspace:*",
+    "@mammoth-ai/mmp-mcp-client": "workspace:*",
+    "@mammoth-ai/mmp-spill-local": "workspace:*",
+    "@mammoth-ai/mmp-llm-deepseek": "workspace:*",
+    "@mammoth-ai/mmp-ptc-runtime": "workspace:*",
+    "@mammoth-ai/mmp-attachment-local": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-native": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-ptc": "workspace:*",
+    "@mammoth-ai/mmp-tool-fs": "workspace:*",
+    "sharp": "0.35.5",
+    "@mammoth-ai/mmp-agent-loop-testkit": "workspace:*"
+  }
+}

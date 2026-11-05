@@ -1,0 +1,22 @@
+# api 镜像只需要 packages/shared + apps/backend，其余不进构建上下文。
+.git
+**/node_modules
+**/dist
+**/.turbo
+apps/frontend
+docs
+openspec
+*.log
+
+**/.env
+**/.env.*
+**/*production*.env
+**/secrets
+**/.oidc-keys.json
+**/*bootstrap*.json
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+release
+releases

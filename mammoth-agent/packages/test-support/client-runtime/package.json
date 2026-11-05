@@ -1,0 +1,98 @@
+{
+  "name": "@mammoth-ai/mmp-client-test-runtime",
+  "description": "Browser test runtimes: a jsdom slot bench with test-owned Session and Workspace doubles, and a whole-client tier that boots the web roster through the production bootClient over an endpoint-named Remote mock",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/test-support/client-runtime"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.3",
+    "js-yaml": "^4.3.2",
+    "vitest": "^4.1.11"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/cordis-plugin-include": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-api-gateway": "workspace:*",
+    "@mammoth-ai/mmp-api-session-controller": "workspace:*",
+    "@mammoth-ai/mmp-api-workspace-controller": "workspace:*",
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-client-connection": "workspace:*",
+    "@mammoth-ai/mmp-client-hmr": "workspace:*",
+    "@mammoth-ai/mmp-client-modules": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-chat": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-conversation": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-renderer": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-session": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-settings": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-slots": "workspace:*",
+    "@mammoth-ai/mmp-client-web": "workspace:*",
+    "@mammoth-ai/mmp-remote-mock": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-typert-protocol": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@mammoth-ai/mmp-client-ui-context-menu": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/cordis-plugin-include": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-api-gateway": "workspace:*",
+    "@mammoth-ai/mmp-api-remote-access": "workspace:*",
+    "@mammoth-ai/mmp-api-remotes": "workspace:*",
+    "@mammoth-ai/mmp-api-session-controller": "workspace:*",
+    "@mammoth-ai/mmp-api-workspace-controller": "workspace:*",
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-base": "workspace:*",
+    "@mammoth-ai/mmp-client-connection": "workspace:*",
+    "@mammoth-ai/mmp-client-hmr": "workspace:*",
+    "@mammoth-ai/mmp-client-locale": "workspace:*",
+    "@mammoth-ai/mmp-client-modules": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-chat": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-conversation": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-layout": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-renderer": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-session": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-settings": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-slots": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-workspace": "workspace:*",
+    "@mammoth-ai/mmp-client-web": "workspace:*",
+    "@mammoth-ai/mmp-remote-mock": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-settings": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-typert-protocol": "workspace:*",
+    "@mammoth-ai/mmp-web-app": "workspace:*",
+    "@types/js-yaml": "^4.0.9",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@mammoth-ai/mmp-client-ui-context-menu": "workspace:*"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ]
+}

@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mammoth-postgres
+    environment:
+      POSTGRES_USER: mammoth
+      POSTGRES_PASSWORD: mammoth
+      POSTGRES_DB: mammoth_core
+    ports:
+      - "5433:5432"
+    volumes:
+      - mammoth_pgdata:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mammoth -d mammoth_core"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mammoth_pgdata:

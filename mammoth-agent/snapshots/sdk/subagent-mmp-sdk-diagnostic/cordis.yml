@@ -1,0 +1,65 @@
+# TypeScript SDK snapshot patch for automatic MMP SDK failure notices.
+
+- id: skill-filesystem
+  name: '@mammoth-ai/mmp-skill-filesystem'
+  config:
+    includeDefaultRoots: false
+
+- id: llm-deepseek
+  name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+  config:
+    thinking: enabled
+    reasoningEffort: max
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: !!js "process.env.MMP_SNAPSHOT === undefined ? 'zstd' : 'none'"
+
+- id: session-log-deepseek
+  name: '@mammoth-ai/mmp-session-log-deepseek'
+  config:
+    enabled: true
+
+- insert:
+    - id: subagent-mmp-sdk-diagnostic
+      name: '@mammoth-ai/mmp-subagent-mmp-sdk'
+      config:
+        providerName: mmp-sdk-diagnostic
+        profile: sdk
+        patches:
+          - !!js process.env.MMP_TEST_CHILD_PATCH
+        mmpHome: !!js mmpHomePath('children/first')
+        provider: mock
+        model: mock-echo
+        env:
+          MMP_TELEMETRY_DISABLED: '1'
+          MMP_TEST_CHILD_FAILURE: '1'
+    - id: tool-subagent-mmp-sdk-diagnostic
+      name: '@mammoth-ai/mmp-tool-subagent'
+      config:
+        provider: mmp-sdk-diagnostic
+        toolName: subagent_dsh_sdk
+        maxDepth: provider-managed
+    - id: subagent-mmp-sdk-diagnostic-second
+      name: '@mammoth-ai/mmp-subagent-mmp-sdk'
+      config:
+        providerName: mmp-sdk-diagnostic-second
+        profile: sdk
+        patches:
+          - !!js process.env.MMP_TEST_CHILD_PATCH
+        mmpHome: !!js mmpHomePath('children/second')
+        provider: mock
+        model: mock-echo
+        env:
+          MMP_TELEMETRY_DISABLED: '1'
+          MMP_TEST_CHILD_FAILURE: '1'
+    - id: tool-subagent-mmp-sdk-diagnostic-second
+      name: '@mammoth-ai/mmp-tool-subagent'
+      config:
+        provider: mmp-sdk-diagnostic-second
+        toolName: subagent_dsh_sdk_second
+        maxDepth: provider-managed
+    - id: await-external-subagents
+      name: '../../../packages/test-support/session-snapshot/tests/fixtures/subagent-settlement-barrier.ts'

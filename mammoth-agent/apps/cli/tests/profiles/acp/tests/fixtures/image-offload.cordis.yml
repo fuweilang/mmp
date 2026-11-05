@@ -1,0 +1,44 @@
+# Keyless assembled-request snapshot for native DeepSeek image offload. The
+# local provider endpoint is supplied by the snapshot test; the real attachment
+# store and ACP bridge carry two uploaded images into one model request.
+- id: llm-deepseek
+  name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+  config:
+    apiKeyEnv: MMP_SNAPSHOT_API_KEY
+    baseURL: !!js process.env.MMP_SNAPSHOT_BASE_URL
+    thinking: disabled
+    maxRequestFilesBytes: 92
+    imageOffloadByteQuantum: 1
+    models:
+      - id: deepseek-v4-flash-vision-exp
+        contextWindow: 32768
+        maxTokens: 1024
+        inputModalities: [text, image]
+
+- id: acp
+  name: '@mammoth-ai/mmp-acp'
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-flash-vision-exp
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js process.env.MMP_SNAPSHOT_SESSIONS_ROOT ?? './.sessions'
+    compression: none
+
+- id: agent-instructions
+  name: '@mammoth-ai/mmp-agent-instructions'
+  config:
+    maxBytes: 65536
+
+- id: system-prompt
+  name: '@mammoth-ai/mmp-system-prompt'
+  config:
+    personaPrefix: |
+      You are a coding assistant powered by the {{model}} model.
+
+      Keep answers brief and factual.
+
+- id: attachment-local
+  name: '@mammoth-ai/mmp-attachment-local'

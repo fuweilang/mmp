@@ -1,0 +1,64 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/client/locale/README.md
+/:
+  en: 06abc0b7552f6852
+  zh: f470b5a391bb7d76
+/mammoth-ai-mmp-client-locale:
+  en: d376ecef9915ff04
+  zh: 5bfd9a5a3d2652e8
+/mammoth-ai-mmp-client-locale/summary:
+  en: b8c7c4dc2f429da8
+  zh: d81bad8cd2876d2e
+/mammoth-ai-mmp-client-locale/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: bda879a892f240f0
+/mammoth-ai-mmp-client-locale/use-this-package:
+  en: 7fedfbcbc3ad8cea
+  zh: e29ba5230e0b9ecb
+/mammoth-ai-mmp-client-locale/use-this-package/choosing-a-language:
+  en: 569dc15cf6d6a531
+  zh: 39fa73a2dcd2e0af
+/mammoth-ai-mmp-client-locale/use-this-package/registering-a-dictionary:
+  en: f19407c3ce8a94cc
+  zh: 3e5300ce7fa02987
+/mammoth-ai-mmp-client-locale/use-this-package/resolving-package-text:
+  en: 290dc0a9c4466d55
+  zh: e96557befca062ca
+/mammoth-ai-mmp-client-locale/use-this-package/registering-a-language-pack:
+  en: 38789e490dbc5031
+  zh: 48182ad3a6bd8cd9
+/mammoth-ai-mmp-client-locale/use-this-package/what-the-host-half-does:
+  en: 2940081a58148a33
+  zh: 9c5ea72f7189d314
+/mammoth-ai-mmp-client-locale/understand-the-implementation:
+  en: 288d8db39f9acfc5
+  zh: d65cf2ffae8ad35c
+/mammoth-ai-mmp-client-locale/understand-the-implementation/design-concept:
+  en: 108c3d5198279980
+  zh: 7c68da504e374ef1
+/mammoth-ai-mmp-client-locale/understand-the-implementation/preference-resolution:
+  en: 76e898b974fc64f3
+  zh: 0fd9bcdf4c77fef0
+/mammoth-ai-mmp-client-locale/understand-the-implementation/dictionary-lookup:
+  en: 68373e745761494c
+  zh: 43a5b8c19d03268a
+/mammoth-ai-mmp-client-locale/understand-the-implementation/source-map:
+  en: 6f329e4872398634
+  zh: 9d8364dc4c03d055
+/mammoth-ai-mmp-client-locale/further-exploration:
+  en: f06aaa74c636bb48
+  zh: 42297ec481b3aa03
+/mammoth-ai-mmp-client-locale/model-experience:
+  en: 209321ba2d2e6710
+  zh: 21deb6c973f69b66
+/mammoth-ai-mmp-client-locale/model-experience/kv-cache-effect:
+  en: ca75c51c89c2c9b0
+  zh: de54f3467ef3b9be
+/mammoth-ai-mmp-client-locale/known-limitations-and-deferred-work:
+  en: bd6e1251ec2ecc05
+  zh: b6c5e315d73f67ea
+/mammoth-ai-mmp-client-locale/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 3bb0c20c93f16f98

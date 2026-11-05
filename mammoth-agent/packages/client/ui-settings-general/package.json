@@ -1,0 +1,88 @@
+{
+  "name": "@mammoth-ai/mmp-client-ui-settings-general",
+  "description": "Settings ownerless-copy and product onboarding plugin: the General section, shell trigger/header chrome content, settings dictionaries, and the versioned welcome notice",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/client/ui-settings-general"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "mmp": {
+    "client": {
+      "inject": [
+        "@mammoth-ai/mmp-client-ui-settings",
+        "@mammoth-ai/mmp-client-locale",
+        "@mammoth-ai/mmp-client-connection",
+        "@mammoth-ai/mmp-api-remotes",
+        "@mammoth-ai/mmp-client-ui-sidebar",
+        "@mammoth-ai/mmp-client-shortcuts",
+        "@mammoth-ai/mmp-client-modules",
+        "@mammoth-ai/mmp-client-ui-layout"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@mammoth-ai/schemastery": "workspace:~"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-api-remote-access": "workspace:*",
+    "@mammoth-ai/mmp-api-remotes": "workspace:*",
+    "@mammoth-ai/mmp-client-connection": "workspace:*",
+    "@mammoth-ai/mmp-client-locale": "workspace:*",
+    "@mammoth-ai/mmp-client-modules": "workspace:*",
+    "@mammoth-ai/mmp-client-product-analytics": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
+    "@mammoth-ai/mmp-client-test-runtime": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-layout": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-primitives": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-renderer": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-session": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-settings": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-sidebar": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-slots": "workspace:*",
+    "@mammoth-ai/mmp-remote-mock": "workspace:*",
+    "clsx": "^2.0.0",
+    "react": "^18.2.0",
+    "@mammoth-ai/mmp-settings": "workspace:*",
+    "react-dom": "^18.2.0",
+    "@mammoth-ai/mmp-client-shortcuts": "workspace:*"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/client.js",
+    "lib/types/**/*.d.ts"
+  ]
+}

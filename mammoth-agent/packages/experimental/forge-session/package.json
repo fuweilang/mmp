@@ -1,0 +1,88 @@
+{
+  "name": "@mammoth-ai/mmp-experimental-forge-session",
+  "description": "Binds change requests to the Session that created, pushed, or tracked them",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts"
+    },
+    "./locale/*.json": "./locale/*.json",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/experimental/forge-session"
+  },
+  "dependencies": {
+    "@mammoth-ai/mmp-timeout": "workspace:*",
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@mammoth-ai/schemastery": "workspace:~",
+    "shell-quote": "^1.12.0",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-experimental-forge": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-shell": "workspace:*",
+    "@mammoth-ai/mmp-shell-env": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/cordis-plugin-include": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-agent-loop": "workspace:*",
+    "@mammoth-ai/mmp-bash-local": "workspace:*",
+    "@mammoth-ai/mmp-experimental-forge": "workspace:*",
+    "@mammoth-ai/mmp-experimental-forge-github": "workspace:*",
+    "@mammoth-ai/mmp-fs-local": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-shell-env": "workspace:*",
+    "@mammoth-ai/mmp-subprocess-local": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*",
+    "@mammoth-ai/mmp-tool-bash": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-native": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-working-directory": "workspace:*",
+    "@mammoth-ai/mmp-shell": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@mammoth-ai/mmp-shell": {
+      "optional": true
+    },
+    "@mammoth-ai/mmp-shell-env": {
+      "optional": true
+    },
+    "@mammoth-ai/mmp-tools": {
+      "optional": true
+    },
+    "@mammoth-ai/mmp-sandbox-policy": {
+      "optional": true
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "name": "@mammoth-ai/mmp-tool-schedule",
+  "description": "Model-facing scheduled task tools (schedule_create, schedule_list, schedule_view, schedule_edit) over the Host ctx.schedule service",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/schedule/tool-schedule"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-schedule": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-ptc-runtime": "workspace:*",
+    "@mammoth-ai/mmp-schedule": "workspace:*",
+    "@mammoth-ai/mmp-scope": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-ptc": "workspace:*",
+    "@mammoth-ai/mmp-tool-testkit": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-agent-preset-registry": "workspace:*"
+  }
+}

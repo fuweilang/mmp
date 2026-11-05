@@ -1,0 +1,562 @@
+# The mmp-base bundle patch: the shared core of each base-backed profile, applied as
+# ONE insert over the empty profile root. Later bundle patches and the user's
+# profile cordis.patch.yml address these rows by id, with the last write
+# winning per row.
+#
+# A patch replaces the targeted row's whole `config` rather than merging into
+# it, so a row whose value differs by mode does NOT live here: it belongs to
+# each mode bundle, keeping any single row down to one bundle layer plus the
+# user's. Mode-specific rows appear below only with shared plugin identity and
+# neutral defaults; each mode bundle restates its complete configuration.
+#
+# Row order carries no load semantics (activation is service-availability
+# driven); the grouping is for readers.
+
+- insert:
+    - id: tool-plugin-manager
+      name: '@mammoth-ai/mmp-plugin-manager/tools'
+      disabled: true
+
+    - id: plugin-manager
+      name: '@mammoth-ai/mmp-plugin-manager'
+      disabled: !!js "!ctx.get('profileContext')"
+
+    - id: timer
+      name: '@mammoth-ai/cordis-plugin-timer'
+
+    # Profile configuration reloads by default; module roots are opt-in.
+    - id: hmr
+      name: '@mammoth-ai/mmp-hmr'
+      disabled: !!js "!ctx.get('profileContext')"
+      config:
+        root: []
+
+    - id: llm
+      name: '@mammoth-ai/mmp-llm'
+
+    - id: deepseek-llm-api-extensions
+      name: '@mammoth-ai/mmp-deepseek-llm-api-extensions'
+
+    - id: session
+      name: '@mammoth-ai/mmp-session'
+
+    - id: session-log-deepseek
+      name: '@mammoth-ai/mmp-session-log-deepseek'
+
+    - id: typert
+      name: '@mammoth-ai/mmp-typert-registry'
+
+    - id: typert-loader
+      name: '@mammoth-ai/mmp-typert-loader'
+
+    - id: typert-gateway
+      name: '@mammoth-ai/mmp-api-gateway'
+
+    # Method-level access control for non-owner Peers; the Gateway requires it,
+    # and its Client half publishes the standard access Hooks.
+    - id: remote-access
+      name: '@mammoth-ai/mmp-api-remote-access'
+
+    - id: session-title
+      name: '@mammoth-ai/mmp-session-title'
+      config:
+        fallbackMaxWords: 5
+        fallbackMaxBytes: 40
+        maxTitleBytes: 80
+
+    - id: session-title-llm
+      name: '@mammoth-ai/mmp-session-title-first-prompt-llm'
+      config:
+        targetWords: 5
+        targetCjkCharacters: 10
+        maxInputBytes: 4096
+        # A ceiling against runaway output, not a length target: the prompt
+        # keeps titles short, while reasoning a model cannot switch off also
+        # counts as output. Stays within common model output limits.
+        maxOutputTokens: 4096
+        timeoutMs: 60000
+
+    - id: user-questions
+      name: '@mammoth-ai/mmp-user-questions'
+
+    - id: agent
+      name: '@mammoth-ai/mmp-agent'
+
+    - id: plugin-package-inventory-deepseek
+      name: '@mammoth-ai/mmp-plugin-package-inventory-deepseek'
+
+    # The transport-independent default for Agents created by entry points.
+    # Settings may supply a saved selection; consumers read it at creation time.
+    - id: agent-default-model
+      name: '@mammoth-ai/mmp-agent-default-model'
+      config:
+        provider: mammoth-ground
+        model: auto
+
+    - id: jobs
+      name: '@mammoth-ai/mmp-jobs-local'
+
+    - id: llm-retry
+      name: '@mammoth-ai/mmp-llm-retry'
+
+    # Live Config forms persist through the active profile patch.
+
+    # Live configuration forms persist through the launcher's profile.
+    - id: config-editor
+      name: '@mammoth-ai/mmp-config-editor'
+      disabled: !!js "!ctx.get('profileContext')"
+
+    - id: settings
+      name: '@mammoth-ai/mmp-settings'
+      disabled: !!js "!ctx.get('profileContext')"
+
+    # Credential sources: managed `$MMP_HOME/.credentials.yaml`, then inherited
+    # environment, project `.env`, and user `.env` fallbacks.
+    # Adapters resolve references per request; the Models page writes only the
+    # managed document, which is never materialized into the process environment.
+    - id: authorization
+      name: '@mammoth-ai/mmp-authorization'
+
+    - id: deepseek-account
+      name: '@mammoth-ai/mmp-deepseek-account-platform'
+      config:
+        desktopPlatform: !!js "ctx.get('profileContext')?.name === 'desktop' && ['darwin', 'win32'].includes(process.platform) ? process.platform : null"
+        platformOrigin: !!js "process.env.GROUND_PUBLIC_ORIGIN || process.env.MMP_PLATFORM_ORIGIN || (ctx.get('profileContext')?.name === 'desktop' && process.env.MMP_DESKTOP_PRODUCTION === '1' ? 'https://www.mmai.vip' : 'http://127.0.0.1:5201')"
+        # SSO grant may only be sent to this origin (Ground chat gateway).
+        inferenceOrigin: !!js "process.env.GROUND_PUBLIC_ORIGIN || process.env.MMP_PLATFORM_ORIGIN || (ctx.get('profileContext')?.name === 'desktop' && process.env.MMP_DESKTOP_PRODUCTION === '1' ? 'https://www.mmai.vip' : 'http://127.0.0.1:5201')"
+        allowLoopbackHttp: true
+        authMode: oidc
+        historySync: true
+        historySyncIntervalMs: 30000
+        historyBatchSize: 100
+        oidcClientId: !!js "process.env.MMP_OIDC_CLIENT_ID || 'harness-desktop'"
+        oidcApiPrefix: /console/api
+        webSso: !!js "ctx.get('profileContext')?.name === 'web' && process.env.MMP_WEB_SSO === '1'"
+        webSsoOrigin: !!js "process.env.MMP_WEB_SESSION_ORIGIN || ''"
+        groundCookieName: !!js "process.env.MMP_GROUND_COOKIE_NAME || 'mammothai_access_token'"
+
+    - id: credentials
+      name: '@mammoth-ai/mmp-credentials-local'
+
+    # Product chat is Ground-only. Custom development profiles may mount this
+    # package explicitly, but the shipped base never enables local provider settings.
+    - id: llm-pi-ai
+      name: '@mammoth-ai/mmp-llm-pi-ai'
+      disabled: true
+
+    - id: session-persistence-jsonl
+      name: '@mammoth-ai/mmp-session-persistence-jsonl'
+      config:
+        root: !!js mmpHomePath('sessions')
+
+    # Durable image bytes live outside the append-only session log. Messages
+    # keep content-addressed references that this shared backend resolves for
+    # provider requests and authorized history reads.
+    - id: attachment-local
+      name: '@mammoth-ai/mmp-attachment-local'
+
+    # Full-text session search is opt-in. `openAt: never` keeps
+    # ctx.sessionQuery mounted — exact reads, titles, and lineage traces
+    # (session export, subagent-fork Workspace inheritance) stay available —
+    # while search calls fail with SESSION_QUERY_SEARCH_DISABLED and SQLite is
+    # never opened; the Web sidebar search matches titles and workspace names
+    # only. Deployments enabling content search override `openAt` to
+    # `first-search` or `startup` in a later patch layer (profile
+    # cordis.patch.yml or a --patch overlay), typically with a durable `path`.
+    - id: session-query-sqlite
+      name: '@mammoth-ai/mmp-session-query-sqlite'
+      config:
+        path: ':memory:'
+        openAt: never
+
+    # Shared projection registry: subagent catalog identity (mode/label) folds
+    # through its registered units, so the `list_agents` surface below fails
+    # loud without it; web layers reuse this same mount for list rows.
+    - id: working-directory
+      name: '@mammoth-ai/mmp-working-directory'
+
+    - id: tool-working-directory
+      name: '@mammoth-ai/mmp-tool-working-directory'
+
+    - id: session-projection
+      name: '@mammoth-ai/mmp-session-projection'
+
+    # Durable KV storage: the storage hub, the json backend, and the
+    # schema-validated domain form over them. Session-layer persistence (the
+    # projection cache below; workspace in web layers)
+    # routes through this stack, so it belongs to the shared base.
+    - id: storage
+      name: '@mammoth-ai/mmp-storage'
+
+    - id: storage-json
+      name: '@mammoth-ai/mmp-storage-json'
+      config:
+        root: !!js mmpHomePath('storages')
+
+    - id: storage-domain
+      name: '@mammoth-ai/mmp-storage-domain'
+      config:
+        backend: json
+
+    # Persisted projection cache: throttled write-behind over the
+    # session_projcache domain (per-record layout — one version-stamped
+    # checkpoint document per session), serving the session listing's
+    # projection column.
+    - id: session-projection-cache
+      name: '@mammoth-ai/mmp-session-projection-cache'
+      config:
+        writeEveryEvents: 200
+        writeIntervalMs: 5000
+
+    - id: otel
+      name: '@mammoth-ai/mmp-otel'
+
+    # OTel releases a Session-log prefix only after explicit user feedback,
+    # regardless of model provider. Ordinary activity never triggers capture.
+    # MMP_TELEMETRY_OTLP_URL overrides the production endpoint. A non-empty
+    # MMP_TELEMETRY_DISABLED — any value, including '0'/'false' — opts the
+    # process out (the launchers patch the row disabled; config cannot disable
+    # a row). Exports carry the harness home's anonymous user id ($MMP_HOME/.anonymous-user-id,
+    # random UUID; delete the file to reset the identity) as the Resource's
+    # user.id. Byte-bounded batching may turn an authorized prefix into
+    # several HTTP requests. Requests run serially; each has its own 1s
+    # transport timeout and 1.5s watchdog. A watchdog does not release the
+    # active request slot. The outer 3s shutdown deadline stops queued sends;
+    # large prefixes or an unsettled transport may leave records unsent.
+    # Every CLI exit path drains by disposing the root on SIGINT/SIGTERM.
+    - id: session-telemetry-otel
+      name: '@mammoth-ai/mmp-session-telemetry-otel'
+      config:
+        mode: !!js process.env.MMP_TELEMETRY_MODE || 'FEEDBACK_ONLY'
+        shutdownTimeoutMillis: 3000
+        maxRequestBytes: 4000000
+        exporter:
+          url: !!js process.env.MMP_TELEMETRY_OTLP_URL ?? 'https://mmp-otel-collector.deepseeksvc.com/v1/logs'
+          compression: gzip
+          timeoutMillis: 1000
+        processor:
+          scheduledDelayMillis: 10000
+          maxQueueSize: 2048
+          maxExportBatchSize: 2048
+          exportTimeoutMillis: 1500
+
+    - id: subprocess
+      name: '@mammoth-ai/mmp-subprocess-local'
+
+    # Every shipped CLI mode starts with the same file-effect boundary.
+    # The environment remains an explicit deployment override; otherwise fresh
+    # sessions pin workspace-write + ask through the permission service below.
+    - id: sandbox
+      name: '@mammoth-ai/mmp-sandbox-local'
+
+    - id: sandbox-policy
+      name: '@mammoth-ai/mmp-sandbox-policy'
+      config:
+        mode: !!js process.env.MMP_PERMISSION_MODE ?? 'workspace-write'
+        workspaceRoot: !!js process.cwd()
+
+    - id: bash-sandbox
+      name: '@mammoth-ai/mmp-bash-sandbox'
+      disabled: !!js process.platform === 'win32'
+      config:
+        timeoutMs: 60000
+
+    - id: pwsh-sandbox
+      name: '@mammoth-ai/mmp-pwsh-sandbox'
+      disabled: !!js process.platform !== 'win32'
+
+    - id: approval
+      name: '@mammoth-ai/mmp-user-approval'
+      config:
+        policy: !!js "(process.env.MMP_PERMISSION_MODE ?? 'workspace-write') === 'danger-full-access' ? 'never' : 'ask'"
+
+    - id: permission
+      name: '@mammoth-ai/mmp-permission-presets'
+      config:
+        presets:
+          read-only:
+            sandbox: read-only
+            approval: ask
+          workspace-write:
+            sandbox: workspace-write
+            approval: ask
+          danger-full-access:
+            sandbox: danger-full-access
+            approval: never
+
+    - id: shell-env
+      name: '@mammoth-ai/mmp-shell-env'
+
+    - id: tool-bash
+      name: '@mammoth-ai/mmp-tool-bash'
+      disabled: !!js process.platform === 'win32'
+
+    - id: tool-pwsh
+      name: '@mammoth-ai/mmp-tool-pwsh'
+      disabled: !!js process.platform !== 'win32'
+
+    - id: tool-jobs
+      name: '@mammoth-ai/mmp-tool-jobs'
+
+    - id: fs-observation-policy
+      name: '@mammoth-ai/mmp-fs-observation-policy'
+
+    - id: tool-fs
+      name: '@mammoth-ai/mmp-tool-fs'
+      config:
+        # Set true to add the apply_patch tool beside edit.
+        applyPatch: false
+
+    - id: tool-fs-search
+      name: '@mammoth-ai/mmp-tool-fs-search'
+      config:
+        sampleOverCapGlobResults: false
+
+    - id: agent-instructions
+      name: '@mammoth-ai/mmp-agent-instructions'
+      config:
+        maxBytes: 65536
+
+    - id: skill
+      name: '@mammoth-ai/mmp-skill'
+
+    - id: skill-filesystem
+      name: '@mammoth-ai/mmp-skill-filesystem'
+
+    - id: tool-skill
+      name: '@mammoth-ai/mmp-tool-skill'
+
+    - id: commands
+      name: '@mammoth-ai/mmp-commands'
+
+    - id: command-feedback
+      name: '@mammoth-ai/mmp-command-feedback'
+
+    - id: goal
+      name: '@mammoth-ai/mmp-goal'
+
+    - id: goal-round-driver
+      name: '@mammoth-ai/mmp-goal-round-driver'
+
+    - id: command-goal
+      name: '@mammoth-ai/mmp-command-goal'
+
+    - id: plan-mode
+      name: '@mammoth-ai/mmp-plan-mode'
+      config:
+        section: |
+              You are in plan mode. Stay in plan mode until the user approves your plan through exit_plan_mode or switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+              Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+              The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed only to keep the request shape stable. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode.
+
+              Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+              Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions.
+
+              When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+
+    - id: token-meter
+      name: '@mammoth-ai/mmp-token-meter'
+
+    - id: compaction-basic
+      name: '@mammoth-ai/mmp-compaction-basic'
+      config:
+        # Conservative auto-compact: fire later, keep a larger recent tail.
+        # Summary failure soft-fails to prune-only (see compaction-basic).
+        auto: true
+        thresholdRatio: 0.85
+        headroomTokens: 16384
+        retainRatio: 0.2
+        compactionRetries: 1
+        maxOverflowRetries: 2
+
+    # Human `/compact`: one useful reduction below the automatic threshold. Backend
+    # independent, so it follows whichever compaction service this leaf mounts.
+    - id: command-compact
+      name: '@mammoth-ai/mmp-command-compact'
+
+    - id: subagent
+      name: '@mammoth-ai/mmp-subagent'
+
+    - id: subagent-spawn-in-process
+      name: '@mammoth-ai/mmp-subagent-spawn-in-process'
+      config:
+        providerName: spawn
+
+    - id: subagent-fork-in-process
+      name: '@mammoth-ai/mmp-subagent-fork-in-process'
+      config:
+        providerName: fork
+
+    # Continuable background children are selected per delegation tool. The
+    # separately loaded follow-up tool registers the one global `send_message`.
+    - id: tool-subagent-control
+      name: '@mammoth-ai/mmp-tool-subagent-control'
+
+    - id: tool-subagent
+      name: '@mammoth-ai/mmp-tool-subagent'
+      config:
+        provider: spawn
+        toolName: subagent
+
+    # Fork omits model-selection arguments for KV Cache reuse. Parent and child
+    # share the messaging tools; return guidance follows the inherited history.
+    # See packages/subagent/tool-subagent/README.md
+    # and .agents/notes/implemented/architecture/2026-08-10-fork-children-stay-one-shot.md.
+    - id: tool-subagent-fork
+      name: '@mammoth-ai/mmp-tool-subagent'
+      config:
+        provider: fork
+        toolName: subagent_fork
+
+    - id: ptc-runtime
+      name: '@mammoth-ai/mmp-ptc-runtime-node'
+
+    - id: workflow-ptc
+      name: '@mammoth-ai/mmp-workflow-ptc'
+      config:
+        provider: spawn
+
+    - id: tool-workflow
+      name: '@mammoth-ai/mmp-tool-workflow'
+
+    - id: timeout-policy
+      name: '@mammoth-ai/mmp-tool-call-timeout-policy'
+
+    - id: spill-local
+      name: '@mammoth-ai/mmp-spill-local'
+
+    - id: spill-policy
+      name: '@mammoth-ai/mmp-spill-policy'
+      config:
+        # Spill oversized tool results to disk; context keeps path + head/tail.
+        # `read` stays inline (avoids read→spill→read loop).
+        maxInlineTokens: 6000
+
+    # Durability checkpoints before each model request and top-level dispatch.
+    - id: session-checkpoint-policy
+      name: '@mammoth-ai/mmp-session-checkpoint-policy'
+
+    # Compacts oversized tool results before the broader conversation compactor
+    # runs, preserving the model-visible result within the configured budget.
+    - id: tool-result-pruner
+      name: '@mammoth-ai/mmp-compaction-tool-result-pruner'
+      config:
+        # Mid-content prune for oversize results (incl. read) before LLM summarize.
+        thresholdChars: 6144
+        headChars: 3072
+        tailChars: 768
+
+    # When an image-capable route rejects a request as over its image budget,
+    # replace the oldest images with placeholders on the surface and retry.
+    - id: image-offload
+      name: '@mammoth-ai/mmp-compaction-image-offload'
+
+    - id: tool-todo
+      name: '@mammoth-ai/mmp-tool-todo'
+      config:
+        allowParallelInProgress: true
+
+    # Persisted same-session goals reach the model and the slash menu here; the
+    # domain, driver, and `/goal` command are above.
+    - id: tool-goal
+      name: '@mammoth-ai/mmp-tool-goal'
+
+    # Consecutive-repeat reminders on the tool chain.
+    - id: repeat-tool-reminder
+      name: '@mammoth-ai/mmp-repeat-tool-reminder'
+      config:
+        thresholds: [3, 5, 8]
+        argumentsPreviewChars: 500
+
+    # The shared base enables the stable model-facing web_search and web_fetch
+    # tools. The Web app disables this host row and composes both tools per agent
+    # preset; products with a stricter network policy override tool-web. DeepSeek
+    # search resolves the same DEEPSEEK_API_KEY
+    # credential the Models page manages for chat, at each search; its Messages
+    # endpoint is configured independently from the model route, so it takes its own
+    # base-URL override. Anonymous fetch accepts only public HTTP(S) destinations,
+    # resolves and validates every destination, and pins every actual connection.
+    # Search is a full auxiliary model request with server-side retrieval, so this
+    # shipped DeepSeek route gets 60s while the provider-neutral tool default
+    # remains 30s. The DeepSeek Search and Fetch APIs register as
+    # deepseek-search-api and deepseek-fetch-api with the same credential; the Web
+    # search settings switch selects both in place of these defaults.
+    - id: web
+      name: '@mammoth-ai/mmp-web'
+      config:
+        searchProvider: deepseek-official
+        fetchProvider: http
+
+    - id: web-search-deepseek
+      name: '@mammoth-ai/mmp-web-search-deepseek'
+      config:
+        apiKeyEnv: DEEPSEEK_API_KEY
+
+    - id: web-deepseek-api
+      name: '@mammoth-ai/mmp-web-deepseek-api'
+      config:
+        apiKeyEnv: DEEPSEEK_API_KEY
+
+    - id: web-fetch-http
+      name: '@mammoth-ai/mmp-web-fetch-http'
+
+    - id: tool-web
+      name: '@mammoth-ai/mmp-tool-web'
+      config:
+        fetch: true
+        searchTimeoutMs: 60000
+
+    - id: mcp-resources
+      name: '@mammoth-ai/mmp-mcp-resources'
+
+    # ── rows every mode mounts, whose values each overlay may state ──────────────
+
+    # Shared tool definitions and the deployment’s native executor.
+    - id: tools
+      name: '@mammoth-ai/mmp-tools'
+
+    - id: tool-executor-native
+      name: '@mammoth-ai/mmp-tool-executor-native'
+
+    - id: tool-executor-ptc
+      name: '@mammoth-ai/mmp-tool-executor-ptc'
+      disabled: true
+
+    # The deployment persona is a deployment choice; plan-mode and tool plugins own
+    # their own prompt sections.
+    - id: system-prompt
+      name: '@mammoth-ai/mmp-system-prompt'
+      config:
+        personaPrefix: ''
+
+    # Agents created at startup. The base stays empty; raw overlays may create
+    # agents, while Web creates sessions on client request.
+    - id: agent-loop
+      name: '@mammoth-ai/mmp-agent-loop'
+      config:
+        agents: []
+
+    # The sandboxed filesystem provider. `cwd` defaults to `process.cwd()`; an
+    # overlay can pin another workspace.
+    - id: fs-sandbox
+      name: '@mammoth-ai/mmp-fs-sandbox'
+
+    # Native provider packages remain available to custom development profiles.
+    # Shipped product profiles never mount direct API-key or account routes.
+    - id: llm-deepseek
+      name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+      disabled: true
+
+    - id: llm-deepseek-account
+      name: '@mammoth-ai/mmp-llm-deepseek-account'
+      disabled: true
+
+    - id: llm-ground
+      name: '@mammoth-ai/mmp-llm-ground'
+      config:
+        groundOrigin: !!js "process.env.GROUND_PUBLIC_ORIGIN || process.env.MMP_PLATFORM_ORIGIN || (ctx.get('profileContext')?.name === 'desktop' && process.env.MMP_DESKTOP_PRODUCTION === '1' ? 'https://www.mmai.vip' : 'http://127.0.0.1:5201')"
+        providerId: mammoth-ground
+        displayName: 猛犸云端

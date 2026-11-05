@@ -1,0 +1,72 @@
+{
+  "name": "@mammoth-ai/mmp-creation-recommendations",
+  "description": "Create persistent removable interface plugins from explicit conversation needs",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/experimental/creation-recommendations"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./references/*.md": "./references/*.md",
+    "./skills/*.md": "./skills/*.md"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-skill": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-plugin-manager": "workspace:*",
+    "@mammoth-ai/mmp-api-remote-access": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-app-boot": "workspace:*",
+    "@mammoth-ai/mmp-skill": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*",
+    "@mammoth-ai/mmp-tool-testkit": "workspace:*"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0",
+    "resolve.exports": "^2.0.3",
+    "zod": "4.4.3",
+    "@mammoth-ai/mmp-client-ui-creation-recommendations": "workspace:*",
+    "@mammoth-ai/mmp-action-cards": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-action-cards": "workspace:*"
+  },
+  "files": [
+    "icon.svg",
+    "locale/*.json",
+    "lib/index.js",
+    "references/*.md",
+    "skills/*.md",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "icon": "./icon.svg"
+}

@@ -1,0 +1,173 @@
+{
+  "name": "@mammoth-ai/mmp-api-session-controller",
+  "description": "Session Remote commands, cold reads, and live control transport",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/api/session-controller"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./remote-events": {
+      "types": "./lib/types/remote-events.d.ts",
+      "default": "./lib/types/remote-events.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./typert": {
+      "types": "./lib/typert.host.d.ts",
+      "default": "./lib/typert.host.js"
+    },
+    "./remote": {
+      "types": "./lib/typert.remote-client.d.ts",
+      "default": "./lib/typert.remote-client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "mmp": {
+    "client": {
+      "external": [
+        "@mammoth-ai/mmp-api-gateway/client"
+      ],
+      "inject": [
+        "@mammoth-ai/mmp-api-gateway",
+        "@mammoth-ai/mmp-client-file-upload"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/client.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts",
+    "lib/typert.host.js",
+    "lib/typert.host.d.ts",
+    "lib/typert.remote-client.js",
+    "lib/typert.remote-client.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/mmp-deque": "workspace:*",
+    "@mammoth-ai/mmp-timeout": "workspace:*",
+    "@mammoth-ai/schemastery": "workspace:~",
+    "mime-types": "^3.0.2",
+    "zod": "4.4.3"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-agent-default-model": "workspace:*",
+    "@mammoth-ai/mmp-agent-preset-registry": "workspace:*",
+    "@mammoth-ai/mmp-api-gateway": "workspace:*",
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-client-connection": "workspace:*",
+    "@mammoth-ai/mmp-client-file-upload": "workspace:*",
+    "@mammoth-ai/mmp-commands": "workspace:*",
+    "@mammoth-ai/mmp-credentials": "workspace:*",
+    "@mammoth-ai/mmp-file-reference": "workspace:*",
+    "@mammoth-ai/mmp-fs": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-native-command": "workspace:*",
+    "@mammoth-ai/mmp-scope": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-session-projection-cache": "workspace:*",
+    "@mammoth-ai/mmp-session-query": "workspace:*",
+    "@mammoth-ai/mmp-session-title": "workspace:*",
+    "@mammoth-ai/mmp-settings": "workspace:*",
+    "@mammoth-ai/mmp-skill": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-typert-protocol": "workspace:*",
+    "@mammoth-ai/mmp-typert-registry": "workspace:*",
+    "@mammoth-ai/mmp-util-time": "workspace:*",
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@mammoth-ai/mmp-util-workspace-path": "workspace:*",
+    "@mammoth-ai/mmp-workspace": "workspace:*",
+    "@mammoth-ai/mmp-working-directory": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@mammoth-ai/mmp-session-persistence": {
+      "optional": true
+    },
+    "@mammoth-ai/mmp-session-projection-cache": {
+      "optional": true
+    },
+    "@mammoth-ai/mmp-settings": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@mammoth-ai/mmp-api-remote-access": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-agent-default-model": "workspace:*",
+    "@mammoth-ai/mmp-agent-loop": "workspace:*",
+    "@mammoth-ai/mmp-agent-loop-testkit": "workspace:*",
+    "@mammoth-ai/mmp-agent-preset-registry": "workspace:*",
+    "@mammoth-ai/mmp-api-gateway": "workspace:*",
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-attachment-local": "workspace:*",
+    "@mammoth-ai/mmp-client-connection": "workspace:*",
+    "@mammoth-ai/mmp-client-file-upload": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
+    "@mammoth-ai/mmp-client-test-runtime": "workspace:*",
+    "@mammoth-ai/mmp-commands": "workspace:*",
+    "@mammoth-ai/mmp-credentials": "workspace:*",
+    "@mammoth-ai/mmp-file-reference": "workspace:*",
+    "@mammoth-ai/mmp-fs": "workspace:*",
+    "@mammoth-ai/mmp-fs-local": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-native-command": "workspace:*",
+    "@mammoth-ai/mmp-permission-presets": "workspace:*",
+    "@mammoth-ai/mmp-remote-mock": "workspace:*",
+    "@mammoth-ai/mmp-scope": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence-jsonl": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-session-projection-cache": "workspace:*",
+    "@mammoth-ai/mmp-session-query": "workspace:*",
+    "@mammoth-ai/mmp-session-title": "workspace:*",
+    "@mammoth-ai/mmp-settings": "workspace:*",
+    "@mammoth-ai/mmp-skill": "workspace:*",
+    "@mammoth-ai/mmp-storage": "workspace:*",
+    "@mammoth-ai/mmp-storage-domain": "workspace:*",
+    "@mammoth-ai/mmp-storage-json": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-typert-protocol": "workspace:*",
+    "@mammoth-ai/mmp-typert-registry": "workspace:*",
+    "@mammoth-ai/mmp-util-crypto": "workspace:*",
+    "@mammoth-ai/mmp-util-time": "workspace:*",
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@mammoth-ai/mmp-util-workspace-path": "workspace:*",
+    "@mammoth-ai/mmp-workspace": "workspace:*",
+    "@types/mime-types": "^3.0.1",
+    "@mammoth-ai/mmp-working-directory": "workspace:*"
+  }
+}

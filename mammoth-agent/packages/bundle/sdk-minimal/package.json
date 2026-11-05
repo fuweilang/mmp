@@ -1,0 +1,80 @@
+{
+  "name": "@mammoth-ai/mmp-sdk-minimal",
+  "description": "The standalone minimal SDK profile bundle: JSON-RPC, one DeepSeek adapter, persistent shell, and JSONL sessions",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/bundle/sdk-minimal"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "cordis.patch.yml",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "mmp": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@mammoth-ai/cordis-plugin-timer": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-agent-loop": "workspace:*",
+    "@mammoth-ai/mmp-attachment-local": "workspace:*",
+    "@mammoth-ai/mmp-compaction-basic": "workspace:*",
+    "@mammoth-ai/mmp-compaction-image-offload": "workspace:*",
+    "@mammoth-ai/mmp-deepseek-llm-api-extensions": "workspace:*",
+    "@mammoth-ai/mmp-jobs-local": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-llm-deepseek-api-key": "workspace:*",
+    "@mammoth-ai/mmp-llm-retry": "workspace:*",
+    "@mammoth-ai/mmp-mcp-resources": "workspace:*",
+    "@mammoth-ai/mmp-plugin-package-inventory-deepseek": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-local": "workspace:*",
+    "@mammoth-ai/mmp-sandbox-policy": "workspace:*",
+    "@mammoth-ai/mmp-sdk-app": "workspace:*",
+    "@mammoth-ai/mmp-sdk-jsonrpc-server": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-checkpoint-policy": "workspace:*",
+    "@mammoth-ai/mmp-session-log-deepseek": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence-jsonl": "workspace:*",
+    "@mammoth-ai/mmp-session-projection": "workspace:*",
+    "@mammoth-ai/mmp-session-title": "workspace:*",
+    "@mammoth-ai/mmp-subprocess-local": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*",
+    "@mammoth-ai/mmp-terminal": "workspace:*",
+    "@mammoth-ai/mmp-terminal-bash": "workspace:*",
+    "@mammoth-ai/mmp-token-meter": "workspace:*",
+    "@mammoth-ai/mmp-tool-bash-persistent": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-native": "workspace:*",
+    "@mammoth-ai/mmp-tool-fs": "workspace:*",
+    "@mammoth-ai/mmp-tool-pwsh-persistent": "workspace:*",
+    "@mammoth-ai/mmp-tools": "workspace:*",
+    "@mammoth-ai/mmp-working-directory": "workspace:*",
+    "@mammoth-ai/mmp-tool-working-directory": "workspace:*",
+    "@mammoth-ai/mmp-fs-local": "workspace:*"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~"
+  }
+}

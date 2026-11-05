@@ -1,0 +1,83 @@
+{
+  "name": "@mammoth-ai/mmp-experimental-client-ui-voice-input",
+  "description": "Record speech and insert editable text into the conversation draft",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/experimental/client-ui-voice-input"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    }
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/client.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {},
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-api-remotes": "workspace:*",
+    "@mammoth-ai/mmp-api-session-controller": "workspace:*",
+    "@mammoth-ai/mmp-client-locale": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-conversation": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-primitives": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-renderer": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-session": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-slots": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-typert-protocol": "workspace:*",
+    "@mammoth-ai/mmp-experimental-api-speech-to-text": "workspace:*",
+    "@mammoth-ai/mmp-experimental-speech-to-text": "workspace:*",
+    "@mammoth-ai/mmp-client-test-runtime": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@testing-library/react": "^16.3.3",
+    "@mammoth-ai/mmp-api-gateway": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-plugin-manager": "workspace:*"
+  },
+  "mmp": {
+    "client": {
+      "inject": [
+        "@mammoth-ai/mmp-api-remotes",
+        "@mammoth-ai/mmp-api-session-controller",
+        "@mammoth-ai/mmp-client-locale",
+        "@mammoth-ai/mmp-client-ui-conversation",
+        "@mammoth-ai/mmp-client-ui-primitives",
+        "@mammoth-ai/mmp-api-gateway",
+        "@mammoth-ai/mmp-client-ui-plugin-manager"
+      ],
+      "platform": "web",
+      "external": [
+        "@mammoth-ai/mmp-api-gateway/client"
+      ]
+    }
+  },
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  }
+}

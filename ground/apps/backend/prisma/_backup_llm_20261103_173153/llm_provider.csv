@@ -1,0 +1,2 @@
+id,name,display_name,kind,base_url,api_key_enc,api_key_hint,note,enabled,sort_order,created_at,updated_at
+cmw0ghxjo00005l935re8gj0d,deepseek,DeepSeek,openai_compatible,https://api.deepseek.com,v1:oLTjSr5VGH5sJqPL:DkGeA-9hVbJldy012A7v2g:ZQQQvbNsnZZQaJjPG8EvBN4qnAJ2HdV_bTCOrcmZoinz6Uc,••••ce6d,,t,0,2026-11-03 08:59:15.348,2026-11-03 09:15:37.42

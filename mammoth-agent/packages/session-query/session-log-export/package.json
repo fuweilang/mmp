@@ -1,0 +1,87 @@
+{
+  "name": "@mammoth-ai/mmp-session-log-export",
+  "description": "Web Session-log ZIP export and Session Markdown copy",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/session-query/session-log-export"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/client.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@mammoth-ai/mmp-session-format": "workspace:*",
+    "@mammoth-ai/schemastery": "workspace:~",
+    "fflate": "^0.8.2",
+    "@mammoth-ai/mmp-brand": "workspace:*"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-client-connection": "workspace:*",
+    "@mammoth-ai/mmp-client-locale": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-commands": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-conversation": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-layout": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-message-feedback": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-primitives": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-renderer": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-session": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-slots": "workspace:*",
+    "@mammoth-ai/mmp-commands": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence": "workspace:*",
+    "@mammoth-ai/mmp-session-query": "workspace:*",
+    "@mammoth-ai/mmp-session-title": "workspace:*",
+    "react": "^18.2.0"
+  },
+  "mmp": {
+    "client": {
+      "inject": [
+        "@mammoth-ai/mmp-client-locale",
+        "@mammoth-ai/mmp-client-ui-commands",
+        "@mammoth-ai/mmp-client-ui-conversation",
+        "@mammoth-ai/mmp-client-ui-layout",
+        "@mammoth-ai/mmp-client-ui-renderer",
+        "@mammoth-ai/mmp-client-ui-session"
+      ],
+      "platform": "web"
+    }
+  }
+}

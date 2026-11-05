@@ -1,0 +1,114 @@
+{
+  "name": "@mammoth-ai/mmp-client-ui-chat",
+  "description": "Chat Conversation target, node definitions, renderers, and details surface",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/client/ui-chat"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./assets/*": "./lib/assets/*",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "mmp": {
+    "client": {
+      "inject": [
+        "@mammoth-ai/mmp-api-session-controller",
+        "@mammoth-ai/mmp-api-workspace-controller",
+        "@mammoth-ai/mmp-client-connection",
+        "@mammoth-ai/mmp-client-locale",
+        "@mammoth-ai/mmp-client-ui-conversation",
+        "@mammoth-ai/mmp-client-ui-input-trigger",
+        "@mammoth-ai/mmp-client-ui-layout",
+        "@mammoth-ai/mmp-client-ui-renderer",
+        "@mammoth-ai/mmp-client-ui-session",
+        "@mammoth-ai/mmp-client-ui-settings",
+        "@mammoth-ai/mmp-client-ui-sidebar-right",
+        "@mammoth-ai/mmp-client-ui-workspace",
+        "@mammoth-ai/mmp-client-ui-file-drag",
+        "@mammoth-ai/mmp-client-ui-context-menu"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-agent": "workspace:*",
+    "@mammoth-ai/mmp-api-remotes": "workspace:*",
+    "@mammoth-ai/mmp-api-session-controller": "workspace:*",
+    "@mammoth-ai/mmp-api-workspace-controller": "workspace:*",
+    "@mammoth-ai/mmp-api-workspace-files": "workspace:*",
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/mmp-client-connection": "workspace:*",
+    "@mammoth-ai/mmp-client-locale": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-approval": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-conversation": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-input-trigger": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-layout": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-primitives": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-renderer": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-session": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-settings": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-sidebar-browser": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-sidebar-documentpreview": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-sidebar-right": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-slots": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-workspace": "workspace:*",
+    "@mammoth-ai/mmp-commands": "workspace:*",
+    "@mammoth-ai/mmp-compaction": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-llm-retry": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-stats": "workspace:*",
+    "@mammoth-ai/mmp-session-turn-outline": "workspace:*",
+    "@mammoth-ai/mmp-subagent": "workspace:*",
+    "@mammoth-ai/mmp-token-meter": "workspace:*",
+    "@mammoth-ai/mmp-util-workspace-path": "workspace:*",
+    "@mammoth-ai/mmp-tool-executor-ptc": "workspace:*",
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@tanstack/react-virtual": "3.14.10",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@mammoth-ai/mmp-settings": "workspace:*",
+    "@mammoth-ai/mmp-client-product-analytics": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-file-drag": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-context-menu": "workspace:*"
+  },
+  "dependencies": {
+    "@mammoth-ai/schemastery": "workspace:~"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/client.js",
+    "lib/assets",
+    "lib/types/**/*.d.ts"
+  ]
+}

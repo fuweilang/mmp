@@ -1,0 +1,30 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+.opencode/
+# Octop 源码纳入本仓；嵌套 git 挪到 .git.upstream，不要提交。
+Octop/.git.upstream/
+Octop/.venv/
+Octop/.venv-online/
+Octop/dashboard/node_modules/
+Octop/desktop/portable/release/
+Octop/desktop/portable/.cache/
+Octop/desktop/src/bin/
+coze-studio/
+coverage/
+.turbo/
+*.tsbuildinfo
+apps/backend/generated/
+apps/backend/.oidc-keys.json
+apps/backend/uploads/
+downloads/*.dmg
+downloads/*.exe
+# Local backups / dumps — never commit
+*.env.bak*
+.env*.bak*
+*.bak*
+downloads/*.dump
+
+apps/backend/.local-backups/

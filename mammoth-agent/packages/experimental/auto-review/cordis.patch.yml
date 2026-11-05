@@ -1,0 +1,3 @@
+- insert:
+    - id: auto-review
+      name: '@mammoth-ai/mmp-experimental-auto-review'

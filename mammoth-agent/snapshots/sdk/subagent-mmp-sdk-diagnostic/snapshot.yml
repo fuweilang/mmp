@@ -1,0 +1,8 @@
+version: 1
+scenario: subagent-mmp-sdk-diagnostic
+profile: sdk
+composition: sdk-mmp-sdk-diagnostic
+recording: live
+header:
+  class: sdk-mmp-sdk-diagnostic
+  pin: true

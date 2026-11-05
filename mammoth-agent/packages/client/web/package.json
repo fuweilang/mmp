@@ -1,0 +1,54 @@
+{
+  "name": "@mammoth-ai/mmp-client-web",
+  "description": "Web boot kernel: static module table, Cordis loader, framework-free boot page, and UI-renderer handoff",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/client/web"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./injections": {
+      "types": "./lib/types/apply-injections.d.ts",
+      "default": "./lib/apply-injections.js"
+    }
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-client-modules": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-dockkit": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-renderer": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-primitives": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-slots": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^6.0.3",
+    "@mammoth-ai/mmp-host-webserver": "workspace:*",
+    "zod": "4.4.3",
+    "@tanstack/react-virtual": "3.14.10"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/**/*.css",
+    "lib/apply-injections.js",
+    "lib/types/**/*.d.ts"
+  ]
+}

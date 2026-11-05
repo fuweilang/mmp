@@ -1,0 +1,29 @@
+# SDK-profile patch for the child runtime in the cwd-inheritance proof.
+
+- id: llm-deepseek
+  name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+  disabled: true
+
+- id: system-prompt
+  name: '@mammoth-ai/mmp-system-prompt'
+  config:
+    personaPrefix: 'Echo where you run.'
+
+- id: agent-instructions
+  name: '@mammoth-ai/mmp-agent-instructions'
+  disabled: true
+
+- id: skill-filesystem
+  name: '@mammoth-ai/mmp-skill-filesystem'
+  config:
+    includeDefaultRoots: false
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: none
+
+- insert:
+    - id: child-mock-llm
+      name: './child-mock-llm.ts'

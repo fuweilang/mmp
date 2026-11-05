@@ -1,0 +1,25 @@
+- name: '@mammoth-ai/mmp-llm'
+- name: '@mammoth-ai/mmp-session'
+- name: '@mammoth-ai/mmp-session-projection'
+- name: '@mammoth-ai/mmp-system-prompt'
+- name: '@mammoth-ai/mmp-tools'
+- name: '@mammoth-ai/mmp-tool-executor-native'
+- name: '@mammoth-ai/mmp-agent'
+- name: '@mammoth-ai/mmp-agent-loop'
+  config:
+    agents: []
+- name: '@mammoth-ai/mmp-credentials-local'
+  config:
+    path: {{credentials}}
+    watch: false
+- name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+  config:
+    apiKeyEnv: DEEPSEEK_API_KEY
+    baseURL: {{endpoint}}
+    thinking: enabled
+    reasoningEffort: high
+    maxTokens: 256000
+    streamIdleTimeoutMs: 300000
+- name: '@mammoth-ai/mmp-llm-deepseek-account'
+  config:
+    baseURL: {{endpoint}}

@@ -1,0 +1,31 @@
+# Keyless replay counterpart: deterministic HTTP remains real; only the model
+# adapter is replaced by replay.
+- id: llm-deepseek
+  name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+  disabled: true
+
+- insert:
+    - id: llm-replay
+      name: '@mammoth-ai/mmp-llm-replay'
+      config:
+        providers:
+          - id: deepseek-official
+            name: DeepSeek
+            models:
+              - id: deepseek-v4-flash
+              - id: deepseek-v4-pro
+
+    - id: web-fetch-fixture
+      name: './web-fetch-fixture-server.mjs'
+
+- id: web
+  name: '@mammoth-ai/mmp-web'
+
+- id: web-fetch-http
+  name: '@mammoth-ai/mmp-web-fetch-http'
+  disabled: true
+
+- id: tool-web
+  name: '@mammoth-ai/mmp-tool-web'
+  config:
+    search: false

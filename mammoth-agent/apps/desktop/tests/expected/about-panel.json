@@ -1,0 +1,54 @@
+{
+  "darwin:en-US": {
+    "menu": [
+      { "label": "About 猛犸智能体", "role": "about" },
+      { "type": "separator" }
+    ],
+    "options": {
+      "applicationName": "猛犸智能体",
+      "applicationVersion": "1.0.0",
+      "version": "",
+      "copyright": "",
+      "iconPath": "<app icon>"
+    }
+  },
+  "darwin:zh-CN": {
+    "menu": [
+      { "label": "关于猛犸智能体", "role": "about" },
+      { "type": "separator" }
+    ],
+    "options": {
+      "applicationName": "猛犸智能体",
+      "applicationVersion": "1.0.0",
+      "version": "",
+      "copyright": "",
+      "iconPath": "<app icon>"
+    }
+  },
+  "win32:zh-CN": {
+    "menu": [
+      { "label": "关于猛犸智能体" },
+      { "type": "separator" }
+    ],
+    "options": {
+      "applicationName": "猛犸智能体",
+      "applicationVersion": "1.0.0",
+      "version": "",
+      "copyright": "",
+      "iconPath": "<app icon>"
+    }
+  },
+  "win32:en-US": {
+    "menu": [
+      { "label": "About 猛犸智能体" },
+      { "type": "separator" }
+    ],
+    "options": {
+      "applicationName": "猛犸智能体",
+      "applicationVersion": "1.0.0",
+      "version": "",
+      "copyright": "",
+      "iconPath": "<app icon>"
+    }
+  }
+}

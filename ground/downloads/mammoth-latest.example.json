@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-10-28T10:00:00+08:00",
+  "platforms": {
+    "darwin-arm64": {
+      "portable": {
+        "version": "0.0.0-example",
+        "url": "https://www.mmai.vip/downloads/mammoth-portable-darwin-arm64-0.0.0-example.zip",
+        "sha256": "REPLACE_WITH_SHA256_OF_ZIP"
+      },
+      "shell": {
+        "version": "0.0.0-example",
+        "url": "https://www.mmai.vip/downloads/mammoth-agent-mac-arm64.dmg"
+      }
+    },
+    "darwin-amd64": {
+      "portable": {
+        "version": "0.0.0-example",
+        "url": "https://www.mmai.vip/downloads/mammoth-portable-darwin-amd64-0.0.0-example.zip",
+        "sha256": "REPLACE_WITH_SHA256_OF_ZIP"
+      },
+      "shell": {
+        "version": "0.0.0-example",
+        "url": "https://www.mmai.vip/downloads/mammoth-agent-mac-x64.dmg"
+      }
+    },
+    "windows-amd64": {
+      "portable": {
+        "version": "0.0.0-example",
+        "url": "https://www.mmai.vip/downloads/mammoth-portable-windows-amd64-0.0.0-example.zip",
+        "sha256": "REPLACE_WITH_SHA256_OF_ZIP"
+      },
+      "shell": {
+        "version": "0.0.0-example",
+        "url": "https://www.mmai.vip/downloads/mammoth-agent-win.exe"
+      }
+    }
+  }
+}

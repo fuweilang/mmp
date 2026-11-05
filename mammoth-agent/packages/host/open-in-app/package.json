@@ -1,0 +1,54 @@
+{
+  "name": "@mammoth-ai/mmp-host-open-in-app",
+  "description": "Host half of open-in-app: resolved application catalog, icons, and the launch endpoint as three webServer routes",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/host/open-in-app"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./shared": {
+      "types": "./lib/types/shared.d.ts",
+      "default": "./lib/types/shared.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@mammoth-ai/mmp-launch-environment": "workspace:*",
+    "@mammoth-ai/mmp-native-command": "workspace:*",
+    "@mammoth-ai/mmp-subprocess": "workspace:*",
+    "@mammoth-ai/schemastery": "workspace:~"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-host-webserver": "workspace:*"
+  }
+}

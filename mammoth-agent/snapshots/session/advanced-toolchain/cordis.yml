@@ -1,0 +1,41 @@
+# Native inspection, scoped PTC, then native subagents and workflow.
+- id: agent-default-model
+  name: '@mammoth-ai/mmp-agent-default-model'
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-pro
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: !!js 'process.env.MMP_SNAPSHOT === undefined ? ''zstd'' : ''none'''
+
+- id: agent-instructions
+  name: '@mammoth-ai/mmp-agent-instructions'
+  config:
+    maxBytes: 65536
+
+- id: tool-executor-native
+  disabled: false
+
+- id: tool-executor-ptc
+  disabled: true
+
+- id: system-prompt
+  name: '@mammoth-ai/mmp-system-prompt'
+  config:
+    personaPrefix: |
+      You are a coding assistant powered by the {{model}} model.
+
+      Verify your work by running the code or tests. Keep answers brief and factual.
+
+- insert:
+    - id: cordis-host-runner
+      name: '@mammoth-ai/mmp-cordis-host-runner'
+    - id: cordis-inspect-providers
+      name: '@mammoth-ai/mmp-tool-cordis/host'
+    - id: tool-cordis
+      name: '@mammoth-ai/mmp-tool-cordis'
+    - id: advanced-toolchain-presentation
+      name: './presentation.mjs'

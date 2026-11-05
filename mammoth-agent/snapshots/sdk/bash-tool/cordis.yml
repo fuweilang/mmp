@@ -1,0 +1,29 @@
+# SDK snapshot-record composition without provider-specific upload metadata.
+
+- id: skill-filesystem
+  name: '@mammoth-ai/mmp-skill-filesystem'
+  config:
+    includeDefaultRoots: false
+
+- id: llm-deepseek
+  name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+  config:
+    thinking: enabled
+    reasoningEffort: max
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: !!js "process.env.MMP_SNAPSHOT === undefined ? 'zstd' : 'none'"
+
+- id: tool-subagent
+  name: '@mammoth-ai/mmp-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    maxDepth: 1
+
+- id: session-log-deepseek
+  config:
+    enabled: false

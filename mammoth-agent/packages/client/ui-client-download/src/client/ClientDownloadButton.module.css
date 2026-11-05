@@ -1,0 +1,220 @@
+/* Compact download card aligned with the account launcher below it. */
+.action {
+  align-items: center;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 2%, transparent);
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+  border-radius: 12px;
+  box-sizing: border-box;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 13px;
+  gap: 10px;
+  min-height: 46px;
+  margin: 4px 2px 8px;
+  padding: 7px 10px;
+  text-align: start;
+  width: calc(100% - 4px);
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.action:hover {
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) 6%, transparent);
+  border-color: color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) 24%, transparent);
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  outline-offset: 2px;
+}
+
+.actionIcon {
+  align-items: center;
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) 9%, transparent);
+  border-radius: 8px;
+  color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  display: flex;
+  flex: none;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.actionLabel {
+  flex: 1;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actionArrow {
+  color: var(--dsw-alias-label-tertiary);
+  display: flex;
+  flex: none;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.action:hover .actionArrow {
+  color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  transform: translateX(2px);
+}
+
+.action[data-wide='false'] {
+  background: transparent;
+  border-color: transparent;
+  height: 36px;
+  justify-content: center;
+  margin: 2px 0 6px;
+  min-height: 36px;
+  padding: 0;
+  width: 36px;
+}
+
+.action[data-wide='false'] .actionIcon {
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.action[data-wide='false']:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action, .actionArrow { transition: none; }
+  .action:hover .actionArrow { transform: none; }
+}
+
+.dialog {
+  max-width: 460px;
+}
+
+.tip {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0 0 4px;
+}
+
+.meta {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+
+/* Option cards: separate cards with gaps, matching the 中台 dialog. */
+.optionList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.option {
+  align-items: center;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-md);
+  cursor: pointer;
+  display: flex;
+  gap: 14px;
+  padding: 14px 16px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.option:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  border-color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+}
+
+.optionIcon {
+  align-items: center;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-sm);
+  color: var(--dsw-alias-label-secondary);
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.option:hover .optionIcon {
+  border-color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+}
+
+.optionIcon svg {
+  height: 20px;
+  width: 20px;
+}
+
+.optionText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.optionTitle {
+  align-items: center;
+  color: var(--dsw-alias-label-primary);
+  display: flex;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 8px;
+}
+
+.optionBadge {
+  border: 1px solid var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  border-radius: var(--dsw-radius-sm);
+  color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 18px;
+  padding: 0 6px;
+}
+
+.optionSub {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+/* Download action: outlined small button; whole-card hover fills brand color. */
+.optionAction {
+  align-items: center;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-sm);
+  color: var(--dsw-alias-label-primary);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 13px;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 12px;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.option:hover .optionAction {
+  background: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  border-color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  color: var(--dsw-alias-label-inverse, #ffffff);
+}
+
+.retry {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.option[aria-disabled='true'] { opacity: .5; cursor: default; }
+.option[aria-disabled='true']:hover { background: transparent; border-color: var(--dsw-alias-border-l2); }
+.option[aria-disabled='true']:hover .optionAction { background: transparent; color: var(--dsw-alias-label-secondary); border-color: var(--dsw-alias-border-l2); }

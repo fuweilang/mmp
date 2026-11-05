@@ -1,0 +1,39 @@
+# Minimal tool-pwsh composition: real app boot path, real pwsh executor, real
+# foreground + background tool calls; driven by the package's loader.spec.ts.
+- id: system-prompt
+  name: '@mammoth-ai/mmp-system-prompt'
+
+- id: fs
+  name: '@mammoth-ai/mmp-fs-local'
+
+- id: session-projections
+  name: '@mammoth-ai/mmp-session-projection'
+
+- id: working-directory
+  name: '@mammoth-ai/mmp-working-directory'
+
+- id: tools
+  name: '@mammoth-ai/mmp-tools'
+
+- id: tool-executor-native
+  name: '@mammoth-ai/mmp-tool-executor-native'
+
+- id: subprocess
+  name: '@mammoth-ai/mmp-subprocess-local'
+
+- id: bash
+  name: '@mammoth-ai/mmp-pwsh-local'
+  config:
+    graceMs: 200
+
+- id: shell-env
+  name: '@mammoth-ai/mmp-shell-env'
+
+- id: tasks
+  name: '@mammoth-ai/mmp-jobs-local'
+
+- id: tool-jobs
+  name: '@mammoth-ai/mmp-tool-jobs'
+
+- id: tool-pwsh
+  name: '@mammoth-ai/mmp-tool-pwsh'

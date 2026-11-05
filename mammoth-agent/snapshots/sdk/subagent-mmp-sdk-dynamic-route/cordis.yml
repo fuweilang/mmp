@@ -1,0 +1,68 @@
+# SDK-profile patch for a deterministic parent model that selects a route for
+# a separate SDK child runtime. Both runtimes persist their request headers.
+
+- id: llm-deepseek
+  name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+  disabled: true
+
+- id: tool-subagent
+  name: '@mammoth-ai/mmp-tool-subagent'
+  disabled: true
+
+- id: sdk-jsonrpc-server
+  name: '@mammoth-ai/mmp-sdk-jsonrpc-server'
+  disabled: true
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: none
+
+- insert:
+    - id: mock-llm
+      name: '../../../packages/subagent/subagent-mmp-sdk/tests/fixtures/loader/mock-delegating-llm.ts'
+      disabled: !!js process.env.MMP_SNAPSHOT !== 'record'
+
+    - id: subagent-mmp-sdk
+      name: '@mammoth-ai/mmp-subagent-mmp-sdk'
+      config:
+        profile: sdk
+        patches: !!js JSON.parse(process.env.MMP_TEST_CHILD_PATCHES ?? '[]')
+        mmpHome: !!js process.env.MMP_TEST_CHILD_HOME
+        provider: mock
+        model: mock-routed
+        env:
+          MMP_TELEMETRY_DISABLED: '1'
+
+    - id: subagent-model-selection-settings
+      name: '@mammoth-ai/mmp-tool-subagent/model-selection-settings'
+      config:
+        enabled: true
+        allowedModels:
+          - provider: mock
+            model: mock-routed
+
+    - id: tool-subagent-mmp-sdk
+      name: '../../../packages/subagent/subagent-mmp-sdk/tests/fixtures/loader/scoped-tool-subagent.ts'
+      config:
+        provider: mmp-sdk
+        toolName: subagent
+        agentOptions:
+          maxTokens: 777
+        maxDepth: 'provider-managed'
+
+    - id: sdk-jsonrpc-server-dynamic-live
+      name: '@mammoth-ai/mmp-sdk-jsonrpc-server'
+      inject: [sdkAppStartup, loader]
+      disabled: !!js process.env.MMP_SNAPSHOT !== 'record'
+      config:
+        maxTokensAsSuccess: true
+
+- id: session-log-deepseek
+  config:
+    enabled: false
+
+- insert:
+    - id: await-external-subagents
+      name: '../../../packages/test-support/session-snapshot/tests/fixtures/subagent-settlement-barrier.ts'

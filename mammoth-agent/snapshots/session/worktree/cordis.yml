@@ -1,0 +1,5 @@
+- insert:
+    - id: worktree
+      name: '@mammoth-ai/mmp-experimental-worktree'
+    - id: tool-worktree
+      name: '@mammoth-ai/mmp-experimental-tool-worktree'

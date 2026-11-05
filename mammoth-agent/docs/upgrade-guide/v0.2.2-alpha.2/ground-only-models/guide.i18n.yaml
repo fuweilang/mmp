@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.2-alpha.2/ground-only-models/guide.md
+/:
+  en: 70d5d50b0bb39bfc
+  zh: b14168c0ddae6800
+/ground-only-model-routing:
+  en: 873334cf44f70a82
+  zh: a738063d0d17cab4
+/ground-only-model-routing/change:
+  en: 5ba742a70ae1bbf9
+  zh: fbaf9f4af03a82f6
+/ground-only-model-routing/migration:
+  en: a07aa6186c9d867b
+  zh: 8835a1356b1f28df

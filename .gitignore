@@ -1,0 +1,48 @@
+# 两个项目共用此仓库；子目录 .gitignore 继续保留各自构建规则。
+
+# 本机发布包、生产配置和管理员凭据（不上传 GitHub）
+/release/
+/release-private/
+
+# 依赖和常见构建缓存
+node_modules/
+.pnpm-store/
+.turbo/
+*.tsbuildinfo
+coverage/
+__pycache__/
+*.pyc
+.venv/
+
+# 真实环境配置；允许提交脱敏模板
+.env
+.env.*
+*.env
+*.env.*
+!.env.example
+!.env.*.example
+!*.env.example
+!*.env.*.example
+
+# 本地密钥目录与签名文件
+secrets/
+*.p12
+*.pfx
+*.keystore
+id_rsa
+id_ed25519
+
+# 本地备份、数据库导出和旧嵌套 Git 记录
+*.bak
+*.bak-*
+*.bak.*
+*.dump
+*.sql.gz
+.git.upstream/
+.git.backup/
+
+# 系统与日志
+.DS_Store
+._*
+Thumbs.db
+*.log

@@ -1,0 +1,71 @@
+name: CI
+
+# 直接往 1.0 推也要有 CI（以前只监听 pull_request，1.0 从没触发过）。
+# 拆成 web / api 两个 job：谁红了看名字就知道。
+on:
+  push:
+    branches: [1.0, main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  version:
+    name: Version SSOT
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # ground 仓库里没有 Octop，脚本会跳过 pyproject/__init__ 的比对；
+      # 发版 worktree（两个仓库都在）里跑同一条命令才是完整校验。
+      - name: Check version consistency
+        run: node scripts/check-version.mjs
+
+  web:
+    name: Web / console
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck + build (frontend)
+        run: pnpm verify-web
+
+  api:
+    name: API / console
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # nest build = tsc 全量编译，等于后端的 typecheck
+      - name: Build (backend)
+        run: pnpm verify-api

@@ -1,0 +1,10 @@
+- insert:
+    - id: experimental-inspector
+      name: '@mammoth-ai/mmp-experimental-inspector'
+      disabled: false
+      config:
+        captureFetch: true
+    - id: session-inspector
+      name: '@mammoth-ai/mmp-experimental-session-inspector'
+    - id: client-ui-stats
+      name: '@mammoth-ai/mmp-experimental-client-ui-stats'

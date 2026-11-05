@@ -1,0 +1,55 @@
+- id: llm-deepseek
+  name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+  disabled: true
+
+- id: agent-default-model
+  name: '@mammoth-ai/mmp-agent-default-model'
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-flash
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: none
+
+- id: agent-instructions
+  name: '@mammoth-ai/mmp-agent-instructions'
+  config:
+    maxBytes: 65536
+
+- id: tool-executor-native
+  disabled: false
+
+- id: tool-executor-ptc
+  disabled: true
+
+- id: system-prompt
+  name: '@mammoth-ai/mmp-system-prompt'
+  config:
+    personaPrefix: |
+      You are a coding assistant powered by the {{model}} model.
+
+      Verify your work by running the code or tests. Keep answers brief and factual.
+
+- insert:
+    - id: cordis-host-runner
+      name: '@mammoth-ai/mmp-cordis-host-runner'
+      config:
+        clientInspectTimeoutMs: 100
+    - id: cordis-inspect-providers
+      name: '@mammoth-ai/mmp-tool-cordis/host'
+    - id: tool-cordis
+      name: '@mammoth-ai/mmp-tool-cordis'
+    - id: llm-replay
+      name: '@mammoth-ai/mmp-llm-replay'
+      config:
+        providers:
+          - id: deepseek-official
+            name: DeepSeek
+            models:
+              - id: deepseek-v4-flash
+              - id: deepseek-v4-pro
+    - id: client-inspect-timeout-fixture
+      name: ./client-fixture.mjs

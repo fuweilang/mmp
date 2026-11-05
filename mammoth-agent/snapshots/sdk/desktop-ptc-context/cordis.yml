@@ -1,0 +1,42 @@
+# TypeScript SDK snapshot-record patch over `mmp --profile sdk`.
+
+# The fixture corpus must not depend on the developer's personal skill roots.
+# Ordinary product launches retain the sdk profile's default skill discovery.
+- id: skill-filesystem
+  name: '@mammoth-ai/mmp-skill-filesystem'
+  config:
+    includeDefaultRoots: false
+
+- id: llm-deepseek
+  name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+  config:
+    thinking: enabled
+    reasoningEffort: max
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: !!js "process.env.MMP_SNAPSHOT === undefined ? 'zstd' : 'none'"
+
+- id: tool-subagent
+  name: '@mammoth-ai/mmp-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    maxDepth: 1
+
+# The process-local clock is deterministic; native timers remain live.
+- insert:
+    - id: snapshot-clock
+      name: './clock.mjs'
+
+- id: time-context
+  config:
+    timeZone: UTC
+
+- id: tool-executor-native
+  disabled: true
+
+- id: tool-executor-ptc
+  disabled: false

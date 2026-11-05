@@ -1,0 +1,77 @@
+# The SDK application over mmp-base. Stdout belongs exclusively to JSON-RPC.
+
+- id: system-prompt
+  config:
+    personaPrefix: >-
+      You are a coding agent powered by the {{model}} model.
+
+- id: session-title-llm
+  disabled: true
+
+- insert:
+    - id: sdk-app-startup
+      name: '@mammoth-ai/mmp-sdk-app'
+      config:
+        profile: sdk
+
+    - id: sdk-jsonrpc-server
+      name: '@mammoth-ai/mmp-sdk-jsonrpc-server'
+      inject: [sdkAppStartup, loader]
+      config:
+        maxTokensAsSuccess: !!js "process.env.MMP_MAX_TOKENS_AS_SUCCESS === undefined ? true : JSON.parse(process.env.MMP_MAX_TOKENS_AS_SUCCESS)"
+
+- id: hmr
+  disabled: true
+
+- id: tool-plugin-manager
+  disabled: false
+
+# The packaged carrier supplies a default; MMP_PRIMARY_RUNTIME overrides it,
+# including an empty-string opt-out. Each row can be patched independently.
+- insert:
+    - id: workspace-dependencies
+      name: '@mammoth-ai/mmp-tool-workspace-dependencies'
+      disabled: !!js "!(process.env.MMP_PRIMARY_RUNTIME ?? process.env.MMP_BUNDLED_PRIMARY_RUNTIME)"
+      config:
+        source: !!js "process.getBuiltinModule('node:path').resolve(process.env.MMP_PRIMARY_RUNTIME ?? process.env.MMP_BUNDLED_PRIMARY_RUNTIME ?? '')"
+
+    - id: skill-office
+      name: '@mammoth-ai/mmp-skill-office'
+      disabled: !!js "!(process.env.MMP_PRIMARY_RUNTIME ?? process.env.MMP_BUNDLED_PRIMARY_RUNTIME) && !process.env.MMP_BUNDLED_OFFICE_CLI"
+      config:
+        assetRoot: !!js "process.env.MMP_BUNDLED_OFFICE_SKILLS ?? process.getBuiltinModule('node:path').resolve(process.env.MMP_PRIMARY_RUNTIME ?? process.env.MMP_BUNDLED_PRIMARY_RUNTIME ?? '', '..', 'office-skills')"
+        cli: !!js "process.env.MMP_BUNDLED_OFFICE_CLI === '' ? false : process.env.MMP_BUNDLED_OFFICE_CLI"
+        node: !!js "process.env.MMP_BUNDLED_OFFICE_NODE ?? process.getBuiltinModule('node:path').resolve(process.env.MMP_PRIMARY_RUNTIME ?? process.env.MMP_BUNDLED_PRIMARY_RUNTIME ?? '', 'dependencies', 'node', 'bin', process.platform === 'win32' ? 'node.exe' : 'node')"
+
+# Share native desktop tools and model context without starting a Web server.
+- insert:
+    - id: connection
+      name: '@mammoth-ai/mmp-client-connection'
+
+    - id: file-upload
+      name: '@mammoth-ai/mmp-client-file-upload'
+
+    - id: workspace
+      name: '@mammoth-ai/mmp-workspace'
+
+    - id: schedule
+      name: '@mammoth-ai/mmp-schedule'
+      inject: [sdkSessionActivation]
+
+    - id: time-context
+      name: '@mammoth-ai/mmp-time-context'
+
+    - id: tool-schedule
+      name: '@mammoth-ai/mmp-tool-schedule'
+
+    - id: tool-ask-user
+      name: '@mammoth-ai/mmp-tool-ask-user'
+
+    - id: present
+      name: '@mammoth-ai/mmp-tool-present'
+
+    - id: file-reference-local
+      name: '@mammoth-ai/mmp-file-reference-local'
+
+    - id: deliverable-file-references
+      name: '@mammoth-ai/mmp-deliverable-file-references'

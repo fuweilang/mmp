@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Habilidad de insignia MMP",
+    "description": "Permita que los agentes agreguen una insignia \"con tecnología de mmp\" a documentos, solicitudes de extracción y otros resultados.",
+    "detail": "docs/DETAIL.md"
+  }
+}

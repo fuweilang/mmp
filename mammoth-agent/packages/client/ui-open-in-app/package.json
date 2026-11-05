@@ -1,0 +1,94 @@
+{
+  "name": "@mammoth-ai/mmp-client-ui-open-in-app",
+  "description": "Web \"Open In...\" controls: the Session-header split button opening the workspace directory in an installed application, and the document preview's default-application controls for one file",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/client/ui-open-in-app"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/client.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
+  "license": "MIT",
+  "mmp": {
+    "client": {
+      "inject": [
+        "@mammoth-ai/mmp-api-gateway",
+        "@mammoth-ai/mmp-api-remotes",
+        "@mammoth-ai/mmp-api-session-controller",
+        "@mammoth-ai/mmp-client-locale",
+        "@mammoth-ai/mmp-client-shortcuts",
+        "@mammoth-ai/mmp-client-ui-conversation",
+        "@mammoth-ai/mmp-client-ui-layout",
+        "@mammoth-ai/mmp-client-ui-renderer",
+        "@mammoth-ai/mmp-client-ui-session",
+        "@mammoth-ai/mmp-client-ui-sidebar-documentpreview",
+        "@mammoth-ai/mmp-client-ui-context-menu",
+        "@mammoth-ai/mmp-client-ui-sidebar-right",
+        "@mammoth-ai/mmp-api-workspace-files",
+        "@mammoth-ai/mmp-client-ui-workspace"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-api-gateway": "workspace:*",
+    "@mammoth-ai/mmp-api-remotes": "workspace:*",
+    "@mammoth-ai/mmp-api-session-controller": "workspace:*",
+    "@mammoth-ai/mmp-client-locale": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
+    "@mammoth-ai/mmp-client-test-runtime": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-conversation": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-layout": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-primitives": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-renderer": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-session": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-sidebar-documentpreview": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-sidebar-files": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-slots": "workspace:*",
+    "@mammoth-ai/mmp-host-open-in-app": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "react": "^18.2.0",
+    "@mammoth-ai/mmp-client-ui-deliverables": "workspace:*",
+    "@mammoth-ai/mmp-native-command": "workspace:*",
+    "@mammoth-ai/mmp-client-shortcuts": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-context-menu": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-file-actions": "workspace:*",
+    "@mammoth-ai/mmp-util-workspace-path": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-sidebar-right": "workspace:*",
+    "@mammoth-ai/mmp-api-workspace-files": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-sidebar-browser": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-workspace": "workspace:*"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "name": "@mammoth-ai/mmp-llm",
+  "description": "Provider-neutral LLM service interface for the DeepSeek Harness",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/llm/llm"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./brand": {
+      "types": "./lib/types/brand.d.ts",
+      "default": "./lib/types/brand.js"
+    },
+    "./message": {
+      "types": "./lib/types/message.d.ts",
+      "default": "./lib/types/message.js"
+    },
+    "./assistant-stream": {
+      "types": "./lib/types/assistant-stream.d.ts",
+      "default": "./lib/types/assistant-stream.js"
+    },
+    "./typert": {
+      "types": "./lib/typert.host.d.ts",
+      "default": "./lib/typert.host.js"
+    },
+    "./remote": {
+      "types": "./lib/typert.remote-client.d.ts",
+      "default": "./lib/typert.remote-client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts",
+    "lib/typert.host.js",
+    "lib/typert.host.d.ts",
+    "lib/typert.remote-client.js",
+    "lib/typert.remote-client.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "dependencies": {
+    "@mammoth-ai/mmp-util-crypto": "workspace:*",
+    "@mammoth-ai/schemastery": "workspace:~",
+    "zod": "4.4.3",
+    "@mammoth-ai/mmp-timeout": "workspace:*",
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@mammoth-ai/mmp-typert-protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/mmp-attachment": "workspace:*",
+    "@mammoth-ai/mmp-package-manifest": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~"
+  }
+}

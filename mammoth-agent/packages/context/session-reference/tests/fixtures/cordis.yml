@@ -1,0 +1,20 @@
+- name: '@mammoth-ai/mmp-session'
+- name: '@mammoth-ai/mmp-system-prompt'
+- name: '@mammoth-ai/mmp-tools'
+- name: '@mammoth-ai/mmp-tool-executor-native'
+- name: '@mammoth-ai/mmp-fs-local'
+- name: '@mammoth-ai/mmp-session-projection'
+- name: '@mammoth-ai/mmp-working-directory'
+- name: '@mammoth-ai/mmp-tool-fs'
+- name: '@mammoth-ai/mmp-session-query-sqlite'
+  config:
+    path: ':memory:'
+    openAt: never
+- name: '@mammoth-ai/mmp-session-reference'
+  config:
+    maxReferenceBytes: 360
+- name: './source-session.ts'
+- name: '@mammoth-ai/mmp-spill-local'
+  config:
+    root: '{{spillRoot}}'
+    cleanupPeriodDays: 0

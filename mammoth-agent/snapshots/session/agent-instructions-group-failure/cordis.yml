@@ -1,0 +1,31 @@
+# The snapshot harness supplies scenario-local .mmp and .agents roots.
+- id: agent-default-model
+  name: '@mammoth-ai/mmp-agent-default-model'
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-pro
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: none
+
+- id: agent-instructions
+  name: '@mammoth-ai/mmp-agent-instructions'
+  config:
+    maxBytes: 65536
+    projectRootMarkers:
+      - .mmp-project
+
+- id: system-prompt
+  name: '@mammoth-ai/mmp-system-prompt'
+  config:
+    personaPrefix: |
+      You are a coding assistant powered by the {{model}} model.
+
+      Verify your work by running the code or tests. Keep answers brief and factual.
+
+- insert:
+    - id: workspace-context-global-failure
+      name: '../../../packages/test-support/session-snapshot/tests/fixtures/workspace-context-global-failure.ts'

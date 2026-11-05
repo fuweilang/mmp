@@ -1,0 +1,70 @@
+{
+  "name": "@mammoth-ai/mmp-experimental-translator",
+  "description": "Machine translation with reusable Session results",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/experimental/translator"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@mammoth-ai/schemastery": "workspace:~"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-timeout": "workspace:*",
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence": "workspace:*",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/mmp-credentials": "workspace:*",
+    "@mammoth-ai/mmp-launch-environment": "workspace:*"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-app-boot": "workspace:*",
+    "@mammoth-ai/mmp-timeout": "workspace:*",
+    "@mammoth-ai/mmp-util-values": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence": "workspace:*",
+    "@mammoth-ai/mmp-session-persistence-jsonl": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-credentials": "workspace:*",
+    "@mammoth-ai/mmp-launch-environment": "workspace:*",
+    "@mammoth-ai/mmp-llm-deepseek": "workspace:*",
+    "@mammoth-ai/mmp-llm-deepseek-api-key": "workspace:*",
+    "@mammoth-ai/mmp-llm-deepseek-account": "workspace:*",
+    "@mammoth-ai/mmp-deepseek-account": "workspace:*",
+    "@mammoth-ai/mmp-deepseek-llm-api-extensions": "workspace:*",
+    "@mammoth-ai/mmp-session-log-deepseek": "workspace:*",
+    "@mammoth-ai/mmp-session-query-sqlite": "workspace:*"
+  }
+}

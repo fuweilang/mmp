@@ -1,0 +1,9 @@
+- insert:
+    - id: cua-provider-registry
+      name: '../../../computer-use/computer-use/src/index.ts'
+    - id: cua
+      name: '../src/index.ts'
+      config:
+        agentPreset: false
+        # MMP_CUA_HELPER must name MMP Computer Use.app/Contents/MacOS/mmp-cua-native.
+        helperPath: !!js process.env.MMP_CUA_HELPER

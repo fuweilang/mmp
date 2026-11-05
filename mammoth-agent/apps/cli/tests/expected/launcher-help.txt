@@ -1,0 +1,32 @@
+Usage: mmp [--profile] <name> [options] [app-args...]
+       mmp plugin --profile <name> <pnpm-args...>
+
+mmp: boot a DeepSeek Harness profile — an ordered stack of plugin-bundle patch
+layers under your own overrides.
+
+Arguments:
+  args                           arguments for the booted profile's app (see:
+                                 mmp --profile <name> --help)
+
+Options:
+  -V, --version                  output the version number
+  --profile <name>               the profile under $MMP_HOME/profiles to boot
+  --from-default-profile <name>  replace a custom profile with a fresh copy of a
+                                 shipped profile template
+  --patch <path>                 extra patch-list overlay applied after the
+                                 profile layer (repeatable)
+  --dump-config                  print the composed profile tree and exit
+  --dump-config-schema           print JSON Schema for profile entries and
+                                 patches without mounting
+  --dump-default-config          print the profile tree without its user layer
+                                 or --patch overlays and exit
+
+Examples:
+  mmp web                                   boot the web profile (same as: mmp --profile web)
+  mmp rescue --from-default-profile web
+                                            recreate rescue from the shipped web template, then boot it
+  mmp headless "run the tests"              answer one task, print the result, and exit
+  mmp tui --patch ./extra.yml               boot a custom profile with one extra overlay
+  mmp tui --resume <session>                arguments after the launcher flags reach the app
+  mmp web --help                            the web app's own flags and help
+  mmp plugin --profile tui add <package>    install a plugin into the tui profile

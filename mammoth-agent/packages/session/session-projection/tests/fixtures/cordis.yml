@@ -1,0 +1,3 @@
+- name: '@mammoth-ai/mmp-session'
+- name: '@mammoth-ai/mmp-session-projection'
+- name: './legacy-plugin.ts'

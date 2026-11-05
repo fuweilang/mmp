@@ -1,0 +1,13 @@
+- insert:
+    - id: action-cards
+      name: '@mammoth-ai/mmp-action-cards'
+    - id: client-ui-action-cards
+      name: '@mammoth-ai/mmp-client-ui-action-cards'
+    - id: creation-recommendations
+      name: '@mammoth-ai/mmp-creation-recommendations'
+    - id: client-ui-creation-recommendations
+      name: '@mammoth-ai/mmp-client-ui-creation-recommendations'
+    - id: plugin-recommendations
+      name: '@mammoth-ai/mmp-plugin-recommendations'
+    - id: client-ui-plugin-recommendations
+      name: '@mammoth-ai/mmp-client-ui-plugin-recommendations'

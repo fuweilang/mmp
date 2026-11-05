@@ -1,0 +1,104 @@
+{
+  "name": "@mammoth-ai/mmp-client-ui-sidebar-documentpreview",
+  "description": "Extensible Sidebar previews for Office documents, spreadsheets, Markdown, code, images, PDF, HTML, and plain text",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/client/ui-sidebar-documentpreview"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "mmp": {
+    "client": {
+      "inject": [
+        "@mammoth-ai/mmp-api-gateway",
+        "@mammoth-ai/mmp-api-workspace-files",
+        "@mammoth-ai/mmp-client-resources",
+        "@mammoth-ai/mmp-client-ui-sidebar-right",
+        "@mammoth-ai/mmp-client-ui-session",
+        "@mammoth-ai/mmp-api-remotes",
+        "@mammoth-ai/mmp-client-locale",
+        "@mammoth-ai/mmp-client-ui-settings",
+        "@mammoth-ai/mmp-client-ui-file-drag",
+        "@mammoth-ai/mmp-client-ui-context-menu"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "devDependencies": {
+    "@mammoth-ai/cordis": "workspace:~",
+    "@mammoth-ai/mmp-api-gateway": "workspace:*",
+    "@mammoth-ai/mmp-api-remotes": "workspace:*",
+    "@mammoth-ai/mmp-api-workspace-files": "workspace:*",
+    "@mammoth-ai/mmp-client-connection": "workspace:*",
+    "@mammoth-ai/mmp-client-locale": "workspace:*",
+    "@mammoth-ai/mmp-client-resources": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
+    "@mammoth-ai/mmp-client-test-runtime": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-dockkit": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-primitives": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-renderer": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-session": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-settings": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-sidebar-files": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-sidebar-right": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-slots": "workspace:*",
+    "@mammoth-ai/mmp-office-to-pdf": "workspace:*",
+    "@mammoth-ai/mmp-host-webserver": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
+    "@mammoth-ai/mmp-util-workspace-path": "workspace:*",
+    "@fortune-sheet/core": "1.0.4",
+    "@fortune-sheet/react": "1.0.4",
+    "@testing-library/react": "^16.3.3",
+    "@types/papaparse": "^5.3.16",
+    "clsx": "^2.0.0",
+    "dompurify": "^3.4.16",
+    "exceljs": "4.4.0",
+    "fast-xml-parser": "5.11.1",
+    "fflate": "^0.8.3",
+    "papaparse": "5.7.0",
+    "pdfjs-dist": "6.3.289",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "yaml": "^2.9.0",
+    "@mammoth-ai/mmp-client-ui-file-drag": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-context-menu": "workspace:*"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "lib/client.js",
+    "lib/client.*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "dependencies": {
+    "@mammoth-ai/schemastery": "workspace:~"
+  }
+}

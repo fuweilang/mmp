@@ -1,0 +1,55 @@
+name: mmp-prod-v1
+services:
+  pg:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mammoth
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: mammoth_core
+    volumes:
+      - prod_pg:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U mammoth -d mammoth_core']
+      interval: 5s
+      retries: 20
+  api:
+    image: ${MMP_API_IMAGE:?set MMP_API_IMAGE}
+    restart: unless-stopped
+    env_file: production.env
+    environment:
+      DATABASE_URL: postgresql://mammoth:${POSTGRES_PASSWORD}@pg:5432/mammoth_core
+      PORT: '3100'
+    ports: ['127.0.0.1:33100:3100']
+    volumes:
+      - ./data/uploads:/app/apps/backend/uploads
+      - ./data/api-state:/app/state
+      - ./secrets:/app/secrets:ro
+    depends_on:
+      pg:
+        condition: service_healthy
+  web:
+    image: ${MMP_WEB_IMAGE:?set MMP_WEB_IMAGE}
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      GROUND_PUBLIC_ORIGIN: https://www.mmai.vip
+      MMP_WEB_PUBLIC_ORIGIN: https://www.mmai.vip
+      MMP_HOME: /state
+      MMP_WEB_BUILT_RUNTIME: '1'
+      MMP_WEB_SSO: '1'
+      MMP_WEB_WORKER_MODE: docker
+      MMP_WEB_WORKER_IMAGE: ${MMP_WEB_IMAGE}
+      MMP_WEB_HOST_DATA_ROOT: ${MMP_WEB_HOST_DATA_ROOT:?set absolute host data directory}
+      MMP_WEB_MAX_IDENTITIES: ${MMP_WEB_MAX_IDENTITIES:-4}
+      MMP_WEB_WORKER_MEMORY_MB: ${MMP_WEB_WORKER_MEMORY_MB:-1024}
+      MMP_WEB_WORKER_CPUS: ${MMP_WEB_WORKER_CPUS:-1}
+      MMP_WEB_WORKER_PIDS: ${MMP_WEB_WORKER_PIDS:-256}
+    volumes:
+      - ${MMP_WEB_HOST_DATA_ROOT}:/state
+      # Only this narrow identity gateway gets Docker control; user workers NEVER mount it.
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: [node, runtime/serve-ground-web.mjs, --port, '33080', --no-open]
+volumes:
+  prod_pg:

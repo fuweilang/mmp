@@ -1,0 +1,80 @@
+# Minimal live counterpart for the glob-sampling snapshot composition.
+- id: llm-deepseek
+  name: '@mammoth-ai/mmp-llm-deepseek-api-key'
+  config:
+    models:
+      - id: deepseek-v4-pro
+
+- id: subprocess
+  name: '@mammoth-ai/mmp-subprocess-local'
+
+- id: agent-default-model
+  name: '@mammoth-ai/mmp-agent-default-model'
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-pro
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: !!js 'process.env.MMP_SNAPSHOT === undefined ? ''zstd'' : ''none'''
+
+- id: agent-instructions
+  name: '@mammoth-ai/mmp-agent-instructions'
+  disabled: true
+
+- id: system-prompt
+  name: '@mammoth-ai/mmp-system-prompt'
+  config:
+    personaPrefix: You are a concise snapshot agent.
+
+- id: tool-jobs
+  name: '@mammoth-ai/mmp-tool-jobs'
+  disabled: true
+
+- id: goal
+  name: '@mammoth-ai/mmp-goal'
+  disabled: true
+
+- id: goal-round-driver
+  name: '@mammoth-ai/mmp-goal-round-driver'
+  disabled: true
+
+- id: command-goal
+  name: '@mammoth-ai/mmp-command-goal'
+  disabled: true
+
+- id: tool-goal
+  name: '@mammoth-ai/mmp-tool-goal'
+  disabled: true
+
+- id: skill
+  name: '@mammoth-ai/mmp-skill'
+  disabled: true
+
+- id: skill-filesystem
+  name: '@mammoth-ai/mmp-skill-filesystem'
+  disabled: true
+
+- id: tool-skill
+  name: '@mammoth-ai/mmp-tool-skill'
+  disabled: true
+
+- id: tool-fs-search
+  name: '@mammoth-ai/mmp-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: true
+    globMaxResults: 4
+
+- id: spill-local
+  name: '@mammoth-ai/mmp-spill-local'
+  config:
+    root: !!js process.env.MMP_SNAPSHOT_SPILL_ROOT ?? './.spill'
+
+- insert:
+    - id: snapshot-spill-locators
+      name: ../../../scripts/snapshot-spill-locators.ts
+      config:
+        root: !!js process.env.MMP_SNAPSHOT_SPILL_ROOT
+        locatorRoot: !!js process.env.MMP_SNAPSHOT_SPILL_LOCATOR_ROOT

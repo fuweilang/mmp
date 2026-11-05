@@ -1,0 +1,19 @@
+- insert:
+    - id: optional-persistent-terminals
+      name: cordis:group
+      group: true
+      isolate:
+        terminals: true
+      config:
+        - id: optional-terminal-registry
+          name: '@mammoth-ai/mmp-terminal'
+        - id: optional-terminal-bash
+          name: '@mammoth-ai/mmp-terminal-bash'
+          disabled: !!js process.platform === 'win32'
+        - id: optional-terminal-pwsh
+          name: '@mammoth-ai/mmp-terminal-bash'
+          disabled: !!js process.platform !== 'win32'
+          config:
+            shellDialect: pwsh
+        - id: optional-tool-terminal
+          name: '@mammoth-ai/mmp-tool-terminal'

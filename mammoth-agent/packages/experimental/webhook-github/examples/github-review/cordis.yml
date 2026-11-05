@@ -1,0 +1,35 @@
+# Opt-in GitHub webhook overlay over the shipped Web composition. The second
+# WebServer lives in an isolated realm so exposing it never exposes the UI API.
+
+- insert:
+    - id: webhook-runtime
+      name: '@mammoth-ai/mmp-webhook'
+
+    - id: github-ready-review-rule
+      name: './github-ready-review-rule.mjs'
+      config:
+        source: primary-github
+        repository: deepseek-ai/deepseek-harness
+        workspacePath: !!js process.env.MMP_GITHUB_REVIEW_WORKSPACE ?? process.cwd()
+        agentPreset: standard
+        permissionPreset: read-only
+
+    - id: github-webhook-ingress
+      name: cordis:group
+      group: true
+      isolate:
+        webServer: true
+      config:
+        - id: github-webhook-server
+          name: '@mammoth-ai/mmp-host-webserver'
+          config:
+            host: '127.0.0.1'
+            port: !!js Number(process.env.MMP_GITHUB_WEBHOOK_PORT ?? 3081)
+
+        - id: github-webhook-adapter
+          name: '@mammoth-ai/mmp-webhook-github'
+          config:
+            source: primary-github
+            path: /github
+            secretEnv: MMP_GITHUB_WEBHOOK_SECRET
+            maxBodyBytes: 1048576

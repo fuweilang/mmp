@@ -1,0 +1,8 @@
+- insert:
+    - id: translator
+      name: '@mammoth-ai/mmp-experimental-translator'
+    - id: cot-translation
+      name: '@mammoth-ai/mmp-experimental-client-ui-cot-translation'
+      config:
+        provider: bing
+        targetLanguage: auto

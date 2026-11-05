@@ -1,0 +1,4 @@
+- id: sandbox
+  name: '@mammoth-ai/mmp-sandbox-local'
+- id: skills
+  name: '@mammoth-ai/mmp-skill'

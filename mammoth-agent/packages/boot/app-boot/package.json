@@ -1,0 +1,66 @@
+{
+  "name": "@mammoth-ai/mmp-app-boot",
+  "description": "Shared boot glue for the app bins: .env loading, fail-loud Loader guards, snapshot-aware config resolution, and the Loader boot sequence",
+  "version": "0.2.2-alpha.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/boot/app-boot"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./worker/profile-resolution-bootstrap": {
+      "types": "./lib/types/profile-resolution/worker-bootstrap.d.ts",
+      "default": "./lib/worker/profile-resolution-bootstrap.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/worker/profile-resolution-bootstrap.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@mammoth-ai/mmp-atomic-write": "workspace:*",
+    "@mammoth-ai/mmp-official-bundles": "workspace:*",
+    "@mammoth-ai/mmp-package-manifest": "workspace:*",
+    "@eslint-community/regexpp": "^4.12.2",
+    "ajv": "^8.20.0",
+    "js-yaml": "^4.3.2",
+    "node-addon-require-builtin": "^0.1.9",
+    "resolve.exports": "^2.0.3",
+    "semver": "^7.8.5"
+  },
+  "peerDependencies": {
+    "@mammoth-ai/cordis-plugin-group": "workspace:~",
+    "@mammoth-ai/cordis-plugin-include": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/mmp-launch-environment": "workspace:*",
+    "@mammoth-ai/mmp-home-paths": "workspace:*",
+    "@mammoth-ai/cordis": "workspace:~"
+  },
+  "devDependencies": {
+    "@mammoth-ai/schemastery": "workspace:~",
+    "@mammoth-ai/cordis-plugin-group": "workspace:~",
+    "@mammoth-ai/cordis-plugin-include": "workspace:~",
+    "@mammoth-ai/cordis-plugin-loader": "workspace:~",
+    "@mammoth-ai/cordis-plugin-timer": "workspace:~",
+    "@mammoth-ai/mmp-launch-environment": "workspace:*",
+    "@mammoth-ai/mmp-home-paths": "workspace:*",
+    "@mammoth-ai/mmp-system-prompt": "workspace:*",
+    "@types/js-yaml": "^4.0.9",
+    "@types/semver": "^7.8.0",
+    "@mammoth-ai/cordis": "workspace:~"
+  }
+}

@@ -1,0 +1,9 @@
+- insert:
+    - id: subagent-codex
+      name: '@mammoth-ai/mmp-subagent-codex'
+    - id: tool-subagent-codex
+      name: '@mammoth-ai/mmp-tool-subagent'
+      config:
+        provider: codex
+        toolName: subagent_codex
+        maxDepth: provider-managed

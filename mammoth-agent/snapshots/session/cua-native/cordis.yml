@@ -1,0 +1,45 @@
+- id: agent-default-model
+  name: '@mammoth-ai/mmp-agent-default-model'
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-flash-vision-exp
+
+- id: session-persistence-jsonl
+  name: '@mammoth-ai/mmp-session-persistence-jsonl'
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: none
+
+- id: tool-executor-native
+  disabled: false
+
+- id: tool-executor-ptc
+  disabled: true
+
+- id: system-prompt
+  name: '@mammoth-ai/mmp-system-prompt'
+  config:
+    personaPrefix: |
+      You are a coding assistant powered by the {{model}} model.
+
+      Verify your work by running the code or tests. Keep answers brief and factual.
+
+- id: attachment-local
+  name: '@mammoth-ai/mmp-attachment-local'
+
+- insert:
+    - id: computer-use
+      name: '@mammoth-ai/mmp-computer-use'
+    - id: cua-native
+      name: '@mammoth-ai/mmp-experimental-cua-macos'
+      config:
+        agentPreset: false
+        helperPath: !!js process.cwd() + '/native-helper.mjs'
+        allowedApps: [{"id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "name": "Fixture", "executablePath": "/fixture/app"}]
+
+- id: user-questions
+  name: '@mammoth-ai/mmp-user-questions'
+
+- insert:
+    - id: cua-permission-fixture
+      name: './permission-fixture.mjs'

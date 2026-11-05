@@ -1,0 +1,27 @@
+- insert:
+    - id: preset-delegate-a
+      name: '@mammoth-ai/mmp-agent-preset'
+      config:
+        id: delegate-a
+        plugins:
+          - name: '@mammoth-ai/mmp-tool-subagent'
+            config:
+              provider: spawn
+              allowedAgentPresets: [standard, ptc, minimal]
+          - name: '@mammoth-ai/mmp-tool-subagent'
+            config:
+              provider: fork
+              toolName: subagent_fork
+    - id: preset-delegate-b
+      name: '@mammoth-ai/mmp-agent-preset'
+      config:
+        id: delegate-b
+        plugins:
+          - name: '@mammoth-ai/mmp-tool-subagent'
+            config:
+              provider: spawn
+              allowedAgentPresets: [standard, ptc, minimal]
+          - name: '@mammoth-ai/mmp-tool-subagent'
+            config:
+              provider: fork
+              toolName: subagent_fork

@@ -1,0 +1,96 @@
+/** The standalone SDK-minimal bundle's complete declared Cordis tree. */
+
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import * as yaml from 'js-yaml'
+import { describe, expect, it } from 'vitest'
+import { entryListSchema } from '@mammoth-ai/cordis-plugin-include'
+
+function packageName(specifier: string): string {
+  return specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/') : specifier.split('/')[0]!
+}
+
+describe('mmp-sdk-minimal bundle', () => {
+  it('declares one standalone allowlisted tree with every row dependency', () => {
+    const root = fileURLToPath(new URL('..', import.meta.url))
+    const manifest = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as {
+      dependencies?: Record<string, string>
+      mmp?: { bundle?: { patch?: string } }
+    }
+    expect(manifest.mmp?.bundle?.patch).toBe('./cordis.patch.yml')
+    const patches = yaml.load(
+      readFileSync(resolve(root, manifest.mmp!.bundle!.patch!), 'utf8'),
+      { schema: entryListSchema },
+    ) as Array<{ insert?: Array<{ id?: string; inject?: string[]; name?: string; config?: Record<string, unknown>; disabled?: unknown }> }>
+    expect(patches).toHaveLength(1)
+    const rows = patches[0]?.insert ?? []
+    expect(rows.map(row => [row.id, row.name])).toEqual([
+      ['sdk-app-startup', '@mammoth-ai/mmp-sdk-app'],
+      ['sdk-jsonrpc-server', '@mammoth-ai/mmp-sdk-jsonrpc-server'],
+      ['deepseek-llm-api-extensions', '@mammoth-ai/mmp-deepseek-llm-api-extensions'],
+      ['session-log-deepseek', '@mammoth-ai/mmp-session-log-deepseek'],
+      ['plugin-package-inventory-deepseek', '@mammoth-ai/mmp-plugin-package-inventory-deepseek'],
+      ['llm-deepseek', '@mammoth-ai/mmp-llm-deepseek-api-key'],
+      ['sandbox', '@mammoth-ai/mmp-sandbox-local'],
+      ['filesystem', '@mammoth-ai/mmp-fs-local'],
+      ['attachment-local', '@mammoth-ai/mmp-attachment-local'],
+      ['tool-fs', '@mammoth-ai/mmp-tool-fs'],
+      ['working-directory', '@mammoth-ai/mmp-working-directory'],
+      ['tool-working-directory', '@mammoth-ai/mmp-tool-working-directory'],
+      ['session-projection', '@mammoth-ai/mmp-session-projection'],
+      ['token-meter', '@mammoth-ai/mmp-token-meter'],
+      ['compaction-basic', '@mammoth-ai/mmp-compaction-basic'],
+      ['image-offload', '@mammoth-ai/mmp-compaction-image-offload'],
+      ['sandbox-policy', '@mammoth-ai/mmp-sandbox-policy'],
+      ['subprocess', '@mammoth-ai/mmp-subprocess-local'],
+      ['pty', '@mammoth-ai/mmp-terminal'],
+      ['terminal-bash', '@mammoth-ai/mmp-terminal-bash'],
+      ['terminal-pwsh', '@mammoth-ai/mmp-terminal-bash'],
+      ['timer', '@mammoth-ai/cordis-plugin-timer'],
+      ['llm', '@mammoth-ai/mmp-llm'],
+      ['session', '@mammoth-ai/mmp-session'],
+      ['session-title', '@mammoth-ai/mmp-session-title'],
+      ['system-prompt', '@mammoth-ai/mmp-system-prompt'],
+      ['tools', '@mammoth-ai/mmp-tools'],
+      ['tool-executor-native', '@mammoth-ai/mmp-tool-executor-native'],
+      ['mcp-resources', '@mammoth-ai/mmp-mcp-resources'],
+      ['agent', '@mammoth-ai/mmp-agent'],
+      ['llm-retry', '@mammoth-ai/mmp-llm-retry'],
+      ['jobs', '@mammoth-ai/mmp-jobs-local'],
+      ['agent-loop', '@mammoth-ai/mmp-agent-loop'],
+      ['persistent-bash', '@mammoth-ai/mmp-tool-bash-persistent'],
+      ['persistent-pwsh', '@mammoth-ai/mmp-tool-pwsh-persistent'],
+      ['sessions', '@mammoth-ai/mmp-session-persistence-jsonl'],
+      ['session-checkpoint-policy', '@mammoth-ai/mmp-session-checkpoint-policy'],
+    ])
+    expect(rows.find(row => row.id === 'sdk-app-startup')?.config).toEqual({ profile: 'sdk-minimal' })
+    expect(rows.find(row => row.id === 'sdk-jsonrpc-server')).toMatchObject({
+      inject: ['sdkAppStartup', 'loader'],
+      config: { maxTokensAsSuccess: false },
+    })
+    expect(rows.find(row => row.id === 'llm-deepseek')?.config).toEqual({
+      apiKeyEnv: 'DEEPSEEK_API_KEY',
+      defaultContextWindow: { __jsExpr: 'Number(process.env.MMP_CONTEXT_WINDOW ?? 1000000)' },
+      streamIdleTimeoutMs: 172800000,
+    })
+    expect(rows.find(row => row.id === 'system-prompt')?.config).toEqual({
+      includeHarnessIdentity: false,
+      includeRuntimeContext: false,
+      personaPrefix: { __jsExpr: "process.env.MMP_SYSTEM_PROMPT ?? 'You are a helpful software engineer assistant.'" },
+    })
+    expect(rows.find(row => row.id === 'agent-loop')?.config).toEqual({ agents: [] })
+    expect(rows.find(row => row.id === 'tool-fs')?.config).toEqual({ read: false, readImage: true, write: false, edit: false })
+    expect(rows.find(row => row.id === 'compaction-basic')?.config).toBeUndefined()
+    expect(rows.find(row => row.id === 'terminal-bash')).toMatchObject({
+      disabled: { __jsExpr: "process.platform === 'win32'" },
+    })
+    expect(rows.find(row => row.id === 'terminal-pwsh')).toMatchObject({
+      disabled: { __jsExpr: "process.platform !== 'win32'" },
+      config: { shellDialect: 'pwsh', timeoutMs: 300000 },
+    })
+    expect(Object.keys(manifest.dependencies ?? {}).sort()).toEqual(
+      [...new Set(rows.map(row => row.name).filter((name): name is string => name !== undefined).map(packageName))].sort(),
+    )
+  })
+})

@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for 2026-11-04-desktop-account-data.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-04-desktop-account-data.md
+/agent-note-desktop-account-data-homes:
+  en: 90f2198358fd5d9f
+  zh: ddeeb981f0cd5429
+/agent-note-desktop-account-data-homes/problem:
+  en: 0882d2b305db0ef9
+  zh: 2b788d061e9db1b6
+/agent-note-desktop-account-data-homes/decision:
+  en: 1068d7bcc8dcdacb
+  zh: cb25c913452fa8ed
+/agent-note-desktop-account-data-homes/verification:
+  en: e1008b33811f0061
+  zh: b5707f94fa065681

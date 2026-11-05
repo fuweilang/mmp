@@ -1,0 +1,49 @@
+# Bilingual-pair consistency record for development.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/development.md
+/development-guide:
+  en: 543efdab722ce44a
+  zh: 021d6a1655ae8389
+/development-guide/setup-tutorial:
+  en: 5207d17725c07a27
+  zh: 258884c4300ac63a
+/development-guide/setup-tutorial/prerequisites:
+  en: c7d95e2482948a2a
+  zh: 972cb127939c09f4
+/development-guide/setup-tutorial/windows-and-wsl-2:
+  en: e86be579be6f1813
+  zh: 14f6a220337d0861
+/development-guide/setup-tutorial/first-time-setup:
+  en: 51ed8ba5378aa574
+  zh: 7c979955374e5412
+/development-guide/contributor-reference:
+  en: 3221d1076554001f
+  zh: 29f166be6a5c04d9
+/development-guide/contributor-reference/typescript-project-layout:
+  en: 38a5cd17b4fdde16
+  zh: b3ad54fa3e62047e
+/development-guide/contributor-reference/environment-variables:
+  en: dba2c72ee6ffa930
+  zh: b65c27fbb9129ec8
+/development-guide/contributor-reference/git-integrations:
+  en: 9ee1a5738d2fa2da
+  zh: d21b4b5370bc8da7
+/development-guide/contributor-reference/ci-gates:
+  en: c05fd490bfad9e9d
+  zh: 91d41a6b390755af
+/development-guide/contributor-reference/daily-commands:
+  en: 08aa6ec1cdabfeb7
+  zh: dcce5ae9d3c829d0
+/development-guide/contributor-reference/profile-runs:
+  en: 7ce6264a6a06dc4a
+  zh: e12b684f2bef942b
+/development-guide/contributor-reference/application-commands:
+  en: 18ac3eaf13132fb7
+  zh: f51007f0406e7a9e
+/development-guide/contributor-reference/todo-markers:
+  en: 85b38f78d87fc88f
+  zh: 00d5eb625e7dfb61
+/development-guide/contributor-reference/documenting-types-verbatim-ts-type-equiv:
+  en: b12edeadf57e3f59
+  zh: d731f99876069b0b
