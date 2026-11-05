@@ -350,7 +350,7 @@ step_web() {
   run rsync -az --delete \
     -e "ssh ${SSH_OPTS[*]}" \
     --exclude node_modules --exclude .git --exclude .desktop-build \
-    --exclude release --exclude releases \
+    --exclude '/release' --exclude '/releases' \
     "$AGENT_ROOT/" "$HOST:$build_dir/"
 
   log '准备服务器 Dockerfile 并校验关键文件'
