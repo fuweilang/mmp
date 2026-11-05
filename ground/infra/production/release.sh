@@ -521,7 +521,7 @@ JS
   echo "$logs" | grep -q 'Nest application successfully started' \
     || warn 'api 日志未见 "Nest application successfully started"（health 已 200，继续）'
 
-  code="$(rsh "curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:33080/ || true")"
+  code="$(rsh "curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H 'Host: www.mmai.vip' http://127.0.0.1:33080/ || true")"
   [[ "$code" == 200 || "$code" == 302 || "$code" == 303 ]] \
     || die "web 端口 33080 异常（${code}）"
   log "web 端口正常（${code}）"
