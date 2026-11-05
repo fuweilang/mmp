@@ -515,7 +515,7 @@ export async function packageTarget(
     // at runtime. Registry-resolved copies stay inside the pnpm virtual store,
     // which the runtime materialization omits, so the target's platform package
     // must join the packed set as a root dependency.
-    if (target.platform === 'darwin' || target.platform === 'linux') {
+    if (target.platform === 'darwin') {
       const nativeName = `@mammoth-ai/node-addon-system-${target.platform}-${target.arch}`
       const nativeDir = `native/system/packages/${target.platform}-${target.arch}`
       if (process.platform === target.platform && process.arch === target.arch) {
