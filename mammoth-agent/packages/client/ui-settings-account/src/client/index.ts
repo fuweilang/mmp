@@ -28,6 +28,9 @@ import { refreshAfterReturn } from './account-refresh.ts'
 import { AccountAvatarLoader } from './account-avatar.ts'
 import { createBillingStore, openEnterpriseConsole } from './ground-billing.ts'
 import { RechargeDialog, type RechargeDialogInjected } from './RechargeDialog.tsx'
+import { DesktopOnboardingController } from './onboarding-state.ts'
+import { DesktopOnboardingEntry, type DesktopOnboardingInjected } from './DesktopOnboardingEntry.tsx'
+import { DESKTOP_ONBOARDING_NAMESPACE, type OnboardingSettings } from '../onboarding-settings.ts'
 export type { AccountSectionInjected, AccountSectionProps } from './AccountSection.tsx'
 export type { AccountMenuProps } from './AccountMenu.tsx'
 export type { AccountSnapshot } from './AccountSection.tsx'
@@ -310,6 +313,29 @@ export function apply(ctx: Context): void {
   ctx.remoteAccess.whenAccess('account/watch', () => ctx.slots.inject('settings.models.sign-in', () => ctx.slots.register({
     name: 'settings.models.sign-in', locale: 'settings.account', inject: () => operations,
   }, AccountOnboarding)))
+  // First-run onboarding overlay: the controller decides visibility from durable
+  // progress and the account state, so it stays hidden once completed or skipped.
+  const onboarding = new DesktopOnboardingController(
+    ctx.configForms.get<OnboardingSettings>(DESKTOP_ONBOARDING_NAMESPACE),
+    ctx.configForms.get('ui-chat'),
+    (enabled) => ctx.configForms.developerTools.setEnabled(enabled),
+    operations.hooks.account,
+    // Cloud-only product: no API-key credentials, so the api-key completion branch never applies.
+    async () => false,
+    ctx.configForms.describe(),
+  )
+  ctx.effect(() => () => { onboarding.dispose() }, 'account: onboarding lifetime')
+  ctx.remoteAccess.whenAccess('account/watch', () => ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    name: 'shell.overlay', id: 'desktop-onboarding', locale: 'settings.account',
+    inject: (): DesktopOnboardingInjected => ({
+      update: change => onboarding.update(change),
+      complete: reason => onboarding.complete(reason),
+      retry: () => onboarding.retry(),
+      setVisible: (visible) => { publish({ ...snapshot, desktopOnboardingVisible: visible }) },
+      hooks: { onboarding: onboarding.state, account: operations.hooks.account },
+      ...nativePlatform === undefined ? {} : { openPlatformPage: platformPageOpener(refreshAccount) },
+    }),
+  }, DesktopOnboardingEntry)))
   ctx.remoteAccess.whenAccess('account/watch', () => ctx.slots.inject('shell.quota-notice', () => ctx.slots.register({
     name: 'shell.quota-notice', locale: 'settings.account',
     select: owner => owner.code === 'ACCOUNT_QUOTA' ? owner : null,

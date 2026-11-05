@@ -29,7 +29,7 @@
 
 ## 发布猛犸宝塔
 
-用户说 **「发布猛犸宝塔」** → 读并遵守相关 baota Skill / `infra/baota/`（中台 api + web + postgres）。**不再发 Octop 镜像/桌面包。**
+用户说 **「发布猛犸宝塔」** → 先读仓库根 `.opencode/skills/baota-release/SKILL.md`，按 `infra/production/` 发 api + web + postgres。旧 `infra/baota/` 已停用；不发 Octop 镜像/桌面包；只动 `www.mmai.vip`。
 
 ## 怎么跑
 

@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { pnpmInvocation } from '../pnpm-invocation.ts'
-import { releaseFamily, tarballName, type ReleaseFamily, type ReleaseMember } from './families.ts'
+import { releaseFamily, tarballName, type MemberSelection, type ReleaseFamily, type ReleaseMember } from './families.ts'
 import { isEntry, runConcurrent } from './process.ts'
 import { PUBLISH_ORDER_FILE, packedManifest, tarballFiles } from './tarball.ts'
 
@@ -89,12 +89,13 @@ export function parsePackConcurrency(raw: string | undefined): number {
  * @param family - Package selection, version, and payload policy.
  * @param destination - Absolute staging directory owned by this packing invocation.
  * @param concurrency - Validated maximum number of concurrent package packs.
+ * @param selection - Private members a local build additionally needs.
  * @returns Tarball filenames in publish order, after every package passes validation.
  */
 export async function packFamilyMembers(
-  root: string, family: ReleaseFamily, destination: string, concurrency: number,
+  root: string, family: ReleaseFamily, destination: string, concurrency: number, selection: MemberSelection = {},
 ): Promise<string[]> {
-  const members = family.publishOrder(family.members(root)).order
+  const members = family.publishOrder(family.members(root, selection)).order
   family.verifyVersions(members)
   rmSync(destination, { recursive: true, force: true })
   mkdirSync(destination, { recursive: true })

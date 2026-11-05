@@ -57,6 +57,12 @@ export interface PublishPlan {
   readonly droppedPeerEdges: readonly DroppedPeerEdge[]
 }
 
+/** Additional members a local build needs even though publication omits them. */
+export interface MemberSelection {
+  /** Workspace-relative directories of private packages to include. */
+  readonly includePrivate?: readonly string[]
+}
+
 /** One publishable package of a release family. */
 export interface ReleaseMember {
   readonly directory: string
@@ -118,9 +124,10 @@ export abstract class ReleaseFamily {
   /**
    * Discover this family's members.
    * @param root - repository root.
+   * @param selection - private members a local build additionally needs.
    * @returns Publishable members sorted by directory, with names validated and deduplicated.
    */
-  members(root: string): ReleaseMember[] {
+  members(root: string, selection: MemberSelection = {}): ReleaseMember[] {
     const manifestPaths = globSync([...this.patterns], { cwd: root }).sort()
     if (manifestPaths.length === 0) throw new Error(`release family ${this.id} matched no manifests`)
 
@@ -128,8 +135,9 @@ export abstract class ReleaseFamily {
     const seen = new Set<string>()
     for (const manifestPath of manifestPaths) {
       const normalized = manifestPath.replaceAll('\\', '/')
+      const directory = normalized.slice(0, normalized.length - '/package.json'.length)
       const manifest = readManifest(resolve(root, manifestPath))
-      if (manifest.private === true) continue
+      if (manifest.private === true && !selection.includePrivate?.includes(directory)) continue
       const name = requireString(manifest, 'name', normalized)
       const version = requireString(manifest, 'version', normalized)
       if (name === WORKSPACE_ROOT_PACKAGE) throw new Error(`${normalized} selected the workspace root`)
@@ -137,7 +145,7 @@ export abstract class ReleaseFamily {
       if (seen.has(name)) throw new Error(`${name} appears twice in release family ${this.id}`)
       seen.add(name)
       members.push({
-        directory: normalized.slice(0, normalized.length - '/package.json'.length),
+        directory,
         name,
         version,
         manifest,

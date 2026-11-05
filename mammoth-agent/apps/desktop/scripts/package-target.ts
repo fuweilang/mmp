@@ -19,7 +19,8 @@ import { macOSDownloadEnvironment, resolveMacOSPackageSettings } from './macos-p
 import { resolveWindowsPackageSettings } from './windows-package-settings.mjs'
 import { packagingErrorDetails, packagingStep } from './packaging-step.mjs'
 import { notarizeMacOS } from './notarize-macos.mjs'
-import { resolveMacOSNotarizationEnvironment } from './desktop-release-environment.mjs'
+import { resolveMacOSNotarizationEnvironment, resolveNpmRegistry } from './desktop-release-environment.mjs'
+import { packRegistryPackage } from './pack-registry-package.mjs'
 import { DESKTOP_BUILD_VERSION_ENV, resolveDesktopBuildVersion, validateDesktopBuildVersion } from './desktop-build-version.mjs'
 import { suggestDesktopBuildVersion } from './desktop-build-version-discovery.ts'
 import { desktopBuildCommitEnvironment, readDesktopBuildCommit, resolveDesktopBuildCommit } from './desktop-build-commit.mjs'
@@ -510,6 +511,24 @@ export async function packageTarget(
       '--pack-destination',
       buildPaths.packedLandlock,
     ], buildEnv, REPOSITORY_ROOT)
+    // flock resolves its platform addon through the entry's optionalDependencies
+    // at runtime. Registry-resolved copies stay inside the pnpm virtual store,
+    // which the runtime materialization omits, so the target's platform package
+    // must join the packed set as a root dependency.
+    if (target.platform === 'darwin' || target.platform === 'linux') {
+      const nativeName = `@mammoth-ai/node-addon-system-${target.platform}-${target.arch}`
+      const nativeDir = `native/system/packages/${target.platform}-${target.arch}`
+      if (process.platform === target.platform && process.arch === target.arch) {
+        await executePreparation(['--dir', 'native/system', 'run', 'build:native'], buildEnv, REPOSITORY_ROOT)
+        await executePreparation(['--dir', nativeDir, 'pack', '--pack-destination', buildPaths.packedLandlock], buildEnv, REPOSITORY_ROOT)
+      } else {
+        // Cross-architecture builds cannot compile the addon here; take the
+        // published platform tarball of the same family version instead.
+        const nativeManifest = JSON.parse(readFileSync(join(REPOSITORY_ROOT, nativeDir, 'package.json'), 'utf8')) as { version?: unknown }
+        if (typeof nativeManifest.version !== 'string') throw new Error(`desktop package: ${nativeName} has no version`)
+        await packRegistryPackage(`${nativeName}@${nativeManifest.version}`, buildPaths.packedLandlock, resolveNpmRegistry(environment))
+      }
+    }
   }
   const prepareRuntime = () => executePreparation(
     ['run', 'prepare:runtime', ...(signPrimaryRuntime ? ['--defer-primary-runtime-smoke'] : [])], downloadEnv)

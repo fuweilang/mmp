@@ -93,6 +93,12 @@ export function selectDesktopPackageClosure(
       const optional = available.get(dependency)
       if (optional && supportsTarget(optional.manifest, 'os', target.platform)
         && supportsTarget(optional.manifest, 'cpu', target.arch)) visit(dependency)
+      // A missing flock platform addon only fails at runtime inside the
+      // installed app; reject it here so packaging cannot ship without it.
+      else if (optional === undefined && dependency.startsWith('@mammoth-ai/node-addon-system-')
+        && dependency.endsWith(`-${target.platform}-${target.arch}`)) {
+        throw new Error(`desktop package set: packed inputs omit required platform addon ${dependency}`)
+      }
     }
   }
   for (const name of ROOT_PACKAGES) {

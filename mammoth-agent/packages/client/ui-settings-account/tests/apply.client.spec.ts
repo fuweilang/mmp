@@ -68,7 +68,7 @@ it('registers account sign-in in a plain browser without the Desktop-only surfac
     expect(c.ctx.slots.entries('settings.models.sign-in')).toHaveLength(1)
     expect(quotaNoticeEntry(c)).toBeDefined()
     expect(platformHostEntry(c)).toBeUndefined()
-    expect(c.ctx.slots.entries('shell.overlay').some(entry => entry.options.id === 'desktop-onboarding')).toBe(false)
+    expect(c.ctx.slots.entries('shell.overlay').some(entry => entry.options.id === 'desktop-onboarding')).toBe(true)
     expect(operations(c).hooks.account.getSnapshot().desktopOnboardingVisible).toBe(false)
   }
 }, 60_000)
@@ -677,9 +677,9 @@ it('forwards live account notices and removes their subscriptions', async ({ sta
   expect(expired).toHaveBeenCalledOnce()
   expect(unavailable).toHaveBeenCalledOnce()
 })
-it('opens the desktop workspace without registering first-run onboarding', async ({ start }) => {
+it('opens the desktop workspace and registers first-run onboarding', async ({ start }) => {
   vi.stubGlobal('mmpDesktop', {})
   const c = await start()
-  expect(c.ctx.slots.entries('shell.overlay').some(entry => entry.options.id === 'desktop-onboarding')).toBe(false)
+  expect(c.ctx.slots.entries('shell.overlay').some(entry => entry.options.id === 'desktop-onboarding')).toBe(true)
   expect(operations(c).hooks.account.getSnapshot().desktopOnboardingVisible).toBe(false)
 }, 60_000)

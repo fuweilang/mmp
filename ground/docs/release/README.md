@@ -1,59 +1,45 @@
 # 猛犸发版文档索引
 
-目标：中台发版 **≤20 分钟**（客户端大包拆开）。只改 mmPlatform（ground + Octop）；生产走宝塔；默认不开 GitHub PR。
+当前生产：`https://www.mmai.vip` → 新栈 `mmp-prod-v1`（api + web + pg），目录 `/www/mmp-prod`。
 
-**对人**：发版时只说 **「发布猛犸宝塔」**。根目录 `AGENTS.md` + Skill `baota-release` 已绑定；不必贴长文。
-
-## 规程与脚本
+## 当前入口（2026-11 起）
 
 | 资源 | 路径 |
-|------|------|
-| 发布 Skill（**唯一发版入口**） | `.opencode/skills/baota-release/SKILL.md` |
-| **换 AI 粘贴 HANDOFF** | [`HANDOFF-ANY-AI.md`](./HANDOFF-ANY-AI.md)（本地 MD 不会自动加载） |
-| preflight / release / smoke / T1 | `ground/infra/baota/{preflight,release-baota-mid,smoke,publish-desktop-baota,assert-latest-json,fast-release}.sh` |
-| infra 说明 | `ground/infra/baota/README.md` |
-| **并行快发** | `docs/release/fast-parallel.md` + `ground/infra/baota/fast-release.sh` |
-| compose 模板 | `ground/infra/baota/docker-compose.yml` |
+|---|---|
+| **发布 Skill（唯一发版入口）** | [`.opencode/skills/baota-release/SKILL.md`](../../../.opencode/skills/baota-release/SKILL.md) |
+| **换 AI 兜底交接** | [`HANDOFF-ANY-AI.md`](./HANDOFF-ANY-AI.md) |
+| **发版检查清单** | [`BAOTA-RELEASE-CHECKLIST.md`](./BAOTA-RELEASE-CHECKLIST.md) |
+| **给 Kimi/ChatGPT 的提示词** | [`AI-PROMPT.md`](./AI-PROMPT.md) |
+| 状态文件模板 | [`RELEASE-STATE.template.json`](./RELEASE-STATE.template.json) |
+| 构建/部署脚本 | `ground/infra/production/`（见其 [README](../../infra/production/README.md)） |
+| 版本单一源 | [`VERSION-SINGLE-SOURCE.md`](./VERSION-SINGLE-SOURCE.md) |
+| 2026-11-04 复盘 | [`../reports/2026-11-04-baota-release-retrospective.md`](../reports/2026-11-04-baota-release-retrospective.md) |
 
-## 复盘与契约
-
-| 资源 | 路径 |
-|------|------|
-| 2026-11-02 发版复盘 | `docs/reports/2026-11-02-release-retrospective.md` |
-| 生产契约 OpenSpec | `ground/openspec/changes/baota-prod-hardening/` |
-| 云端模型原则 | `ground/openspec/changes/cloud-llm-proxy/` |
-| RBAC / editable | `ground/openspec/changes/unify-ground-octop-rbac/` |
-
-## 版本与环境
-
-| 资源 | 路径 |
-|------|------|
-| version.json SSOT / latest.json 字段 | `docs/release/versioning.md` |
-| **单一源 + AI 不问版本（方案）** | `docs/release/VERSION-SINGLE-SOURCE.md` |
-| 本机 vs 生产 Octop | `docs/runbooks/local-vs-prod-octop.md` |
-
-## Octop 侧案例报告
-
-- `Octop/docs/reports/2026-11-02-bridge-client-error-403.md`
-- `Octop/docs/reports/2026-11-01-bridge-platform-identity-gate.md`
-- 指针：`Octop/docs/reports/RELATED-baota-release-retrospective.md`
-
-## 20 分钟命令序列（快发）
-
-中台 alone：
+## 最短流程
 
 ```bash
-cd ~/Documents/code/mmPlatform/ground/infra/baota
-./preflight-baota.sh --track fast
-./release-baota-mid.sh --api --octop   # 按改动改 flag，或 --all
-./smoke-baota.sh
+cd /Users/fuweilang/Documents/code/mmp
+./ground/infra/production/doctor.sh              # 只读体检
+./ground/infra/production/release.sh --dry-run   # 看计划
+./ground/infra/production/release.sh --yes       # 发版
 ```
 
-带客户端时走**并行**（见 [`fast-parallel.md`](./fast-parallel.md)）：
+中断续跑：`./ground/infra/production/release.sh --release-id <ID> --from web --yes`
+回滚：`./ground/infra/production/rollback.sh --release-id <ID> --yes`
 
-```bash
-./fast-release.sh --mid octop              # 默认只要中台
-./fast-release.sh --mid octop --dispatch   # T0：desktop-hotfix + 打印中台命令
-# 另窗照抄 preflight / release-baota-mid / smoke
-# T1：./publish-desktop-baota.sh --run-id <id> --version <ver> [--apply]
-```
+## 原则
+
+- 单主操、发版锁、`state.json`；禁止并行发版。
+- 本机只构建前端 + api；web 镜像在服务器原生构建。
+- 只动 `www.mmai.vip`；旧栈 `/www/mammoth` 与其他项目不碰。
+- 默认不发客户端、不发 Octop。
+
+## 历史（已废弃）
+
+以下为 Octop / 旧宝塔流程，仅作追溯，**不要按它发版**：
+
+- `ground/infra/baota/`（旧快发脚本，已 `exit 1` 停用）
+- `docs/release/fast-parallel.md`
+- Octop 桌面端相关 workflow / 文档
+
+旧复盘：`docs/reports/2026-11-02-release-retrospective.md`

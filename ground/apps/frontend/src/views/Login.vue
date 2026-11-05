@@ -97,7 +97,7 @@ import { canAccessConsole } from '@mammoth/shared';
 import { useAuthStore } from '../stores/auth';
 import ClientDownloadLink from '../components/ClientDownloadLink.vue';
 import { sanitizeText } from '../utils/sanitizeText';
-import { redirectToAgentWeb, trustedAgentReturn } from '../utils/agent';
+import { agentWebUrl, redirectToAgentWeb, trustedAgentReturn } from '../utils/agent';
 
 const CONSOLE_HOME = '/console';
 const auth = useAuthStore();
@@ -174,6 +174,8 @@ async function goAfterLogin() {
     try {
       const u = new URL(next);
       if (['127.0.0.1', 'localhost'].includes(u.hostname)) {
+        // 回客户端的同时，顺手新开 Web 智能体首页；被弹窗拦截也不影响客户端回调。
+        if (agentWebUrl) window.open(agentWebUrl, '_blank', 'noopener,noreferrer');
         window.location.href = next;
         return;
       }

@@ -66,7 +66,28 @@ describe('desktop package-set selection', () => {
     expect(() => selectDesktopPackageClosure(available, { platform: 'win32', arch: 'x64' })).toThrow(/unpacked package/u)
     expect(() => selectDesktopPackageClosure(new Map([
       ['@mammoth-ai/mmp', packed('@mammoth-ai/mmp')],
-    ]), { platform: 'win32', arch: 'x64' })).toThrow(/omit @deepseek-ai\/mmp-desktop-host/u)
+    ]), { platform: 'win32', arch: 'x64' })).toThrow(/omit @mammoth-ai\/mmp-desktop-host/u)
+  })
+
+  it('rejects a missing flock platform addon for the matching target only', () => {
+    const addon = (platform: string, arch: string) => `@mammoth-ai/node-addon-system-${platform}-${arch}`
+    const manifests = () => new Map<string, PackedDesktopPackage>([
+      ['@mammoth-ai/mmp', packed('@mammoth-ai/mmp', {
+        dependencies: { '@mammoth-ai/node-addon-system': '0.1.2' },
+      })],
+      ['@mammoth-ai/mmp-desktop-host', packed('@mammoth-ai/mmp-desktop-host')],
+      ['@mammoth-ai/node-addon-system', packed('@mammoth-ai/node-addon-system', {
+        optionalDependencies: { [addon('darwin', 'arm64')]: '0.1.2', [addon('darwin', 'x64')]: '0.1.2' },
+      })],
+    ])
+    expect(() => selectDesktopPackageClosure(manifests(), { platform: 'darwin', arch: 'arm64' }))
+      .toThrow(/platform addon/u)
+    // Windows carries no flock platform package; the semaphore implementation applies.
+    expect(() => selectDesktopPackageClosure(manifests(), { platform: 'win32', arch: 'x64' })).not.toThrow()
+    const withAddon = manifests()
+    withAddon.set(addon('darwin', 'arm64'), packed(addon('darwin', 'arm64'), { os: ['darwin'], cpu: ['arm64'] }))
+    expect(selectDesktopPackageClosure(withAddon, { platform: 'darwin', arch: 'arm64' })
+      .some(entry => entry.manifest.name === addon('darwin', 'arm64'))).toBe(true)
   })
 
   it('leaves independently published Office packages to npm resolution', () => {

@@ -121,9 +121,9 @@
       name: '@mammoth-ai/mmp-deepseek-account-platform'
       config:
         desktopPlatform: !!js "ctx.get('profileContext')?.name === 'desktop' && ['darwin', 'win32'].includes(process.platform) ? process.platform : null"
-        platformOrigin: !!js "process.env.GROUND_PUBLIC_ORIGIN || process.env.MMP_PLATFORM_ORIGIN || (ctx.get('profileContext')?.name === 'desktop' && process.env.MMP_DESKTOP_PRODUCTION === '1' ? 'https://www.mmai.vip' : 'http://127.0.0.1:5201')"
+        platformOrigin: !!js "process.env.GROUND_PUBLIC_ORIGIN || process.env.MMP_PLATFORM_ORIGIN || (process.env.MMP_DESKTOP_PRODUCTION === '1' ? 'https://www.mmai.vip' : 'http://127.0.0.1:5201')"
         # SSO grant may only be sent to this origin (Ground chat gateway).
-        inferenceOrigin: !!js "process.env.GROUND_PUBLIC_ORIGIN || process.env.MMP_PLATFORM_ORIGIN || (ctx.get('profileContext')?.name === 'desktop' && process.env.MMP_DESKTOP_PRODUCTION === '1' ? 'https://www.mmai.vip' : 'http://127.0.0.1:5201')"
+        inferenceOrigin: !!js "process.env.GROUND_PUBLIC_ORIGIN || process.env.MMP_PLATFORM_ORIGIN || (process.env.MMP_DESKTOP_PRODUCTION === '1' ? 'https://www.mmai.vip' : 'http://127.0.0.1:5201')"
         allowLoopbackHttp: true
         authMode: oidc
         historySync: true
@@ -557,6 +557,6 @@
     - id: llm-ground
       name: '@mammoth-ai/mmp-llm-ground'
       config:
-        groundOrigin: !!js "process.env.GROUND_PUBLIC_ORIGIN || process.env.MMP_PLATFORM_ORIGIN || (ctx.get('profileContext')?.name === 'desktop' && process.env.MMP_DESKTOP_PRODUCTION === '1' ? 'https://www.mmai.vip' : 'http://127.0.0.1:5201')"
+        groundOrigin: !!js "process.env.GROUND_PUBLIC_ORIGIN || process.env.MMP_PLATFORM_ORIGIN || (process.env.MMP_DESKTOP_PRODUCTION === '1' ? 'https://www.mmai.vip' : 'http://127.0.0.1:5201')"
         providerId: mammoth-ground
         displayName: 猛犸云端

@@ -560,8 +560,13 @@ async function main(): Promise<void> {
   const backend = new DesktopBackendController((onFailure) => {
     const generation = ++hostGeneration
     const hostInspectPort = developmentHostInspectPort(development)
+    const production = app.isPackaged && process.env.MMP_DESKTOP_DEV_APP !== '1'
+    // Packaged clients always talk to production Ground; MMP_DESKTOP_PLATFORM_ORIGIN
+    // remains an explicit escape hatch for staging or local end-to-end testing.
+    const platformOrigin = process.env.MMP_DESKTOP_PLATFORM_ORIGIN ?? 'https://www.mmai.vip'
     const host = new DesktopHostProcess(resources.node, resources.mmp, activeProject,
-      hostInspectPort, { ...hostEnvironment, MMP_CLIENT_VERSION: desktopClientVersion(), MMP_DESKTOP_PRODUCTION: app.isPackaged && process.env.MMP_DESKTOP_DEV_APP !== '1' ? '1' : '0',
+      hostInspectPort, { ...hostEnvironment, MMP_CLIENT_VERSION: desktopClientVersion(), MMP_DESKTOP_PRODUCTION: production ? '1' : '0',
+        ...(production ? { MMP_PLATFORM_ORIGIN: platformOrigin, GROUND_PUBLIC_ORIGIN: platformOrigin } : {}),
         MMP_DESKTOP_DATA_HOME: accountData.home,
         MMP_DESKTOP_CREDENTIALS_PATH: join(resolveMmpHome(), '.credentials.yaml') }, onFailure,
       primaryRuntime,

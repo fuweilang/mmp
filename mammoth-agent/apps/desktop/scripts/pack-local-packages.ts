@@ -1,6 +1,7 @@
 /** Stage local-branded MMP packages for unsigned Desktop builds without a publication record. */
 
-import { resolve } from 'node:path'
+import { globSync, readFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import {
   readClientBuildRecord,
@@ -21,7 +22,13 @@ async function main(): Promise<void> {
   const environment = resolveClientBuildEnvironment(repositoryClientBuildEnvironment(root), 'local')
   readClientBuildRecord(root, environment)
   const destination = resolve(root, values.out)
-  const packed = await packFamilyMembers(root, releaseFamily('mmp'), destination, concurrency)
+  // Published bundles may depend on a private package the local product keeps in the workspace,
+  // for example the branded Ground adapter. Publication still omits it, but the unsigned Desktop
+  // package set cannot resolve the bundle's dependency graph without its tarball.
+  const includePrivate = globSync('packages/*/*/package.json', { cwd: root })
+    .filter(path => (JSON.parse(readFileSync(join(root, path), 'utf8')) as { private?: unknown }).private === true)
+    .map(path => dirname(path).replaceAll('\\', '/'))
+  const packed = await packFamilyMembers(root, releaseFamily('mmp'), destination, concurrency, { includePrivate })
   console.log(`desktop local pack: ${String(packed.length)} tarball(s) in ${destination}`)
 }
 

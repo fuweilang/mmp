@@ -1,0 +1,34 @@
+{
+  "release_id": "2.0.0-YYYYMMDD-HHMM",
+  "version": "2.0.0",
+  "commits": {
+    "ground": "<sha>",
+    "mammoth-agent": "<sha>"
+  },
+  "started_at": "<ISO8601>",
+  "finished_at": null,
+  "operator": "<session/model>",
+  "steps": [
+    { "name": "preflight", "status": "pending", "started_at": null, "ended_at": null, "note": "" },
+    { "name": "frontend", "status": "pending", "started_at": null, "ended_at": null, "note": "" },
+    { "name": "api-image", "status": "pending", "started_at": null, "ended_at": null, "note": "" },
+    { "name": "web-image", "status": "pending", "started_at": null, "ended_at": null, "note": "" },
+    { "name": "deploy", "status": "pending", "started_at": null, "ended_at": null, "note": "" },
+    { "name": "nginx", "status": "pending", "started_at": null, "ended_at": null, "note": "" },
+    { "name": "smoke", "status": "pending", "started_at": null, "ended_at": null, "note": "" }
+  ],
+  "images": {
+    "api": "mmp-api:<release_id>",
+    "web": "mmp-web:<release_id>"
+  },
+  "rollback": {
+    "nginx_backup": "<timestamp>",
+    "previous_env": ".env.bak-<timestamp>",
+    "previous_middle_web": "middle-web.bak-<timestamp>",
+    "previous_images": {
+      "api": "mmp-api:<previous>",
+      "web": "mmp-web:<previous>"
+    }
+  },
+  "notes": []
+}
