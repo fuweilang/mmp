@@ -24,8 +24,8 @@ for (const k of keys) if (!m.platforms[k] || typeof m.platforms[k].file !== "str
   while IFS=$'\t' read -r key file wantSha wantBytes; do
     [[ -n "$file" ]] || continue
     echo "download check: $key $file"
-    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$ORIGIN/downloads/$file")"
-    [[ "$code" == 200 ]] || { echo "GET /downloads/$file returned $code" >&2; exit 1; }
+    code="$(curl -s -o /dev/null -w '%{http_code}' -r 0-0 --max-time 30 "$ORIGIN/downloads/$file")"
+    [[ "$code" == 200 || "$code" == 206 ]] || { echo "GET /downloads/$file returned $code" >&2; exit 1; }
     curl --fail --silent --show-error --location --max-time 900 -o "$TMP/$file" "$ORIGIN/downloads/$file"
     actualBytes="$(wc -c < "$TMP/$file" | tr -d ' ')"
     if [[ -n "$wantBytes" && "$wantBytes" != "null" && "$wantBytes" != "$actualBytes" ]]; then
