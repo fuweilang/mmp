@@ -9,7 +9,7 @@
       <header class="library-toolbar">
         <div class="library-path">
           <button type="button" @click="parentId = null">{{ viewLabel }}</button>
-          <span v-for="crumb in breadcrumb" :key="crumb.id">
+          <span v-for="crumb in (view === 'mine' ? [] : breadcrumb)" :key="crumb.id">
             /
             <button type="button" @click="parentId = crumb.id">{{ crumb.name }}</button>
           </span>
@@ -20,16 +20,18 @@
           placeholder="搜索名称"
           class="library-search"
           @clear="keyword = ''"
-          @keyup.enter="reload"
+          @keyup.enter="commitKeyword()"
         />
-        <el-button @click="reload">搜索</el-button>
+        <el-button @click="commitKeyword()">搜索</el-button>
         <el-button v-if="keyword" @click="keyword = ''">清除搜索</el-button>
-        <el-button :disabled="view === 'trash'" @click="folderOpen = true">新建文件夹</el-button>
-        <el-button :disabled="view === 'trash'" @click="linkOpen = true">新建链接</el-button>
-        <el-button type="primary" :disabled="view === 'trash'" @click="pickUpload">上传</el-button>
-        <input ref="fileInput" class="library-file" type="file" multiple :accept="accept" @change="onFiles" />
+        <el-dropdown trigger="click" :disabled="view === 'trash'">
+          <el-button :disabled="view === 'trash'">新建 <ChevronDown :size="16" /></el-button>
+          <template #dropdown><el-dropdown-menu><el-dropdown-item @click="folderOpen = true">新建文件夹</el-dropdown-item><el-dropdown-item @click="linkOpen = true">保存链接</el-dropdown-item></el-dropdown-menu></template>
+        </el-dropdown>
+        <el-button type="primary" :disabled="view === 'trash'" @click="pickUpload">上传文件</el-button>
       </header>
 
+      <p class="library-muted">支持文档、PNG/JPEG/GIF/WebP/AVIF、MP4/WebM/MOV；{{ uploadLimit ? `单文件上限 ${formatBytes(uploadLimit.maxFileBytes)}` : '上传前检查当前大小限制' }}。图片视频仅保存，不代表 AI 可读。</p>
       <p v-if="transferRatio != null" class="library-progress">上传进度 {{ Math.round(transferRatio * 100) }}%。解析状态在列表里单独显示。</p>
       <p v-if="listError" class="library-error">{{ listError }} 已保留当前列表。</p>
       <p v-if="actionError" class="library-error">{{ actionError }}</p>
@@ -45,15 +47,18 @@
         <el-table-column type="selection" width="42" />
         <el-table-column label="名称" min-width="220">
           <template #default="{ row }">
-            <button v-if="row.kind === 'FOLDER'" type="button" class="library-name" @click="parentId = row.id">{{ row.name }}</button>
+            <span v-if="row.kind === 'FOLDER' && view === 'mine'" class="library-folder-name">{{ row.name }}</span>
+            <button v-else-if="row.kind === 'FOLDER'" type="button" class="library-name" @click="parentId = row.id">{{ row.name }}</button>
             <button v-else type="button" class="library-name" @click="openPreview(row)">{{ row.name }}</button>
+            <span v-if="view === 'mine' && row.parentPath?.length" class="library-muted">所属：{{ libraryParentPath(row) }}</span>
             <span v-if="row.parentHidden" class="library-muted">上级不可见</span>
           </template>
         </el-table-column>
+        <el-table-column label="文件类型" width="100"><template #default="{ row }">{{ libraryFileType(row) }}</template></el-table-column>
         <el-table-column label="范围" width="110">
-          <template #default="{ row }">{{ row.scope === 'PRIVATE' ? '私人' : '企业共享' }}</template>
+          <template #default="{ row }">{{ row.scope === 'PRIVATE' ? '仅自己' : '企业共享' }}</template>
         </el-table-column>
-        <el-table-column label="解析状态" min-width="180">
+        <el-table-column label="处理状态" min-width="180">
           <template #default="{ row }">
             <span v-if="row.currentVersion">{{ statusLabel(row.currentVersion.parseStatus) }}</span>
             <span v-else-if="row.kind === 'LINK'">{{ statusLabel('NOT_APPLICABLE') }}</span>
@@ -69,7 +74,7 @@
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button text type="primary" @click="openPreview(row)">预览</el-button>
+            <el-button v-if="row.kind !== 'FOLDER'" text type="primary" @click="openPreview(row)">预览</el-button>
             <el-dropdown v-if="row.canManage" trigger="click">
               <el-button text type="primary">更多</el-button>
               <template #dropdown>
@@ -90,23 +95,25 @@
         </el-table-column>
         <template #empty>
           <el-empty :description="emptyText">
-            <el-button v-if="!keyword && view !== 'trash'" type="primary" @click="pickUpload">上传</el-button>
+            <el-button v-if="!keyword && view !== 'trash'" type="primary" @click="pickUpload">上传文件</el-button>
             <el-button v-if="keyword" @click="keyword = ''">清除搜索</el-button>
           </el-empty>
         </template>
       </el-table>
 
+      <el-pagination v-if="total > 20" v-model:current-page="page" :page-size="20" :total="total" layout="prev, pager, next" />
     </section>
 
     </div>
-    <el-dialog v-model="moveOpen" title="移动资料" width="420px">
+    <LibraryUploadDialog v-if="uploadOpen" :title="replaceTarget ? '替换资料版本' : '上传资料'" :multiple="!replaceTarget" :accept="accept" hint="新资料默认仅自己可见；图片视频仅保存，不代表AI可读。" :load-limits="libraryConfig" :upload-file="uploadOne" @close="uploadOpen = false" @complete="onUploadComplete" />
+    <el-dialog v-model="moveOpen" title="移动资料" width="420px" align-center append-to-body class="library-modal">
       <p>移动不改变私人或共享范围。</p>
       <el-select v-model="moveParent" clearable placeholder="根目录">
         <el-option v-for="folder in moveFolders" :key="folder.id" :label="folder.name" :value="folder.id" />
       </el-select>
       <template #footer><el-button @click="moveOpen = false">取消</el-button><el-button type="primary" @click="confirmMove">移动</el-button></template>
     </el-dialog>
-    <el-dialog v-model="folderOpen" title="新建文件夹" width="420px">
+    <el-dialog v-model="folderOpen" title="新建文件夹" width="420px" align-center append-to-body class="library-modal">
       <el-input v-model="folderName" placeholder="文件夹名称" />
       <p class="library-muted">新建文件夹默认私人。移动它不会改变里面资料的可见性。</p>
       <template #footer>
@@ -114,7 +121,7 @@
         <el-button type="primary" @click="createFolder">创建</el-button>
       </template>
     </el-dialog>
-    <el-dialog v-model="linkOpen" title="新建链接" width="420px">
+    <el-dialog v-model="linkOpen" title="新建链接" width="420px" align-center append-to-body class="library-modal">
       <el-input v-model="linkName" placeholder="名称" />
       <el-input v-model="linkUrl" placeholder="https://" />
       <p class="library-muted">只保存网址，不会抓取网页，也不是匿名公开链。</p>
@@ -123,22 +130,30 @@
         <el-button type="primary" @click="createLink">保存</el-button>
       </template>
     </el-dialog>
-    <el-drawer v-model="previewOpen" :title="preview?.name || '预览'" size="420px">
+    <el-dialog v-model="previewOpen" :title="preview?.name || '预览'" width="720px" align-center append-to-body class="library-modal">
       <p v-if="preview?.highlightNote">{{ preview.highlightNote }}</p>
       <p v-if="preview?.parseReason">{{ preview.parseReason }}</p>
+      <p v-if="preview?.truncated" class="library-muted">{{ preview.truncationNote || '预览已截断，可下载原文件查看全文。' }}</p>
+      <img v-if="preview?.previewKind === 'image' && preview.versionId" class="library-media" :src="libraryMediaUrl(preview.nodeId, preview.versionId)" :alt="preview.name" />
+      <video v-else-if="preview?.previewKind === 'video' && preview.versionId" class="library-media" :src="libraryMediaUrl(preview.nodeId, preview.versionId)" controls preload="metadata" />
+      <p v-if="preview?.previewKind === 'image' || preview?.previewKind === 'video'" class="library-muted">如浏览器不支持图片格式或视频编码，请下载原文件查看。</p>
       <pre v-if="preview?.text" class="library-pre">{{ preview.text }}</pre>
       <p v-else-if="preview?.previewKind === 'link'">{{ preview.linkUrl }}</p>
       <p v-else>这里没有可安全预览的正文，可以下载原文件。</p>
-      <el-button v-if="preview?.versionId" @click="download(preview.nodeId, preview.versionId)">下载</el-button>
-    </el-drawer>
+      <template #footer><el-button @click="previewOpen = false">关闭</el-button><el-button v-if="preview?.versionId" @click="download(preview.nodeId, preview.versionId)">下载</el-button></template>
+    </el-dialog>
   </section>
 </template>
 
 <script setup lang="ts">
+import { ChevronDown } from 'lucide-vue-next';
 import LibraryCustodyApproval from '../components/LibraryCustodyApproval.vue';
+import LibraryUploadDialog from '../components/LibraryUploadDialog.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { consoleLibraryView, consoleLibraryViews } from '../utils/libraryNavigation';
-import { computed, ref, watch } from 'vue';
+import { libraryFileType, libraryListLocation, libraryParentPath } from '../utils/libraryPresentation';
+import '../styles/libraryDialogs.css';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   LibraryParseStatusLabel,
@@ -146,6 +161,7 @@ import {
 } from '@mammoth/shared';
 import { formatBytes, formatDateTime } from '../utils/format';
 import {
+  libraryConfig, libraryMediaUrl,
   batchLibrary,
   createLibraryFolder,
   createLibraryLink,
@@ -166,26 +182,42 @@ import {
   type LibraryPreview,
 } from '../api/library';
 
-const accept = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.md,.markdown,.txt,.csv,.html,.htm,.zip';
+const uploadLimit = ref<{ maxFileBytes: number; allowedExtensions: string[] }>();
+const accept = computed(() => uploadLimit.value?.allowedExtensions.join(',') ?? '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.md,.markdown,.txt,.csv,.html,.htm,.zip,.png,.jpg,.jpeg,.gif,.webp,.avif,.mp4,.webm,.mov');
+void libraryConfig().then(value => { uploadLimit.value = value; }).catch(() => undefined);
 const route = useRoute();
 const router = useRouter();
 const view = computed(() => consoleLibraryView(route.path));
 const parentId = computed<string | null>({
-  get: () => typeof route.query.folder === 'string' ? route.query.folder : typeof route.query.parentId === 'string' ? route.query.parentId : null,
+  get: () => view.value === 'mine' ? null : typeof route.query.folder === 'string' ? route.query.folder : typeof route.query.parentId === 'string' ? route.query.parentId : null,
   set: value => { void router.replace({ query: { ...route.query, folder: value || undefined, parentId: undefined } }); },
 });
 const breadcrumb = ref<{ id: string; name: string }[]>([]);
-const keyword = computed({
-  get: () => typeof route.query.q === 'string' ? route.query.q : '',
-  set: (value: string) => { void router.replace({ query: { ...route.query, q: value || undefined } }); },
+const routeKeyword = computed(() => typeof route.query.q === 'string' ? route.query.q : '');
+const keyword = ref(routeKeyword.value);
+let keywordTimer: ReturnType<typeof setTimeout> | null = null;
+watch(routeKeyword, (value) => { if (keyword.value !== value) keyword.value = value; });
+watch(keyword, (value) => {
+  if (keywordTimer) clearTimeout(keywordTimer);
+  keywordTimer = setTimeout(() => commitKeyword(value), 300);
 });
+/** 防抖后写回路由；同一关键字不重复 replace。 */
+function commitKeyword(value = keyword.value) {
+  if (keywordTimer) { clearTimeout(keywordTimer); keywordTimer = null; }
+  if (routeKeyword.value === value) return;
+  void router.replace({ query: { ...route.query, q: value || undefined } });
+}
+onBeforeUnmount(() => { if (keywordTimer) clearTimeout(keywordTimer); });
 const items = ref<LibraryItem[]>([]);
+const page = ref(1);
+const total = ref(0);
 const loading = ref(false);
 const listError = ref('');
 const actionError = ref('');
 const selected = ref<LibraryItem[]>([]);
 const transferRatio = ref<number | null>(null);
-const fileInput = ref<HTMLInputElement | null>(null);
+const uploadOpen = ref(false);
+const uploadParent = ref<string | null>(null);
 const replaceTarget = ref<string | null>(null);
 const moveOpen = ref(false);
 const moveTarget = ref<LibraryItem | null>(null);
@@ -201,14 +233,20 @@ const preview = ref<LibraryPreview | null>(null);
 const viewLabel = computed(() => consoleLibraryViews.find((item) => item.id === view.value)?.label ?? '资料库');
 const emptyText = computed(() => (keyword.value ? '没有匹配的资料' : '这里还没有资料'));
 let listSequence = 0;
-watch([view, parentId, keyword], () => {
+watch([view, parentId, routeKeyword], () => {
+  page.value = 1;
   selected.value = [];
   items.value = [];
   breadcrumb.value = [];
   void reload();
 }, { immediate: true });
 
+watch(page, () => { selected.value = []; void reload(); });
+
 function statusLabel(status: LibraryParseStatus) {
+  if (status === 'READY') return '可供 AI 引用';
+  if (status === 'DOWNLOAD_ONLY') return '仅保存';
+  if (['PENDING', 'PROCESSING'].includes(status)) return '处理中';
   return LibraryParseStatusLabel[status];
 }
 
@@ -218,9 +256,13 @@ async function reload() {
   const sequence = ++listSequence;
   loading.value = true;
   try {
-    const data = await listLibrary(view.value, view.value === 'recent' || view.value === 'trash' ? null : parentId.value, keyword.value);
+    const location = libraryListLocation(view.value, parentId.value);
+    const data = await listLibrary(view.value, location.parentId, keyword.value, page.value, location.flat);
     if (sequence !== listSequence) return;
+    const lastPage = Math.max(1, Math.ceil(data.total / 20));
+    if (page.value > lastPage) { page.value = lastPage; return; }
     items.value = data.items;
+    total.value = data.total;
     breadcrumb.value = data.breadcrumb;
     listError.value = '';
   } catch (error) {
@@ -235,40 +277,22 @@ function onSelect(rows: LibraryItem[]) {
   selected.value = rows;
 }
 
-function pickUpload() {
-  replaceTarget.value = null;
-  fileInput.value?.click();
+function pickUpload() { replaceTarget.value = null; uploadParent.value = parentId.value; uploadOpen.value = true; }
+async function uploadOne(file: File, progress: (ratio: number) => void) {
+  if (replaceTarget.value) { await replaceLibraryFile(replaceTarget.value, file); return '新版本已保存；处理状态在列表中显示'; }
+  const result = await uploadLibraryFiles([file], uploadParent.value, progress);
+  if (result.failed.length || !result.items.length) throw new Error(result.failed.map(row => row.message).join('；') || '未收到保存成功结果');
+  return '已保存，仅自己可见；处理状态单独显示';
 }
+async function onUploadComplete(successes: number) { if (successes > 0) await revealCreated(); }
 
-async function onFiles(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const files = [...(input.files ?? [])];
-  input.value = '';
-  if (!files.length) return;
-  if (replaceTarget.value) {
-    try {
-      await replaceLibraryFile(replaceTarget.value, files[0]!);
-      actionError.value = '';
-      await reload();
-    } catch (error) {
-      actionError.value = error instanceof Error ? error.message : '替换失败';
-    }
-    replaceTarget.value = null;
-    return;
-  }
-  transferRatio.value = 0;
-  try {
-    const result = await uploadLibraryFiles(files, parentId.value, (ratio) => {
-      transferRatio.value = ratio;
-    });
-    if (result.failed.length) actionError.value = result.failed.map((row) => `${row.name}：${row.message}`).join('；');
-    else actionError.value = '';
-    await reload();
-  } catch (error) {
-    actionError.value = error instanceof Error ? error.message : '上传失败';
-  } finally {
-    transferRatio.value = null;
-  }
+/** 新建的私有资料在“最近使用/企业共享”里不可见，切回“我的资料”让创建结果可见。 */
+async function revealCreated() {
+  window.dispatchEvent(new Event('mmp:library-changed'));
+  if (view.value !== 'mine') await router.push({ path: '/console/library/mine' });
+  else if (keyword.value) { keyword.value = ''; commitKeyword(''); }
+  page.value = 1;
+  await reload();
 }
 
 async function createFolder() {
@@ -276,8 +300,7 @@ async function createFolder() {
     await createLibraryFolder(folderName.value, parentId.value);
     folderOpen.value = false;
     folderName.value = '';
-    if (view.value !== 'mine') await router.push({ path: '/console/library/mine', query: route.query });
-    await reload();
+    await revealCreated();
   } catch (error) {
     actionError.value = error instanceof Error ? error.message : '创建失败';
   }
@@ -289,7 +312,7 @@ async function createLink() {
     linkOpen.value = false;
     linkName.value = '';
     linkUrl.value = '';
-    await reload();
+    await revealCreated();
   } catch (error) {
     actionError.value = error instanceof Error ? error.message : '保存失败';
   }
@@ -297,7 +320,7 @@ async function createLink() {
 
 async function rename(row: LibraryItem) {
   try {
-    const result = await ElMessageBox.prompt('新名称', '重命名', { inputValue: row.name });
+    const result = await ElMessageBox.prompt('新名称', '重命名', { customClass: 'library-message-box', inputValue: row.name });
     await act(() => renameLibrary(row.id, result.value));
   } catch {
     // 取消重命名不改列表。
@@ -320,11 +343,20 @@ async function confirmMove() {
 
 function startReplace(row: LibraryItem) {
   replaceTarget.value = row.id;
-  fileInput.value?.click();
+  uploadParent.value = parentId.value; uploadOpen.value = true;
+}
+
+async function confirmAction(message: string, title: string): Promise<boolean> {
+  try {
+    await ElMessageBox.confirm(message, title, { customClass: 'library-message-box' });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function share(row: LibraryItem) {
-  await ElMessageBox.confirm('这会变成企业共享，本企业成员都能看到。此操作不会因为移动文件夹而自动发生。', '确认共享');
+  if (!await confirmAction('这会变成企业共享，本企业成员都能看到。此操作不会因为移动文件夹而自动发生。', '确认共享')) return;
   await act(() => shareLibrary(row.id, 'ENTERPRISE', true));
 }
 
@@ -345,14 +377,12 @@ async function restoreOne(row: LibraryItem) {
 }
 
 async function purgeOne(row: LibraryItem) {
-  await ElMessageBox.confirm('彻底删除后，旧引用会显示来源不可用，不会改指向其它版本。', '彻底删除');
+  if (!await confirmAction('彻底删除后，旧引用会显示来源不可用，不会改指向其它版本。', '彻底删除')) return;
   await act(() => purgeLibrary(row.id));
 }
 
 async function runBatch(action: 'recycle' | 'restore' | 'purge') {
-  if (action === 'purge') {
-    await ElMessageBox.confirm('彻底删除后不能再下载这些版本。', '彻底删除');
-  }
+  if (action === 'purge' && !await confirmAction('彻底删除后不能再下载这些版本。', '彻底删除')) return;
   try {
     const result = await batchLibrary(selected.value.map((row) => row.id), action);
     if (result.skipped) ElMessage.warning(`${result.skipped} 项当前不可见，已跳过`);
@@ -366,6 +396,7 @@ async function runBatch(action: 'recycle' | 'restore' | 'purge') {
 async function act(work: () => Promise<unknown>) {
   try {
     await work();
+    window.dispatchEvent(new Event('mmp:library-changed'));
     actionError.value = '';
     await reload();
   } catch (error) {
@@ -375,10 +406,11 @@ async function act(work: () => Promise<unknown>) {
 
 async function openPreview(row: LibraryItem) {
   if (row.kind === 'FOLDER') {
-    parentId.value = row.id;
+    if (view.value !== 'mine') parentId.value = row.id;
     return;
   }
   try {
+    preview.value = null;
     preview.value = await previewLibrary(row.id, row.currentVersion?.id);
     previewOpen.value = true;
   } catch (error) {
@@ -390,10 +422,19 @@ function download(id: string, versionId: string) {
   window.open(libraryDownloadUrl(id, versionId), '_blank', 'noopener');
 }
 
+watch(() => route.query.preview, async value => {
+  if (typeof value !== 'string' || !value) return;
+  preview.value = null;
+  try {
+    const result = await previewLibrary(value, typeof route.query.version === 'string' ? route.query.version : undefined);
+    if (route.query.preview !== value) return;
+    preview.value = result; previewOpen.value = true;
+  } catch (error) { actionError.value = error instanceof Error ? error.message : '无法预览'; }
+}, { immediate: true });
 </script>
 
 <style scoped>
-.library-page { padding:4px 2px 24px; color:var(--el-text-color-primary); }
+.library-page { box-sizing:border-box; min-height:100%; padding:15px; background:#fff; color:var(--el-text-color-primary); }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:16px; }
 .page-header h2 { margin:0 0 6px; font-size:20px; color:var(--app-heading-color); }
 .page-header p { margin:0; color:var(--el-text-color-secondary); font-size:13px; line-height:1.6; }
@@ -407,6 +448,9 @@ function download(id: string, versionId: string) {
 .library-path button { color:var(--el-color-primary); padding:0; }
 .library-search { width:220px; }
 .library-table { width:100%; }
+.library-table :deep(td.el-table__cell) { height:44px; padding:4px 0; }
+.library-toolbar :deep(.el-button) { height:32px; border-radius:8px; }
+.library-media { width:100%; max-height:55vh; object-fit:contain; border-radius:8px; }
 .library-table :deep(th.el-table__cell) { background:var(--el-fill-color-light); font-size:13px; font-weight:600; }
 .library-table :deep(.cell),.library-table :deep(.el-button.is-text) { font-size:13px; }
 .library-file { display:none; }
@@ -414,5 +458,6 @@ function download(id: string, versionId: string) {
 .library-error { color:var(--el-color-danger); }
 .library-muted { display:block; margin-top:4px; color:var(--el-text-color-secondary); font-size:12px; line-height:1.5; }
 .library-name { color:var(--el-color-primary); font-size:13px; padding:0; }
-.library-pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:360px; overflow:auto; background:var(--el-fill-color-light); padding:12px; border-radius:8px; font-size:12px; line-height:1.6; }
+.library-name,.library-folder-name,.library-muted { overflow-wrap:anywhere; }
+.library-pre { white-space:pre-wrap; overflow-wrap:anywhere; background:var(--el-fill-color-light); padding:12px; border-radius:8px; font-size:12px; line-height:1.6; }
 </style>

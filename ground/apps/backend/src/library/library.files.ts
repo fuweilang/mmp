@@ -29,6 +29,7 @@ export function assertAllowedUpload(name: string, bytes: Buffer, limits: Library
   const ext = fileExtension(name);
   if (!ALLOWED.has(ext) || !limits.allowedExtensions.includes(ext)) throw new LibraryError(400, '这个文件类型不允许上传', 'BAD_TYPE');
   if (isDangerousMagic(bytes)) throw new LibraryError(400, '文件内容不像允许的文档', 'BAD_TYPE');
+  assertMediaType(name, bytes);
   return ext;
 }
 
@@ -84,4 +85,27 @@ export function safeLinkUrl(raw: string): string {
   }
   if (url.href.length > 2000) throw new LibraryError(400, '链接过长', 'BAD_LINK');
   return url.href;
+}
+
+/** Allowlisted raster/video formats only. Never trust the client MIME or serve SVG/HTML inline. */
+export function assertMediaType(name: string, bytes: Buffer): string | null {
+  const ext = fileExtension(name);
+  const head = bytes.subarray(0, 64);
+  const ftyp = head.subarray(4, 8).toString('ascii') === 'ftyp';
+  const brands = head.subarray(8).toString('ascii');
+  const entries: Record<string, [string, boolean]> = {
+    '.png': ['image/png', head.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))],
+    '.jpg': ['image/jpeg', head[0] === 255 && head[1] === 216 && head[2] === 255],
+    '.jpeg': ['image/jpeg', head[0] === 255 && head[1] === 216 && head[2] === 255],
+    '.gif': ['image/gif', /^(GIF87a|GIF89a)/.test(head.toString('ascii'))],
+    '.webp': ['image/webp', head.subarray(0,4).toString() === 'RIFF' && head.subarray(8,12).toString() === 'WEBP'],
+    '.avif': ['image/avif', ftyp && /avif|avis/.test(brands)],
+    '.mp4': ['video/mp4', ftyp && /isom|iso[2-9]|mp4[12]|avc1|M4V |dash/.test(brands)],
+    '.mov': ['video/quicktime', ftyp && /qt  /.test(brands)],
+    '.webm': ['video/webm', head.subarray(0,4).equals(Buffer.from([26,69,223,163])) && bytes.subarray(0,4096).includes(Buffer.from('webm'))],
+  };
+  const entry = entries[ext];
+  if (!entry) return null;
+  if (!entry[1]) throw new LibraryError(400, '媒体内容与扩展名不匹配或格式无效', 'BAD_TYPE');
+  return entry[0];
 }

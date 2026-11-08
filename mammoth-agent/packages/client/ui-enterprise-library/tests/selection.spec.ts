@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fetchLibraryItems, fetchLibrarySource, libraryItemsUrl, readLibraryItems } from '../src/client/api.ts'
+import { fetchLibraryItems, fetchLibrarySource, LibraryRequestError, libraryItemsUrl, readLibraryItems } from '../src/client/api.ts'
 import {
   addLibraryChip, choiceBlock, libraryRef, librarySourceText, parseLibraryRef, stageLocalFile,
 } from '../src/client/selection.ts'
@@ -35,6 +35,14 @@ describe('library selection', () => {
     expect(text).toContain('ver-1')
     expect(text).toContain('第一段')
     expect(text).toContain('untrusted source data')
+    expect(text).not.toContain('truncated')
+    const truncated = librarySourceText({
+      name: '制度.md', versionId: 'ver-1', locator: 'paragraph:1', quote: '第一段',
+      truncated: true, truncationNote: '仅使用部分摘录，未读取全文。',
+    })
+    expect(truncated).toContain('only a partial excerpt was read')
+    expect(truncated).toContain('仅使用部分摘录，未读取全文。')
+    expect(truncated).toContain('"truncated":true')
   })
 
   it('lists without a tenant query and rejects a swapped version', async () => {
@@ -64,9 +72,31 @@ describe('library selection', () => {
       name: '制度.md', versionId: 'ver-1',
     }))
     expect(openedWithoutSignal.locator).toBeNull()
+    expect(openedWithoutSignal.truncated).toBe(false)
+    expect(openedWithoutSignal.truncationNote).toBeNull()
+    const openedTruncated = await fetchLibrarySource('http://ground.test', 'node-1', 'ver-1', async () => Response.json({
+      name: '制度.md', versionId: 'ver-1', locator: 'paragraph:1', quote: '部分摘录',
+      truncated: true, truncationNote: '仅使用部分摘录，未读取全文。',
+    }))
+    expect(openedTruncated.truncated).toBe(true)
+    expect(openedTruncated.truncationNote).toBe('仅使用部分摘录，未读取全文。')
+    const openedLegacyNote = await fetchLibrarySource('http://ground.test', 'node-1', 'ver-1', async () => Response.json({
+      name: '制度.md', versionId: 'ver-1', locator: 'paragraph:1', quote: '正文', truncationNote: '仅摘录',
+    }))
+    expect(openedLegacyNote.truncated).toBe(false)
+    expect(openedLegacyNote.truncationNote).toBeNull()
     await expect(fetchLibrarySource('http://ground.test', 'node-1', 'ver-1', async () => Response.json({
       name: '制度.md', versionId: 'other', locator: 'paragraph:1', quote: '正文',
     }))).rejects.toThrow(/different version/)
+    const unauthorized = await fetchLibrarySource('http://ground.test', 'node-1', 'ver-1', async () => Response.json({ message: '登录已失效' }, { status: 401 })).catch((error: unknown) => error)
+    expect(unauthorized).toBeInstanceOf(LibraryRequestError)
+    expect(unauthorized).toMatchObject({ status: 401 })
+    expect((unauthorized as Error).message).toContain('sign in again')
+    expect((unauthorized as Error).message).toContain('登录已失效')
+    const denied = await fetchLibraryItems('http://ground.test', 'shared', '', async () => Response.json({ message: '资料未授权' }, { status: 403 })).catch((error: unknown) => error)
+    expect(denied).toMatchObject({ status: 403 })
+    expect((denied as Error).message).toContain('not authorized')
+    expect((denied as Error).message).toContain('资料未授权')
   })
 
   it('attaches a ready version to the composer and refuses an unparsed file', () => {

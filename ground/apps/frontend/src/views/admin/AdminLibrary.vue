@@ -1,117 +1,96 @@
 <template>
-  <section class="admin-library">
-    <div class="page-header"><h2>资料库概况</h2>
-    <p>这里只显示容量、数量和解析状态，不显示文件名或正文。代管需要写明范围和到期，撤销后不能再读，已经看过的内容不会被抹掉。</p></div>
-    <p v-if="limits">
-      单文件上限 {{ formatBytes(limits.maxFileBytes) }}，企业容量 {{ formatBytes(limits.tenantQuotaBytes) }}，
-      回收保留期配置 {{ limits.recycleDays }} 天（清理由单独维护操作执行）。允许类型：{{ limits.allowedExtensions.join(' ') }}
-    </p>
-    <p v-if="error" class="admin-library-error">{{ error }}</p>
-    <el-table v-loading="loading" :data="tenants" border>
-      <template #empty><el-empty description="暂无企业资料统计" :image-size="80" /></template>
-      <el-table-column prop="tenantName" label="企业" min-width="140" />
-      <el-table-column prop="activeFiles" label="使用中" width="90" />
-      <el-table-column prop="recycledFiles" label="回收站" width="90" />
-      <el-table-column prop="versionCount" label="版本数" width="90" />
-      <el-table-column label="已用容量" width="120">
-        <template #default="{ row }">{{ formatBytes(row.usedBytes) }}</template>
-      </el-table-column>
-      <el-table-column :label="statusLabel('READY')" prop="ready" width="110" />
-      <el-table-column :label="statusLabel('PENDING')" prop="pending" width="90" />
-      <el-table-column :label="statusLabel('PROCESSING')" prop="processing" width="90" />
-      <el-table-column :label="statusLabel('FAILED')" prop="failed" width="80" />
-      <el-table-column :label="statusLabel('DOWNLOAD_ONLY')" prop="downloadOnly" width="90" />
-    </el-table>
-
-    <LibraryManagedBrowser v-if="activeGrant" :key="activeGrant" :grant-id="activeGrant" @close="activeGrant = null" />
-    <h3>代管授权</h3>
-    <p>平台不能自行授予正文访问权。须由资料所有者或企业管理员在相应范围批准；这里只查看、撤销已有授权。</p>
-    <el-table :data="custodies" border>
-      <template #empty><el-empty description="暂无已批准的代管授权" :image-size="80" /></template>
-      <el-table-column prop="tenantId" label="企业" min-width="140" />
-      <el-table-column prop="granteeUserId" label="被授权人" min-width="140" />
-      <el-table-column label="范围" width="160">
-        <template #default="{ row }">{{ row.contentScope === 'ENTERPRISE' ? '企业共享' : '指定人私人' }}</template>
-      </el-table-column>
-      <el-table-column prop="powers" label="权限" width="90" />
-      <el-table-column label="到期（北京时间）" min-width="180"><template #default="{ row }">{{ new Date(row.expiresAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) }}</template></el-table-column>
-      <el-table-column prop="reason" label="原因" min-width="160" />
-      <el-table-column label="状态" width="100">
-        <template #default="{ row }">{{ row.revokedAt ? '已撤销' : Date.parse(row.expiresAt) <= Date.now() ? '已到期' : '有效' }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="240">
-        <template #default="{ row }">
-          <el-button v-if="!row.revokedAt && Date.parse(row.expiresAt) > Date.now()" text @click="activeGrant = row.id">以受授权身份浏览</el-button>
-          <el-button v-if="!row.revokedAt" text type="danger" @click="revoke(row.id)">撤销</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-  </section>
+ <section class="admin-library">
+  <header class="library-header"><div><h2>{{ options ? `${options.tenant.name} · 资料库` : '企业资料库' }}</h2><p>先定位企业，再在明确所有者和代管授权范围内管理。平台身份不自动获得私人正文访问权。</p></div><div class="library-actions"><el-button v-if="tenantId" :disabled="busy" @click="selectTenant('')">返回企业列表</el-button><el-button v-if="tenantId" @click="showCustodies">代管授权</el-button><el-button :disabled="busy" @click="reload">刷新</el-button></div></header>
+  <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon><template #default><el-button text @click="reload">重新加载</el-button></template></el-alert>
+  <template v-if="!tenantId">
+   <div class="library-toolbar"><el-input v-model="tenantSearch" aria-label="搜索企业" clearable placeholder="搜索企业名称" @keyup.enter="tenantPage = 1; loadTenants()" @clear="tenantPage = 1; loadTenants()" /><el-button @click="tenantPage = 1; loadTenants()">搜索</el-button></div>
+   <el-table :data="tenants" v-loading="loading" row-key="id"><template #empty><el-empty description="暂无匹配企业" :image-size="72" /></template><el-table-column prop="name" label="企业" min-width="180" /><el-table-column label="资料" min-width="150"><template #default="{row}">{{ row.activeFiles }}文件 · {{ row.folderCount }}文件夹 · {{ row.linkCount }}链接</template></el-table-column><el-table-column label="已用容量" width="120"><template #default="{row}">{{ formatBytes(row.usedBytes) }}</template></el-table-column><el-table-column prop="recycledCount" label="回收项" width="90"/><el-table-column prop="failed" label="解析失败" width="90"/><el-table-column label="状态" width="90"><template #default="{row}">{{ row.status === 'active' ? '正常' : '已停用' }}</template></el-table-column><el-table-column label="操作" width="120"><template #default="{row}"><el-button text type="primary" @click="selectTenant(row.id)">管理资料</el-button></template></el-table-column></el-table>
+   <el-pagination v-model:current-page="tenantPage" :page-size="20" :total="tenantTotal" layout="total, prev, pager, next" @current-change="loadTenants" />
+  </template>
+  <template v-else>
+   <el-alert v-if="options?.tenant.status !== 'active' && options" title="企业已停用：可查看元数据，不能新增或修改资料。" type="info" :closable="false" />
+   <div class="library-toolbar"><el-input v-model="query.q" aria-label="搜索全部层级资料" clearable placeholder="搜索全部层级资料名称" @keyup.enter="search" @clear="search" /><el-select v-model="query.state" aria-label="资料列表范围" @change="search"><el-option label="全部资料" value="ACTIVE"/><el-option label="回收站" value="RECYCLED"/></el-select><el-button @click="search">搜索</el-button><el-button @click="filtersOpen = !filtersOpen">{{ filtersOpen ? '收起筛选' : '更多筛选' }}</el-button><span class="toolbar-spacer"/><el-button :disabled="!options || options.tenant.status !== 'active' || busy" @click="newFolder">新建文件夹</el-button><el-button type="primary" :disabled="!options || options.tenant.status !== 'active' || busy" @click="newUpload">上传资料</el-button></div>
+   <div v-if="filtersOpen && options" class="library-toolbar library-filters"><el-select v-model="query.ownerUserId" clearable filterable placeholder="全部所有者" aria-label="所有者筛选" @change="search"><el-option v-for="owner in options.filterOwners || options.owners" :key="owner.id" :value="owner.id" :label="owner.name || owner.id"/></el-select><el-select v-model="query.folderId" clearable filterable placeholder="全部所在目录" aria-label="所在目录筛选" @change="search"><el-option v-for="folder in options.filterFolders || []" :key="folder.id" :value="folder.id" :label="folder.name"/></el-select><el-select v-model="query.fileType" clearable placeholder="全部文件类型" aria-label="文件类型筛选" @change="search"><el-option v-for="(label,key) in typeLabels" :key="key" :value="key" :label="label"/></el-select><el-select v-model="query.scope" clearable placeholder="全部可见性" aria-label="可见性筛选" @change="search"><el-option label="仅所有者" value="PRIVATE"/><el-option label="企业共享" value="ENTERPRISE"/></el-select><el-select v-model="query.status" clearable placeholder="全部处理状态" aria-label="处理状态筛选" @change="search"><el-option v-for="(label,key) in statusLabels" :key="key" :value="key" :label="label"/></el-select></div>
+   <p class="library-note">文件、文件夹和链接均全层级展示；名称下显示所属路径。可见性与处理状态不同；图片/视频“仅保存”不代表AI可读。</p>
+   <el-table :data="items" v-loading="loading" row-key="id"><template #empty><el-empty :description="query.state === 'RECYCLED' ? '当前企业暂无匹配的回收资料' : '当前企业暂无匹配资料'" :image-size="72" /></template>
+    <el-table-column label="名称" min-width="220"><template #default="{row}"><div class="library-name"><Folder v-if="row.kind === 'FOLDER'" :size="16"/><Link v-else-if="row.kind === 'LINK'" :size="16"/><Image v-else-if="row.fileType === 'image'" :size="16"/><Video v-else-if="row.fileType === 'video'" :size="16"/><FileText v-else :size="16"/><el-button text type="primary" :title="row.name" @click="openDetail(row)">{{ row.name }}</el-button></div><small :title="row.parentPath.join(' / ')">{{ typeLabels[row.fileType] || '其他' }} · {{ row.parentPath.join(' / ') || '根目录' }}</small></template></el-table-column>
+    <el-table-column label="所有者" min-width="100"><template #default="{row}">{{ row.ownerName || row.ownerUserId }}</template></el-table-column><el-table-column label="可见性" width="100"><template #default="{row}">{{ row.scope === 'PRIVATE' ? '仅所有者' : '企业共享' }}</template></el-table-column><el-table-column label="处理状态" width="128"><template #default="{row}">{{ row.currentVersion ? statusLabels[row.currentVersion.parseStatus] || row.currentVersion.parseStatus : '不适用' }}</template></el-table-column><el-table-column label="更新时间（北京时间）" min-width="166"><template #default="{row}">{{ time(row.updatedAt) }}</template></el-table-column>
+    <el-table-column label="操作" width="90" fixed="right"><template #default="{row}"><el-dropdown trigger="click"><el-button text :aria-label="`管理 ${row.name}`">更多</el-button><template #dropdown><el-dropdown-menu>
+     <el-dropdown-item @click="openDetail(row)">资料详情</el-dropdown-item><el-dropdown-item :disabled="!row.readGrantId || row.kind === 'FOLDER' || row.state !== 'ACTIVE'" @click="previewItem(row)">预览正文</el-dropdown-item><el-dropdown-item :disabled="!row.readGrantId || row.kind !== 'FILE' || row.state !== 'ACTIVE'" @click="download(row)">下载原文件</el-dropdown-item>
+     <template v-if="row.state === 'ACTIVE'"><el-dropdown-item divided :disabled="!row.writeGrantId" @click="openOperation('rename',row)">重命名</el-dropdown-item><el-dropdown-item :disabled="!row.writeGrantId" @click="openOperation('move',row)">移动</el-dropdown-item><el-dropdown-item :disabled="!row.writeGrantId || !row.targetScopeGrantId" @click="openOperation('scope',row)">{{ row.scope === 'PRIVATE' ? '设为企业共享' : '取消企业共享' }}</el-dropdown-item><el-dropdown-item v-if="row.kind === 'FILE'" :disabled="!row.writeGrantId" @click="replaceUpload(row)">替换为新版本</el-dropdown-item><el-dropdown-item v-if="row.currentVersion?.parseStatus === 'FAILED'" :disabled="!row.writeGrantId" @click="openOperation('retry',row)">重试解析</el-dropdown-item><el-dropdown-item divided :disabled="!row.writeGrantId" @click="openOperation('recycle',row)"><span class="danger">移入回收站</span></el-dropdown-item></template>
+     <template v-else><el-dropdown-item divided :disabled="!row.writeGrantId" @click="openOperation('restore',row)">恢复</el-dropdown-item><el-dropdown-item @click="openImpact(row)">查看删除影响</el-dropdown-item><el-dropdown-item :disabled="!row.writeGrantId || !!row.purgeBlockedReason" @click="openOperation('purge',row)"><span class="danger">彻底删除</span></el-dropdown-item></template>
+    </el-dropdown-menu></template></el-dropdown></template></el-table-column>
+   </el-table>
+   <el-pagination v-model:current-page="page" :page-size="20" :total="total" layout="total, prev, pager, next" @current-change="loadItems" />
+   <p class="library-note">当前没有正文/管理授权的资料只能查看元数据；需企业或所有者批准READ/CRUD授权。文件活动使用尚不能可靠核实，因此暂不开放文件彻底删除；空目录/链接仍须通过服务端校验。</p>
+  </template>
+  <el-dialog v-model="folderOpen" title="新建文件夹" width="600px" align-center append-to-body class="library-modal" :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy"><p>目标企业：{{ options?.tenant.name }}</p><el-form label-position="top"><el-form-item label="文件夹名称"><el-input v-model="folderName" maxlength="180"/></el-form-item></el-form><AdminLibraryTargetForm v-if="options" v-model="target" :options="options" :disabled="busy"/><el-alert v-if="dialogError" :title="dialogError" type="error" :closable="false"/><template #footer><el-button :disabled="busy" @click="folderOpen = false">取消</el-button><el-button type="primary" :loading="busy" @click="saveFolder">创建</el-button></template></el-dialog>
+  <LibraryUploadDialog v-if="uploadOpen && options" :key="uploadKey" :title="replacement ? '替换资料新版本' : '上传企业资料'" :multiple="!replacement" :accept="options.limits.allowedExtensions.join(',')" hint="目标企业和所有者会在开始时锁定，不自动共享。" :load-limits="uploadLimits" :prepare="prepareUpload" :upload-file="uploadOne" @close="uploadOpen = false" @complete="uploaded"><template #default="{busy:locked}"><p>目标企业：{{ options.tenant.name }}</p><p v-if="replacement">{{ replacement.name }} · 所有者：{{ replacement.ownerName || replacement.ownerUserId }}。替换会创建新版本，不覆盖历史引用。</p><el-input v-if="replacement" v-model="replaceReason" :disabled="locked" maxlength="500" placeholder="管理原因，至少4个字"/><AdminLibraryTargetForm v-else v-model="target" :options="options" :disabled="locked"/></template></LibraryUploadDialog>
+  <el-dialog v-model="operationOpen" :title="operationTitle" width="560px" align-center append-to-body class="library-modal" :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy"><p>企业：{{ options?.tenant.name }}<br/>资料：{{ operationRow?.name }}<br/>所有者：{{ operationRow?.ownerName || operationRow?.ownerUserId }}</p><el-input v-if="operation === 'rename'" v-model="operationName" aria-label="新名称" maxlength="180"/><el-select v-if="operation === 'move'" v-model="operationParent" clearable filterable placeholder="当前所有者在本企业的根目录"><el-option v-for="folder in moveFolders" :key="folder.id" :value="folder.id" :label="folder.name"/></el-select><p v-if="operation === 'scope'">{{ operationRow?.scope === 'PRIVATE' ? '变更后企业成员可见，需要目标共享范围的CRUD授权。' : '取消共享后，企业成员的后续访问和引用可能失效；不会撤回已经生成的内容。' }}</p><p v-if="operation === 'recycle'">资料进入回收站后停止后续下载和检索，可以恢复；不会抹掉已生成的对话。</p><el-checkbox v-if="operation === 'restore'" v-model="confirmMissingParent">原目录已不存在时，我确认恢复到本企业该所有者的根目录</el-checkbox><template v-if="impact"><p>影响：{{ impact.versionCount }}个版本 · {{ formatBytes(impact.bytes) }} · {{ impact.children }}个未清理子项</p><p>任务活动使用/引用影响：未核实，不能当作零引用。</p><el-alert v-if="impact.blockedReason" :title="impact.blockedReason" type="info" :closable="false"/></template><el-checkbox v-if="operation === 'purge'" v-model="confirmPurge">我确认永久删除上述资料，原版本引用会失效，不可恢复</el-checkbox><el-input v-if="operation !== 'impact'" v-model="operationReason" maxlength="500" placeholder="管理原因，至少4个字，请勿粘贴正文或密钥"/><el-alert v-if="dialogError" :title="dialogError" type="error" :closable="false"/><template #footer><el-button :disabled="busy" @click="operationOpen = false">{{ operation === 'impact' ? '关闭' : '取消' }}</el-button><el-button v-if="operation !== 'impact'" :type="operation === 'purge' || operation === 'recycle' ? 'danger' : 'primary'" :loading="busy" :disabled="operation === 'purge' && (!impact?.canPurge || !confirmPurge)" @click="saveOperation">{{ operation === 'purge' ? '永久删除' : '确认' }}</el-button></template></el-dialog>
+  <el-dialog v-model="detailOpen" :title="detailRow?.name || '资料详情'" width="760px" align-center append-to-body class="library-modal"><el-alert v-if="detailError" :title="detailError" type="error" :closable="false"/><div v-loading="detailLoading"><el-tabs v-model="detailTab"><el-tab-pane label="基本信息" name="info"><p>所有者：{{ detailRow?.ownerName || detailRow?.ownerUserId }}（不在此转移归属）</p><p>目录：{{ detailRow?.parentPath.join(' / ') || '根目录' }}</p><p>类型：{{ typeLabels[detailRow?.fileType || 'other'] }} · 可见性：{{ detailRow?.scope === 'PRIVATE' ? '仅所有者' : '企业共享' }}</p><p v-if="detailRow?.currentVersion">{{ detailRow.currentVersion.mimeType }} · {{ formatBytes(detailRow.currentVersion.sizeBytes) }} · {{ statusLabels[detailRow.currentVersion.parseStatus] }}</p><p v-if="detailRow?.currentVersion?.parseReason">{{ detailRow.currentVersion.parseReason }}</p><p v-if="detailRow?.kind === 'FOLDER'">这是文件夹，不作为文件正文预览。</p><el-button v-else :disabled="!detailRow?.readGrantId || detailRow?.state !== 'ACTIVE'" @click="detailRow && previewItem(detailRow)">预览正文</el-button></el-tab-pane><el-tab-pane label="版本" name="versions"><el-table :data="detail?.versions || []"><el-table-column prop="versionNo" label="版本" width="80"/><el-table-column prop="originalName" label="原文件名" min-width="180"/><el-table-column label="大小" width="100"><template #default="{row}">{{ formatBytes(row.sizeBytes) }}</template></el-table-column><el-table-column label="操作" width="150"><template #default="{row}"><el-button text :disabled="!detailRow?.readGrantId || detailRow?.state !== 'ACTIVE'" @click="detailRow && previewItem(detailRow,row.id)">预览</el-button><el-button text :disabled="!detailRow?.readGrantId || detailRow?.state !== 'ACTIVE'" @click="detailRow && download(detailRow,row.id)">下载</el-button></template></el-table-column></el-table><p v-if="detail?.versionsTruncated">仅展示最近100个版本；既有引用仍按原versionId读取。</p></el-tab-pane><el-tab-pane label="操作记录" name="audit"><el-table :data="detail?.audit || []"><el-table-column label="操作 / 结果" width="140"><template #default="{row}">{{ actionLabels[row.meta.operation] || row.meta.operation }} · {{ row.meta.success ? '成功' : '失败' }}</template></el-table-column><el-table-column prop="userId" label="实际操作人" min-width="150"/><el-table-column label="原因 / 结果" min-width="180"><template #default="{row}">{{ row.meta.reason }} {{ row.meta.code || '' }}</template></el-table-column><el-table-column label="时间（北京时间）" min-width="170"><template #default="{row}">{{ time(row.createdAt) }}</template></el-table-column></el-table><p>展示最近30条平台管理结果；不记录正文或token。</p></el-tab-pane></el-tabs></div><template #footer><el-button @click="detailOpen = false">关闭</el-button></template></el-dialog>
+  <el-dialog v-model="previewOpen" :title="preview?.name || '资料预览'" width="760px" align-center append-to-body class="library-modal"><el-alert v-if="previewError" :title="previewError" type="error" :closable="false"/><div v-loading="previewLoading"><p v-if="preview?.parseReason">{{ preview.parseReason }}</p><p v-if="preview?.truncated">{{ preview.truncationNote || '当前预览为截断内容' }}</p><img v-if="preview?.previewKind === 'image'" :src="previewMedia" :alt="preview.name" class="library-media"/><video v-else-if="preview?.previewKind === 'video'" :src="previewMedia" controls preload="metadata" class="library-media"/><pre v-else-if="preview?.text" class="library-pre">{{ preview.text }}</pre><p v-else-if="preview?.previewKind === 'link'">{{ preview.linkUrl }}</p><p v-else-if="preview">暂无可安全预览的正文；如有权限可下载原文件。</p><p v-if="preview?.previewKind === 'image' || preview?.previewKind === 'video'">图片/视频仅保存，不代表AI可读；浏览器不支持编码时请下载原文件。</p></div><template #footer><el-button @click="previewOpen = false">关闭</el-button><el-button v-if="previewRow?.kind === 'FILE' && previewRow?.readGrantId" @click="download(previewRow,preview?.versionId || undefined)">下载原文件</el-button></template></el-dialog>
+  <el-dialog v-model="custodyOpen" title="当前企业代管授权" width="760px" align-center append-to-body class="library-modal"><p>共享范围由企业管理员批准；私人范围由所有者批准。这里不能给平台自行授权。</p><el-table :data="custodies.filter(g=>g.tenantId === tenantId)"><el-table-column label="范围" min-width="140"><template #default="{row}">{{ row.contentScope === 'ENTERPRISE' ? '企业共享' : '私人所有者：'+row.ownerUserId }} · {{ row.powers }}</template></el-table-column><el-table-column prop="granteeUserId" label="被授权人" min-width="150"/><el-table-column label="到期（北京时间）" min-width="170"><template #default="{row}">{{ time(row.expiresAt) }}{{ row.revokedAt ? ' · 已撤销' : '' }}</template></el-table-column><el-table-column label="操作" width="80"><template #default="{row}"><el-button text type="danger" :disabled="!!row.revokedAt" @click="revoke(row.id)">撤销</el-button></template></el-table-column></el-table><template #footer><el-button @click="custodyOpen = false">关闭</el-button></template></el-dialog>
+ </section>
 </template>
-
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import LibraryManagedBrowser from '../../components/LibraryManagedBrowser.vue';
-const activeGrant = ref<string | null>(null);
-import { ElMessage } from 'element-plus';
-import { LibraryParseStatusLabel, type LibraryParseStatus } from '@mammoth/shared';
+import { computed, onBeforeUnmount, reactive, ref, toRaw, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { Folder, FileText, Image, Link, Video } from 'lucide-vue-next';
+import AdminLibraryTargetForm from '../../components/AdminLibraryTargetForm.vue';
+import LibraryUploadDialog from '../../components/LibraryUploadDialog.vue';
+import '../../styles/libraryDialogs.css';
 import { formatBytes } from '../../utils/format';
-import {
-  libraryAdminStats,
-  libraryCustodies,
-  revokeLibraryCustody,
-  type CustodyRow,
-  type LibraryStats,
-} from '../../api/library';
-
-const loading = ref(false);
-const error = ref('');
-const limits = ref<LibraryStats['limits'] | null>(null);
-const tenants = ref<LibraryStats['tenants']>([]);
-const custodies = ref<CustodyRow[]>([]);
-
-function statusLabel(status: LibraryParseStatus) {
-  return LibraryParseStatusLabel[status];
-}
-
-async function load() {
-  loading.value = true;
-  try {
-    const stats = await libraryAdminStats();
-    limits.value = stats.limits;
-    tenants.value = stats.tenants;
-    custodies.value = await libraryCustodies();
-    error.value = '';
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '概况加载失败';
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function revoke(id: string) {
-  try {
-    const row = await revokeLibraryCustody(id);
-    activeGrant.value = null;
-    ElMessage.success(row.message || '已撤销代管');
-    await load();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '撤销失败';
-  }
-}
-
-onMounted(() => {
-  void load();
-});
+import { libraryCustodies, revokeLibraryCustody, type CustodyRow, type LibraryPreview } from '../../api/library';
+import { adminLibraryTenants, adminLibraryItems, adminLibraryOptions, adminLibraryDetail, adminLibraryImpact, adminLibraryFolder, adminLibraryCommand, adminLibraryUpload, adminLibraryPreview, adminLibraryDownload, type AdminItem, type AdminTenant, type AdminOptions, type AdminTarget, type AdminCommand, type AdminDetail, type AdminImpact } from '../../api/libraryAdmin';
+const route=useRoute(),router=useRouter();const tenantId=computed(()=>typeof route.query.tenantId === 'string'?route.query.tenantId:'');
+const tenants=ref<AdminTenant[]>([]),tenantTotal=ref(0),tenantPage=ref(1),tenantSearch=ref('');
+const options=ref<AdminOptions>(),items=ref<AdminItem[]>([]),total=ref(0),page=ref(1),loading=ref(false),busy=ref(false),error=ref(''),filtersOpen=ref(false);
+const query=reactive({q:'',state:'ACTIVE',ownerUserId:'',scope:'',fileType:'',status:'',folderId:''});
+const typeLabels:Record<string,string>={folder:'文件夹',image:'图片',video:'视频',pdf:'PDF',word:'Word',excel:'Excel',ppt:'PPT',text:'文本',link:'链接',other:'其他'};
+const statusLabels:Record<string,string>={PENDING:'处理中',PROCESSING:'处理中',READY:'可供AI引用',DOWNLOAD_ONLY:'仅保存',FAILED:'解析失败',NOT_APPLICABLE:'不适用'};
+const actionLabels:Record<string,string>={folder:'新建文件夹',upload:'上传',rename:'重命名',move:'移动',scope:'修改可见性',replace:'替换版本',recycle:'回收',restore:'恢复',purge:'彻底删除',retry:'重新解析'};
+const time=(value:string)=>new Date(value).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false});
+let epoch=0,listSequence=0,optionsSequence=0,operationSequence=0,detailSequence=0,previewSequence=0;let alive=true;
+onBeforeUnmount(()=>{alive=false;epoch++;listSequence++;optionsSequence++;operationSequence++;detailSequence++;previewSequence++;});
+function selectTenant(id:string){void router.replace({query:{...route.query,tenantId:id||undefined}});}
+async function loadTenants(){const seq=++listSequence;loading.value=true;try{const result=await adminLibraryTenants({q:tenantSearch.value,page:tenantPage.value,pageSize:20});if(!alive||seq!==listSequence)return;tenants.value=result.items;tenantTotal.value=result.total;error.value='';}catch(e){if(alive&&seq===listSequence){tenants.value=[];error.value=message(e);}}finally{if(alive&&seq===listSequence)loading.value=false;}}
+async function loadItems(){const id=tenantId.value,seq=++listSequence;if(!id)return;loading.value=true;try{const result=await adminLibraryItems(id,{...query,page:page.value,pageSize:20});if(!alive||seq!==listSequence||id!==tenantId.value)return;const last=Math.max(1,Math.ceil(result.total/20));if(page.value>last){page.value=last;void loadItems();return;}items.value=result.items;total.value=result.total;if(detailRow.value){const latest=items.value.find(n=>n.id===detailRow.value!.id);if(latest)detailRow.value=latest;}error.value='';}catch(e){if(alive&&seq===listSequence){items.value=[];error.value=message(e);}}finally{if(alive&&seq===listSequence)loading.value=false;}}
+async function reload(){if(!tenantId.value){await loadTenants();return;}const id=tenantId.value,current=epoch,seq=++optionsSequence;loading.value=true;try{const next=await adminLibraryOptions(id);if(!alive||current!==epoch||seq!==optionsSequence||tenantId.value!==id)return;options.value=next;await loadItems();}catch(e){if(alive&&current===epoch&&seq===optionsSequence){options.value=undefined;items.value=[];error.value=message(e);}}finally{if(alive&&current===epoch&&seq===optionsSequence)loading.value=false;}}
+function search(){page.value=1;void loadItems();}
+function message(e:unknown){return e instanceof Error?e.message:'资料库请求失败';}
+watch(tenantId,()=>{epoch++;listSequence++;optionsSequence++;operationSequence++;detailSequence++;previewSequence++;options.value=undefined;items.value=[];total.value=0;page.value=1;busy.value=false;error.value='';folderOpen.value=false;uploadOpen.value=false;operationOpen.value=false;detailOpen.value=false;previewOpen.value=false;preview.value=undefined;custodyOpen.value=false;Object.assign(query,{q:'',state:'ACTIVE',ownerUserId:'',scope:'',fileType:'',status:'',folderId:''});void reload();});
+const emptyTarget=():AdminTarget=>({ownerUserId:'',scope:'PRIVATE',parentId:'',grantId:'',reason:'',confirmShare:false});const target=ref<AdminTarget>(emptyTarget());
+function validateTarget(){const t=target.value;if(!options.value||!t.ownerUserId||!t.grantId||t.reason.trim().length<4)throw new Error('请明确选择所有者、有效管理授权并填写至少4个字的原因。');const g=options.value.grants.find(g=>g.id===t.grantId&&g.powers==='CRUD'&&(t.scope==='ENTERPRISE'?g.contentScope==='ENTERPRISE':g.contentScope==='PRIVATE_OWNER'&&g.ownerUserId===t.ownerUserId));if(!g||!options.value.owners.some(o=>o.id===t.ownerUserId))throw new Error('授权或所有者已变化，请刷新并重新选择。');if(t.scope==='ENTERPRISE'&&!t.confirmShare)throw new Error('企业共享必须明确确认。');return {...t};}
+const folderOpen=ref(false),folderName=ref(''),dialogError=ref('');
+function newFolder(){target.value=emptyTarget();folderName.value='';dialogError.value='';folderOpen.value=true;}
+async function saveFolder(){if(busy.value)return;const id=tenantId.value,current=epoch;try{const selected=validateTarget();if(!folderName.value.trim())throw new Error('请输入文件夹名称');busy.value=true;await adminLibraryFolder(id,{...selected,name:folderName.value,requestId:crypto.randomUUID()});if(current!==epoch||!alive)return;folderOpen.value=false;ElMessage.success('文件夹已创建');await reload();}catch(e){if(current===epoch)dialogError.value=message(e);}finally{if(current===epoch)busy.value=false;}}
+const uploadOpen=ref(false),uploadKey=ref(0),replacement=ref<AdminItem>(),replaceReason=ref('');
+type UploadPlan={tenant:string;epoch:number;body:AdminTarget|Omit<AdminCommand,'requestId'>;replace:boolean;limits:{maxFileBytes:number;allowedExtensions:string[]}};let uploadPlan:UploadPlan|undefined;let uploadIds=new WeakMap<File,string>();
+function newUpload(){target.value=emptyTarget();replacement.value=undefined;replaceReason.value='';uploadPlan=undefined;uploadIds=new WeakMap();uploadKey.value++;uploadOpen.value=true;}
+function replaceUpload(item:AdminItem){if(!item.writeGrantId)return;newUpload();replacement.value=structuredClone(toRaw(item));}
+function prepareUpload(){if(uploadPlan)return;if(!options.value)throw new Error('企业资料上下文未加载');const item=replacement.value;const body=item?{...commandBase(item,'replace',replaceReason.value),action:'replace' as const}:validateTarget();uploadPlan={tenant:tenantId.value,epoch,body:structuredClone(body),replace:!!item,limits:structuredClone(toRaw(options.value.limits))};}
+async function uploadLimits(){return uploadPlan?.limits||options.value?.limits||Promise.reject(new Error('无法获取企业上传限制'));}
+async function uploadOne(file:File,progress:(ratio:number)=>void){if(!uploadPlan)throw new Error('请先确认上传目标');let requestId=uploadIds.get(file);if(!requestId){requestId=crypto.randomUUID();uploadIds.set(file,requestId);}await adminLibraryUpload(uploadPlan.tenant,{...uploadPlan.body,requestId},file,progress,uploadPlan.replace);return '已保存；AI可用性以处理状态为准';}
+async function uploaded(count:number){if(count>0&&uploadPlan?.epoch===epoch&&alive){ElMessage.success(`${count}个文件已保存`);await loadItems();}}
+const operationOpen=ref(false),operation=ref<AdminCommand['action']|'impact'>('rename'),operationRow=ref<AdminItem>(),operationName=ref(''),operationParent=ref(''),operationReason=ref(''),confirmPurge=ref(false),confirmMissingParent=ref(false),impact=ref<AdminImpact>();
+const operationTitle=computed(()=>operation.value==='impact'?'删除影响':operation.value==='purge'?'永久删除此资料？':actionLabels[operation.value]||'管理资料');
+const moveFolders=computed(()=>options.value?.folders.filter(f=>f.id!==operationRow.value?.id&&f.ownerUserId===operationRow.value?.ownerUserId&&f.grantIds.includes(operationRow.value?.writeGrantId??''))??[]);
+function commandBase(item:AdminItem,action:AdminCommand['action'],reason:string):Omit<AdminCommand,'requestId'>{if(!item.writeGrantId)throw new Error('缺少管理授权');if(reason.trim().length<4)throw new Error('请填写至少4个字的管理原因');return {nodeId:item.id,action,grantId:item.writeGrantId,reason,expectedUpdatedAt:item.updatedAt,...(item.currentVersion?{expectedVersionId:item.currentVersion.id}:{})};}
+async function openOperation(action:AdminCommand['action']|'impact',item:AdminItem){const seq=++operationSequence;operation.value=action;operationRow.value=structuredClone(toRaw(item));operationName.value=item.name;operationParent.value=item.parentId??'';operationReason.value='';confirmPurge.value=false;confirmMissingParent.value=false;dialogError.value='';impact.value=undefined;operationOpen.value=true;if(['purge','impact','recycle'].includes(action)){const current=epoch;try{const result=await adminLibraryImpact(tenantId.value,item.id);if(alive&&current===epoch&&seq===operationSequence&&operationOpen.value&&operationRow.value?.id===item.id)impact.value=result;}catch(e){if(current===epoch&&seq===operationSequence&&operationOpen.value)dialogError.value=message(e);}}}
+function openImpact(item:AdminItem){void openOperation('impact',item);}
+async function saveOperation(){if(busy.value||!operationRow.value||operation.value==='impact')return;const item=operationRow.value,id=tenantId.value,current=epoch;try{const body:AdminCommand={...commandBase(item,operation.value,operationReason.value),requestId:crypto.randomUUID()};if(operation.value==='rename')body.name=operationName.value;if(operation.value==='move')body.parentId=operationParent.value;if(operation.value==='scope'){body.scope=item.scope==='PRIVATE'?'ENTERPRISE':'PRIVATE';body.targetGrantId=item.targetScopeGrantId??undefined;body.confirmShare=true;}if(operation.value==='purge'){if(!confirmPurge.value||!impact.value?.canPurge)throw new Error(impact.value?.blockedReason||'请核实删除影响并确认');body.confirmPurge=true;}if(operation.value==='restore')body.confirmMissingParent=confirmMissingParent.value;busy.value=true;await adminLibraryCommand(id,body);if(current!==epoch||!alive)return;operationOpen.value=false;preview.value=undefined;ElMessage.success(`${actionLabels[body.action]}成功`);await reload();}catch(e){if(current===epoch)dialogError.value=message(e);}finally{if(current===epoch)busy.value=false;}}
+const detailOpen=ref(false),detailRow=ref<AdminItem>(),detail=ref<AdminDetail>(),detailTab=ref('info'),detailError=ref(''),detailLoading=ref(false);
+async function openDetail(item:AdminItem){const id=tenantId.value,seq=++detailSequence;detailRow.value=structuredClone(toRaw(item));detail.value=undefined;detailError.value='';detailTab.value='info';detailOpen.value=true;detailLoading.value=true;try{const value=await adminLibraryDetail(id,item.id);if(alive&&seq===detailSequence&&id===tenantId.value)detail.value=value;}catch(e){if(seq===detailSequence)detailError.value=message(e);}finally{if(seq===detailSequence)detailLoading.value=false;}}
+const previewOpen=ref(false),preview=ref<LibraryPreview>(),previewRow=ref<AdminItem>(),previewMedia=ref(''),previewError=ref(''),previewLoading=ref(false);
+async function previewItem(item:AdminItem,version?:string){if(!item.readGrantId)return;const id=tenantId.value,seq=++previewSequence;preview.value=undefined;previewError.value='';previewMedia.value='';previewRow.value=structuredClone(toRaw(item));previewOpen.value=true;previewLoading.value=true;try{const value=await adminLibraryPreview(id,item,version);if(!alive||seq!==previewSequence||id!==tenantId.value)return;preview.value=value;if(value.previewKind==='image'||value.previewKind==='video')previewMedia.value=adminLibraryDownload(id,item,value.versionId??undefined,true);}catch(e){if(seq===previewSequence)previewError.value=message(e);}finally{if(seq===previewSequence)previewLoading.value=false;}}
+function download(item:AdminItem,version?:string){if(item.readGrantId)window.open(adminLibraryDownload(tenantId.value,item,version),'_blank','noopener');}
+const custodyOpen=ref(false),custodies=ref<CustodyRow[]>([]);
+async function showCustodies(){const current=epoch;custodyOpen.value=true;custodies.value=[];try{const value=await libraryCustodies();if(alive&&current===epoch)custodies.value=value;}catch(e){if(alive&&current===epoch)error.value=message(e);}}
+async function revoke(id:string){try{await ElMessageBox.confirm('撤销后授权不再允许后续访问或写入，已读内容不能撤回。','撤销代管授权',{customClass:'library-message-box',type:'warning'});}catch{return;}try{await revokeLibraryCustody(id);preview.value=undefined;ElMessage.success('代管已撤销');await showCustodies();await reload();}catch(e){error.value=message(e);}}
+void reload();
 </script>
-
 <style scoped>
-.admin-library { padding:4px 2px 24px; display:flex; flex-direction:column; gap:14px; }
-.page-header h2 { margin:0 0 6px; font-size:20px; color:var(--app-heading-color); }
-.admin-library p { margin:0; color:var(--el-text-color-secondary); font-size:13px; line-height:1.6; }
-.admin-library h3 { margin:10px 0 0; font-size:16px; color:var(--app-heading-color); }
-.admin-library .admin-library-error { color:var(--el-color-danger); }
-.admin-library :deep(th.el-table__cell) { background:var(--el-fill-color-light); font-size:13px; font-weight:600; }
-.admin-library :deep(.cell),.admin-library :deep(.el-button.is-text) { font-size:13px; }
-.admin-library :deep(.el-button + .el-button) { margin-left:4px; }
+.admin-library{padding:15px;background:#fff;min-height:100%;display:flex;flex-direction:column;gap:16px;box-sizing:border-box;color:var(--el-text-color-primary)}
+.library-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}.library-header h2{margin:0 0 6px;font-size:20px;font-weight:600}.library-header p,.library-note{margin:0;font-size:12px;line-height:1.7;color:var(--el-text-color-secondary)}.library-actions,.library-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.library-toolbar>.el-input{width:280px;max-width:100%}.library-toolbar>.el-select{width:160px;max-width:100%}.toolbar-spacer{flex:1}.library-filters{padding:12px;background:var(--el-fill-color-light);border-radius:8px}.library-name{display:flex;align-items:center;gap:8px;min-width:0}.library-name>svg{flex:0 0 16px}.library-name :deep(.el-button){min-width:0;max-width:100%;padding:0;height:auto;text-align:left}.library-name :deep(.el-button>span){display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.admin-library small{display:block;color:var(--el-text-color-secondary);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.admin-library :deep(.el-table .cell){font-size:13px}.admin-library :deep(.el-table th.el-table__cell){background:var(--el-fill-color-light)}.admin-library :deep(.el-pagination){align-self:flex-end;flex-wrap:wrap}.danger{color:var(--el-color-danger)}.library-media{display:block;max-width:100%;max-height:55vh;object-fit:contain}.library-pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.7;margin:0}.library-modal p{overflow-wrap:anywhere}.library-modal :deep(.el-select){width:100%}
 </style>

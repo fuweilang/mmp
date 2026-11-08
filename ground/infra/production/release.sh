@@ -443,7 +443,7 @@ step_deploy() {
     ts="$(rsh_script 'set -e
 cd "$1"
 TS=$(date +%Y%m%d-%H%M%S)
-mkdir -p middle-web downloads data/uploads data/api-state secrets
+mkdir -p middle-web downloads data/uploads data/library data/api-state secrets
 cp -a .env ".env.bak-$TS"
 cp -a middle-web "middle-web.bak-$TS"
 find middle-web -mindepth 1 -delete

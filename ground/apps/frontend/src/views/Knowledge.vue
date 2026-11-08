@@ -112,46 +112,15 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="uploadOpen" title="上传材料" width="520px" @close="resetUpload">
-      <el-form ref="uploadFormRef" :model="upload" :rules="uploadRules" label-width="88px">
-        <el-form-item label="文件" prop="hasFile">
-          <el-upload
-            drag
-            :auto-upload="false"
-            :limit="1"
-            :file-list="uploadList"
-            accept=".pdf,.txt,.md,.docx,.pptx"
-            :on-change="onFileChange"
-            :on-remove="onFileRemove"
-          >
-            <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
-            <template #tip>
-              <div class="el-upload__tip">支持 Word（.docx）、PPT（.pptx）、文本型 PDF、TXT 和 Markdown</div>
-            </template>
-          </el-upload>
-        </el-form-item>
-        <el-form-item label="目录">
-          <el-select v-model="upload.folderId" clearable placeholder="未分类" style="width: 100%">
-            <el-option v-for="folder in folders" :key="folder.id" :label="folder.name" :value="folder.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="可见范围">
-          <el-select v-model="upload.visibility" style="width: 100%">
-            <el-option label="全员" value="ALL" />
-            <el-option label="指定成员" value="SELECTED" />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="upload.visibility === 'SELECTED'" label="成员" prop="userIds">
-          <el-select v-model="upload.userIds" multiple filterable style="width: 100%" placeholder="选择可见成员">
-            <el-option v-for="m in members" :key="m.user.id" :label="memberLabel(m)" :value="m.user.id" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="uploadOpen = false">取消</el-button>
-        <el-button type="primary" :loading="uploading" @click="onUpload">上传</el-button>
+    <LibraryUploadDialog v-if="uploadOpen" title="上传知识库材料" accept=".pdf,.txt,.md,.docx,.pptx" hint="企业知识库材料：文本型PDF、TXT、Markdown、DOCX、PPTX，单文件20MB。按下方既有成员范围保存，与私人资料库不同；上传成功不代表解析成功。" :load-limits="knowledgeUploadLimits" :prepare="prepareKnowledgeUpload" :upload-file="uploadKnowledgeFile" @close="uploadOpen = false" @complete="knowledgeUploaded">
+      <template #default="{ busy }">
+        <el-form label-width="88px" :disabled="busy">
+          <el-form-item label="目录"><el-select v-model="upload.folderId" clearable placeholder="未分类" style="width:100%"><el-option v-for="folder in folders" :key="folder.id" :label="folder.name" :value="folder.id" /></el-select></el-form-item>
+          <el-form-item label="可见范围"><el-select v-model="upload.visibility" style="width:100%"><el-option label="全员" value="ALL" /><el-option label="指定成员" value="SELECTED" /></el-select></el-form-item>
+          <el-form-item v-if="upload.visibility === 'SELECTED'" label="成员"><el-select v-model="upload.userIds" multiple filterable style="width:100%" placeholder="选择可见成员"><el-option v-for="m in members" :key="m.user.id" :label="memberLabel(m)" :value="m.user.id" /></el-select></el-form-item>
+        </el-form>
       </template>
-    </el-dialog>
+    </LibraryUploadDialog>
 
     <el-dialog v-model="accessOpen" title="授权" width="480px">
       <el-form label-width="88px">
@@ -207,7 +176,8 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadUserFile } from 'element-plus';
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
+import LibraryUploadDialog from '../components/LibraryUploadDialog.vue';
 import { Search } from 'lucide-vue-next';
 import { AccessScopeLabel, KbStatusLabel, type AccessScope, type KbStatus } from '@mammoth/shared';
 import {
@@ -246,15 +216,10 @@ const folderSaving = ref(false);
 const folderFormRef = ref<FormInstance>();
 const folderForm = reactive({ name: '' });
 const uploadOpen = ref(false);
-const uploading = ref(false);
-const uploadFormRef = ref<FormInstance>();
-const uploadFile = ref<File | null>(null);
-const uploadList = ref<UploadUserFile[]>([]);
 const upload = reactive({
   folderId: '' as string,
   visibility: 'ALL' as AccessScope,
   userIds: [] as string[],
-  hasFile: false,
 });
 const accessOpen = ref(false);
 const accessSaving = ref(false);
@@ -267,30 +232,6 @@ let searchTimer = 0;
 
 const folderRules: FormRules = {
   name: [{ required: true, message: '请输入目录名', trigger: 'blur' }],
-};
-
-const uploadRules: FormRules = {
-  hasFile: [
-    {
-      validator: (_rule, value: boolean, callback) => {
-        if (!value) callback(new Error('请选择文件'));
-        else callback();
-      },
-      trigger: 'change',
-    },
-  ],
-  userIds: [
-    {
-      validator: (_rule, value: string[], callback) => {
-        if (upload.visibility === 'SELECTED' && value.length === 0) {
-          callback(new Error('指定成员时至少选择一人'));
-          return;
-        }
-        callback();
-      },
-      trigger: 'change',
-    },
-  ],
 };
 
 const displayedRows = computed(() => {
@@ -367,31 +308,10 @@ function onPageSizeChange(size: number) {
 }
 
 function resetUpload() {
-  uploadFile.value = null;
-  uploadList.value = [];
-  upload.hasFile = false;
   upload.folderId = folderFilter.value === 'none' ? '' : folderFilter.value;
-  upload.visibility = 'ALL';
-  upload.userIds = [];
-  uploadFormRef.value?.clearValidate();
+  upload.visibility = 'ALL'; upload.userIds = [];
 }
-
-function openUpload() {
-  resetUpload();
-  uploadOpen.value = true;
-}
-
-function onFileChange(file: UploadFile, files: UploadUserFile[]) {
-  uploadList.value = files.slice(-1);
-  uploadFile.value = file.raw ?? null;
-  upload.hasFile = Boolean(uploadFile.value);
-}
-
-function onFileRemove() {
-  uploadList.value = [];
-  uploadFile.value = null;
-  upload.hasFile = false;
-}
+function openUpload() { resetUpload(); uploadOpen.value = true; }
 
 function openAccess(row: KbDocumentRow) {
   accessId.value = row.id;
@@ -452,27 +372,22 @@ async function onCreateFolder() {
   }
 }
 
-async function onUpload() {
-  const valid = await uploadFormRef.value?.validate().catch(() => false);
-  if (!valid || !uploadFile.value) return;
-  uploading.value = true;
-  try {
-    const form = new FormData();
-    form.append('file', uploadFile.value);
-    if (upload.folderId) form.append('folderId', upload.folderId);
-    form.append('visibility', upload.visibility);
-    form.append('userIds', JSON.stringify(upload.visibility === 'SELECTED' ? upload.userIds : []));
-    const next = await knowledgeApi.upload(form);
-    if (next.status === 'READY') ElMessage.success('已上传，可检索');
-    else ElMessage.warning(next.indexError || '文件已上传，尚未完成解析');
-    uploadOpen.value = false;
-    await loadDocuments();
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '上传失败');
-  } finally {
-    uploading.value = false;
-  }
+const knowledgeUploadLimits = async () => ({ maxFileBytes: 20 * 1024 * 1024, allowedExtensions: ['.pdf', '.txt', '.md', '.docx', '.pptx'] });
+let knowledgeUploadContext: { folderId: string; visibility: AccessScope; userIds: string[] } | undefined;
+function prepareKnowledgeUpload() {
+  if (!hasTenant.value) throw new Error('请先选择企业');
+  if (upload.visibility === 'SELECTED' && upload.userIds.length === 0) throw new Error('指定成员时至少选择一人');
+  knowledgeUploadContext = { folderId: upload.folderId, visibility: upload.visibility, userIds: [...upload.userIds] };
 }
+async function uploadKnowledgeFile(file: File) {
+  const context = knowledgeUploadContext; if (!context) throw new Error('请先确认成员范围');
+  const form = new FormData(); form.append('file', file);
+  if (context.folderId) form.append('folderId', context.folderId);
+  form.append('visibility', context.visibility); form.append('userIds', JSON.stringify(context.visibility === 'SELECTED' ? context.userIds : []));
+  const next = await knowledgeApi.upload(form);
+  return next.status === 'READY' ? '已保存，可检索' : `文件已保存，${next.indexError || '尚未完成解析'}；请查看列表处理状态`;
+}
+async function knowledgeUploaded(successes: number) { if (successes > 0) await loadDocuments(); }
 
 async function onStatus(row: KbDocumentRow) {
   const status: KbStatus = row.status === 'READY' ? 'PENDING' : 'READY';

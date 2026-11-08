@@ -137,6 +137,7 @@ afterEach(() => {
 it('puts a + command choice on the current draft and sends that version excerpt only when the user submits', async () => {
   const fetchImpl = stubLibrary(() => Response.json({
     name: '制度.md', versionId: 'ver-1', locator: 'paragraph:1', quote: '第一段持久正文',
+    truncated: true, truncationNote: '仅使用部分摘录，未读取全文。',
   }))
   vi.stubGlobal('fetch', fetchImpl)
   const box = await composer('ver-1')
@@ -151,13 +152,15 @@ it('puts a + command choice on the current draft and sends that version excerpt 
   box.shell.submit('queue', 'click')
   await vi.waitFor(() => { expect(sent).toHaveLength(1) })
   const openCall = fetchImpl.mock.calls.find(call => String(call[0]).includes('/open'))
-  expect(JSON.parse(String(openCall?.[1]?.body))).toEqual({ nodeId: 'node-1', versionId: 'ver-1' })
+  expect(JSON.parse(String(openCall?.[1]?.body))).toEqual({ nodeId: 'node-1', versionId: 'ver-1', purpose: 'prepare' })
   expect(openCall?.[1]?.credentials).toBe('include')
   expect(sent[0]).toContain('条款是什么')
   expect(sent[0]).toContain('ver-1')
   expect(sent[0]).toContain('paragraph:1')
   expect(sent[0]).toContain('第一段持久正文')
   expect(sent[0]).toContain('untrusted source data')
+  expect(sent[0]).toContain('only a partial excerpt was read')
+  expect(sent[0]).toContain('仅使用部分摘录，未读取全文。')
   await box.dispose()
 })
 
@@ -257,7 +260,7 @@ it('sends the selected real single-chunk v1 after replacement by v2, and keeps t
   expect(replacement.currentVersion!.id).not.toBe(versionId)
   box.shell.submit('queue', 'click')
   await vi.waitFor(() => { expect(sent).toHaveLength(1) })
-  expect(openBodies).toEqual([{ nodeId: uploaded.id, versionId }])
+  expect(openBodies).toEqual([{ nodeId: uploaded.id, versionId, purpose: 'prepare' }])
   expect(sent[0]).toContain('这一句是什么')
   expect(sent[0]).toContain(versionId)
   expect(sent[0]).toContain('paragraph:1')
@@ -275,6 +278,7 @@ it('sends the selected real single-chunk v1 after replacement by v2, and keeps t
   await vi.waitFor(() => {
     expect(revoked.shell.draftSnapshot.references.map(reference => reference.ref)).toEqual([`${uploaded.id}@${versionId}`])
   })
+  await service.recycle(actor, uploaded.id)
   await service.purge(actor, uploaded.id)
   revoked.shell.submit('queue', 'click')
   await vi.waitFor(() => { expect(openBodies.some(body => body.versionId === versionId && openBodies.length > 1)).toBe(true) })

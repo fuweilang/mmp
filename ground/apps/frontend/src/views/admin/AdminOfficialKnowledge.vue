@@ -93,8 +93,9 @@
       title="资料详情"
       width="760px"
       align-center
+      append-to-body
       destroy-on-close
-      class="official-kb-dialog official-kb-viewer"
+      class="library-modal official-kb-dialog official-kb-viewer"
     >
       <div v-loading="viewerLoading" class="viewer-body">
         <template v-if="viewerRow">
@@ -142,49 +143,21 @@
       </template>
     </el-dialog>
 
-    <el-dialog
-      v-model="uploadOpen"
-      :title="replaceTarget ? '替换资料' : '上传资料'"
-      width="520px"
-      align-center
-      destroy-on-close
-      class="official-kb-dialog"
-      @closed="resetUploadForm"
-    >
-      <el-form label-position="top">
-        <el-form-item v-if="!replaceTarget" label="所属官方专家" required>
-          <el-select v-model="uploadAgentId" filterable placeholder="仅列出可绑定官方知识库的专家" style="width: 100%">
-            <el-option
-              v-for="agent in agents"
-              :key="agent.id"
-              :label="`${agent.name}（${agent.key}）`"
-              :value="agent.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-else label="替换目标">
-          <div>{{ replaceTarget.name }} · {{ replaceTarget.agent.name }}</div>
-        </el-form-item>
-        <el-form-item label="资料显示名">
-          <el-input v-model="uploadName" maxlength="120" placeholder="默认使用文件名" />
-        </el-form-item>
-        <el-form-item label="文件" required>
-          <input type="file" accept=".md,.markdown,.txt,.pdf,.docx,.pptx" @change="onFileChange" />
-          <div class="muted">支持 Markdown / TXT / PDF / DOCX / PPTX，最大 20MB。先索引成功再生效，失败保留旧知识。</div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="uploadOpen = false">取消</el-button>
-        <el-button type="primary" :loading="uploading" @click="submitUpload">
-          {{ replaceTarget ? '替换并索引' : '上传并索引' }}
-        </el-button>
+    <LibraryUploadDialog v-if="uploadOpen" :title="replaceTarget ? '替换官方知识资料' : '上传官方知识资料'" :multiple="!replaceTarget" accept=".md,.markdown,.txt,.pdf,.docx,.pptx" hint="仅官方知识资料：Markdown/TXT/PDF/DOCX/PPTX，单文件20MB；先索引成功再生效，失败保留旧知识。不会自动修改企业私人资料的分享范围。" :load-limits="officialUploadLimits" :prepare="prepareOfficialUpload" :upload-file="uploadOfficialFile" @close="uploadOpen = false; resetUploadForm()" @complete="officialUploaded">
+      <template #default="{ busy, count }">
+        <el-form label-position="top" :disabled="busy">
+          <el-form-item v-if="!replaceTarget" label="所属官方专家" required><el-select v-model="uploadAgentId" filterable placeholder="仅列出可绑定官方知识库的专家" style="width:100%"><el-option v-for="agent in agents" :key="agent.id" :label="`${agent.name}（${agent.key}）`" :value="agent.id" /></el-select></el-form-item>
+          <el-form-item v-else label="替换目标"><div>{{ replaceTarget.name }} · {{ replaceTarget.agent.name }}</div></el-form-item>
+          <el-form-item label="资料显示名"><el-input v-model="uploadName" :disabled="count > 1" maxlength="120" placeholder="单文件可自定义；多文件使用各自原文件名" /></el-form-item>
+        </el-form>
       </template>
-    </el-dialog>
+    </LibraryUploadDialog>
   </section>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import LibraryUploadDialog from '../../components/LibraryUploadDialog.vue';
 import { ElMessage } from 'element-plus';
 import {
   adminOfficialKnowledgeApi,
@@ -212,10 +185,8 @@ const chunksLoading = ref(false);
 const chunks = ref<Array<{ id: string; ordinal: number; preview: string; length: number }>>([]);
 
 const uploadOpen = ref(false);
-const uploading = ref(false);
 const uploadAgentId = ref('');
 const uploadName = ref('');
-const uploadFile = ref<File | null>(null);
 const replaceTarget = ref<OfficialKnowledgeRow | null>(null);
 
 async function reload() {
@@ -338,51 +309,27 @@ function openReplace(row: OfficialKnowledgeRow) {
 function resetUploadForm() {
   uploadAgentId.value = '';
   uploadName.value = '';
-  uploadFile.value = null;
   replaceTarget.value = null;
 }
 
-function onFileChange(event: Event) {
-  const input = event.target as HTMLInputElement;
-  uploadFile.value = input.files?.[0] ?? null;
+const officialUploadLimits = async () => ({ maxFileBytes: 20 * 1024 * 1024, allowedExtensions: ['.md', '.markdown', '.txt', '.pdf', '.docx', '.pptx'] });
+let officialUploadContext: { agentId: string; replacementId?: string; name: string; namedFile?: File } | undefined;
+function prepareOfficialUpload(files: readonly File[]) {
+  if (!replaceTarget.value && !uploadAgentId.value) throw new Error('请选择所属专家');
+  officialUploadContext = { agentId: uploadAgentId.value, ...(replaceTarget.value ? { replacementId: replaceTarget.value.id } : {}), name: uploadName.value.trim(), ...(files.length === 1 ? { namedFile: files[0] } : {}) };
 }
-
-async function submitUpload() {
-  if (!uploadFile.value) {
-    ElMessage.warning('请选择文件');
-    return;
-  }
-  if (!replaceTarget.value && !uploadAgentId.value) {
-    ElMessage.warning('请选择所属专家');
-    return;
-  }
-  const body = new FormData();
-  body.append('file', uploadFile.value);
-  if (uploadName.value.trim()) body.append('name', uploadName.value.trim());
-  uploading.value = true;
-  try {
-    let result: OfficialKnowledgeRow;
-    if (replaceTarget.value) {
-      result = await adminOfficialKnowledgeApi.replace(replaceTarget.value.id, body);
-    } else {
-      body.append('agentId', uploadAgentId.value);
-      result = await adminOfficialKnowledgeApi.upload(body);
-    }
-    if (result.status === 'READY' && result.active) {
-      ElMessage.success('已索引并生效');
-    } else if (result.status === 'FAILED') {
-      ElMessage.error(result.indexError || '索引失败，线上仍保留旧知识（如有）');
-    } else {
-      ElMessage.warning('已上传，索引尚未完成');
-    }
-    uploadOpen.value = false;
-    await reload();
-  } catch (error) {
-    ElMessage.error(error instanceof ApiError ? error.message : '上传失败');
-  } finally {
-    uploading.value = false;
-  }
+async function uploadOfficialFile(file: File) {
+  const context = officialUploadContext; if (!context) throw new Error('请先选择所属专家');
+  const body = new FormData(); body.append('file', file);
+  if (context.name && context.namedFile === file) body.append('name', context.name);
+  let result: OfficialKnowledgeRow;
+  if (context.replacementId) result = await adminOfficialKnowledgeApi.replace(context.replacementId, body);
+  else { body.append('agentId', context.agentId); result = await adminOfficialKnowledgeApi.upload(body); }
+  if (result.status === 'READY' && result.active) return '已保存，已索引并生效';
+  if (result.status === 'FAILED') return `文件已保存，但索引失败：${result.indexError || '请在列表重试索引'}；旧知识（如有）保留，不必重复上传`;
+  return '文件已保存，索引尚未完成';
 }
+async function officialUploaded(successes: number) { if (successes > 0) await reload(); }
 
 async function onReindex(row: OfficialKnowledgeRow) {
   try {
@@ -491,25 +438,5 @@ onMounted(async () => {
 }
 .official-kb-dialog :deep(.el-dialog__body) {
   padding-top: 8px;
-}
-:deep(.el-dialog.official-kb-viewer) {
-  margin: 48px auto !important;
-  max-height: calc(100dvh - 96px);
-  display: flex;
-  flex-direction: column;
-}
-:deep(.el-dialog.official-kb-viewer .el-dialog__header),
-:deep(.el-dialog.official-kb-viewer .el-dialog__footer) {
-  flex-shrink: 0;
-}
-:deep(.el-dialog.official-kb-viewer .el-dialog__body) {
-  overflow: auto;
-  max-height: calc(100dvh - 220px);
-}
-@media (max-width: 768px) {
-  :deep(.el-dialog.official-kb-viewer) {
-    margin: 24px auto !important;
-    max-height: calc(100dvh - 48px);
-  }
 }
 </style>

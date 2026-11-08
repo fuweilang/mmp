@@ -135,7 +135,8 @@ export function resolvePresentedOfficialAvatarUrl(input: {
   const customName = normalizeCustomAvatarPath(input.customAvatarPath);
   if (customName) {
     const uploaded = resolveUploadedOfficialAvatarFile(customName);
-    return uploaded ? officialAvatarPublicUrl(uploaded.fileName, input.origin) : null;
+    if (uploaded) return officialAvatarPublicUrl(uploaded.fileName, input.origin);
+    // 自定义文件丢失时回退内置头像，避免广场出现空白头像。
   }
   const resolved = resolveOfficialAvatar(input.key, input.explicitAssetAvatar);
   return resolved ? officialAvatarPublicUrl(resolved.fileName, input.origin) : null;

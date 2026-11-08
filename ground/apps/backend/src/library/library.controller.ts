@@ -7,6 +7,7 @@ import {
   ForbiddenException,
   Get,
   GoneException,
+  InternalServerErrorException,
   NotFoundException,
   Param,
   Patch,
@@ -72,7 +73,7 @@ export class LibraryController {
     @Query() query: ListQuery,
   ) {
     const actor = await this.actor(user, tenantId);
-    return this.run(async () => this.library.list(actor, query.view ?? 'mine', query.parentId ?? null, query.q, query.flat === '1'));
+    return this.run(async () => this.library.list(actor, query.view ?? 'mine', query.parentId ?? null, query.q, query.flat === '1', query.page, query.pageSize, query.status));
   }
 
   @Post('folders')
@@ -115,7 +116,7 @@ export class LibraryController {
       } catch (error) {
         failed.push({
           name: uploadedName(file.originalname),
-          message: error instanceof Error ? error.message : '上传失败',
+          message: error instanceof LibraryError ? error.message : '上传失败',
         });
       }
     }
@@ -209,12 +210,15 @@ export class LibraryController {
     @Param('id') id: string,
     @Res() res: Response,
     @Query('versionId') versionId?: string,
+    @Query('inline') inline?: string,
   ) {
     try {
-      const file = await this.library.download(await this.actor(user, tenantId), id, versionId);
+      const file = await this.library.download(await this.actor(user, tenantId), id, versionId, inline === '1');
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`);
+      res.setHeader('Content-Type', file.contentType);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+      res.setHeader('Content-Disposition', `${inline === '1' ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(file.filename)}`);
       res.send(file.bytes);
     } catch (error) {
       throw this.http(error);
@@ -237,7 +241,12 @@ export class LibraryController {
     @CurrentTenantId() tenantId: string | null,
     @Body() dto: OpenCitationDto,
   ) {
-    return this.run(async () => this.library.openCitation(await this.actor(user, tenantId), dto.nodeId, dto.versionId, dto.locator));
+    return this.run(async () => this.library.openCitation(await this.actor(user, tenantId), dto.nodeId, dto.versionId, dto.locator, dto.purpose !== 'prepare'));
+  }
+
+  @Post('used')
+  async used(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null, @Body() dto: OpenCitationDto) {
+    return this.run(async () => this.library.markUsed(await this.actor(user, tenantId), dto.nodeId, dto.versionId));
   }
 
   @Post('ask')
@@ -345,8 +354,9 @@ export class LibraryController {
       if (error.status === 403) return new ForbiddenException({ message: error.message, code: error.code });
       if (error.status === 409) return new ConflictException({ message: error.message, code: error.code });
       if (error.status === 410) return new GoneException({ message: error.message, code: error.code });
+      if (error.status >= 500) return new InternalServerErrorException({ message: '资料库暂时不可用', code: error.code });
       return new BadRequestException({ message: error.message, code: error.code });
     }
-    return error instanceof Error ? error : new BadRequestException('资料库请求失败');
+    return new InternalServerErrorException('资料库请求失败');
   }
 }

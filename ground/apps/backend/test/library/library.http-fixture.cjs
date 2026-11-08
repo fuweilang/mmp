@@ -1,6 +1,6 @@
 /** Isolated real-HTTP fixture. Auth issues sessions through normal password login; tests never sign tokens. */
 require('reflect-metadata');
-const { randomUUID } = require('node:crypto');
+const { randomUUID, randomInt } = require('node:crypto');
 const { mkdtemp, rm } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
@@ -49,7 +49,7 @@ async function withLibraryHttpFixture(work) {
     // Synthetic fixture credentials stay only in this process and are destroyed with these rows.
     const fixturePassword = randomUUID() + randomUUID();
     const passwordHash = await bcrypt.hash(fixturePassword, 4);
-    const suffix = String(Date.now()).slice(-7);
+    const suffix = String(randomInt(1000000, 10000000)); // Independent parallel fixtures must not share millisecond-derived phones.
     for (const [i, name] of ['owner', 'mate', 'other', 'tenantAdmin', 'platform'].entries()) {
       users.push(await prisma.user.create({ data: { phone: `189${suffix}${i}`, name: marker + '-' + name, passwordHash, isPlatformAdmin: name === 'platform' } }));
       if (name !== 'platform') await prisma.orgMember.create({ data: { userId: users[i].id, tenantId: tenants[name === 'other' ? 1 : 0].id, role: name === 'tenantAdmin' ? 'ADMIN' : 'MEMBER' } });
@@ -83,6 +83,9 @@ async function withLibraryHttpFixture(work) {
       await prisma.role.deleteMany({ where: { id: { in: roles.map(row => row.id) } } });
       await prisma.tenant.deleteMany({ where: { id: { in: tenants.map(row => row.id) } } });
       await prisma.user.deleteMany({ where: { id: { in: users.map(row => row.id) } } });
+      const remaining = await Promise.all([prisma.tenant.count({ where: { id: { in: tenants.map(row => row.id) } } }), prisma.user.count({ where: { id: { in: users.map(row => row.id) } } }), prisma.libraryNode.count({ where: { tenantId: { in: tenants.map(row => row.id) } } })]);
+      if (remaining.some(value => value !== 0)) throw new Error('Isolated fixture cleanup left records');
+      console.log('Isolated 55439 fixture cleanup: tenants=0 users=0 libraryNodes=0');
     } } finally {
       try { if (app) await app.close(); } finally { await rm(directory, { recursive: true, force: true }); }
     }

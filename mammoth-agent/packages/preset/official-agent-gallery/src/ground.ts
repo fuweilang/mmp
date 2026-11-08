@@ -402,6 +402,7 @@ export class GroundOfficialAgentClient {
     })
     if (!response.ok) {
       await response.body?.cancel()
+      if (response.status === 401) throw new Error('猛犸登录已失效，请重新登录。')
       throw new Error(`Ground official skill resource failed with HTTP ${response.status}`)
     }
     return new Uint8Array(await response.arrayBuffer())
@@ -422,6 +423,7 @@ export class GroundOfficialAgentClient {
     })
     if (!response.ok) {
       await response.body?.cancel()
+      if (response.status === 401) throw new Error('猛犸登录已失效，请重新登录。')
       throw new Error(`Ground official Expert request failed with HTTP ${response.status}`)
     }
     return schema.parse(await response.json()) as z.infer<Schema>

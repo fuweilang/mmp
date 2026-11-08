@@ -7,7 +7,7 @@ import type {} from '@mammoth-ai/mmp-client-connection'
 const PREFIX = '/ground-library'
 const MAX_BYTES = 55 * 1024 * 1024
 const ROUTES: readonly [string, RegExp][] = [
-  ['GET', /^\/(?:config|items)$/], ['POST', /^\/(?:folders|links|files|open|batch)$/],
+  ['GET', /^\/(?:config|items)$/], ['POST', /^\/(?:folders|links|files|open|batch|used)$/],
   ['POST', /^\/files\/[A-Za-z0-9_-]+\/versions$/],
   ['PATCH', /^\/nodes\/[A-Za-z0-9_-]+$/], ['DELETE', /^\/nodes\/[A-Za-z0-9_-]+$/],
   ['POST', /^\/nodes\/[A-Za-z0-9_-]+\/(?:move|scope|recycle|restore|retry-parse)$/],

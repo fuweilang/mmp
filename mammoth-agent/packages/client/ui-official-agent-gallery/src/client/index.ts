@@ -10,7 +10,7 @@ import type {} from '@mammoth-ai/mmp-client-ui-conversation/client'
 import type {} from '@mammoth-ai/mmp-api-remotes/client'
 import type {} from '@mammoth-ai/mmp-official-agent-gallery/types'
 import { createElement } from 'react'
-import { IconAppsAddOutlineRegular } from '@mammoth-ai/mmp-client-ui-primitives'
+import { IconUsersOutlineRegular } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import { GalleryPage, type GalleryFace } from './GalleryPage.tsx'
 import { GallerySourceLabel } from './GallerySourceLabel.tsx'
@@ -111,5 +111,5 @@ export function apply(ctx: ClientContext): void {
 
 /** Decorative sidebar glyph; the row owns its localized navigation label. */
 function GalleryIcon({ size }: PropsRuntime<'sidebar.panellist'>) {
-  return createElement(IconAppsAddOutlineRegular, { size })
+  return createElement(IconUsersOutlineRegular, { size })
 }

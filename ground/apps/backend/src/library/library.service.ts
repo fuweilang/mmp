@@ -3,6 +3,7 @@ import { buildAskPrompt, sanitizeAnswer } from './library.ask';
 import { LibraryError, libraryNotFound } from './library.errors';
 import {
   assertAllowedUpload,
+  assertMediaType,
   fileExtension,
   safeDisplayName,
   safeLinkUrl,
@@ -109,46 +110,67 @@ export class LibraryService {
     return { ...this.limitsView(), usedBytes: await this.usedBytes(actor.tenantId) };
   }
 
-  async list(actor: Actor, view: LibraryView, parentId?: string | null, q?: string, flat = false) {
+  async list(actor: Actor, view: LibraryView, parentId?: string | null, q?: string, flat = false, page = 1, pageSize?: number, status = 'all') {
     this.requireTenantActor(actor);
     await this.sweep(actor.tenantId);
     const custodies = await this.custodiesFor(actor);
     const nodes = await this.store.listNodes(actor.tenantId);
     if (parentId) {
       const parent = nodes.find((row) => row.id === parentId) ?? await this.store.getNode(parentId);
-      if (!parent || !canSee(actor, parent, custodies, this.now())) throw libraryNotFound();
+      if (!parent || parent.kind !== 'FOLDER' || parent.state !== 'ACTIVE' || !canSee(actor, parent, custodies, this.now())) throw libraryNotFound();
     }
     const recent = view === 'recent' ? await this.store.listRecent(actor.userId, actor.tenantId) : [];
     const recentAt = new Map(recent.map((row) => [row.nodeId, row.accessedAt]));
     let rows = nodes.filter((node) => {
       if (view === 'trash') return node.state === 'RECYCLED' && canManage(actor, node, custodies, this.now());
       if (!canSee(actor, node, custodies, this.now()) || node.state !== 'ACTIVE') return false;
-      if (view === 'mine') return node.ownerUserId === actor.userId && node.scope === 'PRIVATE';
+      if (view === 'mine') return node.ownerUserId === actor.userId;
       if (view === 'shared') return node.scope === 'ENTERPRISE';
       if (view === 'managed') return matchingCustody(actor, node, custodies, this.now()) !== null;
       return recentAt.has(node.id);
     });
     const query = q?.trim().toLowerCase();
     if (!query && parentId) rows = rows.filter((node) => node.parentId === parentId);
-    else if (!query && !flat && (view === 'mine' || view === 'shared' || view === 'managed')) rows = rows.filter((node) => this.isRootForView(node, nodes, actor, custodies));
+    else if (!query && !flat && (view === 'mine' || view === 'shared' || view === 'managed')) rows = rows.filter((node) => this.isRootForView(node, nodes, actor, custodies, view));
     if (query) rows = rows.filter((node) => node.name.toLowerCase().includes(query));
+    if (status !== 'all') {
+      const matched: NodeRecord[] = [];
+      for (const node of rows) {
+        const version = node.currentVersionId ? await this.store.getVersion(node.currentVersionId) : null;
+        if (node.kind === 'FILE' && version?.parseStatus === ({ ready: 'READY', failed: 'FAILED', download: 'DOWNLOAD_ONLY' } as Record<string, string>)[status]) matched.push(node);
+      }
+      rows = matched;
+    }
     if (view === 'recent') rows.sort((a, b) => (recentAt.get(b.id) ?? 0) - (recentAt.get(a.id) ?? 0));
-    else rows.sort((a, b) => b.updatedAt - a.updatedAt);
+    else rows.sort((a, b) => Number(b.kind === 'FOLDER') - Number(a.kind === 'FOLDER') || b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
+    const total = rows.length;
+    if (pageSize !== undefined) {
+      if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) throw new LibraryError(400, '分页参数无效', 'BAD_PAGE');
+      rows = rows.slice((page - 1) * pageSize, page * pageSize);
+    }
     const items = [];
     for (const node of rows) {
-      items.push(await this.toItem(actor, node, custodies, recentAt.get(node.id) ?? null));
+      const item = await this.toItem(actor, node, custodies, recentAt.get(node.id) ?? null);
+      if (flat && view === 'mine') item.parentPath = node.parentId ? await this.breadcrumb(actor, node.parentId, custodies) : [];
+      items.push(item);
       if (actor.custodyId) await this.auditCustodyRead(actor, node);
     }
     const breadcrumb = parentId ? await this.breadcrumb(actor, parentId, custodies) : [];
-    return { items, breadcrumb };
+    return { items, breadcrumb, total, page, pageSize: pageSize ?? total };
   }
 
   async createFolder(actor: Actor, name: string, parentId?: string | null) {
     this.requireMember(actor);
+    return this.createOwnedFolder(actor, actor.userId, name, parentId);
+  }
+
+  /** Explicitly authorized platform creation keeps the real actor separate from the target owner. */
+  async createOwnedFolder(actor: Actor, ownerUserId: string, name: string, parentId?: string | null, scope: LibraryScope = 'PRIVATE') {
+    await this.assertCreation(actor, ownerUserId, scope);
     await this.sweep(actor.tenantId);
     if (parentId) await this.requireVisibleFolder(actor, parentId);
     const now = this.now();
-    const node = this.blankNode(actor, 'FOLDER', safeNodeName(name), parentId ?? null, now);
+    const node = { ...this.blankNode(actor, 'FOLDER', safeNodeName(name), parentId ?? null, now), ownerUserId, scope };
     await this.store.insertNode(node);
     await this.writeAudit(actor, 'library_folder', { nodeId: node.id });
     return this.toItem(actor, node, await this.custodiesFor(actor), null);
@@ -168,6 +190,11 @@ export class LibraryService {
 
   async upload(actor: Actor, input: UploadInput) {
     this.requireMember(actor);
+    return this.uploadOwned(actor, actor.userId, input);
+  }
+
+  async uploadOwned(actor: Actor, ownerUserId: string, input: UploadInput) {
+    await this.assertCreation(actor, ownerUserId, this.scopeOrThrow(input.scope, input.confirmShare));
     await this.sweep(actor.tenantId);
     const scope = this.scopeOrThrow(input.scope, input.confirmShare);
     if (input.parentId) await this.requireVisibleFolder(actor, input.parentId);
@@ -175,7 +202,7 @@ export class LibraryService {
     const ext = assertAllowedUpload(name, input.bytes, this.limits);
     await this.assertQuota(actor.tenantId, input.bytes.length);
     const now = this.now();
-    const node = this.blankNode(actor, 'FILE', name, input.parentId ?? null, now);
+    const node = { ...this.blankNode(actor, 'FILE', name, input.parentId ?? null, now), ownerUserId };
     node.scope = scope;
     const prepared = await this.prepareVersion(actor, node, name, input.mimeType || 'application/octet-stream', input.bytes, ext, 1, now);
     node.currentVersionId = prepared.version.id;
@@ -261,7 +288,8 @@ export class LibraryService {
 
   async recycle(actor: Actor, nodeId: string) {
     const node = await this.requireManage(actor, nodeId);
-    await this.assertNoLiveChildren(actor.tenantId, node.id);
+    // 已在回收站的子项不阻止父目录回收，恢复时再按父子顺序处理。
+    await this.assertNoLiveChildren(actor.tenantId, node.id, { allowRecycled: true });
     node.state = 'RECYCLED';
     node.recycledAt = this.now();
     node.updatedAt = node.recycledAt;
@@ -296,6 +324,9 @@ export class LibraryService {
 
   async purge(actor: Actor, nodeId: string) {
     const node = await this.requireManage(actor, nodeId);
+    if (node.state !== 'RECYCLED') {
+      throw new LibraryError(400, '请先回收到回收站再彻底删除', 'BAD_STATE');
+    }
     await this.assertNoLiveChildren(actor.tenantId, node.id);
     await this.purgeStored(node);
     await this.writeAudit(actor, 'library_purge', { nodeId: node.id });
@@ -337,7 +368,9 @@ export class LibraryService {
         name: opened.node.name,
         previewKind: opened.node.kind === 'LINK' ? 'link' as const : 'blocked' as const,
         text: null,
-        linkUrl: opened.node.kind === 'LINK' ? opened.node.linkUrl : null,
+        linkUrl: opened.node.kind === 'LINK' && opened.node.state === 'ACTIVE' ? opened.node.linkUrl : null,
+        truncated: false,
+        truncationNote: null,
         parseStatus: opened.version?.parseStatus ?? 'NOT_APPLICABLE',
         parseReason: opened.blocked,
         executable: false,
@@ -346,8 +379,8 @@ export class LibraryService {
       };
     }
     await this.auditCustodyRead(actor, opened.node);
-    await this.touch(actor, opened.node);
     if (opened.node.kind === 'LINK') {
+      await this.touch(actor, opened.node);
       return {
         nodeId: opened.node.id,
         versionId: null,
@@ -356,6 +389,8 @@ export class LibraryService {
         previewKind: 'link' as const,
         text: null,
         linkUrl: opened.node.linkUrl,
+        truncated: false,
+        truncationNote: null,
         parseStatus: 'NOT_APPLICABLE' as const,
         parseReason: '链接只保存网址，不会抓取网页',
         executable: false,
@@ -366,16 +401,23 @@ export class LibraryService {
     const version = opened.version;
     if (!version) throw libraryNotFound();
     const chunks = version.parseStatus === 'READY' ? await this.store.listChunks(version.id) : [];
-    const text = chunks.map((chunk) => chunk.content).join('\n').slice(0, 20_000);
+    const fullText = chunks.map((chunk) => chunk.content).join('\n');
+    const truncated = fullText.length > 20_000 || version.extractTruncated;
+    const text = fullText.slice(0, 20_000);
+    if (text) await this.touch(actor, opened.node);
+    const ext = fileExtension(version.originalName);
+    const mediaKind = ['.png','.jpg','.jpeg','.gif','.webp','.avif'].includes(ext) ? 'image' as const : ['.mp4','.webm','.mov'].includes(ext) ? 'video' as const : null;
     const page = chunks.some((chunk) => chunk.locatorKind === 'page');
     return {
       nodeId: opened.node.id,
       versionId: version.id,
       versionNo: version.versionNo,
       name: opened.node.name,
-      previewKind: version.parseStatus === 'READY' ? 'text' as const : 'download_only' as const,
+      previewKind: mediaKind ?? (version.parseStatus === 'READY' ? 'text' as const : 'download_only' as const),
       text: version.parseStatus === 'READY' ? text : null,
       linkUrl: null,
+      truncated,
+      truncationNote: truncated ? '预览只显示前 20000 个字符，可下载原文件查看全文。' : null,
       parseStatus: version.parseStatus,
       parseReason: version.parseReason,
       executable: false,
@@ -384,17 +426,19 @@ export class LibraryService {
     };
   }
 
-  async download(actor: Actor, nodeId: string, versionId?: string | null) {
+  async download(actor: Actor, nodeId: string, versionId?: string | null, inline = false) {
     const opened = await this.openBytes(actor, nodeId, versionId, true);
     if (opened.blocked || !opened.version) throw new LibraryError(409, opened.blocked || '不能下载', 'BLOCKED');
     const bytes = await this.store.getBlob(opened.version.storageKey);
     if (!bytes) throw new LibraryError(410, '来源已彻底删除，不能改指向其他文件或版本', 'SOURCE_GONE');
+    const mediaType = inline ? assertMediaType(opened.version.originalName, bytes) : null;
+    if (inline && !mediaType) throw new LibraryError(400, '此类型不允许内嵌预览，请下载原文件', 'BAD_TYPE');
     await this.auditCustodyRead(actor, opened.node);
     await this.touch(actor, opened.node);
     return {
       filename: opened.version.originalName,
       bytes,
-      contentType: 'application/octet-stream',
+      contentType: mediaType ?? 'application/octet-stream',
     };
   }
 
@@ -405,7 +449,7 @@ export class LibraryService {
     return rows.map((row) => this.brief(row));
   }
 
-  async openCitation(actor: Actor, nodeId: string, versionId: string, locator?: string | null) {
+  async openCitation(actor: Actor, nodeId: string, versionId: string, locator?: string | null, recordAccess = true) {
     const node = await this.store.getNode(nodeId);
     if (!node) throw libraryNotFound();
     const custodies = await this.custodiesFor(actor);
@@ -421,7 +465,7 @@ export class LibraryService {
     const chunks = await this.store.listChunks(version.id);
     const excerpt = citationExcerpt(chunks, locator, this.limits.askMaxChars);
     await this.auditCustodyRead(actor, node);
-    await this.touch(actor, node);
+    if (recordAccess && excerpt.quote) await this.touch(actor, node);
     const precise = excerpt.matched?.locatorKind === 'page' && excerpt.matched.locator === locator;
     return {
       nodeId: node.id,
@@ -438,6 +482,14 @@ export class LibraryService {
       highlightNote: precise ? null : '没有可靠页码，只能定位到当时使用的段落摘录。',
       replacementVersionId: null,
     };
+  }
+
+  async markUsed(actor: Actor, nodeId: string, versionId: string) {
+    this.requireMember(actor);
+    const opened = await this.openBytes(actor, nodeId, versionId, false);
+    if (opened.blocked || !opened.version || opened.version.parseStatus !== 'READY') throw new LibraryError(409, '资料当前不能加入任务', 'BLOCKED');
+    await this.touch(actor, opened.node);
+    return { ok: true };
   }
 
   async ask(
@@ -519,6 +571,10 @@ export class LibraryService {
         notices: [...notices, result.reason],
       };
     }
+    for (const source of prompt.sources) {
+      const node = await this.store.getNode(source.nodeId);
+      if (node && canSee(actor, node, await this.custodiesFor(actor), this.now())) await this.touch(actor, node);
+    }
     const cleaned = sanitizeAnswer(result.text, prompt.sources.map((source) => source.marker));
     if (cleaned.stripped) notices.push('已去掉无法对应到真实版本的引用。');
     return {
@@ -550,7 +606,7 @@ export class LibraryService {
         else await this.purge(actor, id);
         ok.push(id);
       } catch (error) {
-        failed.push({ id, message: error instanceof Error ? error.message : '操作失败' });
+        failed.push({ id, message: error instanceof LibraryError ? error.message : '操作失败' });
       }
     }
     return { ok, failed, skipped };
@@ -616,27 +672,43 @@ export class LibraryService {
     }
     const tenants = await this.store.listTenants();
     if (!tenants.some((tenant) => tenant.id === input.tenantId)) throw libraryNotFound();
-    const row: CustodyRecord = {
-      id: this.store.createId(),
-      tenantId: input.tenantId,
-      grantorUserId: actor.userId,
-      granteeUserId: input.granteeUserId,
-      contentScope: input.contentScope,
-      ownerUserId: input.contentScope === 'PRIVATE_OWNER' ? input.ownerUserId ?? null : null,
-      powers: input.powers,
-      expiresAt: input.expiresAt,
-      revokedAt: null,
-      reason,
-      createdAt: this.now(),
-    };
-    await this.store.insertCustody(row);
+    const now = this.now();
+    const ownerUserId = input.contentScope === 'PRIVATE_OWNER' ? input.ownerUserId ?? null : null;
+    // 同一组授权键只保留一条有效授权；重复批准时续期覆盖，避免撤销一条后旧授权仍然生效。
+    const reusable = (await this.store.listCustodies()).find((row) =>
+      row.tenantId === input.tenantId
+      && row.granteeUserId === input.granteeUserId
+      && row.contentScope === input.contentScope
+      && row.ownerUserId === ownerUserId
+      && row.powers === input.powers
+      && row.revokedAt === null);
+    const row: CustodyRecord = reusable
+      ? { ...reusable, expiresAt: input.expiresAt, reason, createdAt: now }
+      : {
+        id: this.store.createId(),
+        tenantId: input.tenantId,
+        grantorUserId: actor.userId,
+        granteeUserId: input.granteeUserId,
+        contentScope: input.contentScope,
+        ownerUserId,
+        powers: input.powers,
+        expiresAt: input.expiresAt,
+        revokedAt: null,
+        reason,
+        createdAt: now,
+      };
+    if (reusable) {
+      await this.store.updateCustody(row.id, { expiresAt: row.expiresAt, reason: row.reason, createdAt: row.createdAt });
+    } else {
+      await this.store.insertCustody(row);
+    }
     await this.store.audit({
       id: this.store.createId(),
       tenantId: input.tenantId,
       userId: actor.userId,
       action: 'library_custody_grant',
       meta: { custodyId: row.id, contentScope: row.contentScope, powers: row.powers, granteeUserId: row.granteeUserId },
-      createdAt: this.now(),
+      createdAt: now,
     });
     return this.custodyView(row);
   }
@@ -726,7 +798,7 @@ export class LibraryService {
       tenantId: actor.tenantId,
       versionNo,
       originalName: name,
-      mimeType,
+      mimeType: assertMediaType(name, bytes) ?? mimeType,
       sizeBytes: bytes.length,
       storageKey,
       sha256: createHash('sha256').update(bytes).digest('hex'),
@@ -750,6 +822,14 @@ export class LibraryService {
       locator: chunk.locator,
       locatorKind: chunk.locatorKind,
     }));
+  }
+
+  private async assertCreation(actor: Actor, ownerUserId: string, scope: LibraryScope) {
+    if (actor.activeMember && actor.userId === ownerUserId) return;
+    if (!actor.isPlatformAdmin || !actor.custodyId) throw new LibraryError(403, '需要明确的企业代管管理授权', 'FORBIDDEN');
+    const candidate = { ...this.blankNode(actor, 'FILE', '', null, this.now()), ownerUserId, scope };
+    const grant = matchingCustody(actor, candidate, await this.custodiesFor(actor), this.now());
+    if (grant?.powers !== 'CRUD') throw new LibraryError(403, '当前授权不能为此所有者和可见范围新增资料', 'FORBIDDEN');
   }
 
   private blankNode(actor: Actor, kind: NodeRecord['kind'], name: string, parentId: string | null, now: number): NodeRecord {
@@ -815,9 +895,10 @@ export class LibraryService {
     await this.store.updateNode(node.id, { state: 'PURGED', purgedAt: now, updatedAt: now });
   }
 
-  private async assertNoLiveChildren(tenantId: string, nodeId: string) {
+  private async assertNoLiveChildren(tenantId: string, nodeId: string, options: { allowRecycled?: boolean } = {}) {
     const nodes = await this.store.listNodes(tenantId);
-    if (nodes.some((node) => node.parentId === nodeId && node.state !== 'PURGED')) {
+    const blocking = options.allowRecycled ? ['ACTIVE'] : ['ACTIVE', 'RECYCLED'];
+    if (nodes.some((node) => node.parentId === nodeId && blocking.includes(node.state))) {
       throw new LibraryError(400, '目录不为空', 'FOLDER_NONEMPTY');
     }
   }
@@ -907,6 +988,7 @@ export class LibraryService {
   private brief(row: VersionRecord): VersionBrief {
     return {
       id: row.id,
+      mimeType: row.mimeType,
       versionNo: row.versionNo,
       sizeBytes: row.sizeBytes,
       parseStatus: row.parseStatus,
@@ -941,7 +1023,7 @@ export class LibraryService {
       parentId,
       parentName,
       parentHidden,
-      linkUrl: node.kind === 'LINK' ? node.linkUrl : null,
+      linkUrl: node.kind === 'LINK' && node.state === 'ACTIVE' ? node.linkUrl : null,
       mine: node.ownerUserId === actor.userId,
       canManage: canManage(actor, node, custodies, this.now()),
       currentVersion: version ? this.brief(version) : null,
@@ -957,12 +1039,25 @@ export class LibraryService {
     nodes: NodeRecord[],
     actor: Actor,
     custodies: CustodyRecord[],
+    view: LibraryView,
   ) {
     if (!node.parentId) return true;
     const parent = nodes.find((row) => row.id === node.parentId);
     if (!parent || parent.state !== 'ACTIVE' || !canSee(actor, parent, custodies, this.now())) return true;
-    if (node.scope === 'PRIVATE') return parent.scope !== 'PRIVATE' || parent.ownerUserId !== actor.userId;
-    return parent.scope !== 'ENTERPRISE';
+    const inView = (row: NodeRecord) => row.state === 'ACTIVE' && canSee(actor, row, custodies, this.now())
+      && (view === 'mine' ? row.ownerUserId === actor.userId : view === 'shared' ? row.scope === 'ENTERPRISE' : true);
+    if (!inView(parent)) return true;
+    // Old/corrupt cyclic metadata must not make an entire component disappear.
+    // Expose one deterministic root; client expansion and breadcrumb both stop repeats.
+    const visited = [node.id];
+    let current: NodeRecord | undefined = parent;
+    while (current && inView(current)) {
+      const at = visited.indexOf(current.id);
+      if (at >= 0) return node.id === visited.slice(at).sort()[0];
+      visited.push(current.id);
+      current = nodes.find(row => row.id === current?.parentId);
+    }
+    return false;
   }
 
   private async breadcrumb(actor: Actor, parentId: string, custodies: CustodyRecord[]) {

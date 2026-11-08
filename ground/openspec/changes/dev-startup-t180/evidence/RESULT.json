@@ -1,0 +1,30 @@
+{
+  "capturedAt": "2026-11-08T16:12:38.198847+08:00",
+  "changedFiles": {
+    "/Users/fuweilang/Documents/code/mmp/package.json": "67758afb56b3cd2d475def1e4175a727aea92750830ee0e8c70f664452b4e350",
+    "/Users/fuweilang/Documents/code/mmp/ground/package.json": "fe1c556cf4fa54b26eb676cdb48ce0f17a8ba81ff095195aeeed17b253d738f4",
+    "/Users/fuweilang/Documents/code/mmp/ground/scripts/dev-stack.mjs": "ebca188336613ee54285e90eb25bb3f1d5bb09293412e6f62ba7c59282a4d3cb",
+    "/Users/fuweilang/Documents/code/mmp/ground/scripts/dev-stack.test.mjs": "39faf6941d70789a0cb3170597b64af1f28184103378b08a1b71899084c780fb"
+  },
+  "syntaxCheckExitCode": 0,
+  "isolatedProcessCliDoubleTests": {
+    "passed": 15,
+    "failed": 0,
+    "exitCode": 0,
+    "log": "ISOLATED-TESTS.log"
+  },
+  "realPrepare": {
+    "command": "node scripts/dev-stack.mjs --prepare-only",
+    "exitCode": 0,
+    "branch": "existing database ready: no runtime or compose startup",
+    "log": "REAL-PREPARE.log",
+    "containerAfter": "9078620a3155d0c0d85ebb7371c324fafc2e41e6a1c551070b033ef81d38e14c running healthy",
+    "containerIdUnchanged": true
+  },
+  "notRun": [
+    "real cold Colima/Docker Desktop startup",
+    "real stopped database compose startup",
+    "full pnpm run dev / API/Web/gateway processes"
+  ],
+  "limitations": "Cold-start/failure/timeout/context paths validated with real spawned CLI doubles only. Existing dev port reclaim logic is unchanged and was not entered. No install, migration, schema, model, permission, container/volume reset or user-process kill/restart."
+}

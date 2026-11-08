@@ -125,12 +125,7 @@ export class WalletService {
     if (eff.effectivePermissions.includes('portal.console.billing') || isPlatformAdmin) {
       return { canRecharge: true, hasConsoleAccess, isPlatformAdmin };
     }
-    const isOrgAdmin = await this.prisma.userRole.count({
-      where: { userId: user.id, role: { key: 'org_admin' } },
-    });
-    if (isOrgAdmin) {
-      return { canRecharge: true, hasConsoleAccess, isPlatformAdmin };
-    }
+    // 企业管理员只看当前租户成员档，不能复用另一企业的全局 org_admin 角色。
     const membership = await this.prisma.orgMember.findFirst({
       where: {
         userId: user.id,

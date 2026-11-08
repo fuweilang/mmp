@@ -12,6 +12,7 @@
     "install:ground": "pnpm --dir ground install",
     "install:agent": "pnpm --dir mammoth-agent install",
     "dev": "pnpm --dir ground run dev",
+    "dev:prepare": "pnpm --dir ground run dev:prepare",
     "dev:ground": "pnpm --dir ground run dev",
     "dev:agent": "pnpm --dir mammoth-agent run dev:web",
     "dev:desktop": "pnpm --dir mammoth-agent run dev:desktop",

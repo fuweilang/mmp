@@ -3,6 +3,8 @@ import type { LibraryParseStatus } from '@mammoth/shared';
 
 export type LibraryVersion = {
   id: string;
+  /** Older servers may omit MIME; unknown types are displayed as other, not guessed. */
+  mimeType?: string;
   versionNo: number;
   sizeBytes: number;
   parseStatus: LibraryParseStatus;
@@ -22,6 +24,7 @@ export type LibraryItem = {
   parentId: string | null;
   parentName: string | null;
   parentHidden: boolean;
+  parentPath?: { id: string; name: string }[];
   linkUrl: string | null;
   mine: boolean;
   canManage: boolean;
@@ -33,6 +36,9 @@ export type LibraryItem = {
 export type LibraryList = {
   items: LibraryItem[];
   breadcrumb: { id: string; name: string }[];
+  total: number;
+  page: number;
+  pageSize: number;
 };
 
 export type LibraryView = 'recent' | 'mine' | 'shared' | 'trash';
@@ -42,9 +48,11 @@ export type LibraryPreview = {
   versionId: string | null;
   versionNo: number | null;
   name: string;
-  previewKind: 'text' | 'download_only' | 'link' | 'blocked';
+  previewKind: 'text' | 'download_only' | 'link' | 'blocked' | 'image' | 'video';
   text: string | null;
   linkUrl: string | null;
+  truncated?: boolean;
+  truncationNote?: string | null;
   parseStatus: LibraryParseStatus;
   parseReason: string | null;
   executable: false;
@@ -74,8 +82,10 @@ export type LibraryAnswer = {
   notices: string[];
 };
 
-export function listLibrary(view: LibraryView, parentId: string | null, q: string) {
+export function listLibrary(view: LibraryView, parentId: string | null, q: string, page?: number, flat = false) {
   const params = new URLSearchParams({ view });
+  if (page !== undefined) { params.set('page', String(page)); params.set('pageSize', '20'); }
+  if (flat) params.set('flat', '1');
   if (parentId) params.set('parentId', parentId);
   if (q.trim()) params.set('q', q.trim());
   return http<LibraryList>(`/api/library/items?${params.toString()}`);
@@ -300,3 +310,6 @@ export const libraryManagedItems = (id: string, parentId: string | null, q: stri
 };
 export const libraryManagedPreview = (id: string, nodeId: string, versionId: string) => http<LibraryPreview>(`/api/library/admin/custody/${encodeURIComponent(id)}/nodes/${encodeURIComponent(nodeId)}/preview?versionId=${encodeURIComponent(versionId)}`);
 export const libraryManagedDownload = (id: string, nodeId: string, versionId: string) => apiUrl(`/api/library/admin/custody/${encodeURIComponent(id)}/nodes/${encodeURIComponent(nodeId)}/download?versionId=${encodeURIComponent(versionId)}`);
+
+export const libraryConfig = () => http<{ maxFileBytes: number; allowedExtensions: string[] }>('/api/library/config');
+export const libraryMediaUrl = (id: string, versionId: string) => libraryDownloadUrl(id, versionId) + '&inline=1';

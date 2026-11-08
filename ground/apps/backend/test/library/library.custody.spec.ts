@@ -39,3 +39,29 @@ it('rejects private approval by tenant admin, self-grants, other grantees, expir
  await assert.rejects(h.service.managedActor({ ...platform, isPlatformAdmin: false }, grant.id));
  h.expire(); await assert.rejects(h.service.managedActor(platform, grant.id));
 });
+it('重复批准同一授权键只保留一条有效授权，后续撤销不会再泄漏', async () => {
+  const h = setup();
+  const admin: Actor = { ...owner, userId: 'tenant-admin', isOrgAdmin: true };
+  const firstExpiry = h.end();
+  const first = await h.service.grantCustody(admin, {
+    tenantId: 'ta', granteeUserId: 'platform', contentScope: 'ENTERPRISE',
+    powers: 'READ', expiresAt: firstExpiry, reason: '处理企业共享资料',
+  });
+  h.expire();
+  const secondExpiry = h.end();
+  const second = await h.service.grantCustody(admin, {
+    tenantId: 'ta', granteeUserId: 'platform', contentScope: 'ENTERPRISE',
+    powers: 'READ', expiresAt: secondExpiry, reason: '补充授权期限',
+  });
+  assert.equal(second.id, first.id);
+  assert.equal(Date.parse(second.expiresAt), secondExpiry);
+  assert.equal(second.reason, '补充授权期限');
+  const active = [...h.store.custodies.values()].filter((row) =>
+    row.tenantId === 'ta' && row.granteeUserId === 'platform' && row.contentScope === 'ENTERPRISE'
+    && row.revokedAt === null);
+  assert.equal(active.length, 1);
+  assert.equal(h.store.audits.filter((row) => row.action === 'library_custody_grant').length, 2);
+  await h.service.revokeCustody(admin, first.id);
+  await assert.rejects(h.service.managedActor(platform, first.id));
+  assert.deepEqual((await h.service.listCustody(platform as Actor)).filter((row) => row.revokedAt === null), []);
+});

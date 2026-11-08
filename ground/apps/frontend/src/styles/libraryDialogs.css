@@ -1,0 +1,35 @@
+/* Only library dialogs opt in. Teleported Element Plus nodes need unscoped, namespaced rules. */
+.el-dialog.library-modal {
+  --library-dialog-gap: 24px;
+  display: flex;
+  background: var(--el-bg-color, #fff);
+  flex-direction: column;
+  max-width: calc(100vw - var(--library-dialog-gap) * 2);
+  max-height: calc(100vh - var(--library-dialog-gap) * 2);
+  max-height: calc(100dvh - var(--library-dialog-gap) * 2);
+  /* align-center renders a flex overlay: auto margins center both axes and
+     prevent its default cross-axis stretch. Never replace with margin: 0. */
+  margin: auto;
+  box-sizing: border-box;
+}
+.library-modal .el-dialog__header, .library-modal .el-dialog__footer { flex: 0 0 auto; }
+.library-modal .el-dialog__header { min-width: 0; }
+.library-modal .el-dialog__title { display: block; padding-right: 28px; overflow-wrap: anywhere; }
+.library-modal .el-dialog__body { min-height: 0; overflow-y: auto; overflow-wrap: anywhere; overscroll-behavior: contain; }
+.library-modal .el-dialog__footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.library-modal .el-dialog__footer .el-button + .el-button { margin-left: 0; }
+.el-message-box.library-message-box {
+  --library-dialog-gap: 24px;
+  display: inline-flex;
+  flex-direction: column;
+  max-width: calc(100vw - var(--library-dialog-gap) * 2);
+  max-height: calc(100vh - var(--library-dialog-gap) * 2);
+  max-height: calc(100dvh - var(--library-dialog-gap) * 2);
+  vertical-align: middle;
+}
+.library-message-box .el-message-box__header, .library-message-box .el-message-box__btns { flex: 0 0 auto; }
+.library-message-box .el-message-box__content { min-height: 0; overflow-y: auto; overflow-wrap: anywhere; overscroll-behavior: contain; }
+.library-message-box .el-message-box__title { overflow-wrap: anywhere; padding-right: 24px; }
+@media (max-width: 600px) {
+  .el-dialog.library-modal, .el-message-box.library-message-box { --library-dialog-gap: 16px; }
+}

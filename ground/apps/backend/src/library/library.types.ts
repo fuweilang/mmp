@@ -104,6 +104,7 @@ export type AuditRecord = {
 
 export type VersionBrief = {
   id: string;
+  mimeType: string;
   versionNo: number;
   sizeBytes: number;
   parseStatus: LibraryParseStatus;
@@ -124,6 +125,8 @@ export type LibraryItem = {
   parentId: string | null;
   parentName: string | null;
   parentHidden: boolean;
+  /** Authorized ancestor labels, only requested for flat mine management lists. */
+  parentPath?: { id: string; name: string }[];
   linkUrl: string | null;
   mine: boolean;
   canManage: boolean;

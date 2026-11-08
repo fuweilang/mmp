@@ -39,9 +39,7 @@
               <ChevronDown class="nav-group-chevron" :class="{ expanded: libraryExpanded }" />
             </button>
             <div id="console-library-subnav" v-show="libraryExpanded && !isSidebarCollapsed" class="sidebar-subnav">
-              <RouterLink v-for="child in item.children" :key="child.path" :to="libraryTarget(child.path)" :class="{ active: isActive(child.path) }" :title="child.label">
-                <span class="nav-label">{{ child.label }}</span>
-              </RouterLink>
+              <RouterLink v-for="child in item.children" :key="child.path" :to="libraryTarget(child.path)" :class="{ active: isActive(child.path) }" :title="child.label"><span class="nav-label">{{ child.label }}</span></RouterLink>
             </div>
           </div>
           <RouterLink v-else :class="{ active: isActive(item.path) }" :to="item.path" :title="item.label">
@@ -142,7 +140,7 @@
           </el-dropdown>
         </div>
       </header>
-      <section class="workspace">
+      <section class="workspace" :class="{ 'library-workspace': isConsoleLibraryPage || route.path === '/admin/library' }">
         <router-view />
       </section>
     </section>
@@ -220,6 +218,7 @@ onMounted(async () => {
   }
 });
 
+const isConsoleLibraryPage = computed(() => consoleLibraryViews.some(child => child.path === route.path));
 const pageTitle = computed(() => (typeof route.meta.title === 'string' ? route.meta.title : '工作台'));
 const avatar = computed(() => (session.value?.user.name || '猛').slice(0, 1));
 const isPlatformArea = computed(() => route.path.startsWith('/admin'));
@@ -269,7 +268,7 @@ const platformItems: NavItem[] = [
   { path: '/admin/models', label: '模型管理', icon: Bot },
   { path: '/admin/pricing-config', label: 'AI币计价配置', icon: Coins },
   { path: '/admin/audit', label: '操作审计', icon: ScrollText, perm: 'portal.admin.audit' },
-  { path: '/admin/library', label: '资料库概况', icon: Library },
+  { path: '/admin/library', label: '企业资料库', icon: Library },
 ];
 
 const navItems = computed(() => {
@@ -321,6 +320,7 @@ async function onLogout() {
 }
 </script>
 <style scoped>
+.workspace.library-workspace { padding:0; background:#fff; }
 .nav-group-trigger { align-items:center; display:flex; gap:10px; width:100%; height:44px; padding:0 18px; border:0; background:transparent; color:#667085; font:inherit; cursor:pointer; text-align:left; }
 .nav-group-trigger:hover { background:#EEF0F8; color:var(--app-primary-color); }
 .nav-group-active > .nav-group-trigger { color:var(--app-primary-color); }

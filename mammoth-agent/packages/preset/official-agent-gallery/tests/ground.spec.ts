@@ -107,9 +107,24 @@ describe('GroundOfficialAgentClient', () => {
 
     const failure = await client.list().catch((error: unknown) => error)
     expect(failure).toBeInstanceOf(Error)
-    expect((failure as Error).message).toBe('Ground official Agent request failed with HTTP 403')
+    expect((failure as Error).message).toBe('Ground official Expert request failed with HTTP 403')
     expect((failure as Error).message).not.toContain('private enterprise failure')
     expect(cancel).toHaveBeenCalledExactlyOnceWith()
+  })
+
+  it('maps 401 to a re-login message without leaking the body', async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('private enterprise failure'))
+        controller.close()
+      },
+    })
+    const client = new GroundOfficialAgentClient(
+      'https://ground.test', async () => 'token', vi.fn(async () => new Response(body, { status: 401 })),
+    )
+    const failure = await client.list().catch((error: unknown) => error)
+    expect((failure as Error).message).toBe('猛犸登录已失效，请重新登录。')
+    expect((failure as Error).message).not.toContain('private enterprise failure')
   })
 
   it('rejects malformed or unexpectedly privileged payloads', async () => {

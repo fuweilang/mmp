@@ -20,6 +20,7 @@ const DOWNLOAD_REASON: Record<string, string> = {
 export async function parseLibraryBytes(name: string, bytes: Buffer): Promise<ParseResult> {
   const ext = fileExtension(name);
   try {
+    if (['.png','.jpg','.jpeg','.gif','.webp','.avif','.mp4','.webm','.mov'].includes(ext)) return downloadOnly('仅保存：支持预览或下载，不进行图片识别、OCR 或视频理解，不能供 AI 引用');
     if (DOWNLOAD_REASON[ext]) return downloadOnly(DOWNLOAD_REASON[ext]);
     if (ext === '.pdf') return await parsePdf(bytes);
     if (ext === '.docx') return await parseDocx(bytes);

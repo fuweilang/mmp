@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { isKnownPermissionKey } from './catalog';
 import {
   loadOrgMemberOverridePermKeys,
+  ORG_ADMIN_PRESET_KEY,
   ORG_MEMBER_PRESET_KEY,
   resolveOrgMemberPermKeys,
 } from './org-preset-override';
@@ -36,7 +37,7 @@ type Db = PrismaService | Prisma.TransactionClient;
 /**
  * 用户在给定租户上下文下的有效权限并集。
  * - PLATFORM：始终计入
- * - ORG_PRESET org_admin：始终用全局预置包
+ * - ORG_PRESET org_admin：租户内管理员（OrgMember.role ADMIN/OWNER）或平台管理员才计入
  * - ORG_PRESET org_member：tenant 覆盖优先，否则全局
  * - ORG_CUSTOM：仅当 role.tenantId === tenantId
  * tenantId 为空时不计企业自定义角色；org_member 回退全局包。
@@ -65,6 +66,16 @@ export async function computeEffectivePermissions(
   const platformRoles = rows
     .map((row) => row.role)
     .filter((role) => role.scope === RoleScope.PLATFORM);
+  // 企业管理员以租户成员档为准；平台管理员不受租户成员档限制。
+  const platformAdmin = platformRoles.some((role) =>
+    role.permissions.some((p) => p.permKey === ADMIN_ACCESS_PERM && isKnownPermissionKey(p.permKey)));
+  const membership = tenantId && !platformAdmin
+    ? await db.orgMember.findUnique({
+      where: { userId_tenantId: { userId, tenantId } },
+      select: { role: true },
+    })
+    : null;
+  const tenantAdmin = membership?.role === MemberRole.ADMIN || membership?.role === MemberRole.OWNER;
 
   for (const role of rows.map((row) => row.role)) {
     if (role.scope === RoleScope.PLATFORM) {
@@ -89,6 +100,8 @@ export async function computeEffectivePermissions(
           keys.add(k);
         }
       } else {
+        // 非平台管理员只有在目标租户内担任 ADMIN/OWNER 时才获得 org_admin 预设包。
+        if (role.key === ORG_ADMIN_PRESET_KEY && tenantId && !platformAdmin && !tenantAdmin) continue;
         for (const p of role.permissions) {
           if (isKnownPermissionKey(p.permKey)) keys.add(p.permKey);
         }
@@ -134,12 +147,23 @@ export async function listBoundRoleSources(
     },
   });
   const memberOverride = await loadOrgMemberOverridePermKeys(db, tenantId);
+  const platformAdmin = rows.some((row) => row.role.scope === RoleScope.PLATFORM
+    && row.role.permissions.some((p) => p.permKey === ADMIN_ACCESS_PERM && isKnownPermissionKey(p.permKey)));
+  const membership = tenantId && !platformAdmin
+    ? await db.orgMember.findUnique({
+      where: { userId_tenantId: { userId, tenantId } },
+      select: { role: true },
+    })
+    : null;
+  const tenantAdmin = membership?.role === MemberRole.ADMIN || membership?.role === MemberRole.OWNER;
   const out: RolePermSource[] = [];
   for (const row of rows) {
     const role = row.role;
     if (role.scope === RoleScope.ORG_CUSTOM) {
       if (!tenantId || role.tenantId !== tenantId) continue;
     }
+    // 与 computeEffectivePermissions 同源：非本企业管理员不计入 org_admin 预置包。
+    if (role.scope === RoleScope.ORG_PRESET && role.key === ORG_ADMIN_PRESET_KEY && tenantId && !platformAdmin && !tenantAdmin) continue;
     let permKeys = role.permissions
       .map((p) => p.permKey)
       .filter((k) => isKnownPermissionKey(k));

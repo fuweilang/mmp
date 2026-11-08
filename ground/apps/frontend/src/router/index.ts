@@ -88,7 +88,7 @@ const router = createRouter({
         },
         {
           path: 'library',
-          meta: { title: '资料库概况' },
+          meta: { title: '企业资料库' },
           component: () => import('../views/admin/AdminLibrary.vue'),
         },
         {

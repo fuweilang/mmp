@@ -48,11 +48,8 @@ export class TenantService {
       const membership = await this.prisma.orgMember.findUnique({
         where: { userId_tenantId: { userId: user.id, tenantId: parentId } },
       });
-      // 企业管理员判定走角色并集（user_role），不再看历史枚举。
-      const isOrgAdmin = await this.prisma.userRole.count({
-        where: { userId: user.id, role: { key: 'org_admin' } },
-      });
-      if (!membership || !isOrgAdmin) {
+      // 企业管理员判定以本企业成员档为准，不能复用其他企业的 org_admin 角色。
+      if (!membership || (membership.role !== MemberRole.ADMIN && membership.role !== MemberRole.OWNER)) {
         throw new ForbiddenException('无权在该组织下创建');
       }
       if (dto.type !== TenantType.ENTERPRISE) {
@@ -139,10 +136,13 @@ export class TenantService {
       where: { key: presetKey },
       select: { id: true },
     });
-    // 新成员默认给企业预设角色；用户已有角色时不覆盖
+    // 新成员按邀请角色补绑企业预设；已有其它角色（例如另一企业的 org_admin）不阻止补绑，
+    // 否则多企业成员在第二个企业里没有任何企业预设权限。
     if (preset) {
-      const hasRole = await this.prisma.userRole.count({ where: { userId: user.id } });
-      if (hasRole === 0) {
+      const hasPreset = await this.prisma.userRole.count({
+        where: { userId: user.id, roleId: preset.id },
+      });
+      if (hasPreset === 0) {
         await this.prisma.userRole.create({ data: { userId: user.id, roleId: preset.id } });
       }
     }
@@ -433,15 +433,12 @@ export class TenantService {
 
 
   /**
-   * 企业写操作（成员/角色增删改）硬拦：仅企业管理员（org_admin）或平台管理员。
+   * 企业写操作（成员/角色增删改）硬拦：仅本企业管理员（OrgMember.role ADMIN/OWNER）或平台管理员。
    * 读权限仍走 requireConsolePerm（页面权限）；写在此之上再校验。
+   * 不能只看全局 org_admin 角色（同一账号可能在另一企业才是管理员）。
    */
   async assertOrgAdmin(user: User, tenantId: string) {
     if (user.isPlatformAdmin) return;
-    const isOrgAdmin = await this.prisma.userRole.count({
-      where: { userId: user.id, role: { key: 'org_admin' } },
-    });
-    if (isOrgAdmin) return;
     const membership = await this.prisma.orgMember.findFirst({
       where: {
         userId: user.id,

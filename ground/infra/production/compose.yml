@@ -21,9 +21,11 @@ services:
     environment:
       DATABASE_URL: postgresql://mammoth:${POSTGRES_PASSWORD}@pg:5432/mammoth_core
       PORT: '3100'
+      LIBRARY_DIR: /app/library-data
     ports: ['127.0.0.1:33100:3100']
     volumes:
       - ./data/uploads:/app/apps/backend/uploads
+      - ./data/library:/app/library-data
       - ./data/api-state:/app/state
       - ./secrets:/app/secrets:ro
     depends_on:

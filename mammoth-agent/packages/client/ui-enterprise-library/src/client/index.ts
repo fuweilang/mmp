@@ -16,7 +16,7 @@ import type { MainPanelId } from '@mammoth-ai/mmp-client-ui-layout/client'
 import type { CommandUiContract } from '@mammoth-ai/mmp-client-ui-commands/client'
 import type { InputTriggerServiceContract, InputTriggerSource } from '@mammoth-ai/mmp-client-ui-input-trigger/client'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
-import { fetchLibraryItems, fetchLibrarySource } from './api.ts'
+import { fetchLibraryItems, fetchLibrarySource, libraryRequest } from './api.ts'
 import { LibraryIcon } from './LibraryIcon.tsx'
 import { LibraryPanel, type LibrarySourceRequest } from './LibraryPanel.tsx'
 import { de, en, es, fr, ja, NS, pt, ru, zh, type LibraryKey } from './locales.ts'
@@ -56,6 +56,8 @@ export function apply(ctx: ClientContext): void {
     if (item.versionId && input.state.getSnapshot().occurrences.some(ref => ref.source === 'library' && ref.ref === libraryRef({ nodeId: item.nodeId, versionId: item.versionId! }))) return { sent: false, attached: true }
     const result = attachLibraryReference(input, item)
     if (!result.attached) throw new Error(t('attachFailed'))
+    // Receipt follows a real successful draft insertion, not candidate selection/search.
+    void libraryRequest(origin, 'used', 'POST', { nodeId: item.nodeId, versionId: item.versionId }, fetch).catch(() => undefined)
     return result
   }
   let attachmentQueue: Promise<void> = Promise.resolve()
@@ -186,7 +188,7 @@ export function apply(ctx: ClientContext): void {
       serialize: async (ref, signal) => {
         const parsed = parseLibraryRef(ref)
         if (!parsed) throw new Error('library reference is not a real version')
-        const opened = await fetchLibrarySource(origin, parsed.nodeId, parsed.versionId, fetch, signal)
+        const opened = await fetchLibrarySource(origin, parsed.nodeId, parsed.versionId, fetch, signal, 'prepare')
         if (!opened.quote || !opened.locator) throw new Error('library source has no stored excerpt')
         return librarySourceText({
           nodeId: parsed.nodeId,
@@ -194,6 +196,8 @@ export function apply(ctx: ClientContext): void {
           versionId: opened.versionId,
           locator: opened.locator,
           quote: opened.quote,
+          truncated: opened.truncated,
+          truncationNote: opened.truncationNote,
         })
       },
     },

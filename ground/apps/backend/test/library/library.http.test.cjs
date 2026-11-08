@@ -102,6 +102,8 @@ test('real HTTP authorization, immutable versions, recycle, file failures', { ti
       deny(await request('owner', 'open', 'POST', { nodeId: id, versionId: v1 }));
       assert.equal((await request('owner', `nodes/${id}/restore`, 'POST')).status, 201);
       assert.equal((await request('owner', 'open', 'POST', { nodeId: id, versionId: v1 })).body.quote, secretText);
+      assert.equal((await request('owner', `nodes/${id}`, 'DELETE')).status, 400);
+      assert.equal((await request('owner', `nodes/${id}/recycle`, 'POST')).status, 201);
       assert.equal((await request('owner', `nodes/${id}`, 'DELETE')).status, 200);
       deny(await request('owner', 'open', 'POST', { nodeId: id, versionId: v1 }));
       assert.ok(!(await request('owner', 'items?view=recent')).bytes.toString().includes(hiddenTitle));
@@ -114,9 +116,93 @@ test('real HTTP authorization, immutable versions, recycle, file failures', { ti
       assert.equal((await request('mate', `nodes/${linkId}/preview`)).body.linkUrl, 'https://example.com/non-sensitive-fixture');
       await request('owner', `nodes/${linkId}/scope`, 'POST', { scope: 'PRIVATE' });
       const blocked = await request('mate', `nodes/${linkId}/preview`); deny(blocked); assert.ok(!blocked.bytes.toString().includes('https://example.com/non-sensitive-fixture'));
+      assert.equal((await request('owner', `nodes/${linkId}/recycle`, 'POST')).status, 201);
+      const recycled = await request('owner', `nodes/${linkId}/preview`);
+      assert.equal(recycled.status, 200);
+      assert.equal(recycled.body.linkUrl, null);
       const before = await prisma.libraryNode.count({ where: { tenantId: tenants[0].id } });
       const empty = await upload('owner', 'empty.md', ''); assert.equal(empty.body.items.length, 0); assert.equal(empty.body.failed.length, 1); assert.equal(empty.body.failed[0].message, '空文件');
       assert.equal(await prisma.libraryNode.count({ where: { tenantId: tenants[0].id } }), before);
+    });
+    await t.test('t188 media bytes, scoped mine/shared, paging, real recent receipts and prepare exclusions', async () => {
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=', 'base64');
+      const image = (await upload('owner', 'QA_t188.png', png)).body.items[0];
+      assert.equal(image.currentVersion.parseStatus, 'DOWNLOAD_ONLY'); assert.equal(image.currentVersion.mimeType, 'image/png');
+      const version = image.currentVersion.id;
+      assert.equal(await prisma.libraryChunk.count({ where: { versionId: version } }), 0);
+      const metadata = await request('owner', `nodes/${image.id}/preview`);
+      assert.equal(metadata.body.previewKind, 'image');
+      assert.ok(!(await request('owner', 'items?view=recent')).body.items.some(row => row.id === image.id));
+      const inline = await request('owner', `nodes/${image.id}/download?versionId=${version}&inline=1`);
+      assert.equal(inline.status, 200); assert.equal(inline.headers.get('content-type'), 'image/png');
+      assert.equal(inline.headers.get('x-content-type-options'), 'nosniff'); assert.deepEqual(inline.bytes, png);
+      assert.ok((await request('owner', 'items?view=recent')).body.items.some(row => row.id === image.id));
+      assert.ok(!(await request('mate', 'items?view=recent')).body.items.some(row => row.id === image.id));
+      deny(await request('mate', `nodes/${image.id}/download?inline=1`));
+      await request('owner', `nodes/${image.id}/scope`, 'POST', { scope: 'ENTERPRISE', confirmShare: true });
+      assert.ok((await request('owner', 'items?view=mine')).body.items.some(row => row.id === image.id));
+      assert.ok((await request('owner', 'items?view=shared')).body.items.some(row => row.id === image.id));
+      assert.equal((await request('mate', `nodes/${image.id}/download?inline=1`)).status, 200);
+      deny(await request('other', `nodes/${image.id}/download?inline=1`));
+      await request('owner', `nodes/${image.id}/scope`, 'POST', { scope: 'PRIVATE' });
+      deny(await request('mate', `nodes/${image.id}/download?inline=1`));
+      assert.ok(!(await request('mate', 'items?view=recent')).body.items.some(row => row.id === image.id));
+      const spoofed = await upload('owner', 'QA_fake.png', '<svg onload=alert(1)>');
+      assert.equal(spoofed.body.items.length, 0); assert.equal(spoofed.body.failed.length, 1);
+      assert.equal((await upload('owner', 'QA_active.svg', '<svg/>')).body.failed.length, 1);
+      const media = Buffer.concat([Buffer.from([0,0,0,24]), Buffer.from('ftypisom'), Buffer.alloc(4), Buffer.from('isommp42')]);
+      const video = (await upload('owner', 'QA_t188.mp4', media)).body.items[0];
+      assert.equal(video.currentVersion.parseStatus, 'DOWNLOAD_ONLY');
+      assert.equal((await request('owner', `nodes/${video.id}/preview`)).body.previewKind, 'video');
+      const movie = await request('owner', `nodes/${video.id}/download?inline=1`); assert.equal(movie.headers.get('content-type'), 'video/mp4'); assert.deepEqual(movie.bytes, media);
+      // Header-valid synthetic MP4 verifies storage/type/auth; it is deliberately not a codec playback test.
+      const draft = (await upload('owner', 'QA_prepare.md', 'isolated prepared excerpt')).body.items[0];
+      await request('owner', 'open', 'POST', { nodeId: draft.id, versionId: draft.currentVersion.id, purpose: 'prepare' });
+      assert.ok(!(await request('owner', 'items?view=recent')).body.items.some(row => row.id === draft.id));
+      const attached = await request('owner', 'used', 'POST', { nodeId: draft.id, versionId: draft.currentVersion.id }); assert.equal(attached.status, 201);
+      assert.ok((await request('owner', 'items?view=recent')).body.items.some(row => row.id === draft.id));
+      deny(await request('other', 'used', 'POST', { nodeId: draft.id, versionId: draft.currentVersion.id }));
+      const folder = (await request('owner', 'folders', 'POST', { name: 'QA_pages' })).body;
+      for (let i = 0; i < 23; i++) await request('owner', 'links', 'POST', { name: `QA_${i}`, url: 'https://example.test/', parentId: folder.id });
+      const first = await request('owner', `items?view=mine&parentId=${folder.id}&page=1&pageSize=20`);
+      const second = await request('owner', `items?view=mine&parentId=${folder.id}&page=2&pageSize=20`);
+      assert.equal(first.body.total, 23); assert.equal(first.body.items.length, 20); assert.equal(second.body.items.length, 3);
+      assert.equal(new Set([...first.body.items, ...second.body.items].map(row => row.id)).size, 23);
+      assert.deepEqual(second.body.breadcrumb, [{ id: folder.id, name: 'QA_pages' }]);
+      assert.equal((await request('owner', 'items?view=mine&pageSize=101')).status, 400);
+      assert.equal((await request('owner', 'items?view=mine&page=0&pageSize=20')).status, 400);
+    });
+    await t.test('t191 all-level management is server-paged, authorized, typed and independent of directory queries', async () => {
+      const root = (await request('owner', 'folders', 'POST', { name: 'QA_t191_owner_Apple' })).body;
+      const inner = (await request('owner', 'folders', 'POST', { name: 'QA_t191_owner_Inner', parentId: root.id })).body;
+      const ids = new Set([root.id, inner.id]); let shared;
+      for (let i = 0; i < 22; i++) {
+        const result = await request('owner', 'links', 'POST', { name: `QA_t191_owner_nested_${i}`, url: 'https://example.test/', parentId: inner.id });
+        assert.equal(result.status, 201); ids.add(result.body.id); if (!i) shared = result.body;
+      }
+      await request('owner', `nodes/${shared.id}/scope`, 'POST', { scope: 'ENTERPRISE', confirmShare: true });
+      const first = await request('owner', 'items?view=mine&flat=1&q=QA_t191_owner&pageSize=20&page=1');
+      const second = await request('owner', 'items?view=mine&flat=1&q=QA_t191_owner&pageSize=20&page=2');
+      assert.equal(first.status, 200); assert.equal(first.body.total, 24); assert.equal(first.body.items.length, 20); assert.equal(second.body.items.length, 4);
+      const rows = [...first.body.items, ...second.body.items]; assert.deepEqual(new Set(rows.map(row => row.id)), ids);
+      assert.deepEqual(rows.find(row => row.id === shared.id).parentPath, [{ id: root.id, name: root.name }, { id: inner.id, name: inner.name }]);
+      assert.ok(rows.some(row => row.id === shared.id && row.scope === 'ENTERPRISE'));
+      const search = await request('owner', 'items?view=mine&flat=1&q=QA_t191_owner_nested_21&page=1&pageSize=20'); assert.equal(search.body.total, 1);
+      const terminal = await request('owner', 'items?view=mine'); assert.ok(terminal.body.items.some(row => row.id === root.id)); assert.ok(!terminal.body.items.some(row => row.id === shared.id));
+      const directory = await request('owner', `items?view=mine&parentId=${root.id}`); assert.deepEqual(directory.body.items.map(row => row.id), [inner.id]);
+      for (const who of ['mate', 'other', 'tenantAdmin', 'platform']) {
+        const list = await request(who, 'items?view=mine&flat=1&q=QA_t191_owner&pageSize=20'); if (list.status === 200) assert.equal(list.body.total, 0); else deny(list); assert.ok(!list.bytes.toString().includes(root.name));
+      }
+    });
+    await t.test('t193 isolated serial upload contract saves each good file, keeps partial failure and private defaults', async () => {
+      const ids = [];
+      for (const name of ['QA_t193_one.md', 'QA_t193_invalid.exe', 'QA_t193_two.md']) {
+        const result = await upload('owner', name, 'isolated t193 fixture'); assert.equal(result.status, 201);
+        if (name.endsWith('.exe')) { assert.equal(result.body.items.length, 0); assert.equal(result.body.failed.length, 1); }
+        else { assert.equal(result.body.items.length, 1); assert.equal(result.body.items[0].scope, 'PRIVATE'); ids.push(result.body.items[0].id); }
+      }
+      const mine = await request('owner', 'items?view=mine&flat=1&q=QA_t193_&pageSize=20'); assert.equal(mine.body.total, 2); assert.deepEqual(new Set(mine.body.items.map(row => row.id)), new Set(ids));
+      assert.equal((await request('mate', 'items?view=shared&q=QA_t193_')).body.total, 0);
     });
     await t.test('membership removal invalidates the still-signed session for enterprise content', async () => {
       const fresh = (await upload('owner', '离开企业后不可读.md', '仅有效成员可读')).body.items[0];

@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { mkdir, readFile, realpath, unlink, writeFile } from 'fs/promises';
 import { dirname, relative, resolve, sep } from 'path';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { LibraryError } from './library.errors';
 import { resolveUnderRoot } from './library.files';
@@ -38,7 +38,12 @@ function ms(value: Date | null): number | null {
 
 @Injectable()
 export class PrismaLibraryStore implements LibraryStore {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService | Prisma.TransactionClient) {}
+
+  /** Reuse the caller's Prisma transaction for platform operations; ordinary calls keep their original transaction. */
+  private transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return '$transaction' in this.prisma ? this.prisma.$transaction(work) : work(this.prisma);
+  }
 
   createId(): string {
     return randomUUID();
@@ -87,7 +92,7 @@ export class PrismaLibraryStore implements LibraryStore {
   }
 
   async commitNewFile(input: NewFileCommit): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    await this.transaction(async (tx) => {
       await this.lockAndCheckQuota(tx, input.version, input.tenantQuotaBytes);
       await tx.libraryNode.create({
         data: nodeData({ ...input.node, currentVersionId: input.version.id }),
@@ -100,7 +105,7 @@ export class PrismaLibraryStore implements LibraryStore {
   }
 
   async commitReplacement(input: ReplacementCommit): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    await this.transaction(async (tx) => {
       await this.lockAndCheckQuota(tx, input.version, input.tenantQuotaBytes);
       const latest = await tx.libraryVersion.aggregate({ where: { nodeId: input.nodeId }, _max: { versionNo: true } });
       await tx.libraryVersion.create({ data: versionData({ ...input.version, versionNo: (latest._max.versionNo ?? 0) + 1 }) });
@@ -147,22 +152,10 @@ export class PrismaLibraryStore implements LibraryStore {
   }
 
   async replaceChunks(versionId: string, tenantId: string, chunks: ChunkRecord[]): Promise<void> {
-    await this.prisma.$transaction([
-      this.prisma.libraryChunk.deleteMany({ where: { versionId, tenantId } }),
-      ...(chunks.length
-        ? [this.prisma.libraryChunk.createMany({
-          data: chunks.map((chunk) => ({
-            id: chunk.id,
-            versionId,
-            tenantId,
-            ordinal: chunk.ordinal,
-            content: chunk.content,
-            locator: chunk.locator,
-            locatorKind: chunk.locatorKind,
-          })),
-        })]
-        : []),
-    ]);
+    await this.transaction(async tx => {
+      await tx.libraryChunk.deleteMany({ where: { versionId, tenantId } });
+      if (chunks.length) await tx.libraryChunk.createMany({ data: chunks.map(chunk => ({ id: chunk.id, versionId, tenantId, ordinal: chunk.ordinal, content: chunk.content, locator: chunk.locator, locatorKind: chunk.locatorKind })) });
+    });
   }
 
   async listRecent(userId: string, tenantId: string): Promise<RecentRecord[]> {
@@ -180,23 +173,16 @@ export class PrismaLibraryStore implements LibraryStore {
   }
 
   async touchRecent(row: RecentRecord): Promise<void> {
-    const existing = await this.prisma.libraryRecent.findUnique({
+    const accessedAt = new Date(row.accessedAt);
+    await this.prisma.libraryRecent.upsert({
       where: { userId_nodeId: { userId: row.userId, nodeId: row.nodeId } },
-    });
-    if (existing) {
-      await this.prisma.libraryRecent.update({
-        where: { id: existing.id },
-        data: { accessedAt: new Date(row.accessedAt) },
-      });
-      return;
-    }
-    await this.prisma.libraryRecent.create({
-      data: {
+      update: { tenantId: row.tenantId, accessedAt },
+      create: {
         id: row.id,
         tenantId: row.tenantId,
         userId: row.userId,
         nodeId: row.nodeId,
-        accessedAt: new Date(row.accessedAt),
+        accessedAt,
       },
     });
   }
@@ -234,6 +220,9 @@ export class PrismaLibraryStore implements LibraryStore {
       where: { id },
       data: {
         ...(patch.revokedAt !== undefined ? { revokedAt: patch.revokedAt ? new Date(patch.revokedAt) : null } : {}),
+        ...(patch.expiresAt !== undefined ? { expiresAt: new Date(patch.expiresAt) } : {}),
+        ...(patch.reason !== undefined ? { reason: patch.reason } : {}),
+        ...(patch.createdAt !== undefined ? { createdAt: new Date(patch.createdAt) } : {}),
       },
     });
   }

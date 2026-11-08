@@ -55,8 +55,8 @@ function probe(host, port, timeoutMs = 800) {
   });
 }
 
-/** Run a command to completion, resolving to { ok, output }. Never throws. */
-function execCapture(command, args, timeoutMs = 10_000) {
+/** Run a command to completion, preserving { ok, code, output }; missing=127, timeout=124. */
+export function execCapture(command, args, timeoutMs = 10_000) {
   return new Promise((resolve) => {
     const child = spawn(command, args, {
       cwd: root,
@@ -65,17 +65,17 @@ function execCapture(command, args, timeoutMs = 10_000) {
     let output = '';
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
-      resolve({ ok: false, output: 'timeout' });
+      resolve({ ok: false, code: 124, output: `timeout after ${timeoutMs}ms` });
     }, timeoutMs);
     child.stdout.on('data', (c) => (output += c.toString()));
     child.stderr.on('data', (c) => (output += c.toString()));
-    child.on('error', () => {
+    child.on('error', (error) => {
       clearTimeout(timer);
-      resolve({ ok: false, output: 'spawn failed' });
+      resolve({ ok: false, code: error.code === 'ENOENT' ? 127 : 1, output: error.message });
     });
     child.on('exit', (code) => {
       clearTimeout(timer);
-      resolve({ ok: code === 0, output: output.trim() });
+      resolve({ ok: code === 0, code: code ?? 1, output: output.trim() });
     });
   });
 }
@@ -114,14 +114,14 @@ function databaseEndpoint() {
   }
 }
 
-async function waitForPort(host, port, label, timeoutMs) {
+async function waitForPort(host, port, label, timeoutMs, probePort = probe, pollMs = 500) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if (await probe(host, port)) {
+    if (await probePort(host, port)) {
       console.log(`[boot] ${label} ready (${host}:${port})`);
       return true;
     }
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, pollMs));
   }
   return false;
 }
@@ -235,47 +235,69 @@ async function ensureDevPortsFree() {
 }
 
 
-async function ensureDatabase() {
-  const { host, port } = databaseEndpoint();
-  if (await probe(host, port)) {
+/** Preserve the failed CLI's exit status rather than reporting a successful boot. */
+function bootFailure(message, code = 1) {
+  const error = new Error(message);
+  error.exitCode = Number.isInteger(code) && code > 0 && code < 256 ? code : 1;
+  return error;
+}
+
+/** Start only the runtime selected by the existing context; never install or switch contexts. */
+async function ensureDocker({ runCommand, dockerTimeoutMs, pollMs, platform, desktopInstalled, env }) {
+  const infoArgs = ['info', '--format', '{{.ServerVersion}}'];
+  const info = await runCommand('docker', infoArgs, 5_000);
+  if (info.ok) return;
+  if (info.code === 127) throw bootFailure('未找到 Docker CLI；请先安装 Docker/Colima，本脚本不会自动安装。', 127);
+  if (env.DOCKER_HOST) throw bootFailure('DOCKER_HOST 指定的 Docker 不可用；请启动对应服务或修正配置，不会另启本地 runtime。', info.code);
+  const context = await runCommand('docker', ['context', 'show'], 5_000);
+  if (!context.ok) throw bootFailure(`无法读取 Docker context：${context.output}`, context.code);
+  const name = context.output.trim();
+  let command, args;
+  if (name === 'colima' || name.startsWith('colima-') || name === 'default') {
+    const installed = await runCommand('colima', ['version'], 5_000);
+    if (installed.ok) {
+      command = 'colima';
+      args = name.startsWith('colima-') ? ['start', '--profile', name.slice(7)] : ['start'];
+    } else if (name !== 'default') {
+      throw bootFailure('当前 Docker context 使用 Colima，但 Colima 不可用；请先安装/修正，不会改用另一 runtime。', installed.code);
+    }
+  }
+  if (!command && (name === 'desktop-linux' || name === 'default') && platform === 'darwin' && desktopInstalled) {
+    command = 'open'; args = ['-a', 'Docker'];
+  }
+  if (!command) throw bootFailure(`Docker 未就绪，当前 context「${name}」无可自动启动的已安装本机 runtime；请手动启动对应 Docker。`);
+  console.log(`[boot] Docker 未运行，正在启动 ${command === 'colima' ? 'Colima' : 'Docker Desktop'}...`);
+  const deadline = Date.now() + dockerTimeoutMs;
+  const started = await runCommand(command, args, dockerTimeoutMs);
+  if (!started.ok) throw bootFailure(`Docker runtime 启动失败：${started.output}`, started.code);
+  while (Date.now() < deadline) {
+    const ready = await runCommand('docker', infoArgs, Math.min(5_000, Math.max(1, deadline - Date.now())));
+    if (ready.ok) { console.log('[boot] Docker ready'); return; }
+    await new Promise(resolve => setTimeout(resolve, Math.min(pollMs, Math.max(0, deadline - Date.now()))));
+  }
+  throw bootFailure(`等待 Docker 就绪超时（${dockerTimeoutMs}ms）；保留已有 runtime/数据，请检查后重试。`, 124);
+}
+
+/** Optional dependencies are solely a narrow test seam; CLI defaults use real checks and commands. */
+export async function ensureDatabase({
+  endpoint = databaseEndpoint(), probePort = probe, runCommand = execCapture,
+  dockerTimeoutMs = 120_000, databaseTimeoutMs = 90_000, pollMs = 500,
+  platform = process.platform, desktopInstalled = fs.existsSync('/Applications/Docker.app'), env = process.env,
+} = {}) {
+  const { host, port } = endpoint;
+  if (await probePort(host, port)) {
     console.log(`[boot] database ready (${host}:${port})`);
-    return true;
+    return true; // An already-ready DB needs neither Docker nor a second runtime.
   }
-
-  console.log(`[boot] database not listening on ${host}:${port}`);
-  const docker = await execCapture('docker', [
-    'info',
-    '--format',
-    '{{.ServerVersion}}',
-  ]);
-  if (!docker.ok) {
-    console.error(
-      [
-        '[boot] 数据库没起来，api 会直接崩（Prisma P1001: Can\'t reach database server）。',
-        '[boot] Docker 也没在跑，先启动它：',
-        '[boot]   colima start        # 或打开 Docker Desktop',
-        '[boot]   pnpm db:up          # 起 mammoth-postgres (:5433)',
-        '[boot] 然后重新 pnpm run dev。',
-      ].join('\n'),
-    );
-    return false;
+  if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(host) || port !== 5433) {
+    throw bootFailure(`配置的数据库 ${host}:${port} 不可连接；本机 compose 仅提供 :5433，不会启动不相关数据库。`);
   }
-
-  console.log('[boot] starting postgres (docker compose up -d)...');
-  const up = await execCapture(
-    'docker',
-    ['compose', '-f', 'infra/docker-compose.yml', 'up', '-d'],
-    180_000,
-  );
-  if (!up.ok) {
-    console.error(`[boot] docker compose up failed: ${up.output}`);
-    console.error('[boot] 手动执行：pnpm db:up');
-    return false;
-  }
-  if (await waitForPort(host, port, 'database', 90_000)) return true;
-  console.error(`[boot] postgres 已启动但 ${host}:${port} 仍不可连，检查容器日志：`);
-  console.error('[boot]   docker logs mammoth-postgres');
-  return false;
+  await ensureDocker({ runCommand, dockerTimeoutMs, pollMs, platform, desktopInstalled, env });
+  console.log('[boot] starting postgres (existing compose service, no recreate)...');
+  const up = await runCommand('docker', ['compose', '-f', 'infra/docker-compose.yml', 'up', '-d', '--no-recreate', '--wait', '--wait-timeout', '90', 'postgres'], 180_000);
+  if (!up.ok) throw bootFailure(`数据库启动失败：${up.output}；可用 pnpm db:up 检查。`, up.code);
+  if (await waitForPort(host, port, 'database', databaseTimeoutMs, probePort, pollMs)) return true;
+  throw bootFailure(`Postgres 已请求启动，但 ${host}:${port} 等待超时；请检查 docker logs mammoth-postgres。`, 124);
 }
 
 function waitPort(port, label, timeoutMs = 120_000) {
@@ -315,14 +337,14 @@ function shutdown() {
   setTimeout(() => process.exit(0), 300).unref();
 }
 
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
 
-async function main() {
+async function main(args = process.argv.slice(2)) {
   console.log('[boot] 0/3 checking database...');
   if (!(await ensureDatabase())) {
     process.exit(1);
   }
+
+  if (args.includes('--prepare-only')) { console.log('[boot] Docker/数据库准备完成；未启动开发服务。'); return; }
 
   console.log('[boot] reclaiming api/web/gateway ports if stale...');
   await ensureDevPortsFree();
@@ -342,8 +364,12 @@ async function main() {
   console.log('[boot] stack up. Ctrl-C to stop all.');
 }
 
-main().catch((err) => {
-  console.error('[boot]', err.message || err);
-  shutdown();
-  process.exit(1);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+  main().catch((err) => {
+    console.error('[boot]', err.message || err);
+    shutdown();
+    process.exit(err.exitCode ?? 1);
+  });
+}

@@ -1,6 +1,7 @@
 import {
   ArrayMaxSize,
   IsArray,
+  IsInt, Min, Max,
   IsBoolean,
   IsIn,
   IsISO8601,
@@ -10,6 +11,8 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { libraryLimitsFromEnv } from './library.limits';
 
 export class CreateFolderDto {
   @IsString()
@@ -88,6 +91,9 @@ export class BatchDto {
 }
 
 export class OpenCitationDto {
+  @IsOptional() @IsIn(['preview', 'prepare'])
+  purpose?: 'preview' | 'prepare';
+
   @IsString()
   nodeId!: string;
 
@@ -126,6 +132,14 @@ export class GrantCustodyDto {
 }
 
 export class ListQuery {
+  @IsOptional() @IsIn(['all', 'ready', 'failed', 'download'])
+  status?: 'all' | 'ready' | 'failed' | 'download';
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1)
+  page?: number;
+
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100)
+  pageSize?: number;
+
   /** Authorized metadata-only picker view; never loads any file body. */
   @IsOptional()
   @IsIn(['1'])
@@ -145,4 +159,4 @@ export class ListQuery {
   q?: string;
 }
 
-export const libraryUploadLimit = Number(process.env.LIBRARY_MAX_FILE_BYTES || 20 * 1024 * 1024);
+export const libraryUploadLimit = libraryLimitsFromEnv().maxFileBytes;

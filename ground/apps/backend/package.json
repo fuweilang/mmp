@@ -9,9 +9,11 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "test:library": "node --import tsx --test test/library/library.flow.spec.ts",
+    "test:library": "node --import tsx --test test/library/library.flow.spec.ts test/library/library.custody.spec.ts test/tenant/effective-permissions.unit.test.ts",
     "test:library:db": "node --import tsx --test test/library/library.postgres.spec.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:library:custody": "node --import tsx --test test/library/library.custody.spec.ts",
+    "test:library:http": "node --test test/library/library.http.test.cjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

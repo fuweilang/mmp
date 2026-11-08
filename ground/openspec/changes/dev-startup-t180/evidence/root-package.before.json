@@ -1,0 +1,24 @@
+{
+  "name": "mmp",
+  "private": true,
+  "version": "0.0.0",
+  "description": "猛犸中台与智能体的统一命令入口",
+  "engines": {
+    "node": ">=24.9.0"
+  },
+  "scripts": {
+    "postinstall": "node scripts/project-command.mjs install",
+    "install:all": "node scripts/project-command.mjs install",
+    "install:ground": "pnpm --dir ground install",
+    "install:agent": "pnpm --dir mammoth-agent install",
+    "dev": "pnpm --dir ground run dev",
+    "dev:ground": "pnpm --dir ground run dev",
+    "dev:agent": "pnpm --dir mammoth-agent run dev:web",
+    "dev:desktop": "pnpm --dir mammoth-agent run dev:desktop",
+    "build": "node scripts/project-command.mjs build",
+    "build:ground": "pnpm --dir ground run build",
+    "build:agent": "pnpm --dir mammoth-agent run build",
+    "start:agent": "pnpm --dir mammoth-agent run start:web",
+    "start:desktop": "pnpm --dir mammoth-agent run start:desktop"
+  }
+}

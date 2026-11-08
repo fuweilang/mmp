@@ -21,6 +21,8 @@ export const LIBRARY_ALLOWED_EXTENSIONS = [
   '.html',
   '.htm',
   '.zip',
+  '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif',
+  '.mp4', '.webm', '.mov',
 ] as const;
 
 const DEFAULT_MAX_FILE = 20 * 1024 * 1024;

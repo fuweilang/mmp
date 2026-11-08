@@ -1,3 +1,11 @@
+# t190–t193 最新索引（2026-11-08 18:22 Asia/Shanghai（UTC+8））
+
+最新终端根导航、Console全层级表格/四页样式、三端统一上传及最终验证见同目录`t190-t193-handoff.md`。本索引覆盖下文旧呈现，历史证据保留；保存链接未移除。
+
+# t188 更新索引（2026-11-08，Asia/Shanghai）
+
+最新资料树、媒体保存、共享/最近口径与t189导航图标见同目录`t188-handoff.md`。下文保留历史交付证据，不代替本轮实际检查。
+
 # 最新收尾交付（2026-11-07 21:42 PST；本节优先）
 
 ## 保持的边界
@@ -221,3 +229,10 @@ Docker上下文colima为本机Unix socket；mammoth-postgres映射5433，容器�
 - `ground/apps/backend/src/app.module.ts`
 - `.gitignore`
 - `ground/apps/backend/src/library/README.md`
+
+## 最新 t196/t197
+见`t196-t197-handoff.md`：导航/既有Menu、Element Plus真实CSS居中根因、28React+10Vue+9契约/类型/构建、产物hash与未视觉验收。旧t192仅class检查不足的声明已明确纠正。
+
+
+## t200 Admin资料库开发交付
+产品Page批准后已实施企业定位＋单企业全层级CRUD工作流，按原代管授权，不自授、不模拟成员；无schema迁移。文件彻底删除按方案保护仍阻断，回收恢复可用。精确文件、测试/产物hash、局限及刷新说明见同目录t200-handoff.md与t200-artifacts.json；真实浏览器视觉仍待用户审核。

@@ -185,11 +185,27 @@ describe('enterprise library', () => {
     assert.equal(restored.id, item.id);
     assert.equal(restored.scope, 'PRIVATE');
     assert.equal((await store.getVersion(first))?.id, first);
+    await service.recycle(owner, item.id);
     await service.purge(owner, item.id);
     const gone = code(await service.openCitation(owner, item.id, first, 'paragraph:1').catch((error: unknown) => error));
     assert.equal(gone.status, 410);
     assert.match(gone.message, /不能改指向/);
     assert.equal(gone.message.includes('新版本'), false);
+  });
+
+  it('requires recycle before permanent purge and allows recycling a folder whose child is already recycled', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const folder = await service.createFolder(owner, '资料夹');
+    const child = await upload(service, owner, '子文件.md', Buffer.from('子文件正文'));
+    await service.move(owner, child.id, folder.id);
+    const activePurge = code(await service.purge(owner, child.id).catch((error: unknown) => error));
+    assert.equal(activePurge.status, 400);
+    assert.equal((await store.getNode(child.id))?.state, 'ACTIVE');
+    await service.recycle(owner, child.id);
+    await service.recycle(owner, folder.id);
+    assert.equal((await service.list(owner, 'trash')).items.length, 2);
+    assert.equal((await service.restore(owner, folder.id)).state, 'ACTIVE');
   });
 
   it('opens a single ready chunk without a locator and still rejects missing or forbidden versions', async () => {
@@ -217,6 +233,7 @@ describe('enterprise library', () => {
     const hidden = code(await service.openCitation(other, single.id, singleId).catch((error: unknown) => error));
     assert.equal(hidden.status, 404);
     assert.equal(hidden.message.includes('唯一段落'), false);
+    await service.recycle(owner, single.id);
     await service.purge(owner, single.id);
     const gone = code(await service.openCitation(owner, single.id, singleId).catch((error: unknown) => error));
     assert.equal(gone.status, 410);
@@ -453,5 +470,68 @@ describe('enterprise library', () => {
     };
     const org: Actor = { userId: 'admin', tenantId: 'ta', isPlatformAdmin: false, isOrgAdmin: true, activeMember: true };
     assert.equal(canSee(org, node, [], Date.now()), false);
+  });
+});
+
+// t188: isolated in-memory metadata corruption, never real user records.
+describe('t188 navigation and media bounds', () => {
+  it('keeps own shared children in mine and surfaces a safe root for a corrupt folder cycle', async () => {
+    const { service, store, actor } = world(); const owner = actor('owner', 'ta');
+    const a = await service.createFolder(owner, 'QA_a'), b = await service.createFolder(owner, 'QA_b', a.id);
+    await service.setScope(owner, a.id, 'ENTERPRISE', true);
+    assert.ok((await service.list(owner, 'mine')).items.some(row => row.id === a.id));
+    assert.ok((await service.list(owner, 'mine', a.id)).items.some(row => row.id === b.id));
+    await store.updateNode(a.id, { parentId: b.id });
+    const roots = (await service.list(owner, 'mine')).items;
+    assert.equal(roots.filter(row => [a.id, b.id].includes(row.id)).length, 1);
+    const page = await service.list(owner, 'mine', roots[0]!.id);
+    assert.ok(page.breadcrumb.length <= 2);
+    await assert.rejects(service.move(owner, a.id, b.id));
+  });
+  it('rejects oversized/spoofed media before storage and does not index media', async () => {
+    const { service, store, actor } = world(); const owner = actor('owner', 'ta');
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=', 'base64');
+    const file = await upload(service, owner, 'QA.png', png); assert.equal(file.currentVersion?.parseStatus, 'DOWNLOAD_ONLY');
+    assert.equal((await store.listChunks(file.currentVersion!.id)).length, 0);
+    assert.equal((await service.list(owner, 'recent')).items.length, 0);
+    await service.preview(owner, file.id); assert.equal((await service.list(owner, 'recent')).items.length, 0);
+    await service.download(owner, file.id, undefined, true); assert.equal((await service.list(owner, 'recent')).items.length, 1);
+    await assert.rejects(upload(service, owner, 'QA_fake.png', Buffer.from('<script/>')));
+    await assert.rejects(upload(service, owner, 'QA_big.png', Buffer.concat([png, Buffer.alloc(1000)])));
+    await assert.rejects(service.download(owner, (await upload(service, owner, 'QA.md', Buffer.from('text'))).id, undefined, true));
+  });
+});
+
+
+describe('t191 Console flat mine management', () => {
+  it('paginates owned levels including shared, searches globally and keeps directory semantics', async () => {
+    const { service, actor } = world(); const owner = actor('owner', 'ta');
+    const apple = await service.createFolder(owner, 'Apple');
+    const inner = await service.createFolder(owner, 'Inner', apple.id);
+    const expected = new Set([apple.id, inner.id]);
+    for (let i = 0; i < 22; i++) {
+      const row = await service.createLink(owner, `nested-${i}`, 'https://example.test/', inner.id);
+      expected.add(row.id); if (i === 0) await service.setScope(owner, row.id, 'ENTERPRISE', true);
+    }
+    const first = await service.list(owner, 'mine', null, '', true, 1, 20);
+    const second = await service.list(owner, 'mine', null, '', true, 2, 20);
+    assert.equal(first.total, 24); assert.equal(first.items.length, 20); assert.equal(second.items.length, 4);
+    assert.deepEqual(new Set([...first.items, ...second.items].map(row => row.id)), expected);
+    const shared = [...first.items, ...second.items].find(row => row.scope === 'ENTERPRISE')!;
+    assert.deepEqual(shared.parentPath, [{ id: apple.id, name: 'Apple' }, { id: inner.id, name: 'Inner' }]);
+    assert.equal((await service.list(owner, 'mine', null, 'nested-21', true, 1, 20)).items[0]?.name, 'nested-21');
+    assert.deepEqual((await service.list(owner, 'mine', null, '', false, 1, 20)).items.map(row => row.id), [apple.id]);
+    assert.deepEqual((await service.list(owner, 'mine', apple.id, '', false, 1, 20)).items.map(row => row.id), [inner.id]);
+    assert.equal((await service.list(owner, 'mine', inner.id, '', false, 1, 20)).total, 22);
+    for (const who of [actor('mate', 'ta'), actor('admin', 'ta', { isOrgAdmin: true }), actor('platform', 'ta', { isPlatformAdmin: true }), actor('other', 'tb')]) assert.equal((await service.list(who, 'mine', null, '', true, 1, 20)).total, 0);
+  });
+  it('omits hidden ancestor labels and preserves recorded MIME despite a misleading renamed title', async () => {
+    const { service, actor } = world(); const owner = actor('owner', 'ta'); const mate = actor('mate', 'ta');
+    const hidden = await service.createFolder(mate, '不得泄漏上级名称'); await service.setScope(mate, hidden.id, 'ENTERPRISE', true);
+    const file = await service.upload(owner, { originalName: 'valid.txt', mimeType: 'text/plain', bytes: Buffer.from('isolated fixture'), parentId: hidden.id });
+    await service.rename(owner, file.id, '误导名称.png'); await service.setScope(mate, hidden.id, 'PRIVATE');
+    const row = (await service.list(owner, 'mine', null, '', true, 1, 20)).items[0]!;
+    assert.equal(row.parentHidden, true); assert.equal(row.parentName, null); assert.deepEqual(row.parentPath, []);
+    assert.equal(row.currentVersion?.mimeType, 'text/plain'); assert.ok(!JSON.stringify(row).includes('不得泄漏上级名称'));
   });
 });
