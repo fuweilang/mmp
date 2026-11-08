@@ -39,8 +39,13 @@ export function clientLaunchUrl(hostname: string): string {
   return local ? 'mmp-dev://open' : 'mmp://open'
 }
 
-export function clientDownloadUrl(platform: ClientPlatform): string {
-  return `${CLIENT_FILES[platform]}?v=${Date.now()}`
+/**
+ * Resolve the installer URL. Prefer the manifest's own file name so a published
+ * version cannot drift from a stale fixed alias in the page.
+ */
+export function clientDownloadUrl(platform: ClientPlatform, file?: string): string {
+  const path = typeof file === 'string' && /^[\w.-]+\.(dmg|exe)$/.test(file) ? `/downloads/${file}` : CLIENT_FILES[platform]
+  return `${path}?v=${Date.now()}`
 }
 
 export interface ClientDownloadInfo {
@@ -50,6 +55,8 @@ export interface ClientDownloadInfo {
   readonly date: string
   /** Installer size in MB; null when the probe fails. */
   readonly sizeMb: number | null
+  /** Per-platform installer file names exactly as published in the manifest. */
+  readonly files: Partial<Record<ClientPlatform, string>>
 }
 
 const LATEST_MANIFEST = '/downloads/mammoth-latest.json'
@@ -65,7 +72,7 @@ export async function fetchClientDownloadInfo(): Promise<ClientDownloadInfo | nu
     const data = await res.json() as {
       product?: string; schema_version?: number;
       updated_at?: string
-      platforms?: Record<string, { shell?: { version?: string } } | undefined>
+      platforms?: Record<string, { shell?: { version?: string }; file?: string } | undefined>
     }
     const version = data.platforms?.['darwin-arm64']?.shell?.version
     if (!version || data.product !== 'mammoth-agent' || data.schema_version !== 2) return null
@@ -74,6 +81,11 @@ export async function fetchClientDownloadInfo(): Promise<ClientDownloadInfo | nu
       version,
       date: (data.updated_at || '').slice(0, 10),
       sizeMb: await probeSizeMb(CLIENT_FILES['mac-arm64']),
+      files: {
+        ...(data.platforms?.['darwin-arm64']?.file ? { 'mac-arm64': data.platforms['darwin-arm64']!.file } : {}),
+        ...(data.platforms?.['darwin-amd64']?.file ? { 'mac-x64': data.platforms['darwin-amd64']!.file } : {}),
+        ...(data.platforms?.['windows-amd64']?.file ? { win: data.platforms['windows-amd64']!.file } : {}),
+      },
     }
   } catch {
     return null

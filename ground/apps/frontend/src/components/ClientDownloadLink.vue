@@ -126,7 +126,7 @@ function openModal() {
 function download(platform: ClientPlatform) {
   if (!info.value?.availablePlatforms.includes(platform)) return;
   started.value = platform;
-  window.location.assign(clientDownloadUrl(platform));
+  window.location.assign(clientDownloadUrl(platform, info.value?.files?.[platform]));
 }
 </script>
 

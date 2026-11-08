@@ -96,7 +96,7 @@ export function ClientDownloadButton({ wide, t }: ClientDownloadButtonProps) {
   const download = (platform: ClientPlatform) => {
     if (!info?.availablePlatforms.includes(platform)) return
     setStarted(platform)
-    window.location.assign(clientDownloadUrl(platform))
+    window.location.assign(clientDownloadUrl(platform, info?.files?.[platform]))
   }
 
   return <>
