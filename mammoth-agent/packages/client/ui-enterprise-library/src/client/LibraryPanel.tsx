@@ -69,6 +69,8 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const [blocked, setBlocked] = useState<string | null>(null)
+  const [tenants, setTenants] = useState<readonly { id: string; name: string }[]>([])
+  const [switching, setSwitching] = useState(false)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [newOpen, setNewOpen] = useState(false)
@@ -84,6 +86,32 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [movePath, setMovePath] = useState<readonly { id: string; name: string }[]>([])
   const parentId = path.at(-1)?.id ?? null
   const refresh = () => { setRevision(n => n + 1) }
+  /** Platform admins have no default enterprise; let them enter one in place. */
+  const loadTenants = async () => {
+    try {
+      const res = await fetch(`${origin}/api/auth/me`, { credentials: 'include', cache: 'no-store' })
+      if (!res.ok) return
+      const me = await res.json() as { user?: { isPlatformAdmin?: boolean }; tenants?: readonly { id: string; name: string; type?: string; status?: string }[] }
+      if (!me.user?.isPlatformAdmin) return
+      setTenants((me.tenants ?? []).filter(x => x.type !== 'PLATFORM' && x.status === 'active').map(x => ({ id: x.id, name: x.name })))
+    } catch { /* the guidance text stays when tenant discovery fails */ }
+  }
+  const enterTenant = async (tenantId: string) => {
+    if (switching) return
+    setSwitching(true); setError('')
+    try {
+      const res = await fetch(`${origin}/api/auth/switch-tenant`, {
+        method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ tenantId }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { message?: string }
+        throw new Error(body.message ?? `切换企业失败 (${res.status})`)
+      }
+      setBlocked(null); setLimits(undefined); refresh()
+    } catch (e) { setError(e instanceof Error ? e.message : t('operationFailed')) }
+    finally { setSwitching(false) }
+  }
   useEffect(() => { setPage(1) }, [view, query, parentId, filter])
   useEffect(() => { const url = source?.mediaUrl; return () => { if (url) URL.revokeObjectURL(url) } }, [source?.mediaUrl])
   useEffect(() => {
@@ -91,15 +119,22 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     void libraryRequest(origin, 'config', 'GET', undefined, fetchImpl).then(value => {
       const config = value as { maxFileBytes?: number; allowedExtensions?: string[]; enabled?: boolean; message?: string }
       if (!current) return
-      if (config.enabled === false) { setBlocked(config.message ?? t('loadError')); return }
+      if (config.enabled === false) {
+        setBlocked(config.message ?? t('loadError'))
+        void loadTenants()
+        return
+      }
       setBlocked(null)
       if (typeof config.maxFileBytes === 'number' && Array.isArray(config.allowedExtensions)) setLimits({ maxFileBytes: config.maxFileBytes, allowedExtensions: config.allowedExtensions })
     }).catch(e => {
       // Older Ground builds answer 403 NO_TENANT instead of a disabled config.
-      if (current && e instanceof Error && /缺少企业上下文|NO_TENANT/.test(e.message)) setBlocked('资料库属于企业能力：请先在控制台进入企业工作台，再打开资料库')
+      if (current && e instanceof Error && /缺少企业上下文|NO_TENANT/.test(e.message)) {
+        setBlocked('资料库属于企业能力：请先在控制台进入企业工作台，再打开资料库')
+        void loadTenants()
+      }
     })
     return () => { current = false }
-  }, [origin, fetchImpl])
+  }, [origin, fetchImpl, revision])
   useEffect(() => {
     if (blocked !== null) { setLoading(false); setItems([]); setSelected([]); return }
     const control = new AbortController()
@@ -228,6 +263,10 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       </header>
       <p className={css.uploadHint}>{t('uploadHint')}{limits ? ` · ${fileSizeText(limits.maxFileBytes)}` : ''}</p>
       {blocked !== null && <div role="alert" className={css.error}><span>{blocked}</span></div>}
+      {blocked !== null && tenants.length > 0 && <div className={css.toolbar}>
+        <span>{t('panel')}:</span>
+        {tenants.map(tenant => <Button key={tenant.id} size="sm" disabled={switching} onClick={() => { void enterTenant(tenant.id) }}>{tenant.name}</Button>)}
+      </div>}
       <div className={css.toolbar}>
         <div className={css.search}><IconSearchOutlineRegular size={18} /><Input type="search" aria-label={t('searchPlaceholder')} value={query} placeholder={t('searchPlaceholder')} onChange={e => { setQuery(e.target.value) }} /></div>
         <Menu open={filterOpen} onClose={() => { setFilterOpen(false) }} portal compact minWidthFromAnchor autoFocus align="end" selectedId={filter} listClassName={css.filterList}
