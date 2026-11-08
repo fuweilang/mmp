@@ -157,6 +157,7 @@ import {
   ChevronLeft,
   Download,
   FolderOpen,
+  Library,
   KeyRound,
   LayoutDashboard,
   Lock,
@@ -235,6 +236,7 @@ function onSwitchProduct(command: string) {
 const businessItems = [
   { path: '/console/', label: '工作台', icon: LayoutDashboard, perm: 'portal.console.workbench' },
   { path: '/console/knowledge', label: '知识库', icon: FolderOpen, perm: 'portal.console.kb' },
+  { path: '/library', label: '资料库', icon: Library, perm: 'portal.console.access' },
   { path: '/console/members', label: '成员管理', icon: Users, perm: 'portal.console.members' },
   { path: '/console/roles', label: '角色管理', icon: KeyRound, perm: 'portal.console.roles' },
   { path: '/console/usage', label: '操作审计', icon: BarChart3, perm: 'portal.console.usage' },
@@ -253,6 +255,7 @@ const platformItems = [
   { path: '/admin/models', label: '模型管理', icon: Bot },
   { path: '/admin/pricing-config', label: 'AI币计价配置', icon: Coins },
   { path: '/admin/audit', label: '操作审计', icon: ScrollText, perm: 'portal.admin.audit' },
+  { path: '/admin/library', label: '资料库概况', icon: Library },
 ];
 
 const navItems = computed(() => {

@@ -47,7 +47,7 @@ export type ResolvedUpstreamModel = {
   thinkingEnabled: boolean;
 };
 
-type ChatBody = Record<string, unknown> & {
+export type ChatBody = Record<string, unknown> & {
   model?: unknown;
   messages?: unknown;
   stream?: unknown;

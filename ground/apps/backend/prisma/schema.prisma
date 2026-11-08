@@ -53,6 +53,11 @@ model User {
   kbGrants         KbGrant[]
   roles            UserRole[]
   tokenUsageTurns  TokenUsageTurn[]
+  libraryOwned     LibraryNode[]    @relation("LibraryOwner")
+  libraryVersions  LibraryVersion[] @relation("LibraryVersionAuthor")
+  libraryRecents   LibraryRecent[]
+  custodyGrants    LibraryCustody[] @relation("CustodyGrantor")
+  custodyReceived  LibraryCustody[] @relation("CustodyGrantee")
 
   @@map("user")
 }
@@ -83,6 +88,11 @@ model Tenant {
   tokenUsageTurns  TokenUsageTurn[]
   orgPresetOverrides OrgPresetOverride[]
   llmModelAssignments LlmTenantModel[]
+  libraryNodes        LibraryNode[]
+  libraryVersions     LibraryVersion[]
+  libraryChunks       LibraryChunk[]
+  libraryRecents      LibraryRecent[]
+  libraryCustodies    LibraryCustody[]
 
   @@map("tenant")
 }
@@ -585,4 +595,147 @@ model SyncedConversationMessage {
 
   @@unique([conversationId, sourceSeq])
   @@map("synced_conversation_message")
+}
+
+enum LibraryScope {
+  PRIVATE
+  ENTERPRISE
+}
+
+enum LibraryKind {
+  FILE
+  FOLDER
+  LINK
+}
+
+enum LibraryState {
+  ACTIVE
+  RECYCLED
+  PURGED
+}
+
+enum LibraryParseStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+  DOWNLOAD_ONLY
+  NOT_APPLICABLE
+}
+
+enum LibraryCustodyScope {
+  ENTERPRISE
+  PRIVATE_OWNER
+}
+
+enum LibraryCustodyPower {
+  READ
+  CRUD
+}
+
+/// 企业资料库节点。可见性与物理文件分开。私人默认仅所有者。
+model LibraryNode {
+  id               String        @id
+  tenantId         String        @map("tenant_id")
+  ownerUserId      String        @map("owner_user_id")
+  parentId         String?       @map("parent_id")
+  kind             LibraryKind
+  name             String
+  scope            LibraryScope  @default(PRIVATE)
+  state            LibraryState  @default(ACTIVE)
+  linkUrl          String?       @map("link_url")
+  currentVersionId String?       @map("current_version_id")
+  recycledAt       DateTime?     @map("recycled_at")
+  purgedAt         DateTime?     @map("purged_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  tenant           Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner            User          @relation("LibraryOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  parent           LibraryNode?  @relation("LibraryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children         LibraryNode[] @relation("LibraryTree")
+  versions         LibraryVersion[]
+  recents          LibraryRecent[]
+
+  @@index([tenantId, state, scope])
+  @@index([ownerUserId])
+  @@index([parentId])
+  @@map("library_node")
+}
+
+/// 文件的一个字节版本。替换只追加，不改旧版本。
+model LibraryVersion {
+  id               String              @id
+  nodeId           String              @map("node_id")
+  tenantId         String              @map("tenant_id")
+  versionNo        Int                 @map("version_no")
+  originalName     String              @map("original_name")
+  mimeType         String              @map("mime_type")
+  sizeBytes        Int                 @map("size_bytes")
+  storageKey       String              @map("storage_key")
+  sha256           String
+  parseStatus      LibraryParseStatus  @default(PENDING) @map("parse_status")
+  parseReason      String?             @map("parse_reason")
+  extractTruncated Boolean             @default(false) @map("extract_truncated")
+  createdByUserId  String              @map("created_by_user_id")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  node             LibraryNode         @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy        User                @relation("LibraryVersionAuthor", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  chunks           LibraryChunk[]
+
+  @@unique([nodeId, versionNo])
+  @@index([tenantId])
+  @@map("library_version")
+}
+
+model LibraryChunk {
+  id          String         @id
+  versionId   String         @map("version_id")
+  tenantId    String         @map("tenant_id")
+  ordinal     Int
+  content     String         @db.Text
+  locator     String
+  locatorKind String         @map("locator_kind")
+  version     LibraryVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, ordinal])
+  @@index([tenantId, versionId])
+  @@map("library_chunk")
+}
+
+model LibraryRecent {
+  id         String      @id
+  tenantId   String      @map("tenant_id")
+  userId     String      @map("user_id")
+  nodeId     String      @map("node_id")
+  accessedAt DateTime    @default(now()) @map("accessed_at")
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  node       LibraryNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, nodeId])
+  @@index([userId, accessedAt])
+  @@map("library_recent")
+}
+
+/// 平台代管。默认不存在。到期或撤销后不能再读正文。
+model LibraryCustody {
+  id           String               @id
+  tenantId     String               @map("tenant_id")
+  grantorUserId String              @map("grantor_user_id")
+  granteeUserId String              @map("grantee_user_id")
+  contentScope LibraryCustodyScope  @map("content_scope")
+  ownerUserId  String?              @map("owner_user_id")
+  powers       LibraryCustodyPower
+  expiresAt    DateTime             @map("expires_at")
+  revokedAt    DateTime?            @map("revoked_at")
+  reason       String
+  createdAt    DateTime             @default(now()) @map("created_at")
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  grantor      User                 @relation("CustodyGrantor", fields: [grantorUserId], references: [id], onDelete: Cascade)
+  grantee      User                 @relation("CustodyGrantee", fields: [granteeUserId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, granteeUserId])
+  @@map("library_custody")
 }

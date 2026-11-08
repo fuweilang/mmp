@@ -19,6 +19,6 @@ import { LlmProvidersService } from './llm-providers.service';
     LlmChatController,
   ],
   providers: [LlmHealthService, LlmConcurrencyService, LlmProvidersService, LlmChatGatewayService],
-  exports: [LlmProvidersService],
+  exports: [LlmProvidersService, LlmChatGatewayService],
 })
 export class LlmModule {}

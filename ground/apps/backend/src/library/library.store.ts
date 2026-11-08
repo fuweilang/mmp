@@ -1,0 +1,182 @@
+import { randomUUID } from 'crypto';
+import type {
+  AuditRecord,
+  ChunkRecord,
+  CustodyRecord,
+  NodeRecord,
+  RecentRecord,
+  VersionRecord,
+} from './library.types';
+
+export type TenantBrief = { id: string; name: string };
+
+export interface LibraryStore {
+  createId(): string;
+  listNodes(tenantId: string): Promise<NodeRecord[]>;
+  getNode(id: string): Promise<NodeRecord | null>;
+  insertNode(row: NodeRecord): Promise<void>;
+  updateNode(id: string, patch: Partial<NodeRecord>): Promise<void>;
+  listVersions(nodeId: string): Promise<VersionRecord[]>;
+  getVersion(id: string): Promise<VersionRecord | null>;
+  insertVersion(row: VersionRecord): Promise<void>;
+  updateVersion(id: string, patch: Partial<VersionRecord>): Promise<void>;
+  listChunks(versionId: string): Promise<ChunkRecord[]>;
+  replaceChunks(versionId: string, tenantId: string, chunks: ChunkRecord[]): Promise<void>;
+  listRecent(userId: string, tenantId: string): Promise<RecentRecord[]>;
+  touchRecent(row: RecentRecord): Promise<void>;
+  listCustodies(): Promise<CustodyRecord[]>;
+  getCustody(id: string): Promise<CustodyRecord | null>;
+  insertCustody(row: CustodyRecord): Promise<void>;
+  updateCustody(id: string, patch: Partial<CustodyRecord>): Promise<void>;
+  putBlob(key: string, bytes: Buffer): Promise<void>;
+  getBlob(key: string): Promise<Buffer | null>;
+  deleteBlob(key: string): Promise<void>;
+  audit(row: AuditRecord): Promise<void>;
+  userName(userId: string): Promise<string | null>;
+  tenantName(tenantId: string): Promise<string | null>;
+  listTenants(): Promise<TenantBrief[]>;
+}
+
+/** 测试用内存库。生产用 Prisma。 */
+export class MemoryLibraryStore implements LibraryStore {
+  readonly nodes = new Map<string, NodeRecord>();
+  readonly versions = new Map<string, VersionRecord>();
+  readonly chunks = new Map<string, ChunkRecord>();
+  readonly recents = new Map<string, RecentRecord>();
+  readonly custodies = new Map<string, CustodyRecord>();
+  readonly blobs = new Map<string, Buffer>();
+  readonly audits: AuditRecord[] = [];
+  readonly users = new Map<string, string>();
+  readonly tenants = new Map<string, string>();
+  private seq = 0;
+  /** 每个版本 replaceChunks 的调用次数，用来确认重试不是追加。 */
+  readonly chunkWrites: number[] = [];
+
+  createId(): string {
+    this.seq += 1;
+    return `id${this.seq.toString(16).padStart(8, '0')}`;
+  }
+
+  rememberUser(userId: string, name: string) {
+    this.users.set(userId, name);
+  }
+
+  rememberTenant(tenantId: string, name: string) {
+    this.tenants.set(tenantId, name);
+  }
+
+  async listNodes(tenantId: string) {
+    return [...this.nodes.values()].filter((row) => row.tenantId === tenantId);
+  }
+
+  async getNode(id: string) {
+    return this.nodes.get(id) ?? null;
+  }
+
+  async insertNode(row: NodeRecord) {
+    this.nodes.set(row.id, row);
+  }
+
+  async updateNode(id: string, patch: Partial<NodeRecord>) {
+    const current = this.nodes.get(id);
+    if (!current) return;
+    this.nodes.set(id, { ...current, ...patch });
+  }
+
+  async listVersions(nodeId: string) {
+    return [...this.versions.values()]
+      .filter((row) => row.nodeId === nodeId)
+      .sort((a, b) => a.versionNo - b.versionNo);
+  }
+
+  async getVersion(id: string) {
+    return this.versions.get(id) ?? null;
+  }
+
+  async insertVersion(row: VersionRecord) {
+    this.versions.set(row.id, row);
+  }
+
+  async updateVersion(id: string, patch: Partial<VersionRecord>) {
+    const current = this.versions.get(id);
+    if (!current) return;
+    this.versions.set(id, { ...current, ...patch });
+  }
+
+  async listChunks(versionId: string) {
+    return [...this.chunks.values()]
+      .filter((row) => row.versionId === versionId)
+      .sort((a, b) => a.ordinal - b.ordinal);
+  }
+
+  async replaceChunks(versionId: string, _tenantId: string, chunks: ChunkRecord[]) {
+    for (const [id, row] of this.chunks) {
+      if (row.versionId === versionId) this.chunks.delete(id);
+    }
+    for (const row of chunks) this.chunks.set(row.id, row);
+    this.chunkWrites.push(chunks.length);
+  }
+
+  async listRecent(userId: string, tenantId: string) {
+    return [...this.recents.values()]
+      .filter((row) => row.userId === userId && row.tenantId === tenantId)
+      .sort((a, b) => b.accessedAt - a.accessedAt);
+  }
+
+  async touchRecent(row: RecentRecord) {
+    const existing = [...this.recents.values()].find((item) => item.userId === row.userId && item.nodeId === row.nodeId);
+    if (existing) this.recents.set(existing.id, { ...existing, accessedAt: row.accessedAt });
+    else this.recents.set(row.id, row);
+  }
+
+  async listCustodies() {
+    return [...this.custodies.values()];
+  }
+
+  async getCustody(id: string) {
+    return this.custodies.get(id) ?? null;
+  }
+
+  async insertCustody(row: CustodyRecord) {
+    this.custodies.set(row.id, row);
+  }
+
+  async updateCustody(id: string, patch: Partial<CustodyRecord>) {
+    const current = this.custodies.get(id);
+    if (!current) return;
+    this.custodies.set(id, { ...current, ...patch });
+  }
+
+  async putBlob(key: string, bytes: Buffer) {
+    this.blobs.set(key, Buffer.from(bytes));
+  }
+
+  async getBlob(key: string) {
+    const found = this.blobs.get(key);
+    return found ? Buffer.from(found) : null;
+  }
+
+  async deleteBlob(key: string) {
+    this.blobs.delete(key);
+  }
+
+  async audit(row: AuditRecord) {
+    this.audits.push(row);
+  }
+
+  async userName(userId: string) {
+    return this.users.get(userId) ?? null;
+  }
+
+  async tenantName(tenantId: string) {
+    return this.tenants.get(tenantId) ?? null;
+  }
+
+  async listTenants() {
+    return [...this.tenants.entries()].map(([id, name]) => ({ id, name }));
+  }
+}
+
+export function newEntityId(): string {
+  return randomUUID();
+}

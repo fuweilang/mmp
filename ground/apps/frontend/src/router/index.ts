@@ -16,6 +16,8 @@ const router = createRouter({
   history: createWebHistory('/'),
   routes: [
     { path: '/login', component: () => import('../views/Login.vue') },
+    { path: '/library', meta: { title: '资料库' }, component: () => import('../views/Library.vue') },
+    { path: '/console/library', redirect: '/library' },
     {
       path: '/admin',
       component: AppShell,
@@ -68,6 +70,11 @@ const router = createRouter({
           path: 'audit',
           meta: { title: '操作审计', perm: 'portal.admin.audit' },
           component: () => import('../views/admin/AdminAudit.vue'),
+        },
+        {
+          path: 'library',
+          meta: { title: '资料库概况' },
+          component: () => import('../views/admin/AdminLibrary.vue'),
         },
         {
           path: 'billing',
