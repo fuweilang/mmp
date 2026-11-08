@@ -8,7 +8,7 @@ import {SessionId,SESSION_FORMAT_VERSION} from '@mammoth-ai/mmp-session'
 import * as Persistence from '../src/index.ts'
 import {sessionDir,generationLogPath} from '../src/format.ts'
 async function fixture(){const root=await mkdtemp(join(tmpdir(),'mmp-t166-delete-')),ctx=new Context();await ctx.plugin(Persistence,{root:join(root,'logs'),compression:'zstd'});onTestFinished(async()=>{await ctx.fiber.dispose();await rm(root,{recursive:true,force:true})});return {root,ctx,p:ctx.sessionPersistence}}
-const header=(id:string)=>({id:SessionId(id),version:SESSION_FORMAT_VERSION,createdAt:0,isSeeded:false})
+const header=(id:string)=>({id:SessionId(id),version:4 as const,createdAt:0,isSeeded:false})
 it('t166 delete refuses an active writer, removes only canonical owned logs and retains unrelated/shared files and another task',async()=>{
  const f=await fixture(),a=header('t166-delete-a'),b=header('t166-retain-b'),ha=await f.p.create(a),hb=await f.p.create(b)
  await ha.flush();await hb.flush();await expect(f.p.remove(a.id)).rejects.toThrow();await ha.close();await hb.close()

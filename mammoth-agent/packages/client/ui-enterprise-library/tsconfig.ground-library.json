@@ -1,0 +1,23 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../../../../ground/apps/backend/src/library",
+    "outDir": "./lib/ground-library",
+    "tsBuildInfoFile": "./lib/ground-library.tsbuildinfo",
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": [
+    "../../../../ground/apps/backend/src/library/library.ask.ts",
+    "../../../../ground/apps/backend/src/library/library.errors.ts",
+    "../../../../ground/apps/backend/src/library/library.files.ts",
+    "../../../../ground/apps/backend/src/library/library.limits.ts",
+    "../../../../ground/apps/backend/src/library/library.parse.ts",
+    "../../../../ground/apps/backend/src/library/library.policy.ts",
+    "../../../../ground/apps/backend/src/library/library.service.ts",
+    "../../../../ground/apps/backend/src/library/library.store.ts",
+    "../../../../ground/apps/backend/src/library/library.types.ts"
+  ]
+}

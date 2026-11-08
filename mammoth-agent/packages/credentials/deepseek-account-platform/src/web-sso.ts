@@ -39,7 +39,7 @@ export class GroundWebIdentityConflict extends Error {
 /** Authoritative Ground verification failure, with a safe browser-facing message. */
 export class GroundWebSessionError extends Error {
   /** @param status - HTTP refusal. @param message - Credential-free explanation. */
-  constructor(readonly status: 401 | 403 | 502, message: string) { super(message) }
+  constructor(readonly status: 401 | 403 | 502 | 503, message: string) { super(message) }
 }
 
 /**

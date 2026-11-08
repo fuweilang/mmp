@@ -32,7 +32,7 @@ describe('t170/t171 real Cordis negative controls', () => {
 })
 
 // Native renderer/slot registration and sibling Cordis services; no real user/Host/data.
-import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { SlotTestRuntime, usePinnedBrowserLanguages, RemoteError, StaticRemoteAccess } from '@mammoth-ai/mmp-client-test-runtime'
 import { createSnapshotStore } from '@mammoth-ai/mmp-client-store'
 import { LocaleRuntime } from '@mammoth-ai/mmp-client-locale/client'

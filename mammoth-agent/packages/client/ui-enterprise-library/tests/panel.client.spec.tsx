@@ -4,9 +4,11 @@ import modalCss from '../../ui-primitives/src/Modal.module.css'
 import panelCss from '../src/client/LibraryPanel.module.css'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { allowAllAccess, contextMenuHook } from '@mammoth-ai/mmp-client-test-runtime'
+import type { GlobalStandardProps } from '@mammoth-ai/mmp-client-ui-slots'
 import { LibraryTree } from '../src/client/LibraryTree.tsx'
 import { LibraryIcon } from '../src/client/LibraryIcon.tsx'
-import { LibraryPanel } from '../src/client/LibraryPanel.tsx'
+import { LibraryPanel as RawLibraryPanel, type LibraryPanelProps } from '../src/client/LibraryPanel.tsx'
 import type { LibraryChoice } from '../src/client/selection.ts'
 import { zh, type LibraryKey } from '../src/client/locales.ts'
 
@@ -14,10 +16,20 @@ afterEach(() => { cleanup() })
 
 const t = (key: LibraryKey) => zh[key]
 const main = () => within(document.querySelector('main')!)
+const unused = (): never => { throw new Error('unused framework seat') }
+const standard: GlobalStandardProps = {
+  usePanelInfo: unused, useSessions: unused, useSessionStatus: unused, useSessionRetainInfo: unused,
+  useResource: unused, useWorkspaces: unused, ...allowAllAccess, useContextMenu: contextMenuHook(),
+}
+const noSource: LibraryPanelProps['useSourceRequest'] = select => select(null)
+type PanelFixtureProps = Omit<LibraryPanelProps, keyof GlobalStandardProps> & { useSourceRequest?: LibraryPanelProps['useSourceRequest'] }
+function Panel({ useSourceRequest = noSource, ...props }: PanelFixtureProps) {
+  return <RawLibraryPanel {...standard} useSourceRequest={useSourceRequest} {...props} />
+}
 
 describe('library icon', () => {
   it('draws the sidebar glyph', () => {
-    const view = render(<LibraryIcon size={16} active={false} />)
+    const view = render(<LibraryIcon size={16} active={false} {...standard} />)
     expect(view.container.querySelector('svg')).toBeTruthy()
   })
 })
@@ -27,7 +39,7 @@ describe('library panel', () => {
     const fetchImpl = vi.fn(async (url: string) => url.includes('view=shared') ? new Response('no', { status: 403 }) : Response.json({ items: [
       { id: 'n1', name: '制度.md', kind: 'FILE', currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'READY' } },
     ] }))
-    render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="http://ground.test" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="http://ground.test" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     await main().findByText('制度.md')
     fireEvent.click(screen.getByRole('button', { name: zh.shared }))
     await screen.findByText(zh.loadError, { exact: false })
@@ -35,7 +47,7 @@ describe('library panel', () => {
   })
 
   it('hides native file pickers and shows a centered, actionable empty state without persistent upload progress', async () => {
-    const view = render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={vi.fn(async () => Response.json({ items: [] }))} onUse={vi.fn()} />)
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={vi.fn(async () => Response.json({ items: [] }))} onUse={vi.fn()} />)
     await screen.findByText(zh.emptyHint)
     expect(view.container.querySelectorAll('input[type="file"][hidden]')).toHaveLength(0)
     expect(screen.getAllByRole('button', { name: zh.upload })).toHaveLength(2)
@@ -50,7 +62,7 @@ describe('library panel', () => {
       { id: 'n1', name: '制度.md', kind: 'FILE', canManage: true, scope: 'PRIVATE', updatedAt: '2026-11-08T04:00:00.000Z', currentVersion: { id: 'v7', versionNo: 7, parseStatus: 'READY', sizeBytes: 2048 } },
       { id: 'zip', name: '归档.zip', kind: 'FILE', currentVersion: { id: 'vz', versionNo: 1, parseStatus: 'DOWNLOAD_ONLY', parseReason: 'ZIP仅可下载' } },
     ] }))
-    render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} onUseMany={onUseMany} />)
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} onUseMany={onUseMany} />)
     await main().findByText('制度.md')
     expect(screen.getByText('2.0KB')).toBeTruthy()
     expect(screen.getByText(zh.statusReady, { selector: 'span' })).toBeTruthy()
@@ -68,7 +80,7 @@ describe('library panel', () => {
     const fetchImpl = vi.fn(async (url: string) => url.includes('/preview?') ? Response.json({ text: '授权摘录', chunks: [], locator: 'paragraph:1' }) : Response.json({ items: [
       { id: 'n1', name: '单段.md', kind: 'FILE', currentVersion: { id: 'v9', versionNo: 9, parseStatus: 'READY' } },
     ] }))
-    render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     fireEvent.click(await main().findByRole('button', { name: '单段.md' }))
     await screen.findByRole('dialog', { name: '单段.md' })
     expect(screen.getByText('授权摘录')).toBeTruthy()
@@ -79,7 +91,7 @@ describe('library panel', () => {
 
   it('opens New folder through the secondary menu and saves with the existing mmp modal', async () => {
     const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => init?.method === 'POST' ? Response.json({ id: 'folder1' }) : Response.json({ items: [] }))
-    render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     await main().findByText(zh.empty)
     fireEvent.click(screen.getByRole('button', { name: zh.new }))
     fireEvent.click(await screen.findByRole('menuitem', { name: zh.folder }))
@@ -94,7 +106,7 @@ describe('library panel', () => {
     const fetchImpl = vi.fn(async (url: string) => url.includes('/preview?') ? Response.json({ text: null, parseReason: '无法提取文字，请重试解析' }) : Response.json({ items: [
       { id: 'failed', name: '失败.pdf', kind: 'FILE', currentVersion: { id: 'vf', versionNo: 1, parseStatus: 'FAILED' } },
     ] }))
-    render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     fireEvent.click(await main().findByRole('button', { name: '失败.pdf' }))
     await screen.findByRole('dialog', { name: '失败.pdf' })
     expect(screen.getByText('无法提取文字，请重试解析')).toBeTruthy()
@@ -104,7 +116,7 @@ describe('library panel', () => {
     const fetchImpl = vi.fn(async (url: string) => url.includes('/preview?') ? Response.json({ message: '授权已撤销' }, { status: 403 }) : Response.json({ items: [
       { id: 'link1', name: '参考链接', kind: 'LINK', linkUrl: 'https://example.test/reference' },
     ] }))
-    render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     fireEvent.click(await main().findByRole('button', { name: '参考链接' }))
     await screen.findByText('授权已撤销')
     expect(fetchImpl).toHaveBeenCalledWith('/ground-library/nodes/link1/preview?versionId=', expect.objectContaining({ credentials: 'include' }))
@@ -123,7 +135,7 @@ describe('library panel', () => {
         { id: 'b', name: '乙.md', kind: 'FILE', currentVersion: { id: 'vb', versionNo: 1, parseStatus: 'READY' } },
       ] })
     })
-    render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     fireEvent.click(await main().findByRole('button', { name: '甲.md' }))
     await screen.findByRole('dialog', { name: '甲.md' })
     expect(screen.getByText('第一个文件正文')).toBeTruthy()
@@ -143,7 +155,7 @@ describe('library panel', () => {
         truncated: true, truncationNote: '仅使用部分摘录，未读取全文。',
       })
       : Response.json({ items: [] }))
-    render(<LibraryPanel useSourceRequest={selectSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    render(<Panel useSourceRequest={selectSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     await screen.findByRole('dialog', { name: '制度.md' })
     expect(screen.getByText('部分摘录')).toBeTruthy()
     expect(screen.getByText('仅使用部分摘录，未读取全文。')).toBeTruthy()
@@ -152,7 +164,7 @@ describe('library panel', () => {
 
   it('shows an empty library and a search miss', async () => {
     const fetchImpl = vi.fn(async () => Response.json({ items: [] }))
-    render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="http://ground.test" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="http://ground.test" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     await waitFor(() => expect(main().getByText(zh.empty)).toBeTruthy())
     fireEvent.change(screen.getByLabelText(zh.searchPlaceholder), { target: { value: '没有' } })
     await waitFor(() => expect(screen.getByText(zh.noResults)).toBeTruthy())
@@ -161,7 +173,7 @@ describe('library panel', () => {
   it('ignores a response that arrives after the view is gone', async () => {
     let release: (value: Response) => void = () => {}
     const fetchImpl = vi.fn(() => new Promise<Response>((resolve) => { release = resolve }))
-    const view = render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="http://ground.test" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="http://ground.test" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     view.unmount()
     release(Response.json({ items: [] }))
     await Promise.resolve()
@@ -178,7 +190,7 @@ describe('t188 lazy tree, media and upload feedback', () => {
       if (url.includes('page=2')) return Response.json({ items: [{ ...file, id: 'later', name: '后页文件.md' }], total: 3 });
       return Response.json({ items: [{ id: 'f1', name: '项目文件夹', kind: 'FOLDER' }, file], total: 3 });
     });
-    const view = render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
     await main().findByText('根文件.md');
     expect(fetchImpl.mock.calls.some(([url]) => url.includes('parentId=f1'))).toBe(false);
     expect(screen.queryByRole('button', { name: zh.toggleTree })).toBeNull();
@@ -204,7 +216,7 @@ describe('t188 lazy tree, media and upload feedback', () => {
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: create });
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revoke });
     const fetchImpl = vi.fn(async (url: string) => url.includes('/download?') ? new Response('fixture bytes', { headers: { 'content-type': 'image/png' } }) : url.includes('/preview?') ? Response.json({ name: '测试图片.png', previewKind: 'image', parseStatus: 'DOWNLOAD_ONLY', parseReason: '仅保存', versionId: 'vp' }) : Response.json({ items: [{ id: 'pic', name: '测试图片.png', kind: 'FILE', currentVersion: { id: 'vp', versionNo: 1, parseStatus: 'DOWNLOAD_ONLY' } }] }));
-    render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
     fireEvent.click(await main().findByRole('button', { name: '测试图片.png' }));
     const dialog = await screen.findByRole('dialog', { name: '测试图片.png' });
     expect(within(dialog).getByRole('img').getAttribute('src')).toBe('blob:private-fixture');
@@ -221,7 +233,7 @@ describe('t188 lazy tree, media and upload feedback', () => {
       if (init?.method === 'POST') { saved = true; return Response.json({ items: [{ id: 'new' }], failed: [] }); }
       return Response.json({ items: saved && url.includes('view=mine') ? [{ id: 'new', name: '新增.md', kind: 'FILE', scope: 'PRIVATE', currentVersion: { id: 'vnew', versionNo: 1, parseStatus: 'READY' } }] : [] });
     });
-    render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
     await main().findByText(zh.empty); fireEvent.click(screen.getByRole('button', { name: zh.shared }));
     fireEvent.click(screen.getAllByRole('button', { name: zh.upload })[0]!);
     fireEvent.change(screen.getByLabelText(zh.uploadChoose, { selector: 'input' }), { target: { files: [new File(['fixture'], '新增.md')] } });
@@ -234,7 +246,7 @@ describe('t188 lazy tree, media and upload feedback', () => {
   });
   it('retains actual upload errors instead of reporting transfer success', async () => {
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => url.endsWith('/config') ? Response.json({ maxFileBytes: 1000, allowedExtensions: ['.png'] }) : init?.method === 'POST' ? Response.json({ items: [], failed: [{ name: 'fake.png', message: '媒体内容无效' }] }) : Response.json({ items: [] }));
-    render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
     await main().findByText(zh.empty);
     fireEvent.click(screen.getAllByRole('button', { name: zh.upload })[0]!);
     fireEvent.change(screen.getByLabelText(zh.uploadChoose, { selector: 'input' }), { target: { files: [new File(['not image'], 'fake.png')] } });
@@ -250,7 +262,7 @@ it('clamps a now-empty later page back to the current last page without strandin
     if (url.includes('page=2')) { shortened = true; return Response.json({ items: [], total: 1 }); }
     return Response.json({ items: [{ id: 'keep', name: '仍可见.md', kind: 'FILE', currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'READY' } }], total: shortened ? 1 : 21 });
   });
-  render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+  render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
   await main().findByText('仍可见.md'); fireEvent.click(screen.getByRole('button', { name: zh.nextPage }));
   await waitFor(() => { expect(screen.queryByRole('button', { name: zh.nextPage })).toBeNull(); expect(main().getByRole('button', { name: '仍可见.md' })).toBeTruthy(); });
 });
@@ -260,7 +272,7 @@ describe('t190 direct mine root navigation', () => {
   const children = [{ id: 'child', kind: 'FILE', name: 'Apple内.md', currentVersion: { id: 'vc', versionNo: 1, parseStatus: 'READY' } }];
   it('has only the mine title button, shows roots directly, and repeated title clicks never collapse or blank the list', async () => {
     const fetchImpl = vi.fn(async (url: string) => Response.json({ items: url.includes('parentId=apple') ? children : rootItems, total: url.includes('parentId=apple') ? 1 : 2 }));
-    const view = render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
     const nav = within(view.container.querySelector('aside')!);
     await nav.findByRole('button', { name: '根资料.md' });
     const mine = nav.getByRole('button', { name: zh.mine });
@@ -278,7 +290,7 @@ describe('t190 direct mine root navigation', () => {
   });
   it('separates folder-title selection from expansion, preserving the open branch across category navigation', async () => {
     const fetchImpl = vi.fn(async (url: string) => Response.json({ items: url.includes('view=shared') ? [] : url.includes('parentId=apple') ? children : rootItems, total: url.includes('view=shared') ? 0 : url.includes('parentId=apple') ? 1 : 2 }));
-    const view = render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
     const nav = within(view.container.querySelector('aside')!);
     fireEvent.click(await nav.findByRole('button', { name: 'Apple' }));
     await main().findByRole('button', { name: 'Apple内.md' });
@@ -301,7 +313,7 @@ describe('t190 direct mine root navigation', () => {
       if (url.includes('parentId=apple')) return new Promise<Response>(resolve => { release = resolve; });
       return Response.json({ items: url.includes('view=shared') ? [] : rootItems, total: url.includes('view=shared') ? 0 : 2 });
     });
-    const view = render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
     const nav = within(view.container.querySelector('aside')!);
     fireEvent.click(await nav.findByRole('button', { name: `${zh.toggleTree} · Apple` }));
     fireEvent.click(nav.getByRole('button', { name: zh.shared })); await main().findByText(zh.empty);
@@ -315,7 +327,7 @@ describe('t190 direct mine root navigation', () => {
 
 
 describe('t196 real primitive status menu', () => {
-  const mount = () => render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={vi.fn(async () => Response.json({ items: [] }))} onUse={vi.fn()} />);
+  const mount = () => render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={vi.fn(async () => Response.json({ items: [] }))} onUse={vi.fn()} />);
   it('portals the real menu, selects a filter without native select, and dismisses/returns focus on Escape', async () => {
     const view = mount(); await main().findByText(zh.empty);
     const trigger = screen.getByRole('button', { name: zh.filterStatus });
@@ -365,7 +377,7 @@ it('applies real hierarchy CSS to mounted tree disclosure/name columns and keeps
   try {
     const name = '很长的根目录资料名称'.repeat(12) + '.md';
     const fetchImpl = vi.fn(async () => Response.json({ items: [{ id: 'long', kind: 'FILE', name }] }));
-    const view = render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
     const title = await within(view.container.querySelector('aside')!).findByRole('button', { name });
     expect(title.getAttribute('title')).toBe(name);
     const row = title.parentElement!;
@@ -391,7 +403,7 @@ it('keeps real terminal preview on a body-portaled fixed centered layer with bou
   sheet.textContent=rootRule+'\n'+ownRules;document.head.append(sheet);
   try {
     const fetchImpl=vi.fn(async(url:string)=>url.includes('/preview?')?Response.json({text:'fixture line\n'.repeat(400)}):Response.json({items:[{id:'f',name:'预览.md',kind:'FILE',currentVersion:{id:'vf',versionNo:1,parseStatus:'READY'}}]}));
-    const view=render(<LibraryPanel useSourceRequest={() => null} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    const view=render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
     fireEvent.click(await main().findByRole('button',{name:'预览.md'}));const dialog=await screen.findByRole('dialog',{name:'预览.md'});
     const layer=dialog.parentElement!;expect(layer.parentElement).toBe(document.body);expect(view.container.contains(dialog)).toBe(false);
     expect(getComputedStyle(layer).position).toBe('fixed');expect(getComputedStyle(layer).alignItems).toBe('center');expect(getComputedStyle(layer).justifyContent).toBe('center');

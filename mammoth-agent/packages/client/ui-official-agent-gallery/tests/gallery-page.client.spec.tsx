@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { makeTranslate } from '@mammoth-ai/mmp-client-test-runtime'
-import type { OfficialAgentCard } from '@mammoth-ai/mmp-official-agent-gallery/types'
+import type { CatalogDetail, CatalogFacets, CatalogQuery, OfficialAgentCard, OfficialSkillCard } from '@mammoth-ai/mmp-official-agent-gallery/types'
 import { GalleryPage, type GalleryFace, type StartAgentFailure } from '../src/client/GalleryPage.tsx'
 import { zh } from '../src/client/locales.ts'
 
@@ -28,13 +28,64 @@ const t = makeTranslate(zh)
 
 afterEach(cleanup)
 
+type LoadAgents = () => Promise<readonly OfficialAgentCard[]>
+type LoadSkills = () => Promise<readonly OfficialSkillCard[]>
+
+type FacetItem = { readonly discovery?: { readonly capability: string; readonly industries: readonly string[] } | undefined; readonly category?: string | null }
+
+function pageOf<T extends FacetItem>(all: readonly T[], query: CatalogQuery, text: (item: T) => string) {
+  const needle = query.q?.toLowerCase()
+  const items = all.filter(item => {
+    if (needle && !text(item).toLowerCase().includes(needle)) return false
+    if (query.capability && query.capability !== 'all' && item.discovery?.capability !== query.capability) return false
+    return true
+  })
+  return { items, total: items.length, hasMore: false, nextCursor: null }
+}
+
+function facetsOf(all: readonly FacetItem[]): CatalogFacets {
+  const capabilities = new Map<string, number>(), industries = new Map<string, number>()
+  for (const item of all) {
+    const capability = item.discovery?.capability ?? item.category
+    if (capability) capabilities.set(capability, (capabilities.get(capability) ?? 0) + 1)
+    for (const industry of item.discovery?.industries ?? []) industries.set(industry, (industries.get(industry) ?? 0) + 1)
+  }
+  return {
+    total: all.length,
+    capabilities: [...capabilities].map(([id, count]) => ({ id, count })),
+    industries: [...industries].map(([id, count]) => ({ id, count })),
+  }
+}
+
+function firstPage<T>(load: () => Promise<readonly T[]>): () => Promise<readonly T[]> {
+  let pending: Promise<readonly T[]> | undefined
+  return () => {
+    pending ??= load().catch((error: unknown) => { pending = undefined; throw error })
+    return pending
+  }
+}
+
+const detail = async (kind: 'expert' | 'skill', id: string): Promise<CatalogDetail> => ({
+  kind, id, key: id, name: id, summary: '', avatarUrl: null,
+  detail: { schemaVersion: 1, displayRevision: 1, introduction: '', outputs: [], materials: [], boundaries: [], starters: [] },
+  linkedSkills: [],
+})
+
 function mount(
-  loadAgents: GalleryFace['loadAgents'],
+  loadAgents: LoadAgents,
   startAgent: GalleryFace['startAgent'] = vi.fn(async () => undefined),
-  loadSkills: GalleryFace['loadSkills'] = vi.fn(async () => []),
-  requestSkill: GalleryFace['requestSkill'] = vi.fn(async () => 'pending'),
+  loadSkills: LoadSkills = vi.fn(async () => []),
+  requestSkill: GalleryFace['requestSkill'] = vi.fn<GalleryFace['requestSkill']>(async () => 'pending'),
 ) {
-  render(<GalleryPage t={t} loadAgents={loadAgents} loadSkills={loadSkills} startAgent={startAgent} requestSkill={requestSkill} />)
+  const agents = firstPage(loadAgents), skills = firstPage(loadSkills)
+  const pageExperts = async (query: CatalogQuery) => pageOf(await agents(), query, item => `${item.name} ${item.summary}`)
+  const pageSkills = async (query: CatalogQuery) => pageOf(await skills(), query, item => `${item.name} ${item.summary}`)
+  const emptyFacets: CatalogFacets = { total: 0, capabilities: [], industries: [] }
+  const expertFacets = async () => { try { return facetsOf(await agents()) } catch { return emptyFacets } }
+  const skillFacets = async () => { try { return facetsOf(await skills()) } catch { return emptyFacets } }
+  render(<GalleryPage t={t} catalogDetail={detail} pageExperts={pageExperts} pageSkills={pageSkills}
+    expertFacets={expertFacets} skillFacets={skillFacets}
+    startAgent={startAgent} requestSkill={requestSkill} />)
   return { startAgent, requestSkill }
 }
 
@@ -141,7 +192,7 @@ describe('GalleryPage', () => {
   })
 
   it('offers a working retry after loading fails', async () => {
-    const loadAgents = vi.fn<GalleryFace['loadAgents']>()
+    const loadAgents = vi.fn<LoadAgents>()
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce([general])
     mount(loadAgents)
@@ -206,7 +257,7 @@ describe('GalleryPage', () => {
     mount(
       vi.fn(async () => [general]),
       vi.fn(async () => undefined),
-      vi.fn(async () => [{
+      vi.fn<LoadSkills>(async () => [{
         id: 'skill-1', key: 'brief', name: '简报整理', summary: '把材料整理成简报',
         category: 'common', enabledAt: '2026-11-06T00:00:00.000Z', packageRevision: 1,
       }]),

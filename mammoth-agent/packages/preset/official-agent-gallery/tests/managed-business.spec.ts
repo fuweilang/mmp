@@ -4,8 +4,9 @@ import {mkdtemp,rm,writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {Context} from '@mammoth-ai/cordis'
+import {createRequire} from 'node:module'
 import Loader from '@mammoth-ai/cordis-plugin-loader'
-import {createUserMessage,type LlmResolvedModelInfo,type GenerateOptions} from '@mammoth-ai/mmp-llm'
+import {createSystemMessage,createUserMessage,type LlmResolvedModelInfo} from '@mammoth-ai/mmp-llm'
 import {Session,SessionId} from '@mammoth-ai/mmp-session'
 import * as JsonlPersistence from '../../../session/session-persistence-jsonl/src/index.ts'
 import {readColdSessionLog} from '../../../session-query/session-query/src/cold-read.ts'
@@ -18,7 +19,8 @@ import * as SkillTool from '../../../skill/tool-skill/src/index.ts'
 import * as Instructions from '../../../context/agent-instructions/src/index.ts'
 import LocalAttachments from '../../../attachment/attachment-local/src/index.ts'
 import GallerySource from '../src/index.ts'
-const Gallery=process.env.MMP_GALLERY_TEST_BUILT==='1'?(await import('../lib/index.js')).default:GallerySource
+import type {} from '../src/task-composition.ts'
+const Gallery=process.env.MMP_GALLERY_TEST_BUILT==='1'?(createRequire(import.meta.url)('../lib/index.js') as typeof import('../src/index.ts')).default:GallerySource
 import {verifyFinalRequest,managedRuntimeProjection,compositionOf,verifyWireRequest,sha} from '../src/managed-runtime.ts'
 import {executeToolFixture} from '@mammoth-ai/mmp-tool-testkit'
 import {GroundLlmAdapter} from '../../../llm/llm-ground/src/adapter.ts'
@@ -172,7 +174,7 @@ describe('gallery managed business focused evidence',()=>{
   expect(projection.stateOf(current.session).attemptId).not.toBe(cancelled.attemptId)
  })
  it('does not accept stale historical method, truncated context or post-budget unsafe tools',()=>{
-  const system=(text:string)=>({role:'system' as const,content:[{type:'text' as const,text}],source:{kind:'system-prompt' as const}})
+  const system=(text:string)=>createSystemMessage(text)
   expect(()=>verifyFinalRequest({provider:'mammoth-ground',model:'auto',messages:[system('frozen method'),system('later missing')]},'frozen method',100000)).toThrow('CONTEXT_MISSING')
   expect(()=>verifyWireRequest(JSON.stringify({messages:[{role:'system',content:'truncated'}]}),'frozen method')).toThrow('WIRE_CONTEXT_MISSING')
   expect(()=>verifyWireRequest(JSON.stringify({messages:[],tools:[{type:'function',function:{name:'bash'}}]}),undefined)).toThrow('WIRE_TOOL_POLICY')
@@ -181,11 +183,11 @@ describe('gallery managed business focused evidence',()=>{
   let sent='',validated='';let chatCalls=0
   vi.stubGlobal('fetch',vi.fn(async(input:unknown,init:RequestInit)=>{
    if(String(input).endsWith('/models'))return new Response(JSON.stringify({data:[{id:'cloud/active',is_preferred:true,capabilities:{contextWindow:128000}}]}),{headers:{'Content-Type':'application/json'}})
-   chatCalls++;sent=String(init.body)
+   chatCalls++;sent=String(init.body);validated=verifyWireRequest(sent,'PINNED_METHOD')
    return new Response('data: '+JSON.stringify({id:'fixture',choices:[{index:0,delta:{content:'done'},finish_reason:null}]})+'\n\ndata: '+JSON.stringify({id:'fixture',choices:[{index:0,delta:{},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n',{headers:{'Content-Type':'text/event-stream'}})
   }))
-  const adapter=new GroundLlmAdapter({providerId:'mammoth-ground',displayName:'fixture',origin:'https://fixture.invalid',account:()=>({resolveToken:async()=> 'fixture-not-live'} as never),beforeSend:async(_options,body)=>{validated=verifyWireRequest(body,'PINNED_METHOD')}})
-  const options={provider:'mammoth-ground',model:'deleted-sticky',messages:[{role:'system' as const,content:[{type:'text' as const,text:'PINNED_METHOD'}],source:{kind:'system-prompt' as const}}]}
+  const adapter=new GroundLlmAdapter({providerId:'mammoth-ground',displayName:'fixture',origin:'https://fixture.invalid',account:()=>({resolveToken:async()=> 'fixture-not-live'} as never)})
+  const options={provider:'mammoth-ground',model:'deleted-sticky',messages:[createSystemMessage('PINNED_METHOD')]}
   for await(const _chunk of adapter.stream(options)){/* consume actual SSE parser */}
   expect(chatCalls).toBe(1);expect(JSON.parse(sent).model).toBe('cloud/active');expect(sha(sent)).toBe(validated);await evidence('WIRE-EVIDENCE.json',JSON.stringify({adapter:'actual GroundLlmAdapter + actual body-budget + actual SSE parser',HTTP:'mock, not a live model call',requestFingerprint:validated,oldInvalidModel:'deleted-sticky',sentModel:JSON.parse(sent).model,methodPreserved:true},null,2))
   await expect(async()=>{for await(const _chunk of adapter.stream({...options,messages:[]})){/* must not send */}}).rejects.toThrow('WIRE_CONTEXT_MISSING')
@@ -213,7 +215,7 @@ async function stage(f:Awaited<ReturnType<typeof fixture>>,agent:import('@mammot
  agent.followup(message)
  return request
 }
-async function ordinary(f:Awaited<ReturnType<typeof fixture>>){return (await f.ctx.agents.create({agentOptions:{provider:'mammoth-ground',model:'auto'},setup:async c=>{await f.ctx.agentPresets.mount(c,'standard')}})).agent}
+async function ordinary(f:Awaited<ReturnType<typeof fixture>>){return (await f.ctx.agents.create({sessionId:SessionId('t166-ordinary'),agentOptions:{provider:'mammoth-ground',model:'auto'},setup:async c=>{await f.ctx.agentPresets.mount(c,'standard')}})).agent}
 it('t166 send-switch freezes A while queued B loads a fresh exact method, then null removes both without text pollution',async()=>{
  let release!:()=>void,started!:()=>void;const ready=new Promise<void>(r=>{started=r}),hold=new Promise<void>(r=>{release=r})
  const f=await fixture([async()=>{started();await hold;return textResponse('first actual native turn')},textResponse('second actual native turn'),textResponse('plain'),textResponse('skill again')]),agent=await ordinary(f)
@@ -267,7 +269,7 @@ it('t166 selected expert plus explicit method reads a real admitted input and wr
  await evidence('T166-ACTUAL-REPORT.csv',Buffer.from(output.data,'base64'));await evidence('T166-ACTUAL-DOCUMENT.json',JSON.stringify({loop:'actual native loop + compressed session persistence + local managed attachment store',catalogAuthAndModel:'mock, not a live cloud/user account',inputSHA:sha('region,amount\nA,10\nB,20\n'),outputSHA:output.sha256,actualReadback:true,requests:f.adapter.requests.length},null,2))
 })
 it('t166 actual Host dispose/resume preserves frozen revisions and clear starts with fresh context, not restored old persona',async()=>{
- const f=await fixture([textResponse('before restore'),textResponse('after clear')]),handle=await f.ctx.agents.create({agentOptions:{provider:'mammoth-ground',model:'auto'},setup:async c=>{await f.ctx.agentPresets.mount(c,'standard')}}),agent=handle.agent
+ const f=await fixture([textResponse('before restore'),textResponse('after clear')]),handle=await f.ctx.agents.create({sessionId:SessionId('t166-restore-route'),agentOptions:{provider:'mammoth-ground',model:'auto'},setup:async c=>{await f.ctx.agentPresets.mount(c,'standard')}}),agent=handle.agent
  await stage(f,agent,selected(true,true),'t166-restore-A');await agent.whenIdle();const original=agent.session.snapshotEvents().find(e=>e.type==='official-gallery/attempt');expect(original).toBeDefined();const id=agent.id;await handle.dispose()
  const resumed=await f.ctx.agents.resume({resumeSessionId:id,agentOptions:{provider:'mammoth-ground',model:'auto'},setup:async c=>{await f.ctx.agentPresets.mount(c,'standard')}})
  await stage(f,resumed.agent,selected(false,false,2),'t166-restored-clear');await resumed.agent.whenIdle();expect(f.adapter.requests).toHaveLength(2);const system=f.adapter.requests[1]?.messages.filter(m=>m.role==='system').map(m=>JSON.stringify(m.content)).join('')??'';expect(system).not.toContain('EXPERT_ROLE_APPEND_ONLY');expect(system).not.toContain('FROZEN_TEST_METHOD');expect(resumed.agent.session.snapshotEvents().find(e=>e.type==='official-gallery/attempt')).toEqual(original);await resumed.dispose()

@@ -4,6 +4,7 @@ import {mkdtemp,rm,writeFile,readFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {Context} from '@mammoth-ai/cordis'
+import {createRequire} from 'node:module'
 import Loader from '@mammoth-ai/cordis-plugin-loader'
 import {createUserMessage,type LlmResolvedModelInfo,ToolCallId} from '@mammoth-ai/mmp-llm'
 import {SessionId} from '@mammoth-ai/mmp-session'
@@ -25,10 +26,11 @@ import BashLocal from '../../../shell/bash-local/src/index.ts'
 import * as ShellEnv from '../../../shell/shell-env/src/index.ts'
 import LocalAttachments from '../../../attachment/attachment-local/src/index.ts'
 import GallerySource from '../src/index.ts'
+import type {} from '../src/task-composition.ts'
 import {GroundLlmAdapter} from '../../../llm/llm-ground/src/adapter.ts'
 import {executeToolFixture} from '@mammoth-ai/mmp-tool-testkit'
 import {sha,compositionOf} from '../src/managed-runtime.ts'
-const Gallery=process.env.MMP_GALLERY_TEST_BUILT==='1'?(await import('../lib/index.js')).default:GallerySource
+const Gallery=process.env.MMP_GALLERY_TEST_BUILT==='1'?(createRequire(import.meta.url)('../lib/index.js') as typeof import('../src/index.ts')).default:GallerySource
 const roots:{ctx:Context;directory:string}[]=[]
 afterEach(async()=>{vi.unstubAllGlobals();for(const r of roots.splice(0)){await r.ctx.fiber.dispose();await rm(r.directory,{recursive:true,force:true})}})
 async function evidence(name:string,data:string){const directory=process.env.MMP_GALLERY_EVIDENCE_DIR;if(directory)await writeFile(join(directory,name),data)}

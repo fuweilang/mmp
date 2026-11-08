@@ -77,7 +77,7 @@ export class MockAdapter extends LlmAdapter {
   toolUpdate?: ToolUpdate
 
   constructor(
-    private script: (StreamChunk[] | ((options: GenerateOptions) => StreamChunk[]) | 'hang' | 'hang-slow' | HangAfter)[],
+    private script: (StreamChunk[] | ((options: GenerateOptions) => StreamChunk[] | Promise<StreamChunk[]>) | 'hang' | 'hang-slow' | HangAfter)[],
     private readonly reasoning?: LlmModelReasoningInfo,
     private readonly defaultMaxTokens?: number,
   ) {
@@ -130,7 +130,7 @@ export class MockAdapter extends LlmAdapter {
       })
       return
     }
-    const chunks = typeof entry === 'function' ? entry(options) : entry
+    const chunks = typeof entry === 'function' ? await entry(options) : entry
     for (const chunk of chunks) {
       if (options.signal?.aborted) throw new Error('aborted')
       yield chunk

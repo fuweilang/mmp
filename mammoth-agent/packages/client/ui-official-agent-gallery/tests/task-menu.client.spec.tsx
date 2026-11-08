@@ -31,7 +31,7 @@ async function loadBuilt(){
   const loaded=await loader.import('@mammoth-ai/mmp-client-ui-official-agent-gallery')
   if(typeof loaded!=='object'||loaded===null||!('apply'in loaded)||typeof loaded.apply!=='function'||!('inject'in loaded)||!Array.isArray(loaded.inject))throw Error('Invalid built gallery exports')
   return loaded as typeof gallerySource
- }finally{win.__ModuleLoader__=previous}
+ }finally{if(previous===undefined)delete win.__ModuleLoader__;else win.__ModuleLoader__=previous}
 }
 const {apply:gallery,inject:galleryInject}=process.env.MMP_T175_BUILT==='1'?await loadBuilt():gallerySource
 usePinnedBrowserLanguages('zh-CN')

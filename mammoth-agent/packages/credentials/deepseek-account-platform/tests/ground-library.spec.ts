@@ -13,7 +13,7 @@ it('allows explicit library paths, never admin, traversal or arbitrary upstream 
 })
 async function server(denied?: number, switchAccount = false, switchAfter = 1, upstreamResponse?: () => Response) {
  let handler: (req: IncomingMessage, res: ServerResponse) => Promise<void> = async (_req, res) => { res.end() }
- const upstream = vi.fn(async () => upstreamResponse?.() ?? new Response(Uint8Array.from([0, 255, 1]), { headers: { 'content-type': 'application/octet-stream', 'content-disposition': 'attachment' } }))
+ const upstream = vi.fn(async (_url: string, _init: RequestInit) => upstreamResponse?.() ?? new Response(Uint8Array.from([0, 255, 1]), { headers: { 'content-type': 'application/octet-stream', 'content-disposition': 'attachment' } }))
  const realFetch = fetch
  vi.stubGlobal('fetch', upstream)
  let tokenCalls = 0

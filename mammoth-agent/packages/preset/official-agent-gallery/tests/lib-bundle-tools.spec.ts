@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -39,7 +40,7 @@ describe('official-agent-gallery bundled lib tools', () => {
   })
 
   it('runtime import of lib/index.js registers and executes advanced tools', async () => {
-    const mod = await import('../lib/index.js')
+    const mod = createRequire(import.meta.url)('../lib/index.js') as typeof import('../src/index.ts')
     const OfficialAgentGallery = mod.default
     expect(typeof OfficialAgentGallery).toBe('function')
 
