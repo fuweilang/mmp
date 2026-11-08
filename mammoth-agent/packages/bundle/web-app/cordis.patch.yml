@@ -344,6 +344,9 @@
     - id: ui-client-download
       name: '@mammoth-ai/mmp-client-ui-client-download'
 
+    - id: ui-enterprise-library
+      name: '@mammoth-ai/mmp-client-ui-enterprise-library'
+
     - id: ui-attachment
       name: '@mammoth-ai/mmp-client-ui-attachment'
 

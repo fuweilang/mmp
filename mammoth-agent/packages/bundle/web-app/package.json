@@ -81,6 +81,7 @@
     "@mammoth-ai/mmp-message-quotes": "workspace:*",
     "@mammoth-ai/mmp-client-ui-chat": "workspace:*",
     "@mammoth-ai/mmp-client-ui-client-download": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-enterprise-library": "workspace:*",
     "@mammoth-ai/mmp-client-ui-commands": "workspace:*",
     "@mammoth-ai/mmp-client-ui-conversation": "workspace:*",
     "@mammoth-ai/mmp-client-ui-cordis": "workspace:*",
