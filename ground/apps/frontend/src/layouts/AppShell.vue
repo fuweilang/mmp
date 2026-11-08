@@ -31,16 +31,24 @@
       </div>
 
       <nav class="sidebar-nav">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.path"
-          :class="{ active: isActive(item.path) }"
-          :to="item.path"
-          :title="item.label"
-        >
-          <component :is="item.icon" class="nav-icon" />
-          <span class="nav-label">{{ item.label }}</span>
-        </RouterLink>
+        <template v-for="item in navItems" :key="item.path">
+          <div v-if="item.children" class="nav-group" :class="{ 'nav-group-active': isActive(item.path) }">
+            <button type="button" class="nav-group-trigger" :title="item.label" :aria-expanded="libraryExpanded && !isSidebarCollapsed" aria-controls="console-library-subnav" @click="toggleLibraryGroup">
+              <component :is="item.icon" class="nav-icon" />
+              <span class="nav-label">{{ item.label }}</span>
+              <ChevronDown class="nav-group-chevron" :class="{ expanded: libraryExpanded }" />
+            </button>
+            <div id="console-library-subnav" v-show="libraryExpanded && !isSidebarCollapsed" class="sidebar-subnav">
+              <RouterLink v-for="child in item.children" :key="child.path" :to="libraryTarget(child.path)" :class="{ active: isActive(child.path) }" :title="child.label">
+                <span class="nav-label">{{ child.label }}</span>
+              </RouterLink>
+            </div>
+          </div>
+          <RouterLink v-else :class="{ active: isActive(item.path) }" :to="item.path" :title="item.label">
+            <component :is="item.icon" class="nav-icon" />
+            <span class="nav-label">{{ item.label }}</span>
+          </RouterLink>
+        </template>
       </nav>
 
       <div class="sidebar-footer">
@@ -144,8 +152,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { computed, onMounted, ref, watch, type Component } from 'vue';
+import { RouterLink, useRoute, useRouter, type LocationQuery } from 'vue-router';
+import { consoleLibraryViews } from '../utils/libraryNavigation';
 import {
   BarChart3,
   Bot,
@@ -234,10 +243,11 @@ function onSwitchProduct(command: string) {
 }
 
 /** 企业控制台菜单按角色权限渲染；平台管理员直通（isPlatformAdmin 由 hasPermission 的数据保证）。 */
-const businessItems = [
+type NavItem = { path: string; label: string; icon: Component; perm?: string; children?: readonly { path: string; label: string }[] };
+const businessItems: NavItem[] = [
   { path: '/console/', label: '工作台', icon: LayoutDashboard, perm: 'portal.console.workbench' },
   { path: '/console/knowledge', label: '知识库', icon: FolderOpen, perm: 'portal.console.kb' },
-  { path: '/library', label: '资料库', icon: Library, perm: 'portal.console.access' },
+  { path: '/console/library', label: '资料库', icon: Library, perm: 'portal.console.access', children: consoleLibraryViews },
   { path: '/console/members', label: '成员管理', icon: Users, perm: 'portal.console.members' },
   { path: '/console/roles', label: '角色管理', icon: KeyRound, perm: 'portal.console.roles' },
   { path: '/console/usage', label: '操作审计', icon: BarChart3, perm: 'portal.console.usage' },
@@ -246,7 +256,7 @@ const businessItems = [
   { path: '/console/settings', label: '企业设置', icon: Settings, perm: 'portal.console.settings' },
 ];
 
-const platformItems = [
+const platformItems: NavItem[] = [
   { path: '/admin', label: '概况', icon: LayoutDashboard },
   { path: '/admin/users', label: '用户管理', icon: Users },
   { path: '/admin/roles', label: '角色管理', icon: Shield },
@@ -267,8 +277,25 @@ const navItems = computed(() => {
     return platformItems.filter((item) => !item.perm || hasPermission(session.value, item.perm));
   }
   if (session.value?.user.isPlatformAdmin) return businessItems;
-  return businessItems.filter((item) => hasPermission(session.value, item.perm));
+  return businessItems.filter((item) => !item.perm || hasPermission(session.value, item.perm));
 });
+
+// Expansion is navigation state only; the parent button never changes route/Layout.
+const libraryExpanded = ref(true);
+const libraryLocations = ref<Record<string, LocationQuery>>({});
+watch(() => route.fullPath, () => {
+  if (consoleLibraryViews.some(item => item.path === route.path)) {
+    libraryExpanded.value = true;
+    libraryLocations.value[route.path] = { ...route.query };
+  }
+}, { immediate: true });
+function toggleLibraryGroup() {
+  if (isSidebarCollapsed.value) { isSidebarCollapsed.value = false; libraryExpanded.value = true; }
+  else libraryExpanded.value = !libraryExpanded.value;
+}
+function libraryTarget(path: string) {
+  return { path, query: libraryLocations.value[path] ?? {} };
+}
 
 function isActive(path: string) {
   if (path === '/console/' || path === '/console') {
@@ -293,3 +320,15 @@ async function onLogout() {
   window.location.href = '/login';
 }
 </script>
+<style scoped>
+.nav-group-trigger { align-items:center; display:flex; gap:10px; width:100%; height:44px; padding:0 18px; border:0; background:transparent; color:#667085; font:inherit; cursor:pointer; text-align:left; }
+.nav-group-trigger:hover { background:#EEF0F8; color:var(--app-primary-color); }
+.nav-group-active > .nav-group-trigger { color:var(--app-primary-color); }
+.nav-group-chevron { margin-left:auto; width:14px; height:14px; transition:transform .18s ease; }
+.nav-group-chevron.expanded { transform:rotate(180deg); }
+.sidebar-subnav a { height:38px; padding-left:46px; }
+.sidebar-subnav .nav-label { font-size:13px; }
+.sidebar-collapsed .nav-group-trigger { justify-content:center; gap:0; padding:0; }
+.sidebar-collapsed .nav-group-chevron { display:none; }
+.nav-group-trigger:focus-visible { outline:2px solid var(--app-primary-color); outline-offset:-3px; }
+</style>

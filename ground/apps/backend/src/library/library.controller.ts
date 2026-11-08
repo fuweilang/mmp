@@ -72,7 +72,7 @@ export class LibraryController {
     @Query() query: ListQuery,
   ) {
     const actor = await this.actor(user, tenantId);
-    return this.run(async () => this.library.list(actor, query.view ?? 'mine', query.parentId ?? null, query.q));
+    return this.run(async () => this.library.list(actor, query.view ?? 'mine', query.parentId ?? null, query.q, query.flat === '1'));
   }
 
   @Post('folders')

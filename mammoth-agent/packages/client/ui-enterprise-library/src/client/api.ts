@@ -6,6 +6,7 @@ type RawVersion = {
   id?: string
   versionNo?: number
   parseStatus?: string
+  sizeBytes?: number
   parseReason?: string | null
 }
 
@@ -16,14 +17,16 @@ type RawItem = {
   canManage?: boolean
   scope?: string
   parentId?: string | null
+  updatedAt?: string
   linkUrl?: string | null
   currentVersion?: RawVersion | null
 }
 
 /** Same-origin or configured ground origin. The query never carries a tenant id. */
-export function libraryItemsUrl(origin: string, view: LibraryView, q = '', parentId?: string | null): string {
+export function libraryItemsUrl(origin: string, view: LibraryView, q = '', parentId?: string | null, flat = false): string {
   const base = origin.replace(/\/$/, '')
   const params = new URLSearchParams({ view })
+  if (flat) params.set('flat', '1')
   if (parentId && !q.trim()) params.set('parentId', parentId)
   const query = q.trim()
   if (query) params.set('q', query)
@@ -40,6 +43,8 @@ export function readLibraryItems(payload: unknown): LibraryChoice[] {
     if (!item.id || !item.name || (item.kind !== 'FILE' && item.kind !== 'FOLDER' && item.kind !== 'LINK')) return []
     return [{
       nodeId: item.id,
+      ...(typeof item.updatedAt === 'string' ? { updatedAt: item.updatedAt } : {}),
+      ...(typeof item.currentVersion?.sizeBytes === 'number' && Number.isFinite(item.currentVersion.sizeBytes) && item.currentVersion.sizeBytes >= 0 ? { sizeBytes: item.currentVersion.sizeBytes } : {}),
       name: item.name,
       canManage: item.canManage === true,
       scope: item.scope ?? 'PRIVATE',
@@ -57,10 +62,10 @@ export function readLibraryItems(payload: unknown): LibraryChoice[] {
 export type LibraryFetch = (url: string, init?: RequestInit) => Promise<Response>
 
 /** List one view. Credentials stay on the request; tenant id is not sent. */
-export async function fetchLibraryItems(origin: string, view: LibraryView, q: string, fetchImpl: LibraryFetch, signal?: AbortSignal, parentId?: string | null): Promise<LibraryChoice[]> {
+export async function fetchLibraryItems(origin: string, view: LibraryView, q: string, fetchImpl: LibraryFetch, signal?: AbortSignal, parentId?: string | null, flat = false): Promise<LibraryChoice[]> {
   const init: RequestInit = { credentials: 'include' }
   if (signal) init.signal = signal
-  const response = await fetchImpl(libraryItemsUrl(origin, view, q, parentId), init)
+  const response = await fetchImpl(libraryItemsUrl(origin, view, q, parentId, flat), init)
   if (!response.ok) throw new Error(`library list ${response.status}`)
   return readLibraryItems(await response.json())
 }

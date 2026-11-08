@@ -390,3 +390,32 @@ describe('PopupSelectView', () => {
     expect(focusComposer).not.toHaveBeenCalled()
   })
 })
+
+
+describe('library picker footer', () => {
+  it('puts explicit cancel/confirm after the list and never attaches before confirmation', async () => {
+    const onSelect = vi.fn()
+    const popup = new PopupSelectController<string>({ consume: () => true, focusComposer: vi.fn() })
+    const view = render(<PopupSelectView popup={popup} t={t} />)
+    await act(async () => {
+      popup.open('library', spec({ multiple: true, presentation: 'file-picker', cancelLabel: '取消', confirmLabel: '所选资料加入草稿', onSelect }), 'ctx-library', SEGMENT)
+      await Promise.resolve()
+    })
+    const footer = view.container.querySelector('[data-file-picker] footer')
+    expect(footer).toBeTruthy()
+    expect(screen.getByRole('listbox').nextElementSibling).toBe(footer)
+    const confirm = screen.getByRole('button', { name: '所选资料加入草稿 (0)' }) as HTMLButtonElement
+    expect(confirm.disabled).toBe(true)
+    await act(async () => { fireEvent.click(screen.getByRole('option', { name: 'Dark' })); await Promise.resolve() })
+    expect(onSelect).not.toHaveBeenCalled()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '所选资料加入草稿 (1)' })); await Promise.resolve() })
+    expect(onSelect).toHaveBeenCalledOnce()
+    expect(popup.state.getSnapshot().open).toBe(false)
+  })
+
+  it('does not apply library-specific styling/footer to another multi-select command', async () => {
+    const { view } = await mountOpen({ multiple: true, confirmLabel: '确认' })
+    expect(view.container.querySelector('[data-file-picker]')).toBeNull()
+    expect(view.container.querySelector('footer')).toBeNull()
+  })
+})

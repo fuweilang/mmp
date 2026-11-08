@@ -12,7 +12,7 @@ function harness(current?: string) {
   slots: { inject: (_key: string, fn: () => unknown) => { fn(); return () => {} }, register: (o: { inject?: () => { onUse: typeof use } }) => { if(o.inject)use = o.inject().onUse; return () => {} } },
   effect: (fn: () => unknown) => fn(), inject: () => {}, get: () => ({ registerSource: () => () => {} }),
   sessions: { binding: () => binding, create, retain: () => ({ ready: Promise.resolve(binding), release }) },
-  conversation: { input: { for: () => ({ appendReference: append }) }, sendSession: send },
+  conversation: { input: { for: () => ({ appendReference: append, state: { getSnapshot: () => ({ occurrences: [] }) } }) }, sendSession: send },
   uiSession: { adapter: { current: { getSnapshot: () => ({ props: { sessionId: current } }) } } },
   uiWorkspace: { workspaceForNewSession: () => 'workspace', openSession: open }, layout: { selectPanel: () => {} },
  }

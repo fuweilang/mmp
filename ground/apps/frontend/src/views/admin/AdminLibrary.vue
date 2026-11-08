@@ -1,13 +1,14 @@
 <template>
   <section class="admin-library">
-    <h2>资料库概况</h2>
-    <p>这里只显示容量、数量和解析状态，不显示文件名或正文。代管需要写明范围和到期，撤销后不能再读，已经看过的内容不会被抹掉。</p>
+    <div class="page-header"><h2>资料库概况</h2>
+    <p>这里只显示容量、数量和解析状态，不显示文件名或正文。代管需要写明范围和到期，撤销后不能再读，已经看过的内容不会被抹掉。</p></div>
     <p v-if="limits">
       单文件上限 {{ formatBytes(limits.maxFileBytes) }}，企业容量 {{ formatBytes(limits.tenantQuotaBytes) }}，
       回收保留期配置 {{ limits.recycleDays }} 天（清理由单独维护操作执行）。允许类型：{{ limits.allowedExtensions.join(' ') }}
     </p>
     <p v-if="error" class="admin-library-error">{{ error }}</p>
-    <el-table v-loading="loading" :data="tenants">
+    <el-table v-loading="loading" :data="tenants" border>
+      <template #empty><el-empty description="暂无企业资料统计" :image-size="80" /></template>
       <el-table-column prop="tenantName" label="企业" min-width="140" />
       <el-table-column prop="activeFiles" label="使用中" width="90" />
       <el-table-column prop="recycledFiles" label="回收站" width="90" />
@@ -25,14 +26,15 @@
     <LibraryManagedBrowser v-if="activeGrant" :key="activeGrant" :grant-id="activeGrant" @close="activeGrant = null" />
     <h3>代管授权</h3>
     <p>平台不能自行授予正文访问权。须由资料所有者或企业管理员在相应范围批准；这里只查看、撤销已有授权。</p>
-    <el-table :data="custodies">
+    <el-table :data="custodies" border>
+      <template #empty><el-empty description="暂无已批准的代管授权" :image-size="80" /></template>
       <el-table-column prop="tenantId" label="企业" min-width="140" />
       <el-table-column prop="granteeUserId" label="被授权人" min-width="140" />
       <el-table-column label="范围" width="160">
         <template #default="{ row }">{{ row.contentScope === 'ENTERPRISE' ? '企业共享' : '指定人私人' }}</template>
       </el-table-column>
       <el-table-column prop="powers" label="权限" width="90" />
-      <el-table-column prop="expiresAt" label="到期" min-width="180" />
+      <el-table-column label="到期（北京时间）" min-width="180"><template #default="{ row }">{{ new Date(row.expiresAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) }}</template></el-table-column>
       <el-table-column prop="reason" label="原因" min-width="160" />
       <el-table-column label="状态" width="100">
         <template #default="{ row }">{{ row.revokedAt ? '已撤销' : Date.parse(row.expiresAt) <= Date.now() ? '已到期' : '有效' }}</template>
@@ -104,7 +106,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.admin-library { display: flex; flex-direction: column; gap: 12px; }
-.admin-library-error { color: #b42318; }
-.admin-library h2, .admin-library h3 { margin: 0; color: var(--app-heading-color); }
+.admin-library { padding:4px 2px 24px; display:flex; flex-direction:column; gap:14px; }
+.page-header h2 { margin:0 0 6px; font-size:20px; color:var(--app-heading-color); }
+.admin-library p { margin:0; color:var(--el-text-color-secondary); font-size:13px; line-height:1.6; }
+.admin-library h3 { margin:10px 0 0; font-size:16px; color:var(--app-heading-color); }
+.admin-library .admin-library-error { color:var(--el-color-danger); }
+.admin-library :deep(th.el-table__cell) { background:var(--el-fill-color-light); font-size:13px; font-weight:600; }
+.admin-library :deep(.cell),.admin-library :deep(.el-button.is-text) { font-size:13px; }
+.admin-library :deep(.el-button + .el-button) { margin-left:4px; }
 </style>

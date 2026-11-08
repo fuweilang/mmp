@@ -231,4 +231,16 @@ describe('library postgres', () => {
     assert.equal(await prisma.libraryVersion.findUnique({ where: { id: version } }), null);
     assert.equal(await prisma.libraryChunk.count({ where: { versionId: version } }), 0);
   });
+  it('serializes concurrent tenant quota admissions and removes the rejected blob', async () => {
+    const aggregate = await prisma.libraryVersion.aggregate({ where: { tenantId: tenantB, node: { state: { not: 'PURGED' } } }, _sum: { sizeBytes: true } });
+    const store = new PrismaLibraryStore(prisma as never);
+    const service = new LibraryService(store, { maxFileBytes: 1000, tenantQuotaBytes: (aggregate._sum.sizeBytes ?? 0) + 600, recycleDays: 30, askMaxChars: 12000, allowedExtensions: ['.md'] });
+    const before = (await filesUnder(libraryDir)).length;
+    const outcomes = await Promise.allSettled(['a.md', 'b.md'].map(originalName => service.upload(actor(otherId, tenantB), { originalName, mimeType: 'text/markdown', bytes: Buffer.from('a'.repeat(400)) })));
+    assert.equal(outcomes.filter(row => row.status === 'fulfilled').length, 1);
+    const failure = outcomes.find(row => row.status === 'rejected');
+    assert.equal(failure?.status === 'rejected' && failure.reason instanceof LibraryError && failure.reason.code, 'QUOTA');
+    assert.equal((await filesUnder(libraryDir)).length, before + 1);
+  });
+
 });

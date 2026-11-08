@@ -29,6 +29,8 @@ export type PopupSearchMode = 'substring' | 'fuzzy-label'
 /** One option row of a popupSelect shell. */
 export interface SelectOption {
   readonly id: string
+  /** Visible explanation rows cannot be admitted as choices. */
+  readonly disabled?: boolean
   readonly label: string
   /** Optional short marker rendered as a superscript beside the label. */
   readonly badge?: string
@@ -63,6 +65,13 @@ export interface PopupSearchLabels {
  */
 export interface PopupSelectSpec {
   readonly kind: 'popupSelect'
+  /** Opt-in batch selection; existing commands remain single-select. */
+  readonly multiple?: boolean
+  readonly confirmLabel?: string
+  readonly cancelLabel?: string
+  /** Roomy file rows and bottom actions; omitted preserves compact command menus. */
+  readonly presentation?: 'file-picker'
+  onSelectMany?(options: readonly SelectOption[], session: ClientSessionContext): void | Promise<void>
   /** Defaults to substring search; fuzzy-label ranks names within each group. */
   readonly searchMode?: PopupSearchMode
   /**

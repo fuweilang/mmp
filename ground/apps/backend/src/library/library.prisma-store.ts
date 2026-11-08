@@ -88,6 +88,7 @@ export class PrismaLibraryStore implements LibraryStore {
 
   async commitNewFile(input: NewFileCommit): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
+      await this.lockAndCheckQuota(tx, input.version, input.tenantQuotaBytes);
       await tx.libraryNode.create({
         data: nodeData({ ...input.node, currentVersionId: input.version.id }),
       });
@@ -100,7 +101,9 @@ export class PrismaLibraryStore implements LibraryStore {
 
   async commitReplacement(input: ReplacementCommit): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      await tx.libraryVersion.create({ data: versionData(input.version) });
+      await this.lockAndCheckQuota(tx, input.version, input.tenantQuotaBytes);
+      const latest = await tx.libraryVersion.aggregate({ where: { nodeId: input.nodeId }, _max: { versionNo: true } });
+      await tx.libraryVersion.create({ data: versionData({ ...input.version, versionNo: (latest._max.versionNo ?? 0) + 1 }) });
       if (input.chunks.length > 0) {
         await tx.libraryChunk.createMany({ data: input.chunks.map(chunkData) });
       }
@@ -109,6 +112,14 @@ export class PrismaLibraryStore implements LibraryStore {
         data: { currentVersionId: input.version.id, updatedAt: new Date(input.updatedAt) },
       });
     });
+  }
+
+  /** Serialize tenant storage admissions across processes without changing the applied schema. */
+  private async lockAndCheckQuota(tx: Prisma.TransactionClient, version: VersionRecord, quota?: number): Promise<void> {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-quota:' + version.tenantId}))`;
+    if (quota === undefined) return;
+    const aggregate = await tx.libraryVersion.aggregate({ where: { tenantId: version.tenantId, node: { state: { not: 'PURGED' } } }, _sum: { sizeBytes: true } });
+    if ((aggregate._sum.sizeBytes ?? 0) + version.sizeBytes > quota) throw new LibraryError(409, '企业资料容量不足', 'QUOTA');
   }
 
   async updateVersion(id: string, patch: Partial<VersionRecord>): Promise<void> {

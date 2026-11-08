@@ -1,21 +1,11 @@
 <template>
-  <main class="library-shell">
-    <aside class="library-nav">
-      <div class="library-brand">资料库</div>
-      <button
-        v-for="item in views"
-        :key="item.id"
-        type="button"
-        class="library-nav-item"
-        :class="{ active: view === item.id && !parentId }"
-        @click="openView(item.id)"
-      >
-        {{ item.label }}
-      </button>
-      <RouterLink class="library-back" to="/console/">返回控制台</RouterLink>
-    </aside>
-    <section class="library-main">
+  <section class="library-page">
+    <div class="page-header">
+      <div><h2>{{ viewLabel }}</h2><p>保存原文件与版本，资料默认私人；明确共享后才对企业成员可见。</p></div>
       <LibraryCustodyApproval />
+    </div>
+    <div class="library-shell">
+    <section class="library-main">
       <header class="library-toolbar">
         <div class="library-path">
           <button type="button" @click="parentId = null">{{ viewLabel }}</button>
@@ -51,7 +41,7 @@
         <el-button v-if="view === 'trash'" size="small" type="danger" @click="runBatch('purge')">彻底删除</el-button>
       </div>
 
-      <el-table v-loading="loading" :data="items" @selection-change="onSelect">
+      <el-table v-loading="loading" :data="items" border class="library-table" @selection-change="onSelect">
         <el-table-column type="selection" width="42" />
         <el-table-column label="名称" min-width="220">
           <template #default="{ row }">
@@ -77,11 +67,11 @@
         <el-table-column label="更新" width="160">
           <template #default="{ row }">{{ formatDateTime(row.accessedAt || row.updatedAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="220">
+        <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button text @click="openPreview(row)">预览</el-button>
+            <el-button text type="primary" @click="openPreview(row)">预览</el-button>
             <el-dropdown v-if="row.canManage" trigger="click">
-              <el-button text>更多</el-button>
+              <el-button text type="primary">更多</el-button>
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item @click="rename(row)">重命名</el-dropdown-item>
@@ -108,6 +98,7 @@
 
     </section>
 
+    </div>
     <el-dialog v-model="moveOpen" title="移动资料" width="420px">
       <p>移动不改变私人或共享范围。</p>
       <el-select v-model="moveParent" clearable placeholder="根目录">
@@ -140,13 +131,14 @@
       <p v-else>这里没有可安全预览的正文，可以下载原文件。</p>
       <el-button v-if="preview?.versionId" @click="download(preview.nodeId, preview.versionId)">下载</el-button>
     </el-drawer>
-  </main>
+  </section>
 </template>
 
 <script setup lang="ts">
 import LibraryCustodyApproval from '../components/LibraryCustodyApproval.vue';
+import { useRoute, useRouter } from 'vue-router';
+import { consoleLibraryView, consoleLibraryViews } from '../utils/libraryNavigation';
 import { computed, ref, watch } from 'vue';
-import { RouterLink } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   LibraryParseStatusLabel,
@@ -172,20 +164,21 @@ import {
   uploadLibraryFiles,
   type LibraryItem,
   type LibraryPreview,
-  type LibraryView,
 } from '../api/library';
 
-const views: { id: LibraryView; label: string }[] = [
-  { id: 'recent', label: '最近' },
-  { id: 'mine', label: '我的资料' },
-  { id: 'shared', label: '企业共享' },
-  { id: 'trash', label: '回收站' },
-];
 const accept = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.md,.markdown,.txt,.csv,.html,.htm,.zip';
-const view = ref<LibraryView>('mine');
-const parentId = ref<string | null>(null);
+const route = useRoute();
+const router = useRouter();
+const view = computed(() => consoleLibraryView(route.path));
+const parentId = computed<string | null>({
+  get: () => typeof route.query.folder === 'string' ? route.query.folder : typeof route.query.parentId === 'string' ? route.query.parentId : null,
+  set: value => { void router.replace({ query: { ...route.query, folder: value || undefined, parentId: undefined } }); },
+});
 const breadcrumb = ref<{ id: string; name: string }[]>([]);
-const keyword = ref('');
+const keyword = computed({
+  get: () => typeof route.query.q === 'string' ? route.query.q : '',
+  set: (value: string) => { void router.replace({ query: { ...route.query, q: value || undefined } }); },
+});
 const items = ref<LibraryItem[]>([]);
 const loading = ref(false);
 const listError = ref('');
@@ -205,9 +198,13 @@ const linkName = ref('');
 const linkUrl = ref('');
 const previewOpen = ref(false);
 const preview = ref<LibraryPreview | null>(null);
-const viewLabel = computed(() => views.find((item) => item.id === view.value)?.label ?? '资料库');
+const viewLabel = computed(() => consoleLibraryViews.find((item) => item.id === view.value)?.label ?? '资料库');
 const emptyText = computed(() => (keyword.value ? '没有匹配的资料' : '这里还没有资料'));
+let listSequence = 0;
 watch([view, parentId, keyword], () => {
+  selected.value = [];
+  items.value = [];
+  breadcrumb.value = [];
   void reload();
 }, { immediate: true });
 
@@ -215,12 +212,8 @@ function statusLabel(status: LibraryParseStatus) {
   return LibraryParseStatusLabel[status];
 }
 
-function openView(next: LibraryView) {
-  parentId.value = null;
-  view.value = next;
-}
 
-let listSequence = 0;
+
 async function reload() {
   const sequence = ++listSequence;
   loading.value = true;
@@ -283,7 +276,7 @@ async function createFolder() {
     await createLibraryFolder(folderName.value, parentId.value);
     folderOpen.value = false;
     folderName.value = '';
-    view.value = 'mine';
+    if (view.value !== 'mine') await router.push({ path: '/console/library/mine', query: route.query });
     await reload();
   } catch (error) {
     actionError.value = error instanceof Error ? error.message : '创建失败';
@@ -400,24 +393,26 @@ function download(id: string, versionId: string) {
 </script>
 
 <style scoped>
-.library-shell { display: grid; grid-template-columns: 190px 1fr; min-height: 100vh; background: var(--app-page-bg); color: var(--app-heading-color); }
-.library-nav { background: #fff; border-right: 1px solid var(--app-border-color); padding: 16px 12px; display: flex; flex-direction: column; gap: 6px; }
-.library-brand { color: var(--app-primary-color); font-weight: 600; margin-bottom: 12px; }
-.library-nav-item, .library-name, .library-path button, .library-cite { background: none; border: 0; color: inherit; cursor: pointer; text-align: left; }
-.library-nav-item { padding: 8px 10px; }
-.library-nav-item.active { background: var(--app-primary-light-color); color: var(--app-primary-color); }
-.library-back { margin-top: auto; color: var(--app-primary-color); font-size: 13px; }
-.library-main { padding: 16px 20px 40px; }
-.library-toolbar, .library-batch, .library-ask-head, .library-chips, .library-draft { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.library-toolbar { margin-bottom: 12px; }
-.library-search { width: 220px; }
-.library-file { display: none; }
-.library-progress, .library-error { margin: 8px 0; }
-.library-error { color: #b42318; }
-.library-muted { color: var(--app-text-color); margin-left: 8px; font-size: 12px; }
-.library-name { color: var(--app-primary-color); }
-.library-ask, .library-drafts { margin-top: 20px; background: #fff; border: 1px solid var(--app-border-color); padding: 12px; }
-.library-pre { white-space: pre-wrap; background: var(--app-page-bg); padding: 8px; }
-.library-cite { display: block; color: var(--app-primary-color); margin-top: 6px; }
-.library-pick { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; }
+.library-page { padding:4px 2px 24px; color:var(--el-text-color-primary); }
+.page-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:16px; }
+.page-header h2 { margin:0 0 6px; font-size:20px; color:var(--app-heading-color); }
+.page-header p { margin:0; color:var(--el-text-color-secondary); font-size:13px; line-height:1.6; }
+.library-shell { min-width:0; }
+.library-name,.library-path button { background:none; border:0; color:inherit; cursor:pointer; text-align:left; font:inherit; }
+.library-main { min-width:0; }
+.library-toolbar,.library-batch { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.library-toolbar { margin-bottom:14px; }
+.library-toolbar :deep(.el-button + .el-button),.library-batch :deep(.el-button + .el-button) { margin-left:0; }
+.library-path { width:100%; display:flex; gap:6px; align-items:center; min-height:28px; color:var(--el-text-color-secondary); font-size:13px; }
+.library-path button { color:var(--el-color-primary); padding:0; }
+.library-search { width:220px; }
+.library-table { width:100%; }
+.library-table :deep(th.el-table__cell) { background:var(--el-fill-color-light); font-size:13px; font-weight:600; }
+.library-table :deep(.cell),.library-table :deep(.el-button.is-text) { font-size:13px; }
+.library-file { display:none; }
+.library-progress,.library-error,.library-batch { margin:8px 0 14px; font-size:13px; line-height:1.6; }
+.library-error { color:var(--el-color-danger); }
+.library-muted { display:block; margin-top:4px; color:var(--el-text-color-secondary); font-size:12px; line-height:1.5; }
+.library-name { color:var(--el-color-primary); font-size:13px; padding:0; }
+.library-pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:360px; overflow:auto; background:var(--el-fill-color-light); padding:12px; border-radius:8px; font-size:12px; line-height:1.6; }
 </style>

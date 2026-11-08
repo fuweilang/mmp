@@ -33,9 +33,10 @@ export type TokenSegment =
  * session wiring passes its session projection; the controller only carries
  * it from open() to the callbacks).
  */
-export interface PopupSpec<TCtx> extends Pick<PopupSelectSpec, 'searchLabels' | 'searchMode'> {
+export interface PopupSpec<TCtx> extends Pick<PopupSelectSpec, 'searchLabels' | 'searchMode' | 'multiple' | 'confirmLabel' | 'cancelLabel' | 'presentation'> {
   /** Load the option rows once per open (retry after failure reuses the same signal). */
   options(context: TCtx, signal: AbortSignal): Promise<readonly SelectOption[]>
+  onSelectMany?(options: readonly SelectOption[], context: TCtx): void | Promise<void>
   /** Settle the picked option against the open-time context. */
   onSelect(option: SelectOption, context: TCtx): void | Promise<void>
 }
@@ -56,6 +57,11 @@ export interface PopupSelectDeps {
 
 /** Popup shell state (the shell component renders from here; closed = render null). */
 export interface PopupState {
+  readonly multiple: boolean
+  readonly selectedIds: readonly string[]
+  readonly confirmLabel: string | null
+  readonly cancelLabel: string | null
+  readonly presentation: 'compact' | 'file-picker'
   readonly open: boolean
   /** Command name the shell is open for (null while closed). */
   readonly command: string | null
@@ -87,6 +93,7 @@ export interface PopupState {
 }
 
 const CLOSED: PopupState = {
+  multiple: false, selectedIds: [], confirmLabel: null, cancelLabel: null, presentation: 'compact',
   open: false, command: null, status: 'pending', options: [], search: '', searchLabels: null, searchMode: 'substring', active: 0,
   submitting: false, confirming: null, acknowledged: false, error: null,
 }
@@ -173,7 +180,7 @@ export class PopupSelectController<TCtx = unknown> {
     this.binding?.abort.abort()
     const binding: OpenBinding<TCtx> = { command, spec, context, segment, abort: new AbortController() }
     this.binding = binding
-    this.state.set({ ...CLOSED, open: true, command, searchLabels, searchMode: spec.searchMode ?? 'substring' })
+    this.state.set({ ...CLOSED, open: true, command, searchLabels, searchMode: spec.searchMode ?? 'substring', multiple: spec.multiple === true, confirmLabel: spec.confirmLabel ?? null, cancelLabel: spec.cancelLabel ?? null, presentation: spec.presentation ?? 'compact' })
     this.load(binding)
   }
 
@@ -255,12 +262,38 @@ export class PopupSelectController<TCtx = unknown> {
     const s = this.state.getSnapshot()
     if (binding === null || !s.open || s.status !== 'ready' || s.submitting || s.confirming !== null) return
     const option = filterOptions(s.options, s.search, s.searchMode)[index]
-    if (option === undefined) return
+    if (option === undefined || option.disabled) return
+    if (s.multiple) {
+      if (option.confirmation) return // Batch pickers cannot bypass a single-row risk gate.
+      this.state.set({ ...s, selectedIds: s.selectedIds.includes(option.id) ? s.selectedIds.filter(id => id !== option.id) : [...s.selectedIds, option.id] })
+      return
+    }
     if (option.confirmation !== undefined) {
       this.state.set({ ...s, confirming: option, acknowledged: false, error: null })
       return
     }
     await this.settle(binding, option)
+  }
+
+  /** Confirm all checked rows once against the session captured when this popup opened. */
+  async confirmSelection(): Promise<void> {
+    const binding = this.binding
+    const state = this.state.getSnapshot()
+    if (!binding || !state.open || !state.multiple || state.submitting || !state.selectedIds.length) return
+    const selected = state.options.filter(option => state.selectedIds.includes(option.id) && !option.disabled && !option.confirmation)
+    this.state.set({ ...state, submitting: true, error: null })
+    try {
+      if (binding.spec.onSelectMany) await binding.spec.onSelectMany(selected, binding.context)
+      else for (const option of selected) await binding.spec.onSelect(option, binding.context)
+    } catch (error) {
+      if (this.binding === binding) this.state.set({ ...this.state.getSnapshot(), submitting: false, error: errorText(error) })
+      return
+    }
+    if (this.binding !== binding) return
+    this.deps.consume(binding.segment)
+    this.binding = null
+    this.state.set(CLOSED)
+    this.deps.focusComposer()
   }
 
   /**

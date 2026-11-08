@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { LibraryError } from './library.errors';
 import type {
   AuditRecord,
   ChunkRecord,
@@ -12,6 +13,7 @@ export type TenantBrief = { id: string; name: string };
 
 /** 首次上传：节点必须先于版本落入同一事务，版本外键才能成立。 */
 export type NewFileCommit = {
+  tenantQuotaBytes?: number;
   node: NodeRecord;
   version: VersionRecord;
   chunks: ChunkRecord[];
@@ -19,6 +21,7 @@ export type NewFileCommit = {
 
 /** 替换版本：节点已经存在，版本、摘录和当前版本指针一起提交。 */
 export type ReplacementCommit = {
+  tenantQuotaBytes?: number;
   nodeId: string;
   version: VersionRecord;
   chunks: ChunkRecord[];
@@ -117,6 +120,7 @@ export class MemoryLibraryStore implements LibraryStore {
   }
 
   async commitNewFile(input: NewFileCommit) {
+    this.checkCommitQuota(input.version, input.tenantQuotaBytes);
     const snapshot = this.snapshot();
     try {
       if (this.nodes.has(input.node.id) || this.versions.has(input.version.id)) {
@@ -132,6 +136,7 @@ export class MemoryLibraryStore implements LibraryStore {
   }
 
   async commitReplacement(input: ReplacementCommit) {
+    this.checkCommitQuota(input.version, input.tenantQuotaBytes);
     const snapshot = this.snapshot();
     try {
       if (!this.nodes.has(input.nodeId)) throw new Error('资料不存在');
@@ -142,6 +147,12 @@ export class MemoryLibraryStore implements LibraryStore {
       this.restore(snapshot);
       throw error;
     }
+  }
+
+  private checkCommitQuota(version: VersionRecord, quota?: number) {
+    if (quota === undefined) return;
+    const used = [...this.versions.values()].filter(row => row.tenantId === version.tenantId && this.nodes.get(row.nodeId)?.state !== 'PURGED').reduce((sum, row) => sum + row.sizeBytes, 0);
+    if (used + version.sizeBytes > quota) throw new LibraryError(409, '企业资料容量不足', 'QUOTA');
   }
 
   private snapshot() {

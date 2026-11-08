@@ -126,6 +126,11 @@ export class GrantCustodyDto {
 }
 
 export class ListQuery {
+  /** Authorized metadata-only picker view; never loads any file body. */
+  @IsOptional()
+  @IsIn(['1'])
+  flat?: '1';
+
   @IsOptional()
   @IsIn(['recent', 'mine', 'shared', 'trash'])
   view?: 'recent' | 'mine' | 'shared' | 'trash';

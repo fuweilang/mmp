@@ -1,9 +1,9 @@
 # ui-enterprise-library
 
-Web and desktop client entry for the single ground library at `/api/library`.
-The left sidebar opens the library panel. The panel action "用于 AI 对话" and the composer `+` command put a ready version on the current session draft, creating a session only when none is open. The `@` menu inserts the same kind of chip. Nothing sends until the user submits. Submit calls `/api/library/open` with the session cookie and only the node and version ids. One stored chunk is sent as that chunk. A missing, refused, or empty excerpt does not send. `session/prompt` receives the expanded text and does not authorize the library again. Pasted text is not a controlled citation.
+Web and desktop client entry for the single ground library via its connection-protected same-origin `/ground-library/*` Host transport. The Host forwards only allowlisted operations to Ground `/api/library/*`, never exposes its JWT and refuses account switches.
+The left sidebar opens the library panel. The panel action "用于 AI 对话" and the composer `+` multi-select confirmation popup put a ready version on the current session draft, creating a session only when none is open. The `@` menu inserts the same kind of chip. Nothing sends until the user submits. Submit calls `/api/library/open` through the authenticated account Host and only the node and version ids. One stored chunk is sent as that chunk. A missing, refused, or empty excerpt does not send. `session/prompt` receives the expanded text and does not authorize the library again. Pasted text is not a controlled citation.
 
-Local files are not uploaded by this package. Saving into the library stays an explicit library action, and new uploads remain private on the server.
+The native panel supports explicit multi-file save, folders, URL-only links, rename/move/download, version history/replacement, visibility, recycling, restore, purge and parse retry. Temporary local chat attachments are not uploaded by this package. Saving into the library stays an explicit library action, and new uploads remain private on the server.
 
 ## Model Experience
 
@@ -11,4 +11,4 @@ An `@` library chip serializes to one untrusted excerpt block containing the ser
 
 ## Known Limitations and Deferred Work
 
-Desktop packaging is not exercised here. The panel uses `MMP_GROUND_ORIGIN` when set, otherwise the page origin, which is the gateway origin for the hosted Web client. A direct desktop host without that origin cannot reach the library. OCR, spreadsheets, and ZIP contents stay download-only on the server.
+Desktop packaging is not exercised here. Web and desktop share the web-app composition. A signed-in Ground OIDC account and trusted Host connection are required; cross-origin direct browser calls are not used. OCR, spreadsheets, and ZIP contents stay download-only on the server.

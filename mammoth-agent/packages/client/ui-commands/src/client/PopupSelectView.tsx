@@ -11,7 +11,7 @@
  * null; the overlay slot stays mounted. The card height clamps to the space
  * above the composer.
  */
-import { MenuGroup, MenuSurface, observeStickyMenuGroups } from '@mammoth-ai/mmp-client-ui-primitives'
+import { Button, MenuGroup, MenuSurface, observeStickyMenuGroups } from '@mammoth-ai/mmp-client-ui-primitives'
 import { Fragment, useEffect, useMemo, useRef } from 'react'
 import { useSyncExternalStore } from 'react'
 import clsx from 'clsx'
@@ -137,7 +137,8 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
     <div
       key={option.id}
       role="option"
-      aria-selected={index === state.active}
+      aria-selected={state.multiple ? state.selectedIds.includes(option.id) : index === state.active}
+      aria-disabled={option.disabled === true}
       aria-label={option.badge === undefined ? undefined : `${option.label} ${option.badge}`}
       className={clsx(css.row, index === state.active && css.rowActive)}
       onClick={() => { void popup.select(index) }}
@@ -148,7 +149,7 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
         {option.badge !== undefined && <sup className={css.badge}>{option.badge}</sup>}
       </span>
       {option.detail !== undefined && <span className={css.detail}>{option.detail}</span>}
-      {option.active === true && <span className={css.check}><IconCheckOutlineRegular /></span>}
+      {(option.active === true || state.selectedIds.includes(option.id)) && <span className={css.check}><IconCheckOutlineRegular /></span>}
     </div>
   )
   let optionIndex = 0
@@ -158,6 +159,7 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
         <MenuSurface
           ref={cardRef}
           className={css.card}
+          data-file-picker={state.presentation === 'file-picker' || undefined}
           style={{ maxHeight }}
           aria-label={t('overlay.aria', { command: String(state.command) })}
           onKeyDown={onKeyDown}
@@ -180,11 +182,15 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
               )}
             </div>
           )}
+          {state.multiple && state.presentation !== 'file-picker' && <div>
+            <button type="button" disabled={state.submitting || !state.selectedIds.length} onClick={() => { void popup.confirmSelection() }}>{state.confirmLabel} ({state.selectedIds.length})</button>
+            <button type="button" onClick={() => { popup.dismiss({ focusComposer: true }) }}>{t('close')}</button>
+          </div>}
           {state.status === 'pending' && <div className={css.status}>{t('status.loading')}</div>}
           {state.submitting && <div className={css.status}>{t('status.applying')}</div>}
           {state.status === 'ready' && rows.length === 0 && <div className={css.status}>{emptyLabel}</div>}
           {state.status === 'ready' && (
-            <div ref={viewportRef} role="listbox" aria-label={t('listbox.aria', { command: String(state.command) })} className={css.viewport}>
+            <div ref={viewportRef} aria-multiselectable={state.multiple || undefined} role="listbox" aria-label={t('listbox.aria', { command: String(state.command) })} className={css.viewport}>
               {groups.map(({ group, rows: groupRows }) => group === undefined
                 ? <Fragment key="ungrouped">{groupRows.map(option => renderOption(option, optionIndex++))}</Fragment>
                 : <MenuGroup key={`group:${group.name}`} label={group.label}>
@@ -192,6 +198,10 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
                 </MenuGroup>)}
             </div>
           )}
+          {state.multiple && state.presentation === 'file-picker' && <footer className={css.libraryFooter}>
+            <Button variant="outline" onClick={() => { popup.dismiss({ focusComposer: true }) }}>{state.cancelLabel ?? t('close')}</Button>
+            <Button variant="primary" disabled={state.submitting || !state.selectedIds.length} onClick={() => { void popup.confirmSelection() }}>{state.confirmLabel} ({state.selectedIds.length})</Button>
+          </footer>}
         </MenuSurface>
       )}
       {confirmation !== undefined && (

@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus';
 import { canAccessAdmin, canAccessConsole, hasPermission } from '@mammoth/shared';
 import { useAuthStore } from '../stores/auth';
 import { redirectToAgentWeb } from '../utils/agent';
+import { consoleLibraryEntry, consoleLibraryViews } from '../utils/libraryNavigation';
 /** 本次整页加载是否已刷新过会话权限（含总后台与企业控制台，避免旧缓存里的 effectivePermissions 一直生效）。 */
 let sessionRefreshed = false;
 const AppShell = () => import('../layouts/AppShell.vue');
@@ -16,8 +17,7 @@ const router = createRouter({
   history: createWebHistory('/'),
   routes: [
     { path: '/login', component: () => import('../views/Login.vue') },
-    { path: '/library', meta: { title: '资料库' }, component: () => import('../views/Library.vue') },
-    { path: '/console/library', redirect: '/library' },
+    { path: '/library', redirect: to => ({ path: consoleLibraryEntry(to.query.view), query: to.query, hash: to.hash }) },
     {
       path: '/admin',
       component: AppShell,
@@ -113,6 +113,12 @@ const router = createRouter({
       path: '/console',
       component: AppShell,
       children: [
+        { path: 'library', redirect: to => ({ path: consoleLibraryEntry(to.query.view), query: to.query, hash: to.hash }) },
+        ...consoleLibraryViews.map(item => ({
+          path: `library/${item.id}`,
+          meta: { title: item.label, perm: 'portal.console.access' },
+          component: () => import('../views/Library.vue'),
+        })),
         { path: '', meta: { title: '工作台', perm: 'portal.console.workbench' }, component: () => import('../views/Home.vue') },
         { path: 'knowledge', meta: { title: '知识库', perm: 'portal.console.kb' }, component: () => import('../views/Knowledge.vue') },
         { path: 'members', meta: { title: '成员管理', perm: 'portal.console.members' }, component: () => import('../views/Members.vue') },

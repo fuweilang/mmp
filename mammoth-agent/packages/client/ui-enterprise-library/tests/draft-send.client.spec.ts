@@ -208,7 +208,7 @@ it('keeps the draft and does not send when open refuses or returns no excerpt', 
   }
 })
 
-it('sends a real single-chunk version opened without a locator, and keeps the draft after revoke', async () => {
+it('sends the selected real single-chunk v1 after replacement by v2, and keeps the draft after revoke', async () => {
   const store = new MemoryLibraryStore()
   store.rememberTenant('ta', '甲企业')
   store.rememberUser('owner', '甲')
@@ -252,6 +252,9 @@ it('sends a real single-chunk version opened without a locator, and keeps the dr
   box.command.ui.onSelect(chosen!, { sessionId: box.sessionId })
   expect(sent).toEqual([])
   expect(openBodies).toEqual([])
+  const replacement = await service.replaceVersion(actor, uploaded.id, '单段.md', 'text/markdown', Buffer.from('第二版正文，不该替换草稿绑定的旧版本。'))
+  expect(replacement.currentVersion!.versionNo).toBe(2)
+  expect(replacement.currentVersion!.id).not.toBe(versionId)
   box.shell.submit('queue', 'click')
   await vi.waitFor(() => { expect(sent).toHaveLength(1) })
   expect(openBodies).toEqual([{ nodeId: uploaded.id, versionId }])
@@ -260,6 +263,7 @@ it('sends a real single-chunk version opened without a locator, and keeps the dr
   expect(sent[0]).toContain('paragraph:1')
   expect(sent[0]).toContain('唯一段落正文，中间没有空行。')
   expect(sent[0]).not.toContain('客户端自编摘录')
+  expect(sent[0]).not.toContain('第二版正文')
   await box.dispose()
 
   sent.length = 0

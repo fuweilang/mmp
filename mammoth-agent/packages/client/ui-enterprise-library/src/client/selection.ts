@@ -9,6 +9,8 @@ export type LibraryChoice = {
   readonly name: string
   readonly canManage?: boolean
   readonly scope?: string
+  readonly sizeBytes?: number
+  readonly updatedAt?: string
   readonly parentId?: string | null
   readonly url?: string | null
   readonly kind: LibraryKind

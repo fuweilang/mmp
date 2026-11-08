@@ -8,7 +8,7 @@ it('allows explicit library paths, never admin, traversal or arbitrary upstream 
  for(const path of ['/ground-library/admin/stats', '/ground-library/../admin', '/ground-library/nodes/a%2fb/download', '/api/library/items', '//evil.test/items']) expect(libraryProxyTarget('GET', path)).toBeUndefined()
  expect(libraryProxyTarget('POST', '/ground-library/items')).toBeUndefined()
 })
-async function server(denied?: number, switchAccount = false) {
+async function server(denied?: number, switchAccount = false, switchAfter = 1) {
  let handler: (req: IncomingMessage, res: ServerResponse) => Promise<void> = async (_req, res) => { res.end() }
  const upstream = vi.fn(async () => new Response(Uint8Array.from([0, 255, 1]), { headers: { 'content-type': 'application/octet-stream', 'content-disposition': 'attachment' } }))
  const realFetch = fetch
@@ -18,7 +18,7 @@ async function server(denied?: number, switchAccount = false) {
   connection: { requestRejection: () => denied }, effect: (run: () => unknown) => run(),
   webServer: { register: (route: { handler: typeof handler }) => { handler = route.handler; return () => {} } },
  }) }
- installGroundLibrary(ctx as never, 'https://ground.test', async () => { tokenCalls++; return switchAccount && tokenCalls > 1 ? 'account-b' : 'account-a' }, async () => {}, 1000)
+ installGroundLibrary(ctx as never, 'https://ground.test', async () => { tokenCalls++; return switchAccount && tokenCalls > switchAfter ? 'account-b' : 'account-a' }, async () => {}, 1000)
  const http = createServer((req, res) => { void handler(req, res) }); await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
  const address = http.address(); if(!address || typeof address === 'string')throw new Error('listen failed')
  return { upstream, request: (path: string, init?: RequestInit) => realFetch(`http://127.0.0.1:${address.port}${path}`, init), close: () => new Promise<void>(resolve => { http.closeAllConnections(); http.close(() => resolve()) }) }
@@ -35,4 +35,8 @@ it('preserves binary downloads and multipart bytes without exposing credentials'
 })
 it('does not forward after an account/tenant switch', async () => {
  const h = await server(undefined, true); try { expect((await h.request('/ground-library/items')).status).toBe(409); expect(h.upstream).not.toHaveBeenCalled() } finally { await h.close() }
+})
+
+it('discards an upstream response if the account switches while the read is in flight', async () => {
+ const h = await server(undefined, true, 2); try { const response = await h.request('/ground-library/items'); expect(response.status).toBe(409); expect(h.upstream).toHaveBeenCalledOnce(); expect(await response.text()).not.toContain('account-a') } finally { await h.close() }
 })

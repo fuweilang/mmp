@@ -109,7 +109,7 @@ export class LibraryService {
     return { ...this.limitsView(), usedBytes: await this.usedBytes(actor.tenantId) };
   }
 
-  async list(actor: Actor, view: LibraryView, parentId?: string | null, q?: string) {
+  async list(actor: Actor, view: LibraryView, parentId?: string | null, q?: string, flat = false) {
     this.requireTenantActor(actor);
     await this.sweep(actor.tenantId);
     const custodies = await this.custodiesFor(actor);
@@ -130,7 +130,7 @@ export class LibraryService {
     });
     const query = q?.trim().toLowerCase();
     if (!query && parentId) rows = rows.filter((node) => node.parentId === parentId);
-    else if (!query && (view === 'mine' || view === 'shared' || view === 'managed')) rows = rows.filter((node) => this.isRootForView(node, nodes, actor, custodies));
+    else if (!query && !flat && (view === 'mine' || view === 'shared' || view === 'managed')) rows = rows.filter((node) => this.isRootForView(node, nodes, actor, custodies));
     if (query) rows = rows.filter((node) => node.name.toLowerCase().includes(query));
     if (view === 'recent') rows.sort((a, b) => (recentAt.get(b.id) ?? 0) - (recentAt.get(a.id) ?? 0));
     else rows.sort((a, b) => b.updatedAt - a.updatedAt);
@@ -180,7 +180,7 @@ export class LibraryService {
     const prepared = await this.prepareVersion(actor, node, name, input.mimeType || 'application/octet-stream', input.bytes, ext, 1, now);
     node.currentVersionId = prepared.version.id;
     try {
-      await this.store.commitNewFile({ node, version: prepared.version, chunks: prepared.chunks });
+      await this.store.commitNewFile({ node, version: prepared.version, chunks: prepared.chunks, tenantQuotaBytes: this.limits.tenantQuotaBytes });
     } catch (error) {
       await this.store.deleteBlob(prepared.version.storageKey);
       throw error;
@@ -201,6 +201,7 @@ export class LibraryService {
     const prepared = await this.prepareVersion(actor, node, name, mimeType || 'application/octet-stream', bytes, ext, versionNo, updatedAt);
     try {
       await this.store.commitReplacement({
+        tenantQuotaBytes: this.limits.tenantQuotaBytes,
         nodeId: node.id,
         version: prepared.version,
         chunks: prepared.chunks,
@@ -308,6 +309,11 @@ export class LibraryService {
     }
     const version = await this.store.getVersion(node.currentVersionId);
     if (!version) throw libraryNotFound();
+    // A successful extraction is part of this immutable citation version.
+    // Retrying it must not silently remap old paragraph/page locators.
+    if (version.parseStatus === 'READY' || version.parseStatus === 'DOWNLOAD_ONLY') {
+      return this.toItem(actor, node, await this.custodiesFor(actor), null);
+    }
     const bytes = await this.store.getBlob(version.storageKey);
     if (!bytes) throw new LibraryError(410, '来源已彻底删除，不能改指向其他文件或版本', 'SOURCE_GONE');
     const parsed = await parseLibraryBytes(version.originalName, bytes);
