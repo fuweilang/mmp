@@ -426,6 +426,8 @@ ssh "$HOST" 'rm -rf /tmp/mmp-web-build /tmp/mmp-web-build.log /tmp/mmp-release; 
 
 ## 4C. 并行发版执行卡（客户端 + 中台）
 
+> 2026-11-08 起以 **4F** 为准（含时间线、变更集裁剪、上传与部署错层）；本节保留为"只发客户端"场景的简版。
+
 **结论：可以并行。** 客户端打包不占 `/www/mmp-prod/.release.lock`，也不依赖中台镜像；只有最后写 `downloads/` 时才碰服务器。
 
 ### 推荐时间线
@@ -516,6 +518,77 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 | 14 | 两份 release 文档导致 dirty | 文档改动不属于发布快照 | 在 state 里显式记录"排除项" | 冻结时写清纳入/排除清单，不用 tag 掩盖 |
 
 **并行优化（本次验证有效）**：桌面 arm64 先开 → 中台前端/API 并行 → Web 镜像在服务器构建（不占本机）→ arm64 完成后立刻开 x64 → 部署与 smoke 期间不要传大文件 → 最后传 DMG 并切 manifest。本次关键路径 70 分钟，其余为返工。
+
+## 4F. 并行与提速（2026-11-08 实测版）
+
+### 4F.1 临界路径公式
+
+```
+墙钟 ≈ max(桌面 arm64 + x64 串行, 前端 + API 镜像 + Web 镜像) + 部署 + 验收
+     ≈ max(9 + 17, 1.5 + 5 + 9) + 4 + 4 ≈ 26 + 8 ≈ 34 分钟
+```
+
+桌面两架构**必须串行**（8 核机器并行会互相抢 CPU，实测更慢），但"串行"只约束桌面包本身；其余都可以塞进这 26 分钟的窗口里。
+
+### 4F.2 推荐时间线（全栈 + 双 Mac，目标 35 分钟）
+
+| 时刻 | 本机 | 服务器 | 说明 |
+|---|---|---|---|
+| T+0 | 冻结 SHA、家族版本扫描、`build --profile local` | 无锁确认、磁盘≥40G | 门禁 2 分钟 |
+| T+2 | **开 mac-arm64**（后台）+ 前端构建 + API 镜像构建 | `pg_dump` + 隔离恢复演练 | 备份与构建同时开始 |
+| T+2 | rsync 源码（与桌面无关） | **开 Web 镜像构建** | 服务器 CPU 与本机互不抢 |
+| T+3 | 前端产物打包 middle-web.tar.gz | — | 5 秒 |
+| T+11 | arm64 出包 → **立刻上传**（版本化文件名） | — | 上传不占 CPU |
+| T+12 | **开 mac-x64** | Web 镜像给结果 | 上传与 x64 并行 |
+| T+13 | API 镜像 `save \| ssh load` 流式上传 | 载入镜像 | 不落中间 tar |
+| T+18 | — | 部署静态页 + compose up（迁移）+ nginx reload | 3 分钟 |
+| T+21 | 基础 smoke（路由/健康/版本，30 秒） | — | 先确认没白屏 |
+| T+22 | 后台开始 530MB 双包 GET + sha 校验 | — | 与 x64 打包并行 |
+| T+28 | x64 出包 → 上传 → 合并 manifest（最后切指针） | — | 指针永远最后 |
+| T+31 | 全量 smoke（含双架构真实下载） | — | 3 分钟 |
+| T+34 | 收尾：解锁、state、清 `/tmp` | — | — |
+
+### 4F.3 可并行 / 不可并行
+
+| 可以并行（已验证） | 不可并行 |
+|---|---|
+| 桌面 arm64/x64 与中台前端、API 镜像 | 两个 desktop target 同时跑（抢 CPU） |
+| Server Web 镜像构建 与 本机所有构建 | 两个 `compose up` / 两次 nginx reload |
+| DMG 上传 与 下一个 target 打包 | 两个大文件上传同时跑（抢上行） |
+| API 镜像流式上传 与 Web 镜像构建 | 先切 manifest 再传产物 |
+| 双包真实 GET 校验 与 部署/迁移 | 两个会话同时发版（锁） |
+| 数据库 dump/恢复演练 与 构建 | 数据库恢复与其他写操作并行 |
+
+### 4F.4 按变更集裁剪（省时间最多的一招）
+
+发布前用 `git diff --name-only <上次发布 SHA>..HEAD` 判断，只做必要步骤：
+
+| 变更范围 | 可跳过 | 省时 |
+|---|---|---|
+| 只有 `ground/`（API/Admin/Console） | 双 Mac 打包、DMG 上传、manifest、Web 镜像 | ~35 min |
+| 只有 `ground/apps/frontend` | 双 Mac、API 镜像、Web 镜像 | ~30 min |
+| 只有 `mammoth-agent/`（终端 Web/桌面） | API 镜像、middle-web | ~6 min |
+| 只有文档/`.opencode` | 全部构建，只发文档或干脆不发版 | ~40 min |
+| 只有 Windows 相关 | Mac 双架构全部跳过（Windows 本轮不发） | 按需 |
+
+### 4F.5 七条具体提速手段
+
+1. **每出一个包立刻传**：不要等两个都打完才传；arm64 出包即上传，x64 继续打。省 2–3 分钟尾部。
+2. **上传/校验与部署错层**：DMG 用版本化文件名先落盘，nginx 立即可下载；指针（manifest/feed）最后切。这样"下载校验"能与"迁移+nginx 切换"并行。
+3. **镜像流式传输**：`docker save | gzip | ssh 'gunzip | docker load'`，不写本地 tar（省磁盘与一次 IO）。
+4. **预拉基础镜像**：`node:24-bookworm`、`docker:28-cli`、`pgvector:pg16` 在预检阶段确认缓存，避免构建中卡 5–10 分钟。
+5. **保留缓存永不清理**：`.desktop-build`（Electron/pnpm store）、服务器 docker 层、`ground/node_modules`。重复发布时 arm64 可从 9 分钟降到 6–7 分钟。
+6. **manifest 预生成**：本地按产物算好 sha256/bytes 写模板，上传后只做替换与校验，避免手工拼 JSON 出错返工。
+7. **门禁前移**：类型门禁、家族版本、超管登录三条放到"排期前"，失败就不占发布窗口（本次 31 分钟就是这么浪费的）。
+
+### 4F.6 反模式（别做）
+
+- 为了"并行"同时开两个 desktop target → CPU 抢占，两个都变慢。
+- 边发版边修业务代码 → 快照失效，需要重新冻结、重新打包。
+- 用 `--no-cache` / `docker system prune -a` 追求"干净" → 冷缓存反而多花 10 分钟以上。
+- 先切 manifest 再传包 → 客户端下到 404 / 半个文件。
+- 在发布窗口里跑全量测试套件 → 与打包抢 CPU，且不是发版门禁。
+- 把"未签名包"塞进 latest feed → Gatekeeper 拦截 + 更新链路污染。
 
 ## 5. 网络与下载（最容易吃掉几小时）
 
