@@ -1,6 +1,6 @@
 /** Collect validated local Desktop artifacts for Baota without COS, GitHub or network writes. */
-import { copyFile, mkdir, readFile, writeFile, readdir } from 'node:fs/promises'
-import { createReadStream } from 'node:fs'
+import { copyFile, mkdir, readFile, stat, writeFile, readdir } from 'node:fs/promises'
+import { createReadStream, existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'node:path'
@@ -18,13 +18,17 @@ async function checksum(file: string): Promise<string> {
   return hash.digest('hex')
 }
 if (process.argv[5] === '--unsigned-test') {
-  if (selected !== 'mac-arm64' || process.platform !== 'darwin' || process.arch !== 'arm64') throw new Error('Unsigned test collection requires this Apple Silicon Mac')
-  const info = join(resolve(input), 'mac-arm64', '猛犸智能体.app', 'Contents', 'Info.plist')
+  if (!selected.startsWith('mac-') || process.platform !== 'darwin' || process.arch !== 'arm64') throw new Error('Unsigned test collection requires this Apple Silicon Mac')
+  const expectedArch = selected === 'mac-arm64' ? 'arm64' : 'x86_64'
+  const app = join(resolve(input), selected, '猛犸智能体.app')
+  const info = join(app, 'Contents', 'Info.plist')
   const plist = (key: string) => execFileSync('/usr/libexec/PlistBuddy', ['-c', `Print :${key}`, info], { encoding: 'utf8' }).trim()
   if (plist('CFBundleIdentifier') !== 'com.mammoth.ai.desktop') throw new Error('Unexpected application identity')
+  const binaryArchs = execFileSync('lipo', ['-archs', join(app, 'Contents', 'MacOS', '猛犸智能体')], { encoding: 'utf8' }).trim()
+  if (!binaryArchs.split(/\s+/).includes(expectedArch)) throw new Error(`${selected} main binary is ${binaryArchs}, expected ${expectedArch}`)
   const version = plist('CFBundleShortVersionString')
-  const candidates = (await readdir(resolve(input))).filter(name => name.endsWith('-mac-arm64-unsigned.dmg') && name.includes(version))
-  if (candidates.length !== 1) throw new Error('Expected exactly one matching Apple Silicon test installer')
+  const candidates = (await readdir(resolve(input))).filter(name => name.endsWith(`-${selected}-unsigned.dmg`) && name.includes(version))
+  if (candidates.length !== 1) throw new Error(`Expected exactly one matching ${selected} test installer`)
   const dmg = join(resolve(input), candidates[0]!)
   execFileSync('hdiutil', ['verify', dmg], { stdio: 'ignore' })
   const downloads = join(resolve(destination), 'downloads')
@@ -32,9 +36,17 @@ if (process.argv[5] === '--unsigned-test') {
   const name = names[selected]
   await copyFile(dmg, join(downloads, name))
   const sha256 = await checksum(dmg)
-  await writeFile(join(downloads, 'mammoth-latest.json'), JSON.stringify({ product: 'mammoth-agent', schema_version: 2,
-    updated_at: new Date().toISOString(), platforms: { 'darwin-arm64': { shell: { version }, file: name, sha256, signed: false, automatic_updates: false } } }, null, 2))
-  console.log(`Collected Apple Silicon unsigned test installer ${version}; no update feed or network upload.`)
+  // Merge into the existing manifest so other architectures (and any Windows entries) survive.
+  const manifestPath = join(downloads, 'mammoth-latest.json')
+  const manifest = existsSync(manifestPath)
+    ? JSON.parse(await readFile(manifestPath, 'utf8')) as { product: string; schema_version: number; updated_at: string; platforms: Record<string, unknown> }
+    : { product: 'mammoth-agent', schema_version: 2, updated_at: new Date().toISOString(), platforms: {} }
+  manifest.product = 'mammoth-agent'
+  manifest.schema_version = 2
+  manifest.updated_at = new Date().toISOString()
+  manifest.platforms[platformKeys[selected]] = { shell: { version }, file: name, sha256, bytes: (await stat(dmg)).size, signed: false, automatic_updates: false }
+  await writeFile(manifestPath, JSON.stringify(manifest, null, 2))
+  console.log(`Collected ${selected} unsigned test installer ${version}; manifest merged, other platforms preserved; no update feed or network upload.`)
   process.exit(0)
 }
 const plan = await createDesktopUploadPlan(selected, { artifactsRoot: resolve(input), environment: {
@@ -54,13 +66,17 @@ const alias = join(root, 'downloads', names[selected])
 await copyFile(installer.path, alias)
 const sha256 = await checksum(alias)
 await writeFile(join(root, 'downloads', `${selected}.json`), JSON.stringify({ platform: platformKeys[selected], version: plan.version, file: names[selected], sha256 }, null, 2))
-// Build the user-facing manifest from only the installers actually collected.
-const platforms: Record<string, { shell: { version: string }; file: string; sha256: string }> = {}
+// Merge the collected platform into the existing user-facing manifest; never rebuild it from scratch,
+// so architectures built in earlier rounds and pre-existing Windows entries are preserved.
+const manifestPath = join(root, 'downloads', 'mammoth-latest.json')
+const platforms: Record<string, { shell: { version: string }; file: string; sha256: string }> = existsSync(manifestPath)
+  ? (JSON.parse(await readFile(manifestPath, 'utf8')) as { platforms?: Record<string, { shell: { version: string }; file: string; sha256: string }> }).platforms ?? {}
+  : {}
 for (const name of Object.keys(names)) {
   try {
     const item = JSON.parse(await readFile(join(root, 'downloads', `${name}.json`), 'utf8')) as { platform: string; version: string; file: string; sha256: string }
     platforms[item.platform] = { shell: { version: item.version }, file: item.file, sha256: item.sha256 }
   } catch (error) { if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error }
 }
-await writeFile(join(root, 'downloads', 'mammoth-latest.json'), JSON.stringify({ product: 'mammoth-agent', schema_version: 2, updated_at: new Date().toISOString(), platforms }, null, 2))
+await writeFile(manifestPath, JSON.stringify({ product: 'mammoth-agent', schema_version: 2, updated_at: new Date().toISOString(), platforms }, null, 2))
 console.log(`Collected ${selected} ${plan.version}; only local files were written.`)
