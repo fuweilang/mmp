@@ -129,15 +129,15 @@ export class LibraryService {
     const now = this.now();
     const node = this.blankNode(actor, 'FILE', name, input.parentId ?? null, now);
     node.scope = scope;
-    const version = await this.writeVersion(actor, node, name, input.mimeType || 'application/octet-stream', input.bytes, ext, 1, now);
-    node.currentVersionId = version.id;
+    const prepared = await this.prepareVersion(actor, node, name, input.mimeType || 'application/octet-stream', input.bytes, ext, 1, now);
+    node.currentVersionId = prepared.version.id;
     try {
-      await this.store.insertNode(node);
+      await this.store.commitNewFile({ node, version: prepared.version, chunks: prepared.chunks });
     } catch (error) {
-      await this.store.deleteBlob(version.storageKey);
+      await this.store.deleteBlob(prepared.version.storageKey);
       throw error;
     }
-    await this.writeAudit(actor, 'library_upload', { nodeId: node.id, versionId: version.id, scope });
+    await this.writeAudit(actor, 'library_upload', { nodeId: node.id, versionId: prepared.version.id, scope });
     return this.toItem(actor, node, await this.custodiesFor(actor), null);
   }
 
@@ -149,11 +149,22 @@ export class LibraryService {
     await this.assertQuota(actor.tenantId, bytes.length);
     const versions = await this.store.listVersions(node.id);
     const versionNo = versions.reduce((max, row) => Math.max(max, row.versionNo), 0) + 1;
-    const version = await this.writeVersion(actor, node, name, mimeType || 'application/octet-stream', bytes, ext, versionNo, this.now());
-    node.currentVersionId = version.id;
-    node.updatedAt = this.now();
-    await this.store.updateNode(node.id, { currentVersionId: version.id, updatedAt: node.updatedAt });
-    await this.writeAudit(actor, 'library_replace', { nodeId: node.id, versionId: version.id, versionNo });
+    const updatedAt = this.now();
+    const prepared = await this.prepareVersion(actor, node, name, mimeType || 'application/octet-stream', bytes, ext, versionNo, updatedAt);
+    try {
+      await this.store.commitReplacement({
+        nodeId: node.id,
+        version: prepared.version,
+        chunks: prepared.chunks,
+        updatedAt,
+      });
+    } catch (error) {
+      await this.store.deleteBlob(prepared.version.storageKey);
+      throw error;
+    }
+    node.currentVersionId = prepared.version.id;
+    node.updatedAt = updatedAt;
+    await this.writeAudit(actor, 'library_replace', { nodeId: node.id, versionId: prepared.version.id, versionNo });
     return this.toItem(actor, node, await this.custodiesFor(actor), null);
   }
 
@@ -625,7 +636,7 @@ export class LibraryService {
     return { node, version, blocked: null as string | null };
   }
 
-  private async writeVersion(
+  private async prepareVersion(
     actor: Actor,
     node: NodeRecord,
     name: string,
@@ -638,7 +649,6 @@ export class LibraryService {
     const versionId = this.store.createId();
     const storageKey = storageKeyFor(actor.tenantId, versionId, ext || fileExtension(name));
     const parsed = parseLibraryBytes(name, bytes);
-    await this.store.putBlob(storageKey, bytes);
     const version: VersionRecord = {
       id: versionId,
       nodeId: node.id,
@@ -655,14 +665,8 @@ export class LibraryService {
       createdByUserId: actor.userId,
       createdAt: now,
     };
-    try {
-      await this.store.insertVersion(version);
-      await this.store.replaceChunks(version.id, actor.tenantId, this.chunkRows(version, parsed.chunks));
-    } catch (error) {
-      await this.store.deleteBlob(storageKey);
-      throw error;
-    }
-    return version;
+    await this.store.putBlob(storageKey, bytes);
+    return { version, chunks: this.chunkRows(version, parsed.chunks) };
   }
 
   private chunkRows(version: VersionRecord, chunks: { ordinal: number; content: string; locator: string; locatorKind: 'paragraph' | 'page' }[]): ChunkRecord[] {

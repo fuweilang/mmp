@@ -38,6 +38,7 @@
 - [x] 有界摘录、截断说明、真实引用、失败和越权负例
 - [x] 模型请求只组装云端网关的 auto/池内调用
 - [ ] 有可用模型凭证时的真实往返（本环境未接厂商 Key，不能把替身当成通过）
+- [x] 首次上传在已迁移 Postgres 上复现外键失败，并改为节点与版本同一事务
 
 ## 7. 风险聚焦验收
 
@@ -48,7 +49,13 @@
 
 ## 验证记录
 
-2026-11-08，本仓库云端环境，没有 Postgres，也没有云端模型 Key。
+2026-11-08，本仓库云端环境。后来在本机装了 PostgreSQL 16 和 pgvector，库名 `library_test`，连接只放在环境变量 `LIBRARY_TEST_DATABASE_URL`，不写进口令。
+
+修复前，迁移已经全部应用。用当前代码对一份小 Markdown 做首次上传，Postgres 返回 `library_version_node_id_fkey`。当时 `library_node`、`library_version`、`library_chunk` 都是 0，临时目录里也没有留下文件。这证明上传失败，不是内存测试能看出来的。
+
+修复后 `pnpm --filter @mammoth/backend test:library:db` 2 项通过。成功响应摘录：`parseStatus=READY`，资料 `47a2ff41-7dcc-4684-9bc7-28eb1f42c227`，版本 `8d3e6a1e-a848-4f81-8a3e-10e1c6047a01`，1 个 chunk，1 个文件。旧版本打开仍是「第一段持久正文」。故意让提交失败时，节点数、版本数和文件数都不变；chunk 外键失败时节点和版本都回滚。
+
+2026-11-08 早些时候，没有数据库时：
 
 - `pnpm --filter @mammoth/shared build` 通过。
 - `pnpm --filter @mammoth/backend build` 通过。

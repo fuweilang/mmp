@@ -9,7 +9,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "test:library": "node --import tsx --test test/library/*.spec.ts",
+    "test:library": "node --import tsx --test test/library/library.flow.spec.ts",
+    "test:library:db": "node --import tsx --test test/library/library.postgres.spec.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

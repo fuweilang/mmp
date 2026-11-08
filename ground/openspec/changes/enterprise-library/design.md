@@ -16,7 +16,7 @@
 
 `state`：`ACTIVE`、`RECYCLED`、`PURGED`。回收写 `recycledAt`。超过保留天数后清正文并标 `PURGED`，行还在，用来回答「这份来源没了」。不把引用改到别的 ID。
 
-物理键是 `tenantId/versionId.ext`。原始文件名只做显示。
+物理键是 `tenantId/versionId.ext`。原始文件名只做显示。首次上传先把节点写入事务，再写版本和摘录，因为 `library_version.node_id` 外键指向 `library_node`。文件字节在事务外；事务失败就删掉刚写入的文件。替换版本同样把新版本、摘录和当前版本指针放在一个事务里。
 
 ## 权限
 

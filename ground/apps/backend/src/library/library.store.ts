@@ -10,6 +10,21 @@ import type {
 
 export type TenantBrief = { id: string; name: string };
 
+/** 首次上传：节点必须先于版本落入同一事务，版本外键才能成立。 */
+export type NewFileCommit = {
+  node: NodeRecord;
+  version: VersionRecord;
+  chunks: ChunkRecord[];
+};
+
+/** 替换版本：节点已经存在，版本、摘录和当前版本指针一起提交。 */
+export type ReplacementCommit = {
+  nodeId: string;
+  version: VersionRecord;
+  chunks: ChunkRecord[];
+  updatedAt: number;
+};
+
 export interface LibraryStore {
   createId(): string;
   listNodes(tenantId: string): Promise<NodeRecord[]>;
@@ -19,6 +34,10 @@ export interface LibraryStore {
   listVersions(nodeId: string): Promise<VersionRecord[]>;
   getVersion(id: string): Promise<VersionRecord | null>;
   insertVersion(row: VersionRecord): Promise<void>;
+  /** 节点、版本、摘录一次提交。失败时调用方删掉已经写入的文件。 */
+  commitNewFile(input: NewFileCommit): Promise<void>;
+  /** 新版本、摘录和当前版本指针一次提交。 */
+  commitReplacement(input: ReplacementCommit): Promise<void>;
   updateVersion(id: string, patch: Partial<VersionRecord>): Promise<void>;
   listChunks(versionId: string): Promise<ChunkRecord[]>;
   replaceChunks(versionId: string, tenantId: string, chunks: ChunkRecord[]): Promise<void>;
@@ -95,6 +114,51 @@ export class MemoryLibraryStore implements LibraryStore {
 
   async insertVersion(row: VersionRecord) {
     this.versions.set(row.id, row);
+  }
+
+  async commitNewFile(input: NewFileCommit) {
+    const snapshot = this.snapshot();
+    try {
+      if (this.nodes.has(input.node.id) || this.versions.has(input.version.id)) {
+        throw new Error('资料已经存在');
+      }
+      this.nodes.set(input.node.id, { ...input.node, currentVersionId: input.version.id });
+      this.versions.set(input.version.id, input.version);
+      await this.replaceChunks(input.version.id, input.version.tenantId, input.chunks);
+    } catch (error) {
+      this.restore(snapshot);
+      throw error;
+    }
+  }
+
+  async commitReplacement(input: ReplacementCommit) {
+    const snapshot = this.snapshot();
+    try {
+      if (!this.nodes.has(input.nodeId)) throw new Error('资料不存在');
+      this.versions.set(input.version.id, input.version);
+      await this.replaceChunks(input.version.id, input.version.tenantId, input.chunks);
+      await this.updateNode(input.nodeId, { currentVersionId: input.version.id, updatedAt: input.updatedAt });
+    } catch (error) {
+      this.restore(snapshot);
+      throw error;
+    }
+  }
+
+  private snapshot() {
+    return {
+      nodes: new Map(this.nodes),
+      versions: new Map(this.versions),
+      chunks: new Map(this.chunks),
+    };
+  }
+
+  private restore(snapshot: { nodes: Map<string, NodeRecord>; versions: Map<string, VersionRecord>; chunks: Map<string, ChunkRecord> }) {
+    this.nodes.clear();
+    this.versions.clear();
+    this.chunks.clear();
+    for (const [id, row] of snapshot.nodes) this.nodes.set(id, row);
+    for (const [id, row] of snapshot.versions) this.versions.set(id, row);
+    for (const [id, row] of snapshot.chunks) this.chunks.set(id, row);
   }
 
   async updateVersion(id: string, patch: Partial<VersionRecord>) {

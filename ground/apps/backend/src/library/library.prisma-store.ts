@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { LibraryError } from './library.errors';
 import { resolveUnderRoot } from './library.files';
-import type { LibraryStore, TenantBrief } from './library.store';
+import type { LibraryStore, NewFileCommit, ReplacementCommit, TenantBrief } from './library.store';
 import type {
   AuditRecord,
   ChunkRecord,
@@ -84,6 +84,31 @@ export class PrismaLibraryStore implements LibraryStore {
 
   async insertVersion(row: VersionRecord): Promise<void> {
     await this.prisma.libraryVersion.create({ data: versionData(row) });
+  }
+
+  async commitNewFile(input: NewFileCommit): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.libraryNode.create({
+        data: nodeData({ ...input.node, currentVersionId: input.version.id }),
+      });
+      await tx.libraryVersion.create({ data: versionData(input.version) });
+      if (input.chunks.length > 0) {
+        await tx.libraryChunk.createMany({ data: input.chunks.map(chunkData) });
+      }
+    });
+  }
+
+  async commitReplacement(input: ReplacementCommit): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.libraryVersion.create({ data: versionData(input.version) });
+      if (input.chunks.length > 0) {
+        await tx.libraryChunk.createMany({ data: input.chunks.map(chunkData) });
+      }
+      await tx.libraryNode.update({
+        where: { id: input.nodeId },
+        data: { currentVersionId: input.version.id, updatedAt: new Date(input.updatedAt) },
+      });
+    });
   }
 
   async updateVersion(id: string, patch: Partial<VersionRecord>): Promise<void> {
@@ -266,6 +291,18 @@ function nodeData(row: NodeRecord): Prisma.LibraryNodeUncheckedCreateInput {
     purgedAt: row.purgedAt ? new Date(row.purgedAt) : null,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
+  };
+}
+
+function chunkData(chunk: ChunkRecord): Prisma.LibraryChunkUncheckedCreateInput {
+  return {
+    id: chunk.id,
+    versionId: chunk.versionId,
+    tenantId: chunk.tenantId,
+    ordinal: chunk.ordinal,
+    content: chunk.content,
+    locator: chunk.locator,
+    locatorKind: chunk.locatorKind,
   };
 }
 
