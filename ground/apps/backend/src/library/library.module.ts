@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { LlmModule } from '../llm/llm.module';
 import { LibraryController } from './library.controller';
 import { PrismaLibraryStore } from './library.prisma-store';
 import { LibraryService } from './library.service';
 
 @Module({
-  imports: [LlmModule],
+  imports: [AuthModule, LlmModule],
   controllers: [LibraryController],
   providers: [
     PrismaLibraryStore,

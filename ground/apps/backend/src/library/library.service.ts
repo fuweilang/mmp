@@ -40,6 +40,29 @@ type UploadInput = {
   confirmShare?: boolean;
 };
 
+/** Chat opens a version without a locator, so the excerpt keeps every stored paragraph inside the existing character budget. */
+function joinedExcerpt(
+  chunks: { locator: string; locatorKind: string; content: string }[],
+  maxChars: number,
+): { locator: string | null; locatorKind: string | null; quote: string | null } {
+  const parts: string[] = [];
+  const locators: string[] = [];
+  let used = 0;
+  for (const row of chunks) {
+    if (used >= maxChars) break;
+    const slice = row.content.slice(0, maxChars - used);
+    if (!slice) break;
+    parts.push(slice);
+    locators.push(row.locator);
+    used += slice.length;
+  }
+  return {
+    locator: locators.length ? locators.join(',') : null,
+    locatorKind: chunks[0]?.locatorKind ?? null,
+    quote: parts.length ? parts.join('\n\n') : null,
+  };
+}
+
 export class LibraryService {
   constructor(
     private readonly store: LibraryStore,
@@ -363,7 +386,10 @@ export class LibraryService {
     const version = await this.store.getVersion(versionId);
     if (!version || version.nodeId !== node.id || version.tenantId !== node.tenantId) throw libraryNotFound();
     const chunks = await this.store.listChunks(version.id);
-    const chunk = chunks.find((row) => row.locator === locator) ?? chunks[0] ?? null;
+    const chunk = locator ? chunks.find((row) => row.locator === locator) ?? chunks[0] ?? null : null;
+    const excerpt = locator || chunks.length <= 1
+      ? { locator: chunk?.locator ?? null, locatorKind: chunk?.locatorKind ?? null, quote: chunk?.content ?? null }
+      : joinedExcerpt(chunks, this.limits.askMaxChars);
     await this.touch(actor, node);
     const precise = chunk?.locatorKind === 'page' && chunk.locator === locator;
     return {
@@ -371,9 +397,9 @@ export class LibraryService {
       versionId: version.id,
       versionNo: version.versionNo,
       name: node.name,
-      locator: chunk?.locator ?? null,
-      locatorKind: chunk?.locatorKind ?? null,
-      quote: chunk?.content ?? null,
+      locator: excerpt.locator,
+      locatorKind: excerpt.locatorKind,
+      quote: excerpt.quote,
       preciseHighlight: precise,
       highlightNote: precise ? null : '没有可靠页码，只能定位到当时使用的段落摘录。',
       replacementVersionId: null,

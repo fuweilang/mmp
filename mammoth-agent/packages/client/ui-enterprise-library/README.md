@@ -1,7 +1,7 @@
 # ui-enterprise-library
 
 Web and desktop client entry for the single ground library at `/api/library`.
-The left sidebar opens the library panel. The composer `+` command and the `@` menu attach ready versions as chips. Chips wait for the user's question. `@` serialization refetches the stored excerpt and refuses a version the server did not return.
+The left sidebar opens the library panel. The panel action "用于 AI 对话" and the composer `+` command put a ready version on the current session draft, creating a session only when none is open. The `@` menu inserts the same kind of chip. Nothing sends until the user submits. Submit refetches that version and refuses one the server did not return.
 
 Local files are not uploaded by this package. Saving into the library stays an explicit library action, and new uploads remain private on the server.
 

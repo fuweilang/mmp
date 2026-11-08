@@ -49,6 +49,41 @@ export function stageLocalFile(name: string): LocalDraft {
   return { name, persisted: false }
 }
 
+/** Draft chip for one ready version. Unready rows produce no chip and never send. */
+export function libraryReference(item: LibraryChoice): {
+  source: 'library'
+  ref: string
+  label: string
+  appearance: 'file'
+  clipboardText: string
+} | null {
+  if (choiceBlock(item).disabled || item.versionId == null) return null
+  return {
+    source: 'library',
+    ref: libraryRef({ nodeId: item.nodeId, versionId: item.versionId }),
+    label: item.name,
+    appearance: 'file',
+    clipboardText: item.name,
+  }
+}
+
+export type DraftReferenceInput = {
+  appendReference(ref: {
+    source: 'library'
+    ref: string
+    label: string
+    appearance: 'file'
+    clipboardText: string
+  }): boolean
+}
+
+/** Put one ready version on a composer. Unready rows and a missing composer attach nothing and never send. */
+export function attachLibraryReference(input: DraftReferenceInput | undefined, item: LibraryChoice): { sent: false; attached: boolean } {
+  const ref = libraryReference(item)
+  if (!ref || input === undefined) return { sent: false, attached: false }
+  return { sent: false, attached: input.appendReference(ref) }
+}
+
 /** Stable reference id. The serializer refetches this version; it does not trust a model-written id. */
 export function libraryRef(chip: Pick<LibraryChip, 'nodeId' | 'versionId'>): string {
   return `${chip.nodeId}@${chip.versionId}`

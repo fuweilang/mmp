@@ -3,7 +3,7 @@ import { fetchLibraryItems, fetchLibrarySource, libraryItemsUrl, readLibraryItem
 import {
   addLibraryChip, choiceBlock, libraryRef, librarySourceText, parseLibraryRef, stageLocalFile,
 } from '../src/client/selection.ts'
-import { createChipStore } from '../src/client/store.ts'
+import { attachLibraryReference, libraryReference } from '../src/client/selection.ts'
 
 const ready = {
   nodeId: 'node-1', versionId: 'ver-1', versionNo: 2, name: '制度.md', kind: 'FILE' as const,
@@ -69,19 +69,13 @@ describe('library selection', () => {
     }))).rejects.toThrow(/different version/)
   })
 
-  it('stores a chip without a sent flag other than false', () => {
-    const store = createChipStore()
-    expect(store.get('absent')).toEqual([])
-    expect(store.add('s1', ready)).toEqual({ sent: false })
-    expect(store.get('s1')).toHaveLength(1)
-    store.remove('s1', 'ver-1')
-    expect(store.get('s1')).toEqual([])
-    const seen: number[] = []
-    const stop = store.subscribe(() => { seen.push(store.get('s1').length) })
-    store.add('s1', { ...ready, versionId: 'ver-2', name: '第二.md' })
-    store.remove('missing', 'ver-2')
-    store.remove('s1', 'ver-2')
-    stop()
-    expect(seen.length).toBeGreaterThan(0)
+  it('attaches a ready version to the composer and refuses an unparsed file', () => {
+    const appended: string[] = []
+    const input = { appendReference: (ref: { ref: string }) => { appended.push(ref.ref); return true } }
+    expect(attachLibraryReference(input, ready)).toEqual({ sent: false, attached: true })
+    expect(appended).toEqual(['node-1@ver-1'])
+    expect(libraryReference({ ...ready, parseStatus: 'DOWNLOAD_ONLY' })).toBeNull()
+    expect(attachLibraryReference(undefined, ready)).toEqual({ sent: false, attached: false })
+    expect(attachLibraryReference(input, { ...ready, parseStatus: 'FAILED', parseReason: '失败' }).attached).toBe(false)
   })
 })

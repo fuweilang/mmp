@@ -52,7 +52,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse }: LibraryPanelProps)
         return <li key={item.nodeId} className={css.row}>
           <span>{item.name}</span>
           <button type="button" disabled={block.disabled} onClick={() => { onUse(item) }}>
-            {block.disabled ? t('unready') : t('command')}
+            {block.disabled ? t('unready') : t('useForChat')}
           </button>
         </li>
       })}

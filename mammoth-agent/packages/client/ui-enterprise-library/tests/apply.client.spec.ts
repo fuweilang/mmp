@@ -96,6 +96,55 @@ describe('library registration', () => {
     await expect(source.codec.serialize('n1@ver-1', new AbortController().signal)).resolves.toContain('正文')
   })
 
+  it('attaches panel choices to the current session, or creates one, and never sends', async () => {
+    const appended: string[] = []
+    const panels: unknown[] = []
+    const input = { appendReference: (ref: { ref: string }) => { appended.push(ref.ref); return true } }
+    const binding = { ctx: {} }
+    const ready = {
+      get: (name: string) => {
+        if (name === 'inputTriggers') return { registerSource: () => () => {} }
+        if (name === 'uiSession') return { adapter: { current: { value: { props: { sessionId: 'live' } } } } }
+        if (name === 'sessions') return { binding: (id: string) => id === 'live' ? binding : undefined }
+        if (name === 'conversation') return { input: { for: () => input } }
+        if (name === 'layout') return { selectPanel: (id: unknown) => { panels.push(id) } }
+        return undefined
+      },
+    }
+    const current = harness()
+    current.ctx.get = ready.get
+    apply(current.ctx as never)
+    await vi.waitFor(() => { expect(appended).toEqual(['n@v']) })
+    expect(panels).toEqual([null])
+
+    appended.length = 0
+    panels.length = 0
+    const created = harness()
+    created.ctx.get = (name: string) => {
+      if (name === 'inputTriggers') return { registerSource: () => () => {} }
+      if (name === 'uiSession') return { adapter: { current: { value: { props: { sessionId: '' } } } } }
+      if (name === 'sessions') return {
+        binding: () => undefined,
+        create: async () => 'created',
+      }
+      if (name === 'layout') return { selectPanel: (id: unknown) => { panels.push(id) } }
+      return undefined
+    }
+    apply(created.ctx as never)
+    await vi.waitFor(() => { expect(panels).toEqual([null]) })
+    expect(appended).toEqual([])
+
+    const failed = harness()
+    failed.ctx.get = (name: string) => {
+      if (name === 'inputTriggers') return { registerSource: () => () => {} }
+      if (name === 'sessions') return { create: async () => { throw new Error('no workspace') } }
+      return undefined
+    }
+    apply(failed.ctx as never)
+    await Promise.resolve()
+    expect(appended).toEqual([])
+  })
+
   it('skips the mention source when the trigger service is absent', () => {
     const { ctx } = harness()
     ctx.get = () => undefined

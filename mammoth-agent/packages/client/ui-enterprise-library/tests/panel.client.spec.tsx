@@ -1,13 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SessionId } from '@mammoth-ai/mmp-session/types'
-import type { SessionSnapshot } from '@mammoth-ai/mmp-api-session-controller/client'
-import { LibraryChips } from '../src/client/LibraryChips.tsx'
 import { LibraryIcon } from '../src/client/LibraryIcon.tsx'
 import { LibraryPanel } from '../src/client/LibraryPanel.tsx'
 import { zh, type LibraryKey } from '../src/client/locales.ts'
-import { createChipStore } from '../src/client/store.ts'
 
 afterEach(() => { cleanup() })
 
@@ -36,7 +32,7 @@ describe('library panel', () => {
     await waitFor(() => expect(screen.getByText(zh.loadError)).toBeTruthy())
     expect(screen.getByText('制度.md')).toBeTruthy()
     fireEvent.change(screen.getByLabelText(zh.searchPlaceholder), { target: { value: '没有' } })
-    fireEvent.click(screen.getByRole('button', { name: zh.command }))
+    fireEvent.click(screen.getByRole('button', { name: zh.useForChat }))
     expect(onUse).toHaveBeenCalledOnce()
     view.unmount()
   })
@@ -59,16 +55,3 @@ describe('library panel', () => {
   })
 })
 
-describe('library chips', () => {
-  it('renders waiting chips and removes one without sending', () => {
-    const chips = createChipStore()
-    chips.add('session-1', {
-      nodeId: 'n1', versionId: 'v1', versionNo: 1, name: '制度.md', kind: 'FILE', parseStatus: 'READY', parseReason: null,
-    })
-    const session = { sessionId: 'session-1' as SessionId } as SessionSnapshot
-    render(<LibraryChips session={session} input={{} as never} t={t as never} chips={chips} />)
-    expect(screen.getByText(zh.chipsWaiting)).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: '移除 制度.md' }))
-    expect(chips.get('session-1')).toEqual([])
-  })
-})

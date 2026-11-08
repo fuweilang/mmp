@@ -76,6 +76,32 @@ it('isolates three browsers, preserves same-user sessions and proxies upgrades o
   expect((await fetch(router.origin, { headers: { ...headers(rotated), origin: 'https://attacker.invalid' } })).status).toBe(403)
   sessions.delete(rotated)
   expect((await fetch(`${router.origin}/api/identity`, { headers: headers(rotated) })).status).toBe(401)
+  const throughGround = await new Promise<{ status: number; body: string }>((done, fail) => {
+    const req = httpRequest({
+      hostname: '127.0.0.1',
+      port: Number(new URL(router.origin).port),
+      path: '/api/identity',
+      headers: { ...headers([...sessions.keys()][1]!), host: new URL(groundOrigin).host },
+    }, res => {
+      let body = ''
+      res.on('data', chunk => { body += chunk }).on('end', () => done({ status: res.statusCode!, body }))
+    })
+    req.on('error', fail)
+    req.end()
+  })
+  expect(throughGround.status).toBe(200)
+  expect(JSON.parse(throughGround.body)).toEqual(identities[1])
+  const foreignHost = await new Promise<number>((done, fail) => {
+    const req = httpRequest({
+      hostname: '127.0.0.1',
+      port: Number(new URL(router.origin).port),
+      path: '/',
+      headers: { ...headers([...sessions.keys()][1]!), host: 'evil.example', origin: 'http://evil.example' },
+    }, res => { res.resume(); done(res.statusCode!) })
+    req.on('error', fail)
+    req.end()
+  })
+  expect(foreignHost).toBe(403)
   const extra = { userId: 'fifth', tenantId: 'other' }
   sessions.set(token(extra), extra)
   expect((await fetch(router.origin, { headers: headers(token(extra)) })).status).toBe(503)

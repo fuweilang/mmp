@@ -529,6 +529,12 @@ export class SessionInputShell implements SessionInput {
     return this.draftEditor.insertReference(span, ref, tail)
   }
 
+  /** @inheritdoc */
+  appendReference(ref: ReferenceInsert): boolean {
+    const end = this.projection.detectText.length
+    return this.insertReference(ref, { start: end, end, draftRev: this.rev })
+  }
+
   /**
    * Consume one command token after business success (scoped consume-token
    * event listener body). Span guard: revision CAS then splice; bare-token

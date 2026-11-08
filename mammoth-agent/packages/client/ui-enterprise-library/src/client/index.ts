@@ -10,13 +10,14 @@ import { IconPaperclipOutlineRegular } from '@mammoth-ai/mmp-client-ui-primitive
 import type { MainPanelId } from '@mammoth-ai/mmp-client-ui-layout/client'
 import type { CommandUiContract } from '@mammoth-ai/mmp-client-ui-commands/client'
 import type { InputTriggerServiceContract, InputTriggerSource } from '@mammoth-ai/mmp-client-ui-input-trigger/client'
+import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import { fetchLibraryItems, fetchLibrarySource } from './api.ts'
-import { LibraryChips } from './LibraryChips.tsx'
 import { LibraryIcon } from './LibraryIcon.tsx'
 import { LibraryPanel } from './LibraryPanel.tsx'
 import { de, en, es, fr, ja, NS, pt, ru, zh, type LibraryKey } from './locales.ts'
-import { choiceBlock, libraryRef, librarySourceText, parseLibraryRef, type LibraryChoice } from './selection.ts'
-import { createChipStore } from './store.ts'
+import {
+  attachLibraryReference, choiceBlock, libraryRef, librarySourceText, parseLibraryRef, type DraftReferenceInput, type LibraryChoice,
+} from './selection.ts'
 
 declare module '@mammoth-ai/mmp-client-ui-slots' {
   interface LocaleNamespaceMap { enterpriseLibrary: LibraryKey }
@@ -39,9 +40,31 @@ function originFromEnv(env: Record<string, string | undefined>, fallback: string
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en, ja, es, fr, de, ru, pt }), 'enterprise-library: dictionaries')
   const t = ctx.locale.bind(NS)
-  const chips = createChipStore()
   const origin = originFromEnv(process.env, '')
-  const use = (sessionId: string, item: LibraryChoice): { sent: false } => chips.add(sessionId, item)
+  const attach = (sessionId: string, item: LibraryChoice): { sent: false; attached: boolean } => {
+    const sessions = ctx.get('sessions') as { binding?: (id: SessionId) => { ctx: ClientContext } | undefined } | undefined
+    const binding = sessions?.binding?.(sessionId as SessionId)
+    const conversation = ctx.get('conversation') as { input?: { for: (actx: ClientContext) => DraftReferenceInput } } | undefined
+    const input = binding && conversation?.input ? conversation.input.for(binding.ctx) : undefined
+    return attachLibraryReference(input, item)
+  }
+  const currentSessionId = (): string | undefined => {
+    const ui = ctx.get('uiSession') as { adapter?: { current?: { value?: { props?: { sessionId?: unknown } } } } } | undefined
+    const id = ui?.adapter?.current?.value?.props?.sessionId
+    return typeof id === 'string' && id !== '' ? id : undefined
+  }
+  const attachToConversation = async (item: LibraryChoice): Promise<{ sent: false }> => {
+    let sessionId = currentSessionId()
+    if (!sessionId) {
+      const sessions = ctx.get('sessions') as { create?: () => Promise<string> } | undefined
+      if (!sessions?.create) return { sent: false }
+      try { sessionId = await sessions.create() } catch { return { sent: false } }
+    }
+    attach(sessionId, item)
+    const layout = ctx.get('layout') as { selectPanel?: (id: null) => void } | undefined
+    layout?.selectPanel?.(null)
+    return { sent: false }
+  }
   ctx.effect(() => ctx.slots.inject('main', () => ctx.slots.register({
     name: 'main',
     key: PANEL_ID,
@@ -49,7 +72,7 @@ export function apply(ctx: ClientContext): void {
     inject: () => ({
       origin,
       fetchImpl: fetch,
-      onUse: (item: LibraryChoice) => { use('panel', item) },
+      onUse: (item: LibraryChoice) => { void attachToConversation(item) },
     }),
   }, LibraryPanel)), 'enterprise-library: panel')
   ctx.effect(() => ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
@@ -59,13 +82,6 @@ export function apply(ctx: ClientContext): void {
     locale: NS,
     label: () => t('panel'),
   }, LibraryIcon)), 'enterprise-library: icon')
-  ctx.effect(() => ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
-    name: 'conversation.input.dock',
-    id: 'enterprise-library',
-    order: 5,
-    locale: NS,
-    inject: () => ({ chips }),
-  }, LibraryChips)), 'enterprise-library: chips')
   ctx.inject(['commandUi'], (scope: ClientContext) => {
     const command = scope.get('commandUi') as CommandUiContract
     scope.effect(() => command.register({
@@ -105,7 +121,7 @@ export function apply(ctx: ClientContext): void {
             parseStatus: option.badge ? 'DOWNLOAD_ONLY' : 'READY',
             parseReason: option.detail ?? null,
           }
-          use(session.sessionId, item)
+          attach(session.sessionId, item)
         },
       },
     }), 'enterprise-library: command')

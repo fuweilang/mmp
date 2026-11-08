@@ -178,6 +178,12 @@ export interface InputTarget {
   beginCommand(claim: CommandClaim, span: TokenSpan): boolean
   /** Replace the trigger span with one reference chip (span-CAS'd). */
   insertReference(ref: ReferenceInsert, span: TokenSpan): boolean
+  /**
+   * Append one reference chip after the current draft. Does not submit.
+   * @param ref - chip the owner's codec serializes when the user sends.
+   * @returns whether the editor accepted the chip.
+   */
+  appendReference(ref: ReferenceInsert): boolean
 }
 
 /** Per-session input facade owned by the conversation wiring layer. */

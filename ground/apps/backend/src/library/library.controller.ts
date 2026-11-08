@@ -44,6 +44,13 @@ import { PrismaService } from '../prisma/prisma.service';
 
 type UploadFile = { originalname: string; mimetype: string; size: number; buffer: Buffer };
 
+/** Multer reads multipart filenames as latin1. A browser UTF-8 name has no code point above 255 until this repair. */
+function uploadedName(name: string): string {
+  if ([...name].some((char) => char.charCodeAt(0) > 255)) return name;
+  const repaired = Buffer.from(name, 'latin1').toString('utf8');
+  return repaired.includes('\uFFFD') ? name : repaired;
+}
+
 @Controller('library')
 @UseGuards(JwtGuard)
 export class LibraryController {
@@ -100,14 +107,14 @@ export class LibraryController {
     for (const file of files ?? []) {
       try {
         items.push(await this.library.upload(actor, {
-          originalName: file.originalname,
+          originalName: uploadedName(file.originalname),
           mimeType: file.mimetype,
           bytes: file.buffer,
           parentId: parentId || null,
         }));
       } catch (error) {
         failed.push({
-          name: file.originalname,
+          name: uploadedName(file.originalname),
           message: error instanceof Error ? error.message : '上传失败',
         });
       }
@@ -129,7 +136,7 @@ export class LibraryController {
     return this.run(async () => this.library.replaceVersion(
       await this.actor(user, tenantId),
       id,
-      file.originalname,
+      uploadedName(file.originalname),
       file.mimetype,
       file.buffer,
     ));
