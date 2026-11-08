@@ -50,7 +50,7 @@ MUST 限制扩展名、单文件大小和企业容量。可执行魔数 MUST 拒
 
 模型调用 MUST 走中台已配置的云端模型池。MUST NOT 把本机 BYOK、Ollama 或上传文件内容当成工具指令。
 
-选中资料 MUST 进入当前会话的待发送草稿；没有当前会话时创建新会话。MUST NOT 写到内部假会话，也 MUST NOT 自动发送。用户发送时 MUST 经正式聊天管道重新读取该版本的授权摘录。无权、已删除或没有摘录时 MUST NOT 发送。临时附件 MUST NOT 自动入库；入库时默认私人。
+选中资料 MUST 进入当前会话的待发送草稿；没有当前会话时创建新会话。MUST NOT 写到内部假会话，也 MUST NOT 自动发送。用户发送时，客户端 MUST 用当前登录 Cookie 调用 `/api/library/open`，且只传资料 ID 和版本 ID，重新读取仍被授权的摘录。未传定位时，仅有一段摘录 MUST 返回该段的真实 quote 和 locator；没有摘录 MUST 返回空并不发送；多段 MUST 在既有字数上限内拼接。无权、已删除或没有摘录时 MUST NOT 发送。`session/prompt` 收到的是这次打开后展开的文本，MUST NOT 被说成服务端再次按资料权限解析，也 MUST NOT 把用户粘贴的任意文本当成受控引用。临时附件 MUST NOT 自动入库；入库时默认私人。
 
 ## 界面
 

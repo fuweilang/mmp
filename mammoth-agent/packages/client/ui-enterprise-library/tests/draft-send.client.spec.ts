@@ -12,6 +12,11 @@ import { zh } from '@mammoth-ai/mmp-client-ui-conversation/src/client/locales.ts
 import { InputTriggerService } from '@mammoth-ai/mmp-client-ui-input-trigger/src/client/service.ts'
 import { SessionId } from '@mammoth-ai/mmp-session/types'
 import { afterEach, expect, it, vi } from 'vitest'
+import { LibraryError } from '../../../../../ground/apps/backend/src/library/library.errors.ts'
+import { LIBRARY_ALLOWED_EXTENSIONS } from '../../../../../ground/apps/backend/src/library/library.limits.ts'
+import { LibraryService } from '../../../../../ground/apps/backend/src/library/library.service.ts'
+import { MemoryLibraryStore } from '../../../../../ground/apps/backend/src/library/library.store.ts'
+import type { Actor } from '../../../../../ground/apps/backend/src/library/library.types.ts'
 import { apply } from '../src/client/index.ts'
 import type { LibraryChoice } from '../src/client/selection.ts'
 
@@ -197,4 +202,75 @@ it('keeps the draft and does not send when open refuses or returns no excerpt', 
     expect(box.shell.draftSnapshot.references.map(reference => reference.ref)).toEqual([`node-1@${versionId}`])
     await box.dispose()
   }
+})
+
+it('sends a real single-chunk version opened without a locator, and keeps the draft after revoke', async () => {
+  const store = new MemoryLibraryStore()
+  store.rememberTenant('ta', '甲企业')
+  store.rememberUser('owner', '甲')
+  const service = new LibraryService(store, {
+    maxFileBytes: 1000,
+    tenantQuotaBytes: 2500,
+    recycleDays: 30,
+    askMaxChars: 12_000,
+    allowedExtensions: LIBRARY_ALLOWED_EXTENSIONS,
+  })
+  const actor: Actor = {
+    userId: 'owner', tenantId: 'ta', isPlatformAdmin: false, isOrgAdmin: false, activeMember: true,
+  }
+  const uploaded = await service.upload(actor, {
+    originalName: '单段.md',
+    mimeType: 'text/markdown',
+    bytes: Buffer.from('唯一段落正文，中间没有空行。'),
+  })
+  const versionId = uploaded.currentVersion!.id
+  expect((await store.listChunks(versionId)).map(chunk => chunk.locator)).toEqual(['paragraph:1'])
+  const openBodies: { nodeId?: string; versionId?: string; locator?: string }[] = []
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (String(url).includes('/open')) {
+      const body = JSON.parse(String(init?.body)) as { nodeId: string; versionId: string; locator?: string }
+      openBodies.push(body)
+      try {
+        return Response.json(await service.openCitation(actor, body.nodeId, body.versionId, body.locator))
+      } catch (error) {
+        const status = error instanceof LibraryError ? error.status : 500
+        return new Response('no', { status })
+      }
+    }
+    if (String(url).includes('view=shared')) return Response.json({ items: [] })
+    return Response.json(await service.list(actor, 'mine'))
+  }))
+  const box = await composer(versionId)
+  box.shell.setDraft('这一句是什么')
+  const options = await box.command.ui.options({}, new AbortController().signal)
+  const chosen = options.find(option => option.id === `${uploaded.id}@${versionId}`)
+  expect(chosen?.label).toBe('单段.md')
+  box.command.ui.onSelect(chosen!, { sessionId: box.sessionId })
+  expect(sent).toEqual([])
+  expect(openBodies).toEqual([])
+  box.shell.submit('queue', 'click')
+  await vi.waitFor(() => { expect(sent).toHaveLength(1) })
+  expect(openBodies).toEqual([{ nodeId: uploaded.id, versionId }])
+  expect(sent[0]).toContain('这一句是什么')
+  expect(sent[0]).toContain(versionId)
+  expect(sent[0]).toContain('paragraph:1')
+  expect(sent[0]).toContain('唯一段落正文，中间没有空行。')
+  expect(sent[0]).not.toContain('客户端自编摘录')
+  await box.dispose()
+
+  sent.length = 0
+  const revoked = await composer(versionId)
+  revoked.shell.setDraft('撤权后还在吗')
+  revoked.panel.onUse({
+    nodeId: uploaded.id, versionId, versionNo: 1, name: '单段.md', kind: 'FILE', parseStatus: 'READY', parseReason: null,
+  })
+  await vi.waitFor(() => {
+    expect(revoked.shell.draftSnapshot.references.map(reference => reference.ref)).toEqual([`${uploaded.id}@${versionId}`])
+  })
+  await service.purge(actor, uploaded.id)
+  revoked.shell.submit('queue', 'click')
+  await vi.waitFor(() => { expect(openBodies.some(body => body.versionId === versionId && openBodies.length > 1)).toBe(true) })
+  expect(sent).toEqual([])
+  expect(revoked.shell.draftSnapshot.references.map(reference => reference.ref)).toEqual([`${uploaded.id}@${versionId}`])
+  await revoked.dispose()
 })

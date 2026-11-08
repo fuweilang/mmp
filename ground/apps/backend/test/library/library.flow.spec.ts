@@ -172,6 +172,36 @@ describe('enterprise library', () => {
     assert.equal(gone.message.includes('新版本'), false);
   });
 
+  it('opens a single ready chunk without a locator and still rejects missing or forbidden versions', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const other = actor('other', 'tb');
+    const single = await upload(service, owner, '单段.md', Buffer.from('唯一段落正文，中间没有空行。'));
+    const singleId = single.currentVersion!.id;
+    assert.equal((await store.listChunks(singleId)).length, 1);
+    const opened = await service.openCitation(owner, single.id, singleId);
+    assert.equal(opened.versionId, singleId);
+    assert.equal(opened.locator, 'paragraph:1');
+    assert.equal(opened.quote, '唯一段落正文，中间没有空行。');
+    const many = await upload(service, owner, '两段.md', Buffer.from('第一段\n\n第二段'));
+    const joined = await service.openCitation(owner, many.id, many.currentVersion!.id);
+    assert.match(joined.quote ?? '', /第一段/);
+    assert.match(joined.quote ?? '', /第二段/);
+    assert.match(joined.locator ?? '', /paragraph:1/);
+    assert.match(joined.locator ?? '', /paragraph:2/);
+    const zip = zipStored('readme.md', Buffer.from('压缩包里的机密'));
+    const packed = await upload(service, owner, '空摘录.zip', zip);
+    const empty = await service.openCitation(owner, packed.id, packed.currentVersion!.id);
+    assert.equal(empty.quote, null);
+    assert.equal(empty.locator, null);
+    const hidden = code(await service.openCitation(other, single.id, singleId).catch((error: unknown) => error));
+    assert.equal(hidden.status, 404);
+    assert.equal(hidden.message.includes('唯一段落'), false);
+    await service.purge(owner, single.id);
+    const gone = code(await service.openCitation(owner, single.id, singleId).catch((error: unknown) => error));
+    assert.equal(gone.status, 410);
+  });
+
   it('retries parse without duplicating chunks and does not index zip or execute html', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');

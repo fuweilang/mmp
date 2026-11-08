@@ -63,6 +63,34 @@ function joinedExcerpt(
   };
 }
 
+/**
+ * Native chat open sends nodeId and versionId only. One stored chunk is that
+ * excerpt. Several chunks stay inside the ask budget. None stays empty.
+ * An explicit locator still selects that chunk, or the first chunk when it is gone.
+ */
+function citationExcerpt(
+  chunks: { locator: string; locatorKind: string; content: string }[],
+  locator: string | null | undefined,
+  maxChars: number,
+): { locator: string | null; locatorKind: string | null; quote: string | null; matched: { locator: string; locatorKind: string } | null } {
+  if (chunks.length === 0) return { locator: null, locatorKind: null, quote: null, matched: null };
+  if (locator) {
+    const exact = chunks.find((row) => row.locator === locator) ?? null;
+    const chosen = exact ?? chunks[0]!;
+    return {
+      locator: chosen.locator,
+      locatorKind: chosen.locatorKind,
+      quote: chosen.content,
+      matched: exact,
+    };
+  }
+  if (chunks.length === 1) {
+    const only = chunks[0]!;
+    return { locator: only.locator, locatorKind: only.locatorKind, quote: only.content, matched: null };
+  }
+  return { ...joinedExcerpt(chunks, maxChars), matched: null };
+}
+
 export class LibraryService {
   constructor(
     private readonly store: LibraryStore,
@@ -386,12 +414,9 @@ export class LibraryService {
     const version = await this.store.getVersion(versionId);
     if (!version || version.nodeId !== node.id || version.tenantId !== node.tenantId) throw libraryNotFound();
     const chunks = await this.store.listChunks(version.id);
-    const chunk = locator ? chunks.find((row) => row.locator === locator) ?? chunks[0] ?? null : null;
-    const excerpt = locator || chunks.length <= 1
-      ? { locator: chunk?.locator ?? null, locatorKind: chunk?.locatorKind ?? null, quote: chunk?.content ?? null }
-      : joinedExcerpt(chunks, this.limits.askMaxChars);
+    const excerpt = citationExcerpt(chunks, locator, this.limits.askMaxChars);
     await this.touch(actor, node);
-    const precise = chunk?.locatorKind === 'page' && chunk.locator === locator;
+    const precise = excerpt.matched?.locatorKind === 'page' && excerpt.matched.locator === locator;
     return {
       nodeId: node.id,
       versionId: version.id,
