@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-llm-ground",
   "description": "\u731b\u72b8 Ground OpenAI-compatible chat gateway adapter (SSO grant \u2192 /api/v1)",
-  "version": "0.2.2-alpha.2",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "main": "lib/types/index.js",

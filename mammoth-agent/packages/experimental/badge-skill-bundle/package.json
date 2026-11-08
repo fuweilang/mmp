@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-experimental-badge-skill-bundle",
   "description": "Let agents add a “powered by mmp” badge to documents, pull requests, and other outputs.",
-  "version": "0.2.2-alpha.2",
+  "version": "0.3.0",
   "icon": "./icon.svg",
   "publishConfig": {
     "access": "public"

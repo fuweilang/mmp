@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-locale",
   "description": "Locale plugin: Host-backed preference, Chinese-first product default, extensible language catalog, and typed built-in dictionaries",
-  "version": "0.2.2-alpha.2",
+  "version": "0.3.0",
   "publishConfig": {
     "access": "public"
   },

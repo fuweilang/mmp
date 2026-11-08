@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-cmdline",
   "description": "Immutable command-line handoff from a mmp launcher to any app plugin that injects cmdlineArgs",
-  "version": "0.2.2-alpha.2",
+  "version": "0.3.0",
   "publishConfig": {
     "access": "public"
   },

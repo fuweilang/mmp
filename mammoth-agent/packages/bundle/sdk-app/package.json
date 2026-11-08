@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-sdk-app",
   "description": "The mmp SDK profile bundle: stdio JSON-RPC serving and process lifecycle over mmp-base",
-  "version": "0.2.2-alpha.2",
+  "version": "0.3.0",
   "publishConfig": {
     "access": "public"
   },
