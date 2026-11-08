@@ -80,6 +80,9 @@ GitHub代码备份已完成；CI路线仍需另行批准并补齐单仓workflow�
 3. 超管登录真实 200：`release-private/admin-credentials.txt` 可能过期（本次 401，账号 active 但密码被改）。凭据不通就不要排期，否则登录后的验收全做不了。
 4. 服务器：磁盘 ≥40G、无 `.release.lock`、`downloads/` 现有 manifest 与 Windows 资产已落到 state 里。
 5. 记下当前 `MMP_API_IMAGE`/`MMP_WEB_IMAGE` 与上一版镜像 tag，作为回滚基线。
+6. **下载指针一致性**：manifest 的 `file` 必须是本次产物；两个固定别名必须同步替换，否则页面显示新版本、用户下到旧包。
+7. **nginx 白名单**：新增 Ground 公共路径（如 `official-agents`）要同步进 `/api/(...)` 代理正则，否则头像/静态资源 401。
+8. **目录数据行数**：后台专家/技能/知识库页面先查 `official_*` 行数，空表是数据问题不是代码问题。
 
 **本次结果基线**：`3.0.0-20261108-1930`；api `mmp-api:3.0.0-20261108-1930`、web `mmp-web:3.0.0-20261108-r6`；迁移 45/45（发布前 30/45）；arm64 `532040d0…93b000` 268030061B、x64 `2557015f…1e90c9` 289439357B；`state.json` 落在 `release/3.0.0-20261108-1930/`。验收缺口只有"登录后业务验收"（凭据过期）与"真 Intel 实机"。
 
@@ -590,6 +593,50 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 - 在发布窗口里跑全量测试套件 → 与打包抢 CPU，且不是发版门禁。
 - 把"未签名包"塞进 latest feed → Gatekeeper 拦截 + 更新链路污染。
 
+## 4G. 2026-11-08 第二轮：客户端返工、数据导入、下载链路（必读）
+
+这一轮暴露的问题都不在"打包"本身，而在**发布指针、nginx 路由和数据资产**。下次按 4G 的顺序核对。
+
+### 4G.1 新坑清单
+
+| # | 现象 | 根因 | 处理 | 以后规避 |
+|---|---|---|---|---|
+| 1 | 下载弹窗写"最新版本 v0.3.0"，装完却是 0.2.2，没有资料库/专家广场 | 前端 `CLIENT_FILES` 写死固定别名 `/downloads/mammoth-agent-mac-*.dmg`，别名文件仍是上一版 | 立即把别名替换为新包；代码改为优先用 manifest 的 `file` | **每次发布必须同时更新 manifest 和两个固定别名**；不要只改 manifest |
+| 2 | 加了 `Cache-Control: no-store` 却不生效 | `location ^~ /downloads/` 是 `^~` 前缀，优先级高于正则 location，正则里的缓存规则被忽略 | 用 `location = /downloads/<精确文件>`（精确匹配优先级最高） | 改完必须 `curl -sI` 看响应头，不能只看配置文件 |
+| 3 | 老用户清缓存后仍拿到旧包 | 固定别名同名覆盖，中间层/浏览器可能保留旧实体 | 版本化文件名带提交号（`…-0.3.0-<sha>.dmg`），别名只做兼容 | 指针、别名 no-store；产物名唯一 |
+| 4 | 后台专家/技能头像全部裂图，看着像"图片没导" | nginx 只代理 `auth|billing|v1|session-history|oidc|library`，`/api/official-agents/avatars/*` 被转发到 agent web，RPC 层返回 401 | 把 `official-agents|official-skills|official-knowledge` 加入 Ground API 白名单 | 新增任何 Ground 公共路径都要同步 nginx 白名单，并 `curl` 头像验证 200 |
+| 5 | 后台三个页面空白，怀疑代码 bug | 生产 `official_*` 表全是 0 行，迁移成功但目录数据从未导入 | 先 `select count(*)` 再谈代码 | 空页面先查数据量/接口状态码，不要先改代码 |
+| 6 | 导入 `official_*` 时 `relation … does not exist` | `pg_dump --data-only` 文件里有 `set_config('search_path','',false)`，`\i` 之后未限定 schema 的语句找不到表 | 导入脚本里 `SET search_path = public;` 或全部 schema 限定 | 数据导入一律 schema 限定 + 单事务 |
+| 7 | 专家↔版本、技能↔包互相外键，无法按顺序插入 | 循环外键 | `SET session_replication_role = replica` 后插入，再校验完整性 | 导入后必须跑"孤儿行"检查（见 4G.3） |
+| 8 | 本地租户 ID 在生产的授权表里不存在 | 本地/生产 `tenant` 是不同 ID | 按租户名映射（华为/小米），`granted_by_user_id` 置空 | 跨环境导入禁止直接搬用户/租户 ID |
+| 9 | 知识库/技能文件导入后打不开 | 只导了数据库，没导 `uploads/official*` | rsync 三个目录，逐个 `storage_path` 校验存在 | 数据+文件必须同批，校验缺失数=0 |
+| 10 | 资料库所有接口 403 `NO_TENANT` | 平台超管 `tenantId=null`，资料库按企业隔离 | 后端 `config` 返回 `enabled:false` 引导；临时用控制台"进入企业" | 平台账号的验收必须先切企业；不要把 403 当接口坏 |
+| 11 | Intel 包打包最后一步失败：`LibreOffice conversion timed out` | 成品运行时自检里的 DOCX→PDF 在 Rosetta 下偶发超时，DMG 已生成且有效 | 只重跑 `smoke-packaged-runtime.ts`，不要重打 20 分钟 | `MMP_DESKTOP_TARGET_PLATFORM=darwin MMP_DESKTOP_TARGET_ARCH=x64 npx tsx apps/desktop/scripts/smoke-packaged-runtime.ts --unsigned` |
+| 12 | rsync 源码报 `read errors mapping apps/web/dist/...map` | 桌面打包正在重写 `apps/web/dist`，rsync 读到半写文件 | 加排除后重传 | 同步源码时排除 `apps/web/dist`、`apps/desktop/dist` |
+| 13 | Web 镜像构建报 `TS18003` / 找不到 `jszip` | 镜像 build context 只有 `mammoth-agent/`，但 client 类型检查引用 `../ground/apps/backend/src/library` 及其依赖 | 生成 `Dockerfile.server` 时：`COPY __ground_library__ /ground/apps/backend/src/library`，并只在镜像内剔除 ground-library 项目与对应 spec | 正式门禁保持 10/10；镜像内适配写进构建脚本 |
+| 14 | `pgrep -f "docker build"` 显示在跑但镜像早已完成 | 匹配到其他进程/字符串 | 以 `docker images | grep <tag>` 为准 | 判断构建完成用镜像 tag + 日志尾部 |
+| 15 | 部署后怀疑会话丢失 | 实际 `/api/auth/me` 仍 200 | 用真实请求验证，不靠猜测 | 发布后抽查线上会话接口 |
+
+### 4G.2 下载发布检查单（每次发客户端必做）
+
+1. 产物文件名带版本+提交号，两个架构分别计算 `sha256` 与字节数。
+2. 先传版本化文件（`.tmp` → `mv`），服务器 `sha256sum` 与本地一致。
+3. 公网 `curl -L` 真实下载，sha256 与大小一致（不能只 HEAD）。
+4. 更新 manifest（两个平台、`file`/`sha256`/`bytes`）。
+5. **同步替换两个固定别名**（`mammoth-agent-mac-arm64.dmg` / `-x64.dmg`），保留 `.prev-<ts>`。
+6. `curl -sI` 校验：manifest 与别名均为 `no-store`，`content-length` 与产物一致。
+7. 下载页实际点一次两个架构，确认安装后版本号与功能（资料库/专家广场）都在。
+
+### 4G.3 数据导入检查单（跨环境搬目录数据）
+
+1. 目标表行数先记录；事务内导入，失败即回滚。
+2. 导出：`pg_dump --data-only --column-inserts --no-owner --no-acl --table=…`。
+3. 导入：`BEGIN; SET session_replication_role = replica; … SET search_path=public; … COMMIT;`
+4. 关联表按名称映射（如 `tenant.name`），不要搬本地用户/租户 ID。
+5. 文件：`rsync` 对应 `uploads/*` 子目录，**不加 `--delete`**。
+6. 校验（全部必须为 0）：在线版本↔专家、版本↔专家、文档↔专家、分块↔文档、授权↔租户、缺失文件数。
+7. 导入前后各做一次 `pg_dump` 备份，并记录路径。
+
 ## 5. 网络与下载（最容易吃掉几小时）
 
 > 2026-11-04 这次发版，10h47m 里至少 3h 花在“拉文件”：GitHub 0 字节、Docker Hub 超时、
@@ -792,6 +839,19 @@ ssh "$HOST" 'cd /www/mmp-prod/downloads && cp mammoth-latest.prev-<ts>.json mamm
 
 发之前必须检查 dmg 的 bundle id，**`com.tencent.octop` 是废弃包，禁止上线**。
 
+**固定别名必须同步（2026-11-08 踩坑）**：下载页的兼容入口仍是 `/downloads/mammoth-agent-mac-arm64.dmg`、`-x64.dmg`。manifest 改了但别名没换，用户仍会下到上一版（页面显示新版本、装完是旧版）。每次发布：
+
+```bash
+cd /www/mmp-prod/downloads
+cp -a mammoth-agent-mac-arm64.dmg mammoth-agent-mac-arm64.prev-$(date +%Y%m%d-%H%M%S).dmg
+cp mammoth-agent-mac-arm64-<版本>-<sha>.dmg .mammoth-agent-mac-arm64.dmg.tmp
+mv .mammoth-agent-mac-arm64.dmg.tmp mammoth-agent-mac-arm64.dmg
+# x64 同理
+curl -sI https://www.mmai.vip/downloads/mammoth-agent-mac-x64.dmg | grep -iE 'cache-control|content-length'
+```
+
+同时确认 nginx：manifest 与两个别名必须 `no-store`（用 `location =` 精确匹配，`^~` 前缀会让正则失效）。
+
 无客户端时：`/agent` 返回 410，`downloads/` 可为空，preflight/smoke 跳过下载项，不阻塞中台发版。
 
 ## 7. 故障速查
@@ -836,6 +896,13 @@ ssh "$HOST" 'cd /www/mmp-prod/downloads && cp mammoth-latest.prev-<ts>.json mamm
 | `release.sh` 中途失败 | 某一步报错，state 已记录 | 看日志，修好后 `--release-id <ID> --from <step>` |
 | `doctor.sh` 有 FAIL | 工具/SSH/磁盘/镜像源不满足 | 先处理 FAIL；WARN 可继续 |
 | `rollback.sh` 找不到 `.env` 备份 | 备份被清理或名字不对 | `--list` 查看，或按第 10 节手工回滚 |
+| 下载页显示新版本、装完是旧版 | manifest 改了，固定别名没换 | 同步替换别名并保留 `.prev-<ts>`；见 6.4 |
+| 加了 no-store 但响应仍可缓存 | `location ^~` 前缀压过正则 location | 改用 `location =` 精确匹配，`curl -sI` 复验 |
+| 后台头像全裂 | `/api/official-agents/*` 未进 Ground 白名单，被 agent web 401 | nginx 增加 `official-agents|official-skills|official-knowledge` 并 reload |
+| 后台列表全空 | 表里 0 行（数据从未导入） | 先 `select count(*)`，再谈代码 |
+| 导入报 `relation … does not exist` | `pg_dump` 的 `search_path=''` 生效 | `SET search_path=public` 或全限定表名 |
+| Intel 包尾检 `LibreOffice conversion timed out` | Rosetta 下 DOCX 转换偶发超时，DMG 有效 | 单独重跑 `smoke-packaged-runtime.ts`，不重打整包 |
+| rsync 源码报 `read errors mapping .../web/dist` | 桌面打包正在写 dist | 排除 `apps/web/dist`、`apps/desktop/dist` 后重传 |
 
 ## 8. 状态文件
 
