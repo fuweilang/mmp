@@ -17,10 +17,24 @@ async function checksum(file: string): Promise<string> {
   for await (const bytes of createReadStream(file)) hash.update(bytes)
   return hash.digest('hex')
 }
+
+/** Electron nests the bundle under an architecture directory whose name varies by target. */
+async function findAppBundle(dir: string, depth = 0): Promise<string | undefined> {
+  if (depth > 2) return undefined
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const full = join(dir, entry.name)
+    if (entry.name.endsWith('.app')) return full
+    const nested = await findAppBundle(full, depth + 1)
+    if (nested !== undefined) return nested
+  }
+  return undefined
+}
 if (process.argv[5] === '--unsigned-test') {
   if (!selected.startsWith('mac-') || process.platform !== 'darwin' || process.arch !== 'arm64') throw new Error('Unsigned test collection requires this Apple Silicon Mac')
   const expectedArch = selected === 'mac-arm64' ? 'arm64' : 'x86_64'
-  const app = join(resolve(input), selected, '猛犸智能体.app')
+  const app = await findAppBundle(resolve(input))
+  if (app === undefined) throw new Error(`Missing .app bundle in ${input}`)
   const info = join(app, 'Contents', 'Info.plist')
   const plist = (key: string) => execFileSync('/usr/libexec/PlistBuddy', ['-c', `Print :${key}`, info], { encoding: 'utf8' }).trim()
   const bundleId = plist('CFBundleIdentifier')
