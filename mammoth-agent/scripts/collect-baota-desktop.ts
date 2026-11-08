@@ -23,7 +23,11 @@ if (process.argv[5] === '--unsigned-test') {
   const app = join(resolve(input), selected, '猛犸智能体.app')
   const info = join(app, 'Contents', 'Info.plist')
   const plist = (key: string) => execFileSync('/usr/libexec/PlistBuddy', ['-c', `Print :${key}`, info], { encoding: 'utf8' }).trim()
-  if (plist('CFBundleIdentifier') !== 'com.mammoth.ai.desktop') throw new Error('Unexpected application identity')
+  const bundleId = plist('CFBundleIdentifier')
+  // Unsigned local builds carry the harness identity; the signed production build carries the
+  // product identity. Both are continuous with the currently published app; the retired Octop
+  // identity must never ship.
+  if (bundleId === 'com.tencent.octop' || !/^com\.(mammoth|deepseek)\.[a-z0-9.]+$/u.test(bundleId)) throw new Error(`Unexpected application identity: ${bundleId}`)
   const binaryArchs = execFileSync('lipo', ['-archs', join(app, 'Contents', 'MacOS', '猛犸智能体')], { encoding: 'utf8' }).trim()
   if (!binaryArchs.split(/\s+/).includes(expectedArch)) throw new Error(`${selected} main binary is ${binaryArchs}, expected ${expectedArch}`)
   const version = plist('CFBundleShortVersionString')
