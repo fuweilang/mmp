@@ -7,6 +7,84 @@ description: >-
 
 # 猛犸宝塔发版（MMP：ground + mammoth-agent）
 
+## 0A. 授权门禁与本轮全栈/双Mac计划（2026-11-08新增，优先于下方历史默认）
+
+**讨论、整理材料、完善Skill、预检，不等于构建/发布授权。** 只有用户明确批准执行路线、最终版本/通道、源码快照、生产窗口后才进入执行阶段。下方“一句话授权”、开跑命令及并行建议不适用于仅讨论/只读预检；第一阶段禁止运行发布/打包/doctor/smoke脚本，连dry-run也先读源码。不得因聊天历史曾发版就自动执行。
+
+本轮用户已确认范围：**3.0全部新版代码**，包括Ground API、Admin/Console前端、mammoth-agent终端Web，以及mac-arm64和mac-x64两款桌面客户端；**Windows不构建、不上传、不删除旧包、不更新Windows feed/manifest子项**。不是“只发两个DMG、不更新中台”。此处是计划范围，不是现在发布授权。林杰/浪哥/秋池/李庚/王总/甜甜的审查任务不在本次自动投递范围；DeepSeek收到文案后也先报告等批准。
+
+### 源码冻结与当前事实
+- 最新事实补充（2026-11-08，Asia/Shanghai）：用户t65u报告已自行将3.0最新代码push到GitHub，代码备份已完成，不再要求先push。本轮只读本机HEAD与现有refs/remotes/origin/3.0，二者均为43bd7f6d898687cc11d4d50a84073d0e18b866eb；3.0未配置upstream。此为本机追踪ref一致，不是独立远端live核实；未fetch/pull或连接远端。两份发布文档的本轮补充仍分别是tracked修改和untracked新文件，未包含于当前HEAD，不能称已一并推送。已有GitHub备份不代表CI可用，也不授权dispatch/tag/再次push/部署；最终发布commit仍须在版本与阻塞处理后冻结。
+- 2026-11-08静态核对：mmp是单Git仓库；ground与mammoth-agent没有独立.git/.gitmodules。分支3.0，候选HEAD `43bd7f6d898687cc11d4d50a84073d0e18b866eb`；编辑本补充前工作区干净，不能继续沿用旧95a1a61/37 dirty结论。2.0 `88656a65352752429e3be91d149b06261e47fec5`及云端资料库 `a612da7e…`均为该HEAD祖先。
+- 发布前重新核对HEAD/完整dirty/untracked及所有权；最终版本或发布阻塞修复后必须重新冻结。记录release SHA、文件清单/sha、两份lockfile、工具链、迁移清单/校验和、构建参数、镜像digest和两架构制品hash。禁止无记录直接发dirty tree，也不能仅用git HEAD标签掩盖打包了未提交改动。
+- 本地固定SHA归档/用户另行批准的本地commit可以建立可复现来源；用户已自行push完成GitHub代码备份，不需重复push。后续commit/再次push/打tag/dispatch仍分别需授权，已有备份不等于CI就绪或部署许可。也不得从GitHub旧分支取源码漏掉本地修复。
+
+### 数据库不是MySQL；迁移和文件备份是一组门禁
+- `ground/apps/backend/prisma/schema.prisma:5-7`为postgresql；production/compose.yml使用pgvector/pgvector:pg16、mammoth_core和prod_pg卷。宝塔装MySQL并不说明本产品连接MySQL。本轮没有SSH/读取实际生产连接，**线上实际引擎、扩展版本、schema与迁移状态仍待授权核实**；若真是MySQL立即停，不能直接套PG迁移。
+- 仓库45项迁移。历史20261024180000_kb_search_usage要求vector和pg_trgm，含vector(64)；init-db.sh只在新卷首启创建vector，不会补救已有卷。资料库新增表本身不含向量列，但不能因此删掉全产品的pgvector要求。
+- 核对专家广场相关官方专家/版本/授权/知识文档、managed_expert_definition、gallery_discovery_detail等及20261108040000_enterprise_library；是否待应用只能对线上_prisma_migrations/校验和判断，不能拿分支比较或“开发库已应用”推断生产。当前2.0..候选HEAD没有Prisma目录差异，说明这些定义亦在本地2.0基线，不说明生产已更新。
+- Dockerfile.api:27 **启动即prisma migrate deploy**，release deploy执行compose up即可能改schema，不是纯换镜像。现脚本备份.env/静态页但没有完整DB备份/恢复演练门禁；先取得PG一致性备份、角色/扩展/迁移信息、隔离恢复验证与回滚兼容结论，才允许启动新API。只增量migrate deploy；禁reset、db push、migrate dev、改已应用SQL、生产seed。
+- 必须覆盖prod_pg、data/library原文件/版本、data/uploads、data/api-state、真实MMP_WEB_HOST_DATA_ROOT（身份/会话/工作区/运行态）和只由受保护备份机制处理的secrets。DB与文件要有一致恢复点，记录恢复演练和可接受RPO/RTO。禁止rsync --delete针对部署根/data/downloads或删除卷；发布脚本中的静态页清空仅能命中middle-web、临时源码同步仅能命中该RELEASE_ID临时目录。
+- 终端会话SQLite的单调SCHEMA_VERSION与released Session代际也要核对（mammoth-agent/AGENTS.md:8-10）；新数据不保证可被旧程序读，不能只验证PG迁移就宣称可降级。
+- 回滚旧应用镜像不回滚数据库。若旧应用/旧客户端不兼容新schema/API，先设计expand/contract与灰度；无法证明兼容就停发。恢复生产数据另需用户明确确认，不能当普通镜像回滚顺手做。
+
+### 当前静态发现的发布阻塞（尚未修脚本，不能照抄历史命令）
+| 证据 | 风险与门槛 |
+|---|---|
+| production/release.sh:245-246 | dirty仅WARN，不是冻结门禁，主操必须额外拦截 |
+| release.sh:230-311、doctor.sh:123-186 | preflight会SSH；release预检还会pull/tag基础镜像，doctor --network也会pull；不是本轮许可的纯文档动作 |
+| ground/scripts/check-version.mjs:31-76及sync-mammoth-version.mjs | 仍查旧Octop且check读取.env；不能验证mammoth-agent桌面版本，也不适合本阶段“禁止读.env”直接运行 |
+| production/preflight-local.sh:16-18 | ✅已修（2026-11-08）：默认要求 darwin-arm64+darwin-amd64，逐个校验 manifest 文件/大小/sha256，Windows 条目只保留不删除 |
+| production/smoke.sh:9-14 | ✅已修（2026-11-08）：按 manifest 遍历所有平台做真实 GET + 大小 + sha256；探活用 Range，feed 存在时校验其引用 |
+| scripts/collect-baota-desktop.ts:35-36、57-65 | ✅已修（2026-11-08）：manifest 改为合并（保留 Windows/其它架构），unsigned 支持 arm64+x64 并做 lipo 架构断言 |
+| apps/desktop/scripts/upload-target.ts:125-143、desktop-release-tag.ts:64-69 | 普通production upload会向COS写文件并创建/推送desktop-v标签；不是单纯宝塔传包。当前禁止push时不可调用 |
+| mammoth-agent/.github/workflows/{macos-package,macos-intel-package,desktop-publish}.yml | 文件在单仓子目录，根.github/workflows不存在；workflow内部仍假设checkout根是mammoth-agent，production source限制master或mmp-v*，Publish指向COS且会推tag。未核实远端根工作流/runner，不能说“推3.0就能原样CI发宝塔” |
+| release.sh:137-139、491-498、545-559 | 历史done旧note未清仍在；回滚记录的nginx时间戳与实际切流备份时间须对照，不把state.done当已验收 |
+
+### 双Mac打包与正式更新
+- 实际Node本机v24.22.2/arm64；Ground声明Node>=22、pnpm10.32.1；mammoth-agent声明Node>=24.9、pnpm11.28.5，两份lockfile分别frozen，不能一套pnpm强行覆盖另一套。未实际跑依赖安装/构建检查。
+- **2026-11-08 实测基线**：已发布 Ground `3.0.0` / 桌面 `0.3.0`（unsigned，两架构）；unsigned 包 bundle id 为 `com.deepseek.harness`（与线上 0.2.2-alpha.2 一致，`com.tencent.octop` 才禁止）；`unsigned-artifacts/` 下 arm64 的 `.app` 在 `mac-arm64/`、x64 在 `mac/`，DMG 为 `mammoth-ai-0.3.0-mac-<arch>-unsigned.dmg`。mmp 家族 379 个 manifest 必须同一版本，核心包 `@mammoth-ai/mmp` 在 `apps/cli`、Desktop Host 在 `apps/desktop-host`。
+- 当前Ground版本2.0.0；mammoth-agent及apps/desktop版本0.2.2-alpha.2。二者不是现脚本已自动同步的单一桌面版本；须确认最终中台/桌面版本、API兼容和nightly/latest。mammoth-agent/apps/desktop/scripts/electron-builder-config.mjs:105拒绝带预发布后缀的latest；不要把alpha强塞latest或中途静默bump。
+- 只选mac-arm64、mac-x64。package-target.ts支持Apple Silicon原生arm64和Rosetta下x64准备；两者共享ARM自托管CI runner并不等于真Intel实机验收。x64主程序、Electron/Node/Python/runtime、system.node及其它原生模块都必须逐个file/lipo及运行确认；registry兜底须版本匹配，文件名不能证明架构。两target隔离输出，同机串行避免共享产物/CPU竞争。
+- 正式签名、公证、stapling与现有bundle ID/Team ID/用户数据目录、钥匙串/SSO回调身份连续性必须验证；不要从旧文强行套com.mammoth或把com.tencent.octop旧包上线。签名/公证只走受保护的正常工具流程，不读取/输出私钥、证书密码、Keychain秘密。旧文unsigned仅内部测试，不能冒充正式分发/自动更新。
+- 正式产物在.desktop-build/targets/<target>/artifacts，unsigned-artifacts和unnotarized-artifacts不合格；pack命令显式--publish never，上传另一步批准。实际artifactName以构建记录/目录为准，不按旧硬编码DMG路径取包。
+- 不只是DMG：正式自动更新还要ZIP、ZIP.blockmap、对应nightly-mac.yml/latest-mac.yml、release record和sha512/size；production feed分架构位于https://www.mmai.vip/downloads/mmp-desk/feeds/mac-{arm64,x64}/，二进制位于相应bin目录。兼容下载页mammoth-latest.json与mmp-latest-macos-*.dmg固定入口必须分别核对，不能拿旧shell manifest代替electron updater feed。
+- 先上传版本化文件并本地/服务器/公网真实GET三处校验，再最后原子更新各架构feed及兼容manifest/固定别名；保留上一版和原Windows子项/文件/更新元数据，禁止全downloads同步删除，也不顺手提高Windows最低版本或强更规则；旧Windows与新API须兼容。确认nginx/CDN/COS实际路由到同一批准来源；未核实时不能假设同域名同存储。旧客户端与新API、旧App升级保数据、渠道不串、双Mac首轮真实会话/模型/权限/引用均需验收。
+
+### 推荐路线与批准点
+本轮优先建议：**本机固定源码快照→两Mac签名公证打包→按批准的宝塔下载目录发布**；GitHub代码备份已由用户自行push完成，不必把打包地点与备份地点绑死，也不要求再次push。全栈仍按当前production链路：本地Ground前端/API镜像，mammoth-agent Web在原生amd64服务器临时目录构建，完成后清理源码。旧mmPlatform“全在本地构建/禁服务器build”的规则不适用于现mmp Web；本轮尚未执行。
+
+GitHub代码备份已完成；CI路线仍需另行批准并补齐单仓workflow路径/版本tag约束、自托管runner、签名公证、仅Mac目标与宝塔发布目的地；现有desktop-publish是COS+Git标签链路，不是现成宝塔发布。两条路线都不自动获得commit/push/tag/部署权限。
+
+用户只需先决策：①本地冻结打包（推荐）还是经适配的GitHub CI；②最终Ground/桌面版本与nightly/latest、正式签名公证及既有App身份延续；③预检阻塞关闭后另行批准执行及生产窗口（全栈+双Mac范围已确认，无需再次选择）。未批准前只提交预检报告和待修清单，不构建、不SSH、不迁移、不上传、不通知DeepSeek。
+
+### 0B. 2026-11-08 全栈+双Mac 复盘：2h04m 的时间分布与固化门禁
+
+实测：19:11 用户 HEAD → 21:15 验收通过。必要耗时约 35 分钟，返工约 60 分钟。
+
+| 耗时节点 | 实测 | 性质 | 固化动作 |
+|---|---|---|---|
+| 类型/构建门禁 212 个 TS 错误 | 31 min | 源码不可发版 | 排期前先跑 `pnpm --dir mammoth-agent run build --profile local` |
+| Web 镜像反复重建 6 次 | 累计 ~40 min | 与 ground 源码耦合 | 见 4E 第 3 条；先在服务器试构建一次 |
+| 桌面 x64 打包 | 17 min | 必要 | 保留缓存，串行，勿并行双 target |
+| 改 tsconfig 的弯路 | 15 min | 人为返工 | 先 `git stash` 验证 HEAD 是否本来就绿，再动配置 |
+| 桌面 arm64 打包 | 9 min | 必要 | 与中台并行，先开最慢的 |
+| 备份+恢复演练+生产核查 | 8 min | 必要 | 已固化 |
+| 家族版本一致性返工 2 次 | 5 min | 规则不了解 | 见 4E 第 2 条 |
+| 部署+15 迁移+nginx+smoke | 5 min | 必要 | 已固化 |
+
+**发版前 10 分钟门禁（全绿才排期，任一失败先修）**
+
+1. `cd mammoth-agent && pnpm run build --profile local` → 必须 `10 passed, 0 failed`。3.0 曾在首跑就以 212 个错误失败，白等 31 分钟。
+2. 家族版本一致：`packages/*/*/package.json`、`apps/*/package.json`、根 `package.json` 的 version 必须全等；核心包 `@mammoth-ai/mmp` 在 `apps/cli`，Desktop Host 在 `apps/desktop-host`。`bump.ts` 只能从"已一致"状态前进，混合状态会直接抛错。
+3. 超管登录真实 200：`release-private/admin-credentials.txt` 可能过期（本次 401，账号 active 但密码被改）。凭据不通就不要排期，否则登录后的验收全做不了。
+4. 服务器：磁盘 ≥40G、无 `.release.lock`、`downloads/` 现有 manifest 与 Windows 资产已落到 state 里。
+5. 记下当前 `MMP_API_IMAGE`/`MMP_WEB_IMAGE` 与上一版镜像 tag，作为回滚基线。
+
+**本次结果基线**：`3.0.0-20261108-1930`；api `mmp-api:3.0.0-20261108-1930`、web `mmp-web:3.0.0-20261108-r6`；迁移 45/45（发布前 30/45）；arm64 `532040d0…93b000` 268030061B、x64 `2557015f…1e90c9` 289439357B；`state.json` 落在 `release/3.0.0-20261108-1930/`。验收缺口只有"登录后业务验收"（凭据过期）与"真 Intel 实机"。
+
+---
+
 ## 0. 一句话授权
 
 用户说 **「发布猛犸宝塔」** = 授权按本 Skill 执行。
@@ -417,6 +495,27 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 | P1 | 出包自动检查 `file`/`lipo` 架构 + `app.asar.unpacked` 原生包 | 跨架构坏包在打包阶段暴露 | `package-target.ts` / 校验脚本 |
 | P2 | manifest 增加可选 `bytes`、`built_at`；客户端忽略未知字段 | 大小一致性可机器校验 | schema v3 兼容 |
 | P2 | 桌面包保留上一版 + 一键回滚（DMG + json） | 客户端回滚不用手拼 | `downloads/` 备份 + 脚本 |
+
+## 4E. 2026-11-08 新坑与规避（全栈+双Mac，已实测）
+
+| # | 现象 | 根因 | 处理 | 以后规避 |
+|---|---|---|---|---|
+| 1 | 桌面打包第一步失败：`run-gates: 8 passed, 2 failed`，212 个 TS 错误 | 3.0 分支从未完整跑过类型门禁：78×TS6307 文件不在项目清单、23×TS6142 host 程序编 `.tsx`、ui-conversation 真实类型、测试陈旧、`503` 不在联合类型 | 由 mammoth-agent 负责人修：client-face 测试改名 `.client.spec`、补齐清单、隔离 Ground library 项目、测试跟随真实类型 | 排期前先跑 `build --profile local`；失败就停，不要边发边修 |
+| 2 | `@mammoth-ai/mmp@0.2.2-alpha.2 does not match Desktop 0.3.0`，接着 `mmp release members must share one version` | 只改了根/desktop；核心包在 `apps/cli`，Host 在 `apps/desktop-host`，家族共 379 个 manifest 必须同版本 | 批量把家族 manifest 统一到目标版本 + `pnpm install --lockfile-only` + 提交 | 改版本前先扫家族；`scripts/release/bump.ts` 只能从一致状态前进，不要指望它自救 |
+| 3 | Web 镜像 `build:artifacts` 失败：先 `TS18003 No inputs`（`tsconfig.ground-library.json`），补目录后 `TS2307` 找不到 `jszip`/`pdf-parse`/`fast-xml-parser` | 镜像 build context 只有 `mammoth-agent/`，但 client 聚合引用了 `../ground/apps/backend/src/library` 及其依赖 | 只在**镜像内**打补丁：生成 `Dockerfile.server` 时去掉 `tsconfig.client.json` 里的 ground-library 引用并排除对应 spec；正式门禁保持 10/10 | Web 镜像改动先在服务器试构建一次，再排发布窗口 |
+| 4 | 自己改 tsconfig 后冒出新的 TS6307，反复 3 轮 | host 聚合 `include` 为 `packages/*/*/tests/**/*.ts` 且只排除 `*.client.*`；把测试改成 `.ground.spec.ts` 反而被 host 吃回去 | `git stash` 验证 HEAD 本来 10/10，再回退到正确方案 | 动聚合配置前先 stash 对照；改名必须保留 `.client.` 段 |
+| 5 | collect 报 `Unexpected application identity` / `Missing .app bundle` | 脚本硬编码 `com.mammoth.ai.desktop`、只支持 arm64、`.app` 路径写死 `input/<target>/` | 实际身份是 `com.deepseek.harness`（与线上 0.2.2 一致）；x64 的 `.app` 在 `unsigned-artifacts/mac/`，arm64 在 `mac-arm64/`；改为递归找 `.app` + `lipo` 断言架构 | 身份只校验"不是 `com.tencent.octop`"且为 `com.mammoth.*`/`com.deepseek.*`；产物目录用搜索不要硬编码 |
+| 6 | `docker compose up` 报 `invalid reference format: mmp-web:mmp-web:...`，且错误值已写进 `.env` | 我给脚本传了 `mmp-web:tag`，脚本自己又拼前缀 | 手工改回 `.env` 后重跑 | 传参只传 tag；脚本内联校验镜像名格式 |
+| 7 | smoke 首跑 `SMOKE_EXIT=28` | 探活用 30s 全量 GET，268MB 包必然超时 | 探活改 Range `-r 0-0`（200/206 均可），真实下载仍做全量 GET + size + sha256 | 大文件探活一律 Range；timeout 与体积挂钩 |
+| 8 | 资料库接口 404 | nginx 新配置多了 `/api/(auth\|billing\|v1\|session-history\|oidc\|library)` 前缀 | 备份后替换 `extension/.../mammoth.conf` 并 `nginx -t && nginx -s reload` | 每次发版都 diff nginx 模板；有 diff 就必须切 |
+| 9 | 服务器磁盘 92%（32G） | 每个 Web 镜像 3.67GB，多次重建叠加 | 删除被取代的中间镜像，只留当前+上一版 | 重建前先 `docker images` 盘点；构建目录放 `/tmp` 并清理 |
+| 10 | `timeout: command not found`、`date -Is: invalid argument 's'` | macOS 自带工具与 Linux 不同 | 用 `perl`/`gtimeout` 或直接后台+轮询；时间戳写 `new Date().toISOString()` | 脚本不要依赖 GNU coreutils |
+| 11 | ssh 命令 120s 超时但远端构建仍在跑 | `setsid nohup ... &` 后 ssh 会话不释放 | 以"日志出现 started + 远端 pgrep"为准 | 后台启动后加 `</dev/null` 并立即回显标记，不等待会话 |
+| 12 | 生产库 30/45 迁移，发布即真实改 schema | 上次发版后 15 个迁移未应用 | 发布前 PG dump + 隔离恢复演练（31 表/6 用户通过）后再启动 | 迁移数量差异写进预检结论；禁止把"后端启动自动迁移"当无风险换镜像 |
+| 13 | 超管登录 401 | `release-private` 里的密码已被改，账号 active | 按约定不改账号，报告并等待新凭据 | 预检阶段先验证登录，再排窗口 |
+| 14 | 两份 release 文档导致 dirty | 文档改动不属于发布快照 | 在 state 里显式记录"排除项" | 冻结时写清纳入/排除清单，不用 tag 掩盖 |
+
+**并行优化（本次验证有效）**：桌面 arm64 先开 → 中台前端/API 并行 → Web 镜像在服务器构建（不占本机）→ arm64 完成后立刻开 x64 → 部署与 smoke 期间不要传大文件 → 最后传 DMG 并切 manifest。本次关键路径 70 分钟，其余为返工。
 
 ## 5. 网络与下载（最容易吃掉几小时）
 
