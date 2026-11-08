@@ -1,0 +1,4 @@
+Source: github:modelstudioai/skills@main:skills/novel-game#fb4a66023d59
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=0; dropped=0
+No scripts shipped.

@@ -1,0 +1,15 @@
+{
+  "key": "industry-legal-compliance-check",
+  "name": "合规检查整理",
+  "description": "依据用户提供的规则和材料组织合规核对表，不作合规保证。",
+  "entry": "SKILL.md",
+  "category": "legal",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

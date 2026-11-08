@@ -12,7 +12,7 @@ export const zh: Record<keyof typeof en, string> = {
   install: '浏览更多插件',
   create: '创建你的插件',
   'createPrompt.sidebar': '创建一个带左侧栏入口的 MMP 插件。',
-  'createPrompt.conversation': '创建一个 MMP 会话视图插件。',
+  'createPrompt.conversation': '创建一个 MMP 任务视图插件。',
   'createPrompt.rightbar': '创建一个带右侧栏入口的 MMP 插件。',
 }
 

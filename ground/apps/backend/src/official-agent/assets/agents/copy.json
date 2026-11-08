@@ -1,0 +1,21 @@
+{
+  "key": "copy",
+  "kind": "GENERAL",
+  "name": "获客文案大师",
+  "summary": "高转化获客文案",
+  "openingQuestions": [
+    "帮我写一条装修公司的信息流广告文案，目标是留资。",
+    "为企业培训课程写一版落地页首屏文案。",
+    "给我 3 个不同角度的加微引流海报文案。"
+  ],
+  "toolScope": [],
+  "toolScopeNotes": "latest 无工具依赖；不虚构 search",
+  "promptFile": "prompts/copy.md",
+  "batch": "B",
+  "publish": true,
+  "category": "content",
+  "capabilities": [
+    "获客文案",
+    "转化写作"
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "key": "project-governance",
+  "name": "项目治理文档",
+  "description": "为 AI 长期项目建立「项目记忆 + 文件索引 + 工作规则 + 版本记录」的治理系统，让 AI 在长期项目里「不忘事、不乱改、不重复犯错」，换会话后仍能接着做。Set up and maintain a project governance workspace for AI-…",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/README.md"
+    },
+    {
+      "path": "references/templates/AGENTS.md"
+    },
+    {
+      "path": "references/templates/ARCHITECTURE.md"
+    },
+    {
+      "path": "references/templates/CHANGELOG.md"
+    },
+    {
+      "path": "references/templates/LESSONS.md"
+    },
+    {
+      "path": "references/templates/PROJECT.md"
+    },
+    {
+      "path": "references/templates/VERSIONS.md"
+    },
+    {
+      "path": "references/templates/blacklist.json"
+    },
+    {
+      "path": "references/templates/index.md"
+    },
+    {
+      "path": "references/templates/index_notes.json"
+    },
+    {
+      "path": "references/templates/session_handoff.md"
+    },
+    {
+      "path": "references/templates/whitelist.json"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

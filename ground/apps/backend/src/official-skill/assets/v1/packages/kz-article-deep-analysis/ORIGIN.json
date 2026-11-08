@@ -1,0 +1,20 @@
+{
+  "key": "kz-article-deep-analysis",
+  "name": "文章深度解读",
+  "summary": "深度解读非学术类文章（博客、随笔、评论），抽取核心议题与核心主张，评估其对读者认知的增量与张力，输出结构化分析报告。",
+  "category": "content",
+  "userCategoryLabel": "检索研究",
+  "references": [
+    "references/assets/template.md",
+    "references/methodology.md"
+  ],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/kz-article-deep-analysis",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/kz-article-deep-analysis#c7a10696fa90"
+  },
+  "adaptation": "strip-scripts; stripped=1; dropped=0"
+}

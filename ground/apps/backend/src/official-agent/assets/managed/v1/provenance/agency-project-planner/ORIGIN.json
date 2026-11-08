@@ -1,0 +1,62 @@
+{
+  "key": "agency-project-planner",
+  "name": "项目范围与交付专家",
+  "group": "business",
+  "source": {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "paths": [
+      "project-management/project-manager-senior.md"
+    ],
+    "files": [
+      {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "path": "project-management/project-manager-senior.md",
+        "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/project-management/project-manager-senior.md",
+        "localPath": "upstream/agency-agents/project-management/project-manager-senior.md",
+        "sha256": "70fb27cab174c97375293311211d5563c5ac257fba274450d1ca9c05b540ef2d",
+        "bytes": 5308
+      }
+    ],
+    "assetPath": "managed/v1/experts/agency-project-planner.json",
+    "communityEvidence": {
+      "stars": 166950,
+      "observedAt": "2026-11-07T00:02:51.647824+00:00",
+      "selection": "社区独立角色定义",
+      "notExecutionRating": true
+    }
+  },
+  "license": {
+    "spdx": "MIT",
+    "upstreamPath": "LICENSE",
+    "path": "managed/v1/provenance/agency-project-planner/LICENSE",
+    "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+    "evidence": {
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+      "localPath": "upstream/agency-agents/LICENSE",
+      "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+      "bytes": 1079
+    },
+    "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+  },
+  "adaptation": {
+    "language": "zh-CN",
+    "mode": "role-adaptation",
+    "notes": [
+      "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+      "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+      "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+      "移除上游Laravel/图片源等特定示例约束；遵从用户实际项目技术栈。"
+    ],
+    "executionValidation": "not-run"
+  },
+  "linkedSkillKeys": [
+    "project-governance",
+    "superpowers-writing-plans"
+  ],
+  "newSkills": []
+}

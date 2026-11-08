@@ -1,0 +1,15 @@
+{
+  "key": "brand-guidelines",
+  "name": "品牌视觉规范",
+  "description": "Applies Anthropic's official brand colors and typography to any sort of artifact that may benefit from having Anthropic's look-and-feel. Us…",
+  "entry": "SKILL.md",
+  "category": "content",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

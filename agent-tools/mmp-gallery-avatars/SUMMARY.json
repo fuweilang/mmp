@@ -1,0 +1,522 @@
+{
+  "time": "2026-11-06T08:18:38.977Z",
+  "zone": "Asia/Shanghai",
+  "ok": true,
+  "checks": [
+    {
+      "name": "asset_agent_count_20",
+      "pass": true,
+      "detail": 20
+    },
+    {
+      "name": "historical_json_ip",
+      "pass": true,
+      "detail": "avatars/growth.jpg"
+    },
+    {
+      "name": "historical_json_gzh",
+      "pass": true,
+      "detail": "avatars/copy.jpg"
+    },
+    {
+      "name": "historical_json_niche",
+      "pass": true,
+      "detail": "avatars/data.jpg"
+    },
+    {
+      "name": "historical_json_sell",
+      "pass": true,
+      "detail": "avatars/live.jpg"
+    },
+    {
+      "name": "historical_json_method",
+      "pass": true,
+      "detail": "avatars/trans.jpg"
+    },
+    {
+      "name": "historical_json_interview",
+      "pass": true,
+      "detail": "avatars/qc.jpg"
+    },
+    {
+      "name": "portraits_at_least_18",
+      "pass": true,
+      "detail": {
+        "withPortrait": 18,
+        "glyph": [
+          "c3274112ed041",
+          "mammoth"
+        ]
+      }
+    },
+    {
+      "name": "glyph_only_expected",
+      "pass": true,
+      "detail": [
+        "c3274112ed041",
+        "mammoth"
+      ]
+    },
+    {
+      "name": "http_boss.jpg",
+      "pass": true,
+      "detail": {
+        "file": "boss.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/boss.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "http_copy.jpg",
+      "pass": true,
+      "detail": {
+        "file": "copy.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/copy.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "http_data.jpg",
+      "pass": true,
+      "detail": {
+        "file": "data.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/data.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "http_growth.jpg",
+      "pass": true,
+      "detail": {
+        "file": "growth.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/growth.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "http_qc.jpg",
+      "pass": true,
+      "detail": {
+        "file": "qc.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/qc.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "http_live.jpg",
+      "pass": true,
+      "detail": {
+        "file": "live.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/live.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "http_trans.jpg",
+      "pass": true,
+      "detail": {
+        "file": "trans.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/trans.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "http_pyq.jpg",
+      "pass": true,
+      "detail": {
+        "file": "pyq.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/pyq.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "http_sifu.jpg",
+      "pass": true,
+      "detail": {
+        "file": "sifu.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/sifu.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "http_spy.jpg",
+      "pass": true,
+      "detail": {
+        "file": "spy.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/spy.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "http_video.jpg",
+      "pass": true,
+      "detail": {
+        "file": "video.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/video.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "http_xhs.jpg",
+      "pass": true,
+      "detail": {
+        "file": "xhs.jpg",
+        "url": "http://127.0.0.1:5201/api/official-agents/avatars/xhs.jpg",
+        "status": 200,
+        "contentType": "image/jpeg"
+      }
+    },
+    {
+      "name": "playwright_images_loaded",
+      "pass": true,
+      "detail": {
+        "loaded": 18,
+        "expected": 18,
+        "failed": []
+      }
+    },
+    {
+      "name": "screenshot_written",
+      "pass": true,
+      "detail": null
+    }
+  ],
+  "coverage": [
+    {
+      "key": "boss",
+      "name": "猛犸大总管",
+      "avatarField": null,
+      "resolved": "avatars/boss.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "c3274112ed041",
+      "name": "商业命名大师",
+      "avatarField": null,
+      "resolved": null,
+      "source": "glyph-fallback"
+    },
+    {
+      "key": "copy",
+      "name": "获客文案大师",
+      "avatarField": null,
+      "resolved": "avatars/copy.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "data",
+      "name": "数据分析师",
+      "avatarField": null,
+      "resolved": "avatars/data.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "growth",
+      "name": "增长战略顾问",
+      "avatarField": null,
+      "resolved": "avatars/growth.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "gzh",
+      "name": "公众号改写专家",
+      "avatarField": "avatars/copy.jpg",
+      "resolved": "avatars/copy.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "interview",
+      "name": "访谈大师",
+      "avatarField": "avatars/qc.jpg",
+      "resolved": "avatars/qc.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "ip",
+      "name": "IP策划大师",
+      "avatarField": "avatars/growth.jpg",
+      "resolved": "avatars/growth.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "live",
+      "name": "直播话术专家",
+      "avatarField": null,
+      "resolved": "avatars/live.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "mammoth",
+      "name": "猛犸 AI",
+      "avatarField": null,
+      "resolved": null,
+      "source": "glyph-fallback"
+    },
+    {
+      "key": "method",
+      "name": "方法论大师",
+      "avatarField": "avatars/trans.jpg",
+      "resolved": "avatars/trans.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "niche",
+      "name": "利基战略顾问",
+      "avatarField": "avatars/data.jpg",
+      "resolved": "avatars/data.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "pyq",
+      "name": "朋友圈内容大师",
+      "avatarField": null,
+      "resolved": "avatars/pyq.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "qc",
+      "name": "客服质检官",
+      "avatarField": null,
+      "resolved": "avatars/qc.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "sell",
+      "name": "卖点大师",
+      "avatarField": "avatars/live.jpg",
+      "resolved": "avatars/live.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "sifu",
+      "name": "私域运营大师",
+      "avatarField": null,
+      "resolved": "avatars/sifu.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "spy",
+      "name": "竞品情报官",
+      "avatarField": null,
+      "resolved": "avatars/spy.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "trans",
+      "name": "咨询转化教练",
+      "avatarField": null,
+      "resolved": "avatars/trans.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "video",
+      "name": "短视频脚本官",
+      "avatarField": null,
+      "resolved": "avatars/video.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "xhs",
+      "name": "爆款小红书专家",
+      "avatarField": null,
+      "resolved": "avatars/xhs.jpg",
+      "source": "same-key"
+    }
+  ],
+  "http": [
+    {
+      "file": "boss.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/boss.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "file": "copy.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/copy.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "file": "data.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/data.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "file": "growth.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/growth.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "file": "qc.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/qc.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "file": "live.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/live.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "file": "trans.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/trans.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "file": "pyq.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/pyq.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "file": "sifu.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/sifu.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "file": "spy.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/spy.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "file": "video.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/video.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "file": "xhs.jpg",
+      "url": "http://127.0.0.1:5201/api/official-agents/avatars/xhs.jpg",
+      "status": 200,
+      "contentType": "image/jpeg"
+    }
+  ],
+  "errors": [],
+  "browserImages": [
+    {
+      "key": "boss",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/boss.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "copy",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/copy.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "data",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/data.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "growth",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/growth.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "gzh",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/copy.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "interview",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/qc.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "ip",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/growth.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "live",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/live.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "method",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/trans.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "niche",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/data.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "pyq",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/pyq.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "qc",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/qc.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "sell",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/live.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "sifu",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/sifu.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "spy",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/spy.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "trans",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/trans.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "video",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/video.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    },
+    {
+      "key": "xhs",
+      "src": "http://127.0.0.1:5201/api/official-agents/avatars/xhs.jpg",
+      "naturalWidth": 240,
+      "complete": true
+    }
+  ]
+}

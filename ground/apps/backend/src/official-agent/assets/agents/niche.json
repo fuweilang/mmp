@@ -1,0 +1,29 @@
+{
+  "key": "niche",
+  "kind": "KNOWLEDGE",
+  "name": "利基战略顾问",
+  "summary": "利基市场切入与差异化战略",
+  "openingQuestions": [
+    "我有一个创业灵感，怎么判断它是不是利基市场？",
+    "带我走一遍从痛点识别到定位语的完整流程。",
+    "利基市场知识图谱里，验证付费意愿有哪些要点？"
+  ],
+  "toolScope": [
+    "enterprise_knowledge"
+  ],
+  "promptFile": "prompts/niche.md",
+  "batch": "C",
+  "publish": true,
+  "kb": [
+    {
+      "file": "1.md",
+      "name": "利基市场知识图谱"
+    }
+  ],
+  "category": "expertise",
+  "capabilities": [
+    "利基战略",
+    "差异化"
+  ],
+  "avatar": "avatars/data.jpg"
+}

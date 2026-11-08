@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/reconciliation/SKILL.md (git-blob:5f212646c3827aa0d2b88137ade6829cb520ec03)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: finance/skills/reconciliation
+No third-party scripts are executed or shipped in this managed package.

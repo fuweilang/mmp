@@ -1,0 +1,13 @@
+{
+  "key": "office-docx-zh",
+  "name": "Word 文档处理",
+  "summary": "创建、阅读、编辑与校验 Word 文档，优先使用本地办公引擎能力。",
+  "category": "expertise",
+  "userCategoryLabel": "办公协作",
+  "license": "MIT",
+  "adaptation": "local-dsh-office-chinese-wrapper",
+  "source": {
+    "immutableRef": "local:mammoth-agent/packages/skill/skill-office/assets/office-docx"
+  },
+  "officialVsAdapted": "adapted"
+}

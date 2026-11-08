@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/small-business/skills/inventory-planner/SKILL.md (git-blob:9e797e87a89a7232d5903df73a2e9a53d941e21b)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: small-business/skills/inventory-planner
+No third-party scripts are executed or shipped in this managed package.

@@ -1,0 +1,24 @@
+{
+  "key": "marketing-launch",
+  "name": "产品发布策划",
+  "description": "规划发布定位、渠道、节奏和执行清单，不自动发布。",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evals/evals.json"
+    },
+    {
+      "path": "references/shipped-changes.md"
+    },
+    {
+      "path": "references/site-launch-qa.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

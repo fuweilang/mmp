@@ -1,0 +1,3 @@
+Native WorkspaceTypertGenerator generate/writeWorkspaceArtifacts: official-agent-gallery, api-session-controller, api-workspace-controller host faces; exit0.
+tsx scripts/gen-persistence-catalog.ts --check: exit0.
+Both required official-gallery/attempt and official-gallery/attempt-start are in actual core/session lib; RUNTIME-MANIFEST.json checks verify this.

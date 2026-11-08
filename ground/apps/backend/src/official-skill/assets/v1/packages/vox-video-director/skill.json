@@ -1,0 +1,33 @@
+{
+  "key": "vox-video-director",
+  "name": "vox-video-director",
+  "description": ">",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/examples/content-timing.beats.json"
+    },
+    {
+      "path": "references/beat-layer.md"
+    },
+    {
+      "path": "references/local-engine.md"
+    },
+    {
+      "path": "references/models-and-gotchas.md"
+    },
+    {
+      "path": "references/prompt-guide.md"
+    },
+    {
+      "path": "references/voices.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

@@ -508,6 +508,20 @@ export const InputBar = memo(function InputBar({
             <div className={css.modes}>
               {sessionId === undefined ? null : renderSlot('conversation.input.permission', { locked })}
               {sessionId === undefined ? null : renderSlot('conversation.input.plan', { locked })}
+              {sessionId !== undefined && subagent === null && !promptDenied && input?.enterpriseKnowledge === true && (
+                <span className={css.knowledge}>
+                  <span>{t('input.enterpriseKnowledge')}</span>
+                  <button type="button" aria-label={t('input.removeEnterpriseKnowledge')}
+                    disabled={locked || machineBusy || claimActive || inputActions?.setEnterpriseKnowledge === undefined}
+                    onMouseDown={keepFocus} onClick={() => {
+                      keyboard?.arbitrate('escape', false)
+                      inputActions?.setEnterpriseKnowledge?.(false)
+                      if (editor !== null) focusDraftEditor(editor, revealSelection)
+                    }}>
+                    <span aria-hidden>×</span>
+                  </button>
+                </span>
+              )}
             </div>
             {input === undefined || sessionId === undefined
               ? null

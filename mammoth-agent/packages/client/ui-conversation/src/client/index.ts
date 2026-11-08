@@ -103,7 +103,7 @@ export type {
   InputState, InsertReferenceRequest, InsertTextRequest, PickOutcome, SessionInput,
   SessionInputResolver, SubmitAttachment, SubmitOutcome,
 } from './contract/input.ts'
-export type { ArbitrateKey, ArbitrateOutcome, DraftInput, DraftQuote, DraftReference, DraftSnapshot, ReferenceInsert, TokenSpan } from './contract/draft-editor.ts'
+export type { CatalogDraftSelection, ArbitrateKey, ArbitrateOutcome, DraftInput, DraftQuote, DraftReference, DraftSnapshot, ReferenceInsert, TokenSpan } from './contract/draft-editor.ts'
 export type { ComposerBlock, ComposerBlocks } from './contract/composer-blocks.ts'
 
 declare module '@mammoth-ai/cordis' {

@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/product-management/skills/synthesize-research/SKILL.md (git-blob:37920edef38ed91481547e426dbd1505bbd0a105)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: product-management/skills/synthesize-research
+No third-party scripts are executed or shipped in this managed package.

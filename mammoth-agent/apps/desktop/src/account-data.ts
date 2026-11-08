@@ -39,6 +39,10 @@ export class DesktopAccountData {
   }
   get switching(): boolean { return this.pending !== undefined }
   get settled(): boolean { return this.applied === this.desired }
+  /** Wait until the applied home matches the desired one, including a switch that starts while waiting. */
+  async whenSettled(): Promise<void> {
+    while (this.pending !== undefined) await this.pending
+  }
   get anonymous(): boolean { return this.home === this.anonymousHome }
   update(session: PlatformSession | null): void {
     let desired: string

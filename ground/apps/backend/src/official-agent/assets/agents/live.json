@@ -1,0 +1,21 @@
+{
+  "key": "live",
+  "kind": "GENERAL",
+  "name": "直播话术专家",
+  "summary": "留人 · 逼单 · 憋单话术",
+  "openingQuestions": [
+    "帮我写一段直播开场 30 秒的留人话术。",
+    "客单价 199 的家居好物，怎么讲品和逼单？",
+    "直播间观众说太贵了，主播该怎么接？"
+  ],
+  "toolScope": [],
+  "toolScopeNotes": "latest 无工具依赖；不虚构 search",
+  "promptFile": "prompts/live.md",
+  "batch": "B",
+  "publish": true,
+  "category": "content",
+  "capabilities": [
+    "留人话术",
+    "逼单话术"
+  ]
+}

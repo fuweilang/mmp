@@ -1,0 +1,15 @@
+{
+  "key": "cn-punctuation-checker",
+  "name": "中文标点校对",
+  "description": "Checks Chinese text for incorrect English punctuation marks. Invoke when user wants to find and fix wrong punctuation in Chinese copy.",
+  "entry": "SKILL.md",
+  "category": "content",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

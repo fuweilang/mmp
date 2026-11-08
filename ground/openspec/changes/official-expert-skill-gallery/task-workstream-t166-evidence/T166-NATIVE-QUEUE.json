@@ -1,0 +1,9 @@
+{
+  "transport": "mock Ground/cloud",
+  "queue": "real AgentLoop",
+  "requests": 4,
+  "oldPersonaAbsent": true,
+  "explicitSkillLoadedFresh": true,
+  "clearRemovesTools": true,
+  "persistedRequiredEvents": true
+}

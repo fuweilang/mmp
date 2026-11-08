@@ -1,0 +1,7 @@
+{
+  "key": "agency-training-designer",
+  "reason": "Claude Academy-specific guide is not a general corporate training skill; leave this valid expert unbound instead of forcing coverage",
+  "removedOwnNewLinks": 1,
+  "originalExpertsTouched": 0,
+  "skillsChanged": 0
+}

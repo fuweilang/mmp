@@ -474,6 +474,52 @@ describe('Web session model selection', () => {
     await ctx.fiber.dispose()
   })
 
+  it('drops a persisted reasoning effort the resolved model no longer offers', async () => {
+    const { ctx } = await harness()
+    ctx.llm.registerAdapter(['plain'], new CatalogAdapter('Plain', [
+      { provider: 'plain', id: 'plain-model', name: 'Plain Model' },
+    ]))
+    const save = vi.fn()
+    await createSessionTestRemote(ctx, {
+      defaultModelSelection: () => ({
+        provider: 'plain', model: 'plain-model', reasoningEffort: ReasoningEffortId('high'),
+      }),
+      saveDefaultModelSelection: save,
+      cwd: '/tmp',
+    })
+
+    const catalog = await buildModelCatalog(ctx)
+    expect(catalog.default).toEqual({ provider: 'plain', model: 'plain-model' })
+    await vi.waitFor(() => {
+      expect(save).toHaveBeenCalledWith({ provider: 'plain', model: 'plain-model' })
+    })
+    await ctx.fiber.dispose()
+  })
+
+  it('heals a stale session effort before the next prompt', async () => {
+    const { ctx, agent, sessionId } = await harness({
+      provider: 'plain', model: 'plain-model', reasoningEffort: ReasoningEffortId('high'),
+    })
+    ctx.llm.registerAdapter(['plain'], new CatalogAdapter('Plain', [
+      { provider: 'plain', id: 'plain-model', name: 'Plain Model' },
+    ]))
+    const remote = await createSessionTestRemote(ctx, {
+      defaultModelSelection: () => ({
+        provider: 'plain', model: 'plain-model', reasoningEffort: ReasoningEffortId('high'),
+      }),
+      cwd: '/tmp',
+    })
+    const followup = vi.fn()
+    Object.assign(agent, { followup })
+
+    expect(await remote.prompt(promptRequest({
+      sessionId, mode: 'queue', content: [{ type: 'text', text: 'hi' }],
+    }))).toMatchObject({ ok: true, value: { accepted: true } })
+    expect(followup).toHaveBeenCalledOnce()
+    expect(agent.model.current()).toEqual({ provider: 'plain', model: 'plain-model' })
+    await ctx.fiber.dispose()
+  })
+
   it('rejects unlisted models and records validated selections for the next step', async () => {
     const { ctx, agent, sessionId } = await harness()
     const remote = await createSessionTestRemote(ctx, { defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }), cwd: '/tmp' })

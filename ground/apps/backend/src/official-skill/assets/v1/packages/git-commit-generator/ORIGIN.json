@@ -1,0 +1,22 @@
+{
+  "key": "git-commit-generator",
+  "name": "提交信息生成",
+  "summary": "Generate clear, standardized git commit messages based on code changes (diffs), following Conventional Commits specification.",
+  "category": "common",
+  "userCategoryLabel": "通用协作",
+  "references": [
+    "references/examples/input.md",
+    "references/examples/output.md",
+    "references/conventional-commits-types.md",
+    "references/templates/commit-message.txt"
+  ],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/git-commit-generator",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/git-commit-generator#d1b72c5ca283"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

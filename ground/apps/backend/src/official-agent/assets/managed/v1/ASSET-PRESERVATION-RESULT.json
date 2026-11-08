@@ -1,0 +1,21 @@
+{
+  "immutableFetchedFiles": 40,
+  "sourceHashMismatches": [],
+  "expertAssets": 24,
+  "licenses": {
+    "MIT": 20,
+    "Apache-2.0": 4
+  },
+  "groups": {
+    "business": 10,
+    "development": 9,
+    "research": 5
+  },
+  "newSkills": 0,
+  "reusedSkillKeys": 38,
+  "links": 44,
+  "preservedSkillPackages": 115,
+  "preservedSkillFiles": 797,
+  "skillFileMismatches": [],
+  "executionValidation": "not-run"
+}

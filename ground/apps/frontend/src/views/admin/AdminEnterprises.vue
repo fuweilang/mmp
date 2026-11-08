@@ -514,7 +514,7 @@ async function onDeactivate(row: AdminEnterpriseRow) {
       h('span', null, [
         '停用后「',
         highlight(row.name),
-        '」的管理员与成员将无法使用该企业的控制台与智能体。确定停用？',
+        '」的管理员与成员将无法使用该企业的控制台与专家。确定停用？',
       ]),
       '停用企业',
       {

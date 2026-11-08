@@ -1,0 +1,113 @@
+{
+  "key": "dsh-doc",
+  "name": "DSH 技术文档维护",
+  "summary": "指导框架文档、示例与实际接口保持一致。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "deepseek-ai",
+    "repo": "deepseek-harness",
+    "ref": "master",
+    "path": ".agents/skills/dsh-doc",
+    "treeSha": "fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159",
+    "skillBlobSha": "5e32d4c07ec5fe26b2407b8d408713f4f9cb7457",
+    "immutableRef": "https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-doc/SKILL.md (git-blob:5e32d4c07ec5fe26b2407b8d408713f4f9cb7457)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "c1f7a78e89e4e4dc7b86664c3b3c76eb5eee1785",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "deepseek-ai/deepseek-harness",
+      "html_url": "https://github.com/deepseek-ai/deepseek-harness",
+      "stargazers_count": 274718,
+      "forks_count": 33573,
+      "pushed_at": "2026-11-04T13:06:39Z",
+      "default_branch": "master",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [
+      {
+        "path": ".agents/skills/dsh-doc/references/metadata-links-i18n.md",
+        "sha": "4ea476085c77cb8b06e2a4f79d33120493003697",
+        "mapped": "references/metadata-links-i18n.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/references/review.md",
+        "sha": "b1014c04f9fcdde87fb8738a1910f16f0f7a84b9",
+        "mapped": "references/review.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/references/structure-hierarchy.md",
+        "sha": "6586c815a5e1cb80e708b1e93dabf586f159af09",
+        "mapped": "references/structure-hierarchy.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/references/style.md",
+        "sha": "f05f06ef495ea0044ceac628c05a0c80e95d7887",
+        "mapped": "references/style.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/references/website-sync.md",
+        "sha": "0dc05e201f1e6a175255b9603a858ca35cf4c68d",
+        "mapped": "references/website-sync.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/templates/package-bundle.md",
+        "sha": "59db5b0e305ac6dac5e8c59fc57afedd2df261d1",
+        "mapped": "references/templates/package-bundle.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/templates/package-group.md",
+        "sha": "2e1fe14139bd60f912f6be9aa63d0c7e53b0bcfb",
+        "mapped": "references/templates/package-group.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/templates/package-library.md",
+        "sha": "f576634f9c503c5b7263bb585a16e1a80bb7cdda",
+        "mapped": "references/templates/package-library.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/templates/package-reference.md",
+        "sha": "499966301cd8d7251070a19e3df28af45f34d907",
+        "mapped": "references/templates/package-reference.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/templates/persistence-change.md",
+        "sha": "f31867aaaf73e8845bc1ca4f478abee498af0e3d",
+        "mapped": "references/templates/persistence-change.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/templates/persistence-format.md",
+        "sha": "c411e14f7c85474a3dced5aff762f5311fbc8a30",
+        "mapped": "references/templates/persistence-format.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/templates/persistence-release.md",
+        "sha": "08b85503db355364cdae648b52d90bc1cef7a15d",
+        "mapped": "references/templates/persistence-release.md"
+      },
+      {
+        "path": ".agents/skills/dsh-doc/templates/upgrade-guide.md",
+        "sha": "d47f7dc4aea33a272d76c1af012bdc2a01ad0dda",
+        "mapped": "references/templates/upgrade-guide.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "df14b533a5b5879ea387f1dc02d8f508a822b75fb9ec84ab9e02dccddd9f7c76"
+  },
+  "officialVsAdapted": "adapted"
+}

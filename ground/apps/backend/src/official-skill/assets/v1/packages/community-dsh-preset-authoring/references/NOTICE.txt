@@ -1,0 +1,5 @@
+Source: https://github.com/hackerFish/awesome-dsh-skills/blob/main/skills/dsh-preset-authoring/SKILL.md (git-blob:c7b918d86392558b21e36b52271513312548bdae)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: skills/dsh-preset-authoring
+No third-party scripts are executed or shipped in this managed package.

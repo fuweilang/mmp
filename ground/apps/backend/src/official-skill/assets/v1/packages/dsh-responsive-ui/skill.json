@@ -1,0 +1,15 @@
+{
+  "key": "dsh-responsive-ui",
+  "name": "响应式界面设计",
+  "description": "指导 DSH 界面跨屏布局与响应式交互。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

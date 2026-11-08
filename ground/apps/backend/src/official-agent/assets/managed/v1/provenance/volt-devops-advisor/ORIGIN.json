@@ -1,0 +1,62 @@
+{
+  "key": "volt-devops-advisor",
+  "name": "交付与运维方案专家",
+  "group": "development",
+  "source": {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "paths": [
+      "categories/03-infrastructure/devops-engineer.md"
+    ],
+    "files": [
+      {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "path": "categories/03-infrastructure/devops-engineer.md",
+        "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/03-infrastructure/devops-engineer.md",
+        "localPath": "upstream/awesome-claude-code-subagents/categories/03-infrastructure/devops-engineer.md",
+        "sha256": "0d62477d005660f1e43691a35bb5a94b40195cbe0c7e8da42de29a61c536b309",
+        "bytes": 6948
+      }
+    ],
+    "assetPath": "managed/v1/experts/volt-devops-advisor.json",
+    "communityEvidence": {
+      "stars": 26382,
+      "observedAt": "2026-11-07T00:02:51.655015+00:00",
+      "selection": "社区独立角色定义",
+      "notExecutionRating": true
+    }
+  },
+  "license": {
+    "spdx": "MIT",
+    "upstreamPath": "LICENSE",
+    "path": "managed/v1/provenance/volt-devops-advisor/LICENSE",
+    "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+    "evidence": {
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+      "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+      "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+      "bytes": 1065
+    },
+    "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+  },
+  "adaptation": {
+    "language": "zh-CN",
+    "mode": "role-adaptation",
+    "notes": [
+      "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+      "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+      "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+      "删除上游示例中的已完成数字成果，不当作真实执行/评分。"
+    ],
+    "executionValidation": "not-run"
+  },
+  "linkedSkillKeys": [
+    "industry-ops-runbook",
+    "superpowers-verification-before-completion"
+  ],
+  "newSkills": []
+}

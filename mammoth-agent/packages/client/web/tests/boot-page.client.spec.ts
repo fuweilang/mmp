@@ -14,7 +14,7 @@ describe('BootPage', () => {
   it('draws the loading skeleton before any plugin state arrives', () => {
     const { el } = mount()
     expect(el.firstElementChild?.getAttribute('data-mmp-boot')).toBe('')
-    expect(el.textContent).toContain('猛犸智能体')
+    expect(el.textContent).toContain('猛犸AI')
     expect(el.textContent).toContain('Loading plugins…')
   })
 

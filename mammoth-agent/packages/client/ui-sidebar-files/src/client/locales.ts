@@ -20,14 +20,14 @@ declare module '@mammoth-ai/mmp-client-ui-slots' {
 
 /** Simplified Chinese dictionary and key-set source of truth. */
 export const zh = {
-  'shortcut.noSession': '请先选择会话',
+  'shortcut.noSession': '请先选择任务',
   'type.label': '文件',
   'guide.title': '工作区文件',
-  'guide.description': '浏览会话工作区的文件',
+  'guide.description': '浏览任务工作区的文件',
   loading: '正在读取…',
   empty: '空目录',
   truncated: '条目太多，只显示了一部分。',
-  noWorkspace: '这个会话没有工作区目录。',
+  noWorkspace: '这个任务没有工作区目录。',
   reload: '重新读取',
   autoRefresh: '自动刷新',
   'autoRefresh.enable': '开启自动刷新',
@@ -48,14 +48,14 @@ export type SidebarFilesKey = keyof typeof zh
 
 /** English dictionary, checked against the Chinese key set. */
 export const en = {
-  'shortcut.noSession': 'Select a session first',
+  'shortcut.noSession': 'Select a task first',
   'type.label': 'Files',
   'guide.title': 'Workspace files',
-  'guide.description': 'Browse files in this session\'s workspace',
+  'guide.description': 'Browse files in this task\'s workspace',
   loading: 'Reading…',
   empty: 'Empty directory',
   truncated: 'Too many entries, showing only some of them.',
-  noWorkspace: 'This session has no workspace directory.',
+  noWorkspace: 'This task has no workspace directory.',
   reload: 'Reload',
   autoRefresh: 'Auto refresh',
   'autoRefresh.enable': 'Enable auto refresh',
@@ -126,7 +126,7 @@ export const fr = {
   'shortcut.noSession': "Sélectionnez d'abord une session",
   'type.label': 'Fichiers',
   'guide.title': "Fichiers de l'espace de travail",
-  'guide.description': "Parcourir les fichiers dans l'espace de travail de cette session",
+  'guide.description': "Parcourir les fichiers dans l'espace de travail de cette task",
   loading: 'Lecture…',
   empty: 'Répertoire vide',
   truncated: "Trop d'entrées, n'en affichant que certaines.",

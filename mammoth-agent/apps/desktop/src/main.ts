@@ -69,6 +69,8 @@ import { DesktopQuitConfirmation } from './quit-confirmation.ts'
 import { DesktopTray } from './tray.ts'
 import { DesktopBackgroundNotice } from './background-notice.ts'
 
+const desktopDevApp = process.env.MMP_DESKTOP_DEV_APP === '1'
+const desktopLaunchScheme = desktopDevApp ? 'mmp-dev' : 'mmp'
 let focusPrimaryWindow = (): void => {}
 let stopForRecovery = async (): Promise<void> => { await stopOperationReports() }
 let shuttingDown = false
@@ -607,6 +609,7 @@ async function main(): Promise<void> {
           }
           if (state.status === 'credential-stored' && attempt?.phase === 'succeeded' && returnedAttempt !== attempt.id) {
             returnedAttempt = attempt.id
+            if (process.platform === 'darwin') app.focus({ steal: true })
             focusPrimaryWindow()
             if (!accountData.switching && !accountData.anonymous && welcomeWindow !== undefined) void enterWorkspace({ activate: true }).catch(() => undefined)
           }
@@ -847,6 +850,10 @@ async function main(): Promise<void> {
   ipcMain.handle(DESKTOP_IPC.boot, async (event) => {
     assertDesktopSender(event, ['app'])
     await startup
+    // A signed-in launch replaces the bootstrap-signed-out Host with the verified
+    // account data home. A document loaded before that switch must boot against
+    // the replacement instead of reporting the transient gap as a fatal failure.
+    await accountData.whenSettled()
     if (backend.host === undefined || hostUrl === undefined) throw new Error('Desktop Host is unavailable')
     return { injections, streamBaseUrl: new URL(hostUrl).origin }
   })
@@ -1089,7 +1096,7 @@ async function main(): Promise<void> {
   })
 
   app.setAboutPanelOptions({
-    applicationName: '猛犸智能体',
+    applicationName: '猛犸AI',
     applicationVersion: app.getVersion(),
     // The release has no separate build number; omit Electron's bundle version.
     version: '',
@@ -1399,11 +1406,11 @@ async function main(): Promise<void> {
     window.focus()
   }
 
-  if (app.isPackaged || process.env.MMP_DESKTOP_DEV_APP === '1') app.setAsDefaultProtocolClient('mmp')
-  app.on('open-url', (event, url) => {
-    event.preventDefault()
-    if (url === 'mmp://open' || url === 'mmp://open/') focusPrimaryWindow()
-  })
+  if (desktopDevApp && process.platform === 'darwin') {
+    // Earlier development builds could own the installed client's scheme.
+    app.removeAsDefaultProtocolClient('mmp')
+  }
+  if (app.isPackaged || desktopDevApp) app.setAsDefaultProtocolClient(desktopLaunchScheme)
 
   app.on('activate', (_event, hasVisibleWindows) => {
     if (!hasVisibleWindows) focusPrimaryWindow()
@@ -1513,6 +1520,12 @@ async function main(): Promise<void> {
 }
 
 const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimaryWindow() })
+if (ownsDesktopInstance) app.on('open-url', (event, url) => {
+  event.preventDefault()
+  const launchUrl = `${desktopLaunchScheme}://open`
+  if (url === launchUrl || url === `${launchUrl}/`) focusPrimaryWindow()
+})
+
 
 if (ownsDesktopInstance) void app.whenReady().then(main).catch(async (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error)

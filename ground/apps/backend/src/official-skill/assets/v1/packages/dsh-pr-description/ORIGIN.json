@@ -1,0 +1,47 @@
+{
+  "key": "dsh-pr-description",
+  "name": "变更说明撰写",
+  "summary": "根据实际代码改动组织 PR 描述、背景和风险说明。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "deepseek-ai",
+    "repo": "deepseek-harness",
+    "ref": "master",
+    "path": ".agents/skills/dsh-pr-description",
+    "treeSha": "fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159",
+    "skillBlobSha": "5841e73f94c422cd0f480b35a61d2528410780c9",
+    "immutableRef": "https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-pr-description/SKILL.md (git-blob:5841e73f94c422cd0f480b35a61d2528410780c9)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "c1f7a78e89e4e4dc7b86664c3b3c76eb5eee1785",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "deepseek-ai/deepseek-harness",
+      "html_url": "https://github.com/deepseek-ai/deepseek-harness",
+      "stargazers_count": 274718,
+      "forks_count": 33573,
+      "pushed_at": "2026-11-04T13:06:39Z",
+      "default_branch": "master",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "275465e4a43582a700d3a5d50d1dc435fec9d29dc75a84432c2545d3e7efabf8"
+  },
+  "officialVsAdapted": "adapted"
+}

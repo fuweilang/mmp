@@ -1,0 +1,61 @@
+{
+  "key": "agency-frontend-advisor",
+  "name": "前端实现方案专家",
+  "group": "development",
+  "source": {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "paths": [
+      "engineering/engineering-frontend-developer.md"
+    ],
+    "files": [
+      {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "path": "engineering/engineering-frontend-developer.md",
+        "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/engineering/engineering-frontend-developer.md",
+        "localPath": "upstream/agency-agents/engineering/engineering-frontend-developer.md",
+        "sha256": "71eeb60cbeedd94b41b2e5852d8986c909e8d150c324b4bb99e3b184ae202094",
+        "bytes": 9633
+      }
+    ],
+    "assetPath": "managed/v1/experts/agency-frontend-advisor.json",
+    "communityEvidence": {
+      "stars": 166950,
+      "observedAt": "2026-11-07T00:02:51.651083+00:00",
+      "selection": "社区独立角色定义",
+      "notExecutionRating": true
+    }
+  },
+  "license": {
+    "spdx": "MIT",
+    "upstreamPath": "LICENSE",
+    "path": "managed/v1/provenance/agency-frontend-advisor/LICENSE",
+    "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+    "evidence": {
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+      "localPath": "upstream/agency-agents/LICENSE",
+      "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+      "bytes": 1079
+    },
+    "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+  },
+  "adaptation": {
+    "language": "zh-CN",
+    "mode": "role-adaptation",
+    "notes": [
+      "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+      "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+      "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+    ],
+    "executionValidation": "not-run"
+  },
+  "linkedSkillKeys": [
+    "frontend-design",
+    "dsh-responsive-ui"
+  ],
+  "newSkills": []
+}

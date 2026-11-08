@@ -1,0 +1,4 @@
+Source: github:trae-community/trae-skills@main:skills/video-to-keyframes#ea3cb7fe3adc
+License: MIT
+Adaptation: strip-scripts; stripped=4; dropped=0
+No scripts shipped.

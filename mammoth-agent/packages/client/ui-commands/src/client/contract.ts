@@ -81,6 +81,8 @@ export interface PopupSelectSpec {
  */
 export interface ActionSpec {
   readonly kind: 'action'
+  /** Composer-option actions preserve text/selection when picked from the + menu. */
+  readonly preserveDraftOnMenu?: true
   /**
    * Run the action for one session.
    * @param session - the ClientSessionContext captured at invocation.
@@ -99,6 +101,8 @@ export type CommandUiSpec = PopupSelectSpec | ActionSpec
  * locale change reaches the next menu open without re-registration.
  */
 export interface CommandContribution {
+  /** Optional checked presentation resolved for the addressed session. */
+  checked?(session: ClientSessionContext): boolean
   /** Command name without the leading slash (unique across contributions). */
   readonly name: string
   /** Localized menu row title; the name itself when absent. */

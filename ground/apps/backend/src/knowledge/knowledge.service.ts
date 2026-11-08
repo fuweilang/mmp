@@ -103,12 +103,16 @@ export class KnowledgeService {
         storagePath,
         status: KbStatus.PENDING,
         visibility: vis,
+        grants: { create: vis === AccessScope.SELECTED ? [...new Set(userIds)].map((userId) => ({ userId })) : [] },
       },
+    }).catch(async (error: unknown) => {
+      await removeStoredFile(storagePath);
+      throw error;
     });
-    await this.replaceGrants(doc.id, vis, userIds);
     await this.prisma.auditLog.create({
       data: { userId: user.id, tenantId: id, action: 'upload_kb', meta: { documentId: doc.id } },
     });
+    await this.indexPending(id, doc.id);
     return this.getOne(id, doc.id);
   }
 
@@ -118,33 +122,26 @@ export class KnowledgeService {
     if (!current) throw new NotFoundException('文件不存在');
     if (dto.folderId) await this.requireFolder(id, dto.folderId);
     const visibility = dto.visibility ?? current.visibility;
-    if (dto.visibility !== undefined || dto.userIds !== undefined) {
-      this.assertSelectedGrants(visibility, dto.userIds ?? (await this.currentGrantIds(documentId)));
-    }
+    const changeGrants = dto.visibility !== undefined || dto.userIds !== undefined;
+    const grantIds = changeGrants ? dto.userIds ?? (await this.currentGrantIds(documentId)) : [];
+    if (changeGrants) this.assertSelectedGrants(visibility, grantIds);
     const nextStatus = dto.status ?? current.status;
     await this.prisma.kbDocument.update({
       where: { id: documentId },
       data: {
         name: dto.name?.trim(),
         folderId: dto.folderId === undefined ? undefined : dto.folderId || null,
-        status: dto.status,
+        status: nextStatus === KbStatus.READY && current.status !== KbStatus.READY ? KbStatus.PENDING : dto.status,
+        indexError: dto.status === undefined ? undefined : null,
         visibility: dto.visibility,
+        grants: changeGrants ? {
+          deleteMany: {},
+          create: visibility === AccessScope.SELECTED ? [...new Set(grantIds)].map((userId) => ({ userId })) : [],
+        } : undefined,
       },
     });
-    if (dto.visibility !== undefined || dto.userIds !== undefined) {
-      await this.replaceGrants(documentId, visibility, dto.userIds);
-    }
     if (nextStatus === KbStatus.READY && current.status !== KbStatus.READY) {
-      const indexed = await this.reindex(id, documentId);
-      if (!indexed) {
-        await this.prisma.kbDocument.update({
-          where: { id: documentId },
-          data: { status: KbStatus.FAILED },
-        });
-        throw new BadRequestException('无法从文件提取文本，无法生效');
-      }
-    } else if (nextStatus !== KbStatus.READY && current.status === KbStatus.READY) {
-      await this.prisma.kbChunk.deleteMany({ where: { documentId } });
+      await this.indexPending(id, documentId);
     }
     await this.prisma.auditLog.create({
       data: { userId: user.id, tenantId: id, action: 'update_kb', meta: { documentId } },
@@ -164,18 +161,25 @@ export class KnowledgeService {
     return { ok: true };
   }
 
-  async search(user: User, tenantId: string | null, query: string) {
+  async search(
+    user: User,
+    tenantId: string | null,
+    query: string,
+    folderIds?: readonly string[],
+  ) {
     const id = await this.tenants.requireTenant(user, tenantId);
     const q = query.trim().slice(0, 200);
-    if (!q) return { tenantId: id, hits: [] };
-    const allowed = await this.visibleDocumentIds(id, user.id);
+    if (!q || folderIds?.length === 0) return { tenantId: id, hits: [] };
+    const allowed = await this.visibleDocumentIds(id, user.id, folderIds);
     if (allowed.length === 0) return { tenantId: id, hits: [] };
+    const lexicalQueries = lexicalQueryVariants(q);
 
     const lexical = await this.prisma.kbChunk.findMany({
       where: {
         tenantId: id,
         documentId: { in: allowed },
-        content: { contains: q, mode: 'insensitive' },
+        document: this.visibleDocumentScope(id, user.id, folderIds),
+        OR: lexicalQueries.map((term) => ({ content: { contains: term, mode: 'insensitive' as const } })),
       },
       include: {
         document: { select: { id: true, name: true, folder: { select: { name: true } } } },
@@ -189,6 +193,7 @@ export class KnowledgeService {
       {
         documentId: string;
         documentName: string;
+        ordinal: number;
         folderName: string | null;
         snippet: string;
         score: number;
@@ -198,13 +203,14 @@ export class KnowledgeService {
       scored.set(row.id, {
         documentId: row.document.id,
         documentName: row.document.name,
+        ordinal: row.ordinal,
         folderName: row.document.folder?.name ?? null,
         snippet: snippetOf(row.content, q),
-        score: row.content.includes(q) ? 12 : 6,
+        score: lexicalQueries.some((term) => row.content.includes(term)) ? 12 : 6,
       });
     }
 
-    const vectorHits = await this.vectorSearch(id, allowed, q);
+    const vectorHits = await this.vectorSearch(id, user.id, allowed, q);
     for (const hit of vectorHits) {
       const current = scored.get(hit.id);
       if (current) {
@@ -218,9 +224,20 @@ export class KnowledgeService {
     return { tenantId: id, hits };
   }
 
-  async file(user: User, tenantId: string | null, documentId: string) {
-    const id = await this.tenants.requireConsolePerm(user, tenantId, 'portal.console.kb');
-    const current = await this.prisma.kbDocument.findFirst({ where: { id: documentId, tenantId: id } });
+  async file(
+    user: User,
+    tenantId: string | null,
+    documentId: string,
+    source = false,
+    folderIds?: readonly string[],
+  ) {
+    const id = source ? await this.tenants.requireTenant(user, tenantId)
+      : await this.tenants.requireConsolePerm(user, tenantId, 'portal.console.kb');
+    if (folderIds?.length === 0) throw new NotFoundException('文件不存在');
+    const current = await this.prisma.kbDocument.findFirst({ where: {
+      id: documentId, tenantId: id,
+      ...(source ? this.visibleDocumentScope(id, user.id, folderIds) : {}),
+    } });
     if (!current) throw new NotFoundException('文件不存在');
     const abs = absoluteUploadPath(current.storagePath);
     if (!existsSync(abs)) throw new NotFoundException('文件已丢失');
@@ -247,15 +264,6 @@ export class KnowledgeService {
     return grants.map((g) => g.userId);
   }
 
-  private async replaceGrants(documentId: string, visibility: AccessScope, userIds?: string[]) {
-    await this.prisma.kbGrant.deleteMany({ where: { documentId } });
-    if (visibility !== AccessScope.SELECTED || !userIds?.length) return;
-    await this.prisma.kbGrant.createMany({
-      data: userIds.map((userId) => ({ documentId, userId })),
-      skipDuplicates: true,
-    });
-  }
-
   private async getOne(tenantId: string, documentId: string) {
     const row = await this.prisma.kbDocument.findFirst({
       where: { id: documentId, tenantId },
@@ -277,6 +285,7 @@ export class KnowledgeService {
     mimeType: string;
     sizeBytes: number;
     status: KbStatus;
+    indexError: string | null;
     visibility: AccessScope;
     createdAt: Date;
     folder: { id: string; name: string } | null;
@@ -292,70 +301,95 @@ export class KnowledgeService {
       mimeType: row.mimeType,
       sizeBytes: row.sizeBytes,
       status: row.status,
+      indexError: row.indexError,
       visibility: row.visibility,
       userIds: row.grants.map((g) => g.userId),
       createdAt: row.createdAt,
     };
   }
 
-  async reindex(tenantId: string, documentId: string) {
-    const doc = await this.prisma.kbDocument.findFirst({ where: { id: documentId, tenantId } });
-    if (!doc) return false;
-    const abs = absoluteUploadPath(doc.storagePath);
-    if (!existsSync(abs)) return false;
-    const buffer = await readFile(abs);
-    const chunks = chunkText(extractText(doc.originalName, buffer));
-    await this.prisma.kbChunk.deleteMany({ where: { documentId } });
-    if (chunks.length === 0) return false;
-    const created = [];
-    for (let i = 0; i < chunks.length; i += 1) {
-      created.push(
-        await this.prisma.kbChunk.create({
-          data: { tenantId, documentId, ordinal: i, content: chunks[i] },
-        }),
-      );
+  private async indexPending(tenantId: string, documentId: string) {
+    const pending = { id: documentId, tenantId, status: KbStatus.PENDING };
+    const doc = await this.prisma.kbDocument.findFirst({ where: pending });
+    if (!doc) return;
+    let indexError = '文件无法读取或解析，请检查格式后重试';
+    try {
+      const buffer = await readFile(absoluteUploadPath(doc.storagePath));
+      const chunks = chunkText(await extractText(doc.originalName, buffer));
+      if (chunks.length === 0) {
+        indexError = '未提取到文字。扫描件请先转换成可复制文字的 PDF';
+        throw new Error(indexError);
+      }
+      indexError = '索引建立失败，请重试';
+      const vectors = chunks.map((chunk) => vectorLiteral(embedText(chunk)));
+      await this.prisma.$transaction(async (tx) => {
+        const claimed = await tx.kbDocument.updateMany({ where: pending, data: { status: KbStatus.READY, indexError: null } });
+        if (!claimed.count) return;
+        await tx.kbChunk.deleteMany({ where: { tenantId, documentId } });
+        await tx.kbChunk.createMany({ data: chunks.map((content, ordinal) => ({ tenantId, documentId, ordinal, content })) });
+        for (let ordinal = 0; ordinal < vectors.length; ordinal += 1) {
+          await tx.$executeRawUnsafe(
+            'UPDATE kb_chunk SET embedding = $1::vector WHERE tenant_id = $2 AND document_id = $3 AND ordinal = $4',
+            vectors[ordinal],
+            tenantId,
+            documentId,
+            ordinal,
+          );
+        }
+      });
+    } catch {
+      await this.prisma.kbDocument.updateMany({ where: pending, data: { status: KbStatus.FAILED, indexError } });
     }
-    for (const row of created) {
-      const literal = vectorLiteral(embedText(row.content));
-      await this.prisma.$executeRawUnsafe(
-        'UPDATE kb_chunk SET embedding = $1::vector WHERE id = $2',
-        literal,
-        row.id,
-      );
-    }
-    return true;
   }
 
-  private async visibleDocumentIds(tenantId: string, userId: string) {
+  private async visibleDocumentIds(
+    tenantId: string,
+    userId: string,
+    folderIds?: readonly string[],
+  ) {
     const rows = await this.prisma.kbDocument.findMany({
-      where: {
-        tenantId,
-        status: KbStatus.READY,
-        OR: [{ visibility: AccessScope.ALL }, { grants: { some: { userId } } }],
-      },
+      where: this.visibleDocumentScope(tenantId, userId, folderIds),
       select: { id: true },
     });
     return rows.map((row) => row.id);
   }
 
-  private async vectorSearch(tenantId: string, documentIds: string[], query: string) {
+  private visibleDocumentScope(
+    tenantId: string,
+    userId: string,
+    folderIds?: readonly string[],
+  ) {
+    return {
+      tenantId,
+      status: KbStatus.READY,
+      ...(folderIds ? { folderId: { in: [...folderIds] } } : {}),
+      OR: [{ visibility: AccessScope.ALL }, { grants: { some: { userId } } }],
+    };
+  }
+
+  private async vectorSearch(tenantId: string, userId: string, documentIds: string[], query: string) {
     if (documentIds.length === 0) return [];
     type VectorRow = {
       id: string;
       content: string;
       documentId: string;
       documentName: string;
+      ordinal: number;
       folderName: string | null;
       score: number;
     };
     try {
       const rows = await this.prisma.$queryRawUnsafe<VectorRow[]>(
-        `SELECT c.id, c.content, d.id AS "documentId", d.name AS "documentName", f.name AS "folderName",
+        `SELECT c.id, c.content, c.ordinal, d.id AS "documentId", d.name AS "documentName", f.name AS "folderName",
                 (1 - (c.embedding <=> $3::vector))::float AS score
          FROM kb_chunk c
          JOIN kb_document d ON d.id = c.document_id
          LEFT JOIN kb_folder f ON f.id = d.folder_id
          WHERE c.tenant_id = $1
+           AND d.tenant_id = $1 AND d.status = 'READY'
+           AND (d.visibility = 'ALL' OR EXISTS (
+             SELECT 1 FROM kb_grant g WHERE g.document_id = d.id AND g.user_id = $4
+           ))
            AND c.document_id = ANY($2::text[])
            AND c.embedding IS NOT NULL
          ORDER BY c.embedding <=> $3::vector
@@ -363,6 +397,7 @@ export class KnowledgeService {
         tenantId,
         documentIds,
         vectorLiteral(embedText(query)),
+        userId,
       );
       return rows
         .filter((row) => row.score > 0.05)
@@ -372,6 +407,7 @@ export class KnowledgeService {
           row: {
             documentId: row.documentId,
             documentName: row.documentName,
+            ordinal: row.ordinal,
             folderName: row.folderName,
             snippet: snippetOf(row.content, query),
             score: row.score,
@@ -383,8 +419,71 @@ export class KnowledgeService {
   }
 }
 
+
+export function lexicalQueryVariants(query: string) {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  const variants = new Set<string>();
+  const add = (value: string) => {
+    const term = value.trim();
+    // Keep focused keywords; long whole-sentence probes rarely exist as substrings.
+    if (term.length >= 2 && term.length <= 32) variants.add(term);
+  };
+
+  // Title punctuation (·•) often appears in prompts/doc names but not body text.
+  const normalized = trimmed.replace(/[·•・‧]/g, '');
+  add(trimmed);
+  add(normalized);
+  for (const part of trimmed.split(/[·•・‧]+/)) add(part);
+
+  let work = normalized
+    .replace(/[？?！!。．.\s]+$/g, '')
+    .replace(/(是什么|是多少|有哪些|包含哪些|怎么样|如何|吗|呢)+$/g, '')
+    .trim();
+  add(work);
+
+  // Strip instruction wrappers models often append into the tool query.
+  // Keep 请结合/请依据 scopes tight so "请结合知识库分析 利基市场…" does not erase the noun.
+  work = work
+    .replace(/请(?:依据|结合)(?:官方)?知识库/g, ' ')
+    .replace(/请依据[^，。；;]{0,24}[，。；;]?/g, ' ')
+    .replace(/并给出[^，。；;]{0,24}[，。；;]?/g, ' ')
+    .replace(/用一句话[^，。；;]{0,24}[，。；;]?/g, ' ')
+    .replace(/一句话说明[^，。；;]{0,24}[，。；;]?/g, ' ')
+    .replace(/资料名称/g, ' ')
+    .replace(/《([^》]+)》/g, ' $1 ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  add(work);
+
+  const compact = work.replace(/[？?！!，,。．.\s：:、；;（）()【】\[\]《》"'“”‘’]/g, '').trim();
+  add(compact);
+
+  // Mid-sentence question/connective split → OR terms (整句 contains 失败时仍可命中短词).
+  for (const part of work.split(/(?:如何|怎么|怎样|有哪些|包含哪些|是什么|是多少|怎么样|以及|并且|能如何)/)) {
+    add(part);
+    add(part.replace(/[的地得]/g, ''));
+  }
+  for (const part of work.split(/[？?！!，,。．.\s：:、；;（）()【】\[\]《》"'“”‘’]+/)) {
+    add(part);
+  }
+
+  // Sliding CJK windows recover noun phrases like「利基市场」「本质特征」「方法论智囊」.
+  if (/[\u4e00-\u9fff]/.test(compact) && compact.length >= 4) {
+    for (const win of [4, 6]) {
+      if (compact.length < win) continue;
+      for (let i = 0; i + win <= Math.min(compact.length, 24); i += 1) {
+        add(compact.slice(i, i + win));
+      }
+    }
+  }
+
+  return [...variants].slice(0, 24);
+}
+
 function snippetOf(content: string, query: string) {
-  const idx = content.indexOf(query);
+  const needle = lexicalQueryVariants(query).find((term) => content.includes(term)) ?? query;
+  const idx = content.indexOf(needle);
   const start = idx >= 0 ? Math.max(0, idx - 40) : 0;
   const slice = content.slice(start, start + 180).replace(/\s+/g, ' ').trim();
   return start > 0 ? `…${slice}` : slice;

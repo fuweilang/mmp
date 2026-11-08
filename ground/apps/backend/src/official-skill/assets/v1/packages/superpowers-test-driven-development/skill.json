@@ -1,0 +1,18 @@
+{
+  "key": "superpowers-test-driven-development",
+  "name": "测试驱动开发指南",
+  "description": "按红绿重构流程组织开发；测试执行依赖项目环境。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/writing-good-tests.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

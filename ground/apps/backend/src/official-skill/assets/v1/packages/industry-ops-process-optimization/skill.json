@@ -1,0 +1,15 @@
+{
+  "key": "industry-ops-process-optimization",
+  "name": "业务流程优化",
+  "description": "梳理流程瓶颈、改进选项与衡量指标。",
+  "entry": "SKILL.md",
+  "category": "consulting",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

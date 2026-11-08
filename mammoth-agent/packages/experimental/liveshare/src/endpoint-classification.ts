@@ -42,6 +42,7 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'llm/listProviders': 'reader-global-read', // the page lists providers
   'session/canOpenWorkspacePath': 'reader-global-read', // the page asks whether a path can be opened
   'session/modelCatalog': 'reader-global-read', // the page reads the model catalog
+  'officialAgentGallery/list': 'reader-global-read', // the page lists official-gallery cards
 
   // ── reader-session-read ─────────────────────────────────────────────────────────────
   'commands/list': 'reader-session-read', // the page lists slash commands for a visible Session (also granted globally)
@@ -211,6 +212,20 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'userQuestions/answer': 'owner-only', // owner answers a pending question
   'userQuestions/attachWait': 'owner-only', // owner answers a pending question
   'llm/discoverModels': 'owner-only', // owner discovers models
+  'officialAgentGallery/create': 'owner-only', // owner starts an official-gallery Session; never a share viewer
+  'officialAgentGallery/catalogDetail': 'owner-only', // authenticated Ground account/tenant safe-display catalog; no share-viewer grant
+  'officialAgentGallery/createSkill': 'owner-only', // creates and freezes a task using owner account authority
+  'officialAgentGallery/downloadArtifact': 'owner-only', // managed object content requires task ownership/hash and current account; not a share attachment grant
+  'officialAgentGallery/expertCard': 'owner-only', // owner account authorized catalog, not viewer-global data
+  'officialAgentGallery/expertFacets': 'owner-only', // owner account catalog metadata, no independent viewer publication contract
+  'officialAgentGallery/favourite': 'owner-only', // mutates tenant+user private references
+  'officialAgentGallery/listSkillFacets': 'owner-only', // authenticated owner catalog compatibility endpoint
+  'officialAgentGallery/listSkills': 'owner-only', // authenticated owner skill catalog compatibility endpoint
+  'officialAgentGallery/pageExperts': 'owner-only', // authenticated account catalog/filter/page, no share-viewer catalog grant
+  'officialAgentGallery/pageSkills': 'owner-only', // authenticated account skill catalog/filter/page
+  'officialAgentGallery/preferences': 'owner-only', // tenant+user private favourites and genuine recent-use references
+  'officialAgentGallery/skillFacets': 'owner-only', // authenticated owner skill catalog metadata
+  'session/deleteTask': 'owner-only', // permanent owner task-record deletion, never reader mutation
   'agentPresets/list': 'owner-only', // owner agent presets
   'agentPresets/read': 'owner-only', // owner agent presets
   'agentPresets/select': 'owner-only', // owner agent presets

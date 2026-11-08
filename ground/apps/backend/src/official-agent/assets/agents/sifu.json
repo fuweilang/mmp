@@ -1,0 +1,21 @@
+{
+  "key": "sifu",
+  "kind": "GENERAL",
+  "name": "私域运营大师",
+  "summary": "私域成交与复购全流程",
+  "openingQuestions": [
+    "我有 2000 个企微好友但不活跃，怎么激活？",
+    "帮我设计一套新客加微后 7 天的成交 SOP。",
+    "老客复购率低，给我一套复购激活方案。"
+  ],
+  "toolScope": [],
+  "toolScopeNotes": "latest 无工具依赖；不虚构 search",
+  "promptFile": "prompts/sifu.md",
+  "batch": "B",
+  "publish": true,
+  "category": "sales",
+  "capabilities": [
+    "私域成交",
+    "复购运营"
+  ]
+}

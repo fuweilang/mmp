@@ -345,6 +345,7 @@
       "@mammoth-ai/mmp-client-ui-user-questions": ["./packages/client/ui-user-questions/src"],
       "@mammoth-ai/mmp-client-ui-trajectory": ["./packages/client/ui-trajectory/src"],
       "@mammoth-ai/mmp-client-ui-trajectory/types": ["./packages/client/ui-trajectory/src/types.ts"],
+      "@mammoth-ai/mmp-official-agent-gallery/types": ["./packages/preset/official-agent-gallery/src/types.ts"],
       "@mammoth-ai/mmp-client-ui-workspace": ["./packages/client/ui-workspace/src"],
       "@mammoth-ai/mmp-client-ui-theme": ["./packages/client/ui-theme/src"],
       "@mammoth-ai/mmp-client-ui-theme/brand-font.css": ["./packages/client/ui-theme/src/styles/brand-font.css"],

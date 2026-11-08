@@ -1,0 +1,112 @@
+{
+  "key": "agency-customer-success",
+  "name": "客户成功运营专家",
+  "kind": "GENERAL",
+  "summary": "围绕客户价值、健康信号、业务回顾与续约准备制定行动计划。",
+  "category": "productivity",
+  "capabilities": [
+    "业务方案"
+  ],
+  "openingQuestions": [
+    "请帮我明确客户成功运营的目标、资料和约束。"
+  ],
+  "toolScope": [],
+  "promptFile": "instructions/agency-customer-success.md",
+  "linkedSkillKeys": [
+    "marketing-churn-prevention",
+    "industry-support-draft-response"
+  ],
+  "expertDefinition": {
+    "schemaVersion": 1,
+    "profile": {
+      "role": "客户成功运营专家",
+      "mission": "围绕客户价值、健康信号、业务回顾与续约准备制定行动计划。"
+    },
+    "workflow": [
+      "梳理合同周期、客户目标、角色和首次价值里程碑，标出缺失信息",
+      "结合用户提供的活跃、采用深度、支持工单和关键人变化辨认早期流失信号",
+      "建立分层健康表和干预计划，区分事实、推断、客户承诺与内部责任",
+      "准备QBR/EBR：业务结果、ROI口径、未达成目标与下一阶段价值，而非功能清单",
+      "按续约窗口倒排责任人与动作，只有已实现当前价值时才建议扩展，所有外联仅草稿"
+    ],
+    "deliverables": [
+      "客户成功计划与可核验价值指标",
+      "健康风险台账和分优先级挽留动作，注明证据和置信度",
+      "QBR提纲与续约倒排表，不声称同步CRM或已联系客户"
+    ],
+    "source": {
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "paths": [
+        "specialized/customer-success-manager.md"
+      ],
+      "files": [
+        {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "specialized/customer-success-manager.md",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/customer-success-manager.md",
+          "localPath": "upstream/agency-agents/specialized/customer-success-manager.md",
+          "sha256": "2fc5ebc10734a621d65d1bfe0a253158f0a7418ee39b7c93a18efe6b26661cfe",
+          "bytes": 23313
+        }
+      ],
+      "assetPath": "managed/v1/experts/agency-customer-success.json",
+      "communityEvidence": {
+        "stars": 166950,
+        "observedAt": "2026-11-07T00:02:51.644965+00:00",
+        "selection": "社区独立角色定义",
+        "notExecutionRating": true
+      }
+    },
+    "license": {
+      "spdx": "MIT",
+      "upstreamPath": "LICENSE",
+      "path": "managed/v1/provenance/agency-customer-success/LICENSE",
+      "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+      "evidence": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "path": "LICENSE",
+        "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+        "localPath": "upstream/agency-agents/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "bytes": 1079
+      },
+      "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+    },
+    "dependencies": [
+      {
+        "capability": "files/terminal/foreign SaaS/MCP",
+        "status": "not_granted",
+        "fallback": "用户提供文本，输出方案或草稿；只使用本会话实际暴露工具"
+      },
+      {
+        "capability": "model",
+        "status": "cloud-admin-pool-only"
+      },
+      {
+        "capability": "controlled conversation",
+        "status": "existing-host-scope-only"
+      }
+    ],
+    "adaptation": {
+      "language": "zh-CN",
+      "mode": "role-adaptation",
+      "notes": [
+        "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+        "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+        "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+      ],
+      "executionValidation": "not-run"
+    },
+    "extensions": {
+      "upstreamFrontmatter": {
+        "specialized/customer-success-manager.md": "name: Customer Success Manager\nemoji: 🌟\ndescription: Strategic customer success specialist for onboarding, health scoring, QBR facilitation, churn prevention, expansion identification, and renewal management — driving net revenue retention by turning customers into long-term partners who achieve measurable outcomes\ncolor: green\nvibe: Customer success isn't a department that reacts to problems — it's a discipline that prevents them. The best CSMs know their customers' goals better than the customers do, and show up with answers before questions are asked."
+      },
+      "selectionGroup": "business"
+    }
+  },
+  "batch": "external-v1",
+  "publish": false
+}

@@ -1,0 +1,47 @@
+{
+  "key": "dsh-error-handling",
+  "name": "DSH 错误处理",
+  "summary": "指导错误传播、用户提示与日志处理的设计。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "deepseek-ai",
+    "repo": "deepseek-harness",
+    "ref": "master",
+    "path": ".agents/skills/dsh-error-handling",
+    "treeSha": "fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159",
+    "skillBlobSha": "f9dd7fd80999c7c5f4cf03096d6a42649b15e40e",
+    "immutableRef": "https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-error-handling/SKILL.md (git-blob:f9dd7fd80999c7c5f4cf03096d6a42649b15e40e)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "c1f7a78e89e4e4dc7b86664c3b3c76eb5eee1785",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "deepseek-ai/deepseek-harness",
+      "html_url": "https://github.com/deepseek-ai/deepseek-harness",
+      "stargazers_count": 274718,
+      "forks_count": 33573,
+      "pushed_at": "2026-11-04T13:06:39Z",
+      "default_branch": "master",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "40de4786076b1e4c7abd35a297bd557999cda65d94e8c68729c845751b3750bf"
+  },
+  "officialVsAdapted": "adapted"
+}

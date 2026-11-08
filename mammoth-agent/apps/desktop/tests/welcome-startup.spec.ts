@@ -26,6 +26,8 @@ const state = vi.hoisted(() => ({
   showWorkspace: vi.fn(),
   showInactiveWorkspace: vi.fn(),
   focusWorkspace: vi.fn(),
+  focusWelcome: vi.fn(),
+  focusApp: vi.fn(),
   moveTopWorkspace: vi.fn(),
   openDevTools: vi.fn(),
   closeWelcome: vi.fn(),
@@ -53,6 +55,8 @@ vi.mock('electron', () => ({
     name: 'Harness',
     requestSingleInstanceLock: () => true,
     setAsDefaultProtocolClient: vi.fn(),
+    removeAsDefaultProtocolClient: vi.fn(),
+    focus: state.focusApp,
     whenReady: () => Promise.resolve(),
     getLocale: () => 'en',
     getVersion: () => '1.0.0',
@@ -160,8 +164,8 @@ vi.mock('../src/welcome-window.ts', () => ({
     state.welcomeLocale = locale
     state.operations = operations
     await state.beforeWelcome()
-    return { once: vi.fn(), close: state.closeWelcome, isDestroyed: () => false,
-      show: vi.fn(), focus: vi.fn(), webContents: { send: vi.fn() } }
+    return { once: vi.fn(), close: state.closeWelcome, isDestroyed: () => false, isMinimized: () => false,
+      show: vi.fn(), focus: state.focusWelcome, webContents: { send: vi.fn() } }
   },
 }))
 
@@ -182,6 +186,8 @@ it.each([false, true])('starts welcome onboarding without carrying update focus 
   state.accountState.mockResolvedValue({ status: 'signed-out', attempt: null, links: { usageUrl: '', topUpUrl: '' } })
   if (updated) vi.stubGlobal('process', { ...process, platform: 'win32', argv: ['desktop', '--updated'] })
   vi.useFakeTimers()
+  vi.stubEnv('MMP_DESKTOP_DEV_APP', updated ? undefined : '1')
+  const launchUrl = updated ? 'mmp://open' : 'mmp-dev://open'
   vi.stubEnv('MMP_CLIENT_VERSION', '1.2.3')
   vi.stubEnv('MMP_DESKTOP_DEV_PROJECT_DIR', '/development-profile')
   vi.stubEnv('MMP_DESKTOP_NODE_BINARY', '/runtime/node')
@@ -198,7 +204,7 @@ it.each([false, true])('starts welcome onboarding without carrying update focus 
   state.beforeWelcome.mockReturnValueOnce(loading.promise)
   const activate = () => {
     state.appListeners.get('second-instance')!()
-    state.appListeners.get('open-url')!({ preventDefault: vi.fn() }, 'mmp://open')
+    state.appListeners.get('open-url')!({ preventDefault: vi.fn() }, launchUrl)
   }
   await import('../src/main.ts')
   await vi.waitFor(() => { expect(state.beforeRead).toHaveBeenCalledOnce() })
@@ -287,17 +293,14 @@ it.each([false, true])('starts welcome onboarding without carrying update focus 
   state.accountListener!({ ...account, status: 'signed-out', attempt: null })
   await vi.advanceTimersByTimeAsync(0)
   expect(await state.operations!.takeNotice()).toBeUndefined()
-  state.showWorkspace.mockClear()
-  state.focusWorkspace.mockClear()
-  vi.stubEnv('MMP_DESKTOP_OPEN_DEVTOOLS', '1')
+  state.focusWelcome.mockClear()
   state.accountListener!({ ...account, status: 'credential-stored', attempt: { id: attemptId, phase: 'succeeded' } })
-  await vi.waitFor(() => { expect(state.showInactiveWorkspace).toHaveBeenCalledOnce() })
-  expect(state.showWorkspace).not.toHaveBeenCalled()
-  expect(state.focusWorkspace).not.toHaveBeenCalled()
-  expect(state.moveTopWorkspace).not.toHaveBeenCalled()
-  expect(state.openDevTools).not.toHaveBeenCalled()
-  state.appListeners.get('open-url')!({ preventDefault: vi.fn() }, 'mmp://open')
-  expect(state.showWorkspace).toHaveBeenCalledOnce()
-  expect(state.focusWorkspace).toHaveBeenCalledOnce()
+  expect(state.focusWelcome).toHaveBeenCalledOnce()
+  if (process.platform === 'darwin') expect(state.focusApp).toHaveBeenCalledWith({ steal: true })
 
+  const wrongLaunchUrl = updated ? 'mmp-dev://open' : 'mmp://open'
+  state.appListeners.get('open-url')!({ preventDefault: vi.fn() }, wrongLaunchUrl)
+  expect(state.focusWelcome).toHaveBeenCalledOnce()
+  state.appListeners.get('open-url')!({ preventDefault: vi.fn() }, launchUrl)
+  expect(state.focusWelcome).toHaveBeenCalledTimes(2)
 })

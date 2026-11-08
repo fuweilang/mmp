@@ -1,5 +1,7 @@
 /** Local Web identity router. Each Ground user+enterprise gets an independent Harness process and home. */
 import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import type { Socket } from 'node:net'
@@ -72,7 +74,9 @@ export async function startGroundWebRouter(options: {
     const key = groundWebPartition(ground.origin, identity)
     let worker = workers.get(key)
     if (worker !== undefined) return worker
-    if (workers.size >= options.maxWorkers) return Promise.reject(new Error('本机同时在线账号已达到上限，请停止服务后调整 MMP_WEB_MAX_IDENTITIES。'))
+    if (workers.size >= options.maxWorkers) {
+      return Promise.reject(new GroundWebSessionError(503, '网页版已达到同时运行的账号环境上限，请联系管理员。'))
+    }
     worker = options.startWorker(identity, origin, lifetime.signal)
     workers.set(key, worker)
     void worker.then(value => {
@@ -87,6 +91,82 @@ export async function startGroundWebRouter(options: {
     if (res.headersSent) { res.destroy(); return }
     res.writeHead(status, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(text)
   }
+  const sendHtml = (res: ServerResponse, html: string): void => {
+    if (res.headersSent) { res.destroy(); return }
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }).end(html)
+  }
+  /** PWA install metadata the browser fetches without session cookies; must stay anonymous. */
+  const PUBLIC_PWA_ASSETS: Record<string, string> = {
+    '/manifest.webmanifest': 'application/manifest+json; charset=utf-8',
+    '/icon-192.png': 'image/png',
+    '/icon-512.png': 'image/png',
+    '/icon-maskable-512.png': 'image/png',
+  }
+  const webPublicRoot = join(import.meta.dirname, '../apps/web/public')
+  const servePublicPwaAsset = async (req: IncomingMessage, res: ServerResponse): Promise<boolean> => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return false
+    let pathname = ''
+    try { pathname = new URL(req.url ?? '/', origin || 'http://127.0.0.1').pathname } catch { return false }
+    const contentType = PUBLIC_PWA_ASSETS[pathname]
+    if (contentType === undefined) return false
+    try {
+      const body = await readFile(join(webPublicRoot, pathname.slice(1)))
+      if (res.headersSent) { res.destroy(); return true }
+      res.writeHead(200, { 'content-type': contentType, 'cache-control': 'no-cache' })
+      if (req.method === 'HEAD') res.end()
+      else res.end(body)
+      return true
+    } catch {
+      send(res, 404, 'Not found')
+      return true
+    }
+  }
+  /** First navigation paints immediately while the isolated Host boots. */
+  const warmupHtml = `<!doctype html><html lang="zh-CN"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>猛犸AI</title>
+<style>
+:root{color-scheme:light}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f5f6fb;color:#333946;font:14px/1.6 system-ui,-apple-system,"PingFang SC",sans-serif}
+main{text-align:center;padding:32px}.spinner{width:40px;height:40px;margin:0 auto;border:3px solid #dfe5ef;border-top-color:#5b5bd6;border-radius:50%;animation:spin .8s linear infinite}
+h1{font-size:18px;font-weight:600;margin:16px 0 6px}p{color:#667085;margin:0}
+button{margin-top:20px;border:1px solid #dfe5ef;background:#fff;color:#333946;padding:8px 18px;cursor:pointer}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+<main><div class="spinner"></div><h1>正在启动你的智能体…</h1>
+<p id="status">首次进入需要几秒，请稍候</p>
+<button id="retry" hidden onclick="location.reload()">重新加载</button></main>
+<script>
+const status=document.getElementById('status'),retry=document.getElementById('retry');
+const started=Date.now();
+async function probe(){
+  try{
+    const response=await fetch('/.mmp/ready',{cache:'no-store'});
+    if(response.ok){location.replace('/');return}
+    if(response.status===401||response.status===403){location.replace('/');return}
+    if(response.status>=500){status.textContent='启动失败，请稍后重试';retry.hidden=false;return}
+    throw new Error('not ready');
+  }catch{
+    if(Date.now()-started>45000){status.textContent='启动超时，请刷新重试';retry.hidden=false;return}
+    status.textContent='正在启动你的智能体…';
+    setTimeout(probe,600);
+  }
+}
+probe();
+</script></html>`
+  const isDocumentRequest = (req: IncomingMessage): boolean => req.method === 'GET'
+    && (req.headers.accept ?? '').includes('text/html')
+  const warmupProbe = (req: IncomingMessage): boolean => {
+    try { return new URL(req.url ?? '/', origin).pathname === '/.mmp/ready' } catch { return false }
+  }
+  /** Wait briefly for an already-warm Host; a cold start gets the progress page instead of a blank tab. */
+  const readyOrPending = (worker: Promise<IdentityWebWorker>): Promise<'ready' | 'pending'> =>
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { resolve('pending') }, 500)
+      void worker.then(() => { clearTimeout(timer); resolve('ready') }, (error: unknown) => {
+        clearTimeout(timer)
+        reject(error instanceof Error ? error : new Error(String(error)))
+      })
+    })
   const redirect = (res: ServerResponse): void => {
     res.writeHead(303, { location: loginUrl(), 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' }).end()
   }
@@ -98,13 +178,26 @@ export async function startGroundWebRouter(options: {
     void (async () => {
       if (!trusted(req)) { send(res, 403, '请求来源不受信任'); return }
       try {
+        if (await servePublicPwaAsset(req, res)) return
         const identity = await identify(req)
         if (identity === undefined) {
           if (rootRequest(req)) redirect(res)
           else send(res, 401, '请先从 Web 首页登录')
           return
         }
-        const worker = await workerFor(identity)
+        const pending = workerFor(identity)
+        if (warmupProbe(req)) {
+          await pending
+          if (!res.destroyed) res.writeHead(204, { 'cache-control': 'no-store' }).end()
+          return
+        }
+        if (rootRequest(req) && isDocumentRequest(req)) {
+          if (await readyOrPending(pending) === 'pending') {
+            sendHtml(res, warmupHtml)
+            return
+          }
+        }
+        const worker = await pending
         if (lifetime.signal.aborted || res.destroyed) return
         proxy.web(req, res, { target: worker.origin }, () => { send(res, 502, '智能体运行环境暂不可用，请刷新重试。') })
       } catch (error) {

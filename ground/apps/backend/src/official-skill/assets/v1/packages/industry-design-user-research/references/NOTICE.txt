@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/design/skills/user-research/SKILL.md (git-blob:7f1b681e377b0e3471e5a686b6fe0e1af32261a8)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: design/skills/user-research
+No third-party scripts are executed or shipped in this managed package.

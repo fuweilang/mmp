@@ -61,7 +61,14 @@ export async function defaultWorkspaceDirectory(
         ], signal, 'hidden'))
         break
       case 'linux':
-        ({ stdout } = await run('xdg-user-dir', ['DOCUMENTS'], signal, 'hidden'))
+        try {
+          ({ stdout } = await run('xdg-user-dir', ['DOCUMENTS'], signal, 'hidden'))
+        } catch (error: unknown) {
+          // Minimal server images omit xdg-user-dir; use the conventional
+          // per-user Documents location instead of making first use unusable.
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+          stdout = paths.join(internals.home ?? homedir(), 'Documents')
+        }
         break
       default:
         throw new Error(`system Documents directory is unavailable on ${platform}`)

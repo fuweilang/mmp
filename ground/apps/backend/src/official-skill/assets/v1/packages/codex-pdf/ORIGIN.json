@@ -1,0 +1,44 @@
+{
+  "key": "codex-pdf",
+  "name": "PDF 文档处理指南",
+  "summary": "阅读、生成和检查 PDF；相关 Python 库或渲染工具需当前环境具备。",
+  "category": "files",
+  "userCategoryLabel": "文件处理",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=2",
+  "source": {
+    "owner": "openai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/.curated/pdf",
+    "treeSha": "49f948faa9258a0c61caceaf225e179651397431",
+    "skillBlobSha": "fd5d56058f10202e4f50a30bc2906f39696024a1",
+    "immutableRef": "https://github.com/openai/skills/blob/main/skills/.curated/pdf/SKILL.md (git-blob:fd5d56058f10202e4f50a30bc2906f39696024a1)",
+    "licenseEvidence": [
+      {
+        "path": "skills/.curated/pdf/LICENSE.txt",
+        "blobSha": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/skills",
+      "html_url": "https://github.com/openai/skills",
+      "stargazers_count": 28549,
+      "forks_count": 1985,
+      "pushed_at": "2026-10-28T17:31:41Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [
+      "agents/openai.yaml",
+      "assets/pdf.png"
+    ],
+    "originalBodySha256": "dcc3d2d2994abb5b48fff2fa5f8c1a5e6898c6803b9792292768dd675108f28f"
+  },
+  "officialVsAdapted": "adapted"
+}

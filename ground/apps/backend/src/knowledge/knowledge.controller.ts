@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -19,6 +21,13 @@ import { JwtGuard } from '../auth/jwt.guard';
 import { CurrentTenantId, CurrentUser } from '../auth/current-user';
 import { CreateFolderDto, PatchDocumentDto } from './dto/knowledge.dto';
 import { KnowledgeService } from './knowledge.service';
+import { IsString, MaxLength } from 'class-validator';
+
+class RetrieveKnowledgeDto {
+  @IsString()
+  @MaxLength(2000)
+  query!: string;
+}
 
 @Controller('kb')
 @UseGuards(JwtGuard)
@@ -32,6 +41,13 @@ export class KnowledgeController {
     @Query('q') q?: string,
   ) {
     return this.knowledge.search(user, tenantId, q ?? '');
+  }
+
+  @Post('retrieve')
+  @HttpCode(200)
+  @Header('Cache-Control', 'private, no-store')
+  retrieve(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null, @Body() body: RetrieveKnowledgeDto) {
+    return this.knowledge.search(user, tenantId, body.query);
   }
 
   @Get('folders')
@@ -109,6 +125,17 @@ export class KnowledgeController {
     return new StreamableFile(createReadStream(info.abs), {
       type: info.mime,
       disposition: `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`,
+    });
+  }
+
+  @Get('sources/:id')
+  @Header('Cache-Control', 'private, no-store')
+  async source(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null, @Param('id') id: string) {
+    const info = await this.knowledge.file(user, tenantId, id, true);
+    const encoded = encodeURIComponent(info.name);
+    return new StreamableFile(createReadStream(info.abs), {
+      type: 'application/octet-stream',
+      disposition: `attachment; filename*=UTF-8''${encoded}`,
     });
   }
 }

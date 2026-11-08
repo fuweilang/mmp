@@ -1,0 +1,15 @@
+{
+  "key": "web-design-teroop",
+  "name": "网页设计指导",
+  "description": "A design-first architect that generates, persists, and maintains a comprehensive design document (Style, Color, Typography, Icons, Logo) to…",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+Source: https://github.com/openai/skills/blob/main/skills/.curated/security-best-practices/SKILL.md (git-blob:45ccbd8d671c4c4cc3e7e0645a16a3f80ec50de7)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=1
+Original path: skills/.curated/security-best-practices
+No third-party scripts are executed or shipped in this managed package.

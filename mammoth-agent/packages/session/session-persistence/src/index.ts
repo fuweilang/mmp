@@ -186,6 +186,14 @@ export abstract class SessionPersistence extends Service {
    */
   abstract flush(): Promise<void>
 
+  /** Permanently remove only this backend's owned task log generations.
+   * Callers must first stop/dispose its Agent and deny new work. Backends that
+   * cannot prove ownership refuse; shared attachments and workspace files are never swept.
+   */
+  remove(_id: SessionId): Promise<void> {
+    return Promise.reject(new Error('TASK_DELETE_UNSUPPORTED: this storage backend cannot safely remove task records'))
+  }
+
   /**
    * Observe one stored session without reading its event log or taking
    * ownership.

@@ -1,3 +1,4 @@
+import { underArchivedSession } from './archived-session-gate.ts'
 /** Session commands whose activation policy is explicit at each Remote method. */
 
 import { ensureRoutableSelection, modelAvailable } from './catalog.ts'
@@ -182,6 +183,25 @@ export class SessionCommandController {
    * @param request - Session identity and proposed title.
    * @returns the accepted title and durable event sequence.
    */
+  async deleteTask(request: { readonly sessionId: SessionId; readonly confirmation: 'permanent-delete' }): Promise<{ readonly deleted: true; readonly retainedSharedObjects: true }> {
+    if (request.confirmation !== 'permanent-delete') throw new RemoteError('gateway/bad-request', 'Deletion requires explicit permanent-delete confirmation', {})
+    const persistence = this.ctx.get('sessionPersistence')
+    if (persistence === undefined) throw new RemoteError('gateway/bad-request', 'Task deletion is unavailable on this Host', {})
+    const before = this.ctx.sessions.get(request.sessionId)?.header ?? (await persistence.stat(request.sessionId))?.header
+    if (before?.origin === 'subagent') throw new RemoteError('gateway/bad-request', 'Delete the owning task, not a subtask', {})
+    await this.ctx.workspaceRegistry.deleteSession(request.sessionId, async () => {
+      if(!this.ctx.remoteAccess.allows({kind:'session',id:request.sessionId}))throw new RemoteError('gateway/bad-request','Task permission was revoked',{})
+      await this.agents.disposeOwnedTask(request.sessionId)
+      await this.ctx.parallel('task/dispose-owned', request.sessionId)
+      if (this.ctx.agents.get(request.sessionId) !== undefined || this.ctx.sessions.get(request.sessionId) !== undefined) throw new RemoteError('gateway/bad-request', 'Task still has an active owner; stop it and retry deletion', {})
+      if(!this.ctx.remoteAccess.allows({kind:'session',id:request.sessionId}))throw new RemoteError('gateway/bad-request','Task permission was revoked',{})
+      await persistence.remove(request.sessionId)
+      if (await persistence.stat(request.sessionId) !== undefined) throw new Error('TASK_DELETE_INCOMPLETE')
+    })
+    this.ctx.emit('api-session/removed', request.sessionId)
+    return { deleted: true, retainedSharedObjects: true }
+  }
+
   async rename(request: SessionRenameRequest): Promise<SessionRenameValue> {
     const agent = await this.resolveAgent(request.sessionId)
     const titles = this.ctx.get('sessionTitle')
@@ -304,6 +324,9 @@ export class SessionCommandController {
   async prompt(request: SessionPromptRequest, source: MessageSource): Promise<SessionPromptValue> {
     const agent = await this.resolveAgent(request.sessionId)
     await this.healModelSelection(agent)
+    const selectionCheck = await this.ctx.serial('task/prepare-prompt', agent, request)
+    const needsInterpreter=agent.session.snapshotEvents().some(e=>['official-gallery/composition','official-gallery/attempt'].includes(e.type))
+    if ((request.catalogSelection !== undefined||needsInterpreter) && selectionCheck !== 'handled') throw new RemoteError('gateway/bad-request', 'TASK_SELECTION_UNSUPPORTED', {})
     if (hasPromptRequest(agent, request.requestId)) return { accepted: true }
     const admission = resolvePromptFileReceipts(
       request.content,
@@ -335,6 +358,12 @@ export class SessionCommandController {
             { sessionId: agent.id },
           )
         }
+        const prepared = await this.ctx.serial('task/prepare-prompt', agent, request, message)
+        if (request.catalogSelection !== undefined && prepared !== 'handled') throw new RemoteError('gateway/bad-request', 'TASK_SELECTION_UNSUPPORTED', {})
+        if(this.ctx.agents.get(agent.id)!==agent)throw new RemoteError('session/not-found','Task was disposed during admission',{sessionId:agent.id})
+        if(this.ctx.get('workspaceRegistry')&&underArchivedSession(this.ctx,agent))throw new RemoteError('session/agent-busy','Task is archived',{reason:'TASK_ARCHIVED'})
+        const access=this.ctx.get('remoteAccess');if(access&&!access.allows({kind:'session',id:agent.id}))throw new RemoteError('gateway/bad-request','Task permission was revoked',{})
+        if (hasPromptRequest(agent, request.requestId)) return { accepted: true }
         using binding = this.ctx.fileUploads.bindPrompt(agent, admission.receiptIds, request.requestId)
         if (request.mode === 'steer') agent.steer(message)
         else agent.followup(message)
@@ -348,7 +377,7 @@ export class SessionCommandController {
       }
       return { accepted: true }
     }
-    return hasImage ? this.agents.serializeImageAdmission(agent, admit) : admit()
+    return this.agents.serializeImageAdmission(agent, admit)
   }
 
   /**
@@ -359,8 +388,18 @@ export class SessionCommandController {
     const current = agent.model.current()
     if (current === undefined) return
     const next = await ensureRoutableSelection(this.ctx, current)
-    if (next.provider === current.provider && next.model === current.model) return
-    const selected: AgentModelSelection = { provider: next.provider, model: next.model }
+    if (
+      next.provider === current.provider
+      && next.model === current.model
+      && next.reasoningEffort === current.reasoningEffort
+    ) return
+    const selected: AgentModelSelection = {
+      provider: next.provider,
+      model: next.model,
+      ...next.reasoningEffort === undefined
+        ? {}
+        : { reasoningEffort: ReasoningEffortId(next.reasoningEffort) },
+    }
     agent.model.select(selected)
     this.ctx.logger.info(
       `session-controller: healed model ${current.provider}/${current.model} → ${next.provider}/${next.model}`,
@@ -468,6 +507,7 @@ export class SessionCommandController {
         break
       }
       case 'steer':
+        await this.ctx.parallel('task/check-queue-steer',agent,message)
         agent.inbox.remove(request.itemId)
         agent.steer(message)
         break
@@ -578,3 +618,7 @@ function hasPromptRequest(agent: Agent, requestId: SessionRequestId): boolean {
     return source.kind === 'user' && 'rpcId' in source && source.rpcId === requestId
   })
 }
+
+declare module '@mammoth-ai/cordis' { interface Events { 'task/prepare-prompt'(agent: Agent, request: unknown, message?: UserMessage): Promise<'handled' | undefined> } }
+
+declare module '@mammoth-ai/cordis' { interface Events { 'task/check-queue-steer'(agent: Agent, message: UserMessage): Promise<void> } }

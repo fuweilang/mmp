@@ -1,0 +1,47 @@
+{
+  "key": "industry-ops-risk-assessment",
+  "name": "经营风险梳理",
+  "summary": "根据已提供事实组织风险矩阵、应对措施与责任人。",
+  "category": "consulting",
+  "userCategoryLabel": "企业咨询",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "operations/skills/risk-assessment",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "80518b6ce0c094debb53226df6188443ee61de0f",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/operations/skills/risk-assessment/SKILL.md (git-blob:80518b6ce0c094debb53226df6188443ee61de0f)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "f53c679acba79cbb292961fd9fb9e87ca20eab22",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "83d79a5f3526c4f6596d3cbbffa109bbf3076db1de655aecf7306ba7e55e2101"
+  },
+  "officialVsAdapted": "adapted"
+}

@@ -1,0 +1,15 @@
+{
+  "key": "industry-product-write-spec",
+  "name": "产品规格编写",
+  "description": "把用户需求整理成范围、交互、约束与验收条件。",
+  "entry": "SKILL.md",
+  "category": "consulting",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

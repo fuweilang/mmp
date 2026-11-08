@@ -1,0 +1,47 @@
+{
+  "key": "dsh-translate-docs",
+  "name": "DSH 文档翻译",
+  "summary": "根据文档结构与术语规范翻译 DSH 技术资料。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "deepseek-ai",
+    "repo": "deepseek-harness",
+    "ref": "master",
+    "path": ".agents/skills/dsh-translate-docs",
+    "treeSha": "fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159",
+    "skillBlobSha": "6ff2650c74c7f581e6ff7f095b36eb82584c785c",
+    "immutableRef": "https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-translate-docs/SKILL.md (git-blob:6ff2650c74c7f581e6ff7f095b36eb82584c785c)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "c1f7a78e89e4e4dc7b86664c3b3c76eb5eee1785",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "deepseek-ai/deepseek-harness",
+      "html_url": "https://github.com/deepseek-ai/deepseek-harness",
+      "stargazers_count": 274718,
+      "forks_count": 33573,
+      "pushed_at": "2026-11-04T13:06:39Z",
+      "default_branch": "master",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "db7b30158b27f09c8dc1eb73df630849c1e6e93348f2ca8f2893032b44a7b36f"
+  },
+  "officialVsAdapted": "adapted"
+}

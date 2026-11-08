@@ -1,0 +1,39 @@
+{
+  "key": "superpowers-systematic-debugging",
+  "name": "系统化问题排查",
+  "description": "复现、形成假设、收集证据，再进行最小修复。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/CREATION-LOG.md"
+    },
+    {
+      "path": "references/condition-based-waiting.md"
+    },
+    {
+      "path": "references/defense-in-depth.md"
+    },
+    {
+      "path": "references/root-cause-tracing.md"
+    },
+    {
+      "path": "references/test-academic.md"
+    },
+    {
+      "path": "references/test-pressure-1.md"
+    },
+    {
+      "path": "references/test-pressure-2.md"
+    },
+    {
+      "path": "references/test-pressure-3.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

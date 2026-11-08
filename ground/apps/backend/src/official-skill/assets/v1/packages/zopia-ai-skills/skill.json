@@ -1,0 +1,30 @@
+{
+  "key": "zopia-ai-skills",
+  "name": "zopia-api",
+  "description": "Drive AI video production via the Zopia API: create projects, configure styles, chat with the Agent to generate screenplays/characters/stor…",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/API_REFERENCE.md"
+    },
+    {
+      "path": "references/EXAMPLES.md"
+    },
+    {
+      "path": "references/README.md"
+    },
+    {
+      "path": "references/README_CN.md"
+    },
+    {
+      "path": "references/SETTINGS_REFERENCE.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

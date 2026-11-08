@@ -1,0 +1,24 @@
+{
+  "key": "marketing-churn-prevention",
+  "name": "客户流失预防",
+  "description": "梳理流失信号、挽留方案与续费体验改进。",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evals/evals.json"
+    },
+    {
+      "path": "references/cancel-flow-patterns.md"
+    },
+    {
+      "path": "references/dunning-playbook.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

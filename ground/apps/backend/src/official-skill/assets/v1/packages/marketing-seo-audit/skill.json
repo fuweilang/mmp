@@ -1,0 +1,39 @@
+{
+  "key": "marketing-seo-audit",
+  "name": "SEO 诊断清单",
+  "description": "审视站点资料中的技术与内容 SEO 问题，外部指标需另行提供。",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evals/evals.json"
+    },
+    {
+      "path": "references/ai-writing-detection.md"
+    },
+    {
+      "path": "references/international-seo.md"
+    },
+    {
+      "path": "references/local-seo-pages-and-measurement.md"
+    },
+    {
+      "path": "references/local-seo-profile-and-citations.md"
+    },
+    {
+      "path": "references/local-seo.md"
+    },
+    {
+      "path": "references/rankings-push.md"
+    },
+    {
+      "path": "references/title-tags.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

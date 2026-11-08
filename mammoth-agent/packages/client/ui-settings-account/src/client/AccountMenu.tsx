@@ -71,11 +71,11 @@ export function AccountMenu({
   const showBilling = signedIn && billingEnabled
   useEffect(() => { if (signedIn) refreshBilling?.() }, [signedIn, refreshBilling])
   const platformAdmin = isPlatformAdmin || identity?.platformAdmin === true
-  const role = platformAdmin ? t('rolePlatformAdmin')
-    : identity?.role === 'OWNER' || identity?.role === 'ADMIN' ? t('roleEnterpriseAdmin')
-      : identity?.role === 'MEMBER' ? t('roleMember') : t('identityLoading')
-  const company = platformAdmin ? t('platformWorkspace') : identity?.company ?? t('companyUnavailable')
+  // Real enterprise names stay visible; hide the redundant platform-workspace fallback.
+  const companyLabel = !platformAdmin && identity?.company ? identity.company : null
   const phone = displayAccountPhone(identity?.phone ?? (profile?.status === 'ready' ? profile.value.contact : null))
+  // Keep phone next to the display name only when it adds a distinct contact line.
+  const phoneBesideName = phone && phone !== label ? phone : null
   const allowanceStatus = !billingEnabled || billingCoins === null ? t('allowanceUnknown')
     : billingCoins > 0 ? t('allowanceNormal') : t('allowanceEmpty')
   return <div ref={anchor} className={css.root} data-inset={signedIn && wide}>
@@ -86,7 +86,7 @@ export function AccountMenu({
       anchor={anchor} title={t('bonusNoticeTitle')} closeLabel={t('close')}
       onShown={bonusNoticeShown} onDismiss={bonusNoticeDismissed} />}
     <Menu open={open} side="top" portal autoFocus className={css.anchor} listClassName={signedIn ? css.accountPanel : css.signedOutMenu}
-      anchor={<button ref={trigger} type="button" className={css.trigger} data-collapsed={!wide} data-signed-out={!signedIn} aria-label={t('menu')}
+      anchor={<button ref={trigger} type="button" className={css.trigger} data-collapsed={!wide} data-signed-out={!signedIn} data-has-company={Boolean(companyLabel) || undefined} aria-label={t('menu')}
         aria-haspopup="menu" aria-expanded={open} onClick={() => { if (!open && signedIn) refreshBilling?.(); setOpen(value => !value) }}>
         {signedIn
           ? <span className={css.avatar} data-avatar-status={account.avatar?.status}>
@@ -94,8 +94,10 @@ export function AccountMenu({
           </span>
           : <IconEllipsisOutlineMedium size={14} />}
         {wide && (signedIn ? <>
-          <span className={css.identity}><span className={css.label}>{label}</span>
-            <span className={css.subtitle} title={company}>{company}</span></span>
+          <span className={css.identity}>
+            <span className={css.label}>{label}</span>
+            {companyLabel && <span className={css.subtitle} title={companyLabel}>{companyLabel}</span>}
+          </span>
           <span className={css.chevron}><IconChevronDownOutlineMedium size={14} /></span>
         </> : <span className={css.label}>{t('more')}</span>)}
       </button>}
@@ -116,10 +118,11 @@ export function AccountMenu({
         <div className={css.panelHeader} role="presentation">
           <span className={css.panelAvatar}><AccountAvatar avatar={account.avatar} avatarFailed={avatarFailed} /></span>
           <div className={css.panelIdentity}>
-            <strong className={css.label}>{label}</strong>
-            {phone && <span className={css.phone}>{phone}</span>}
-            <span className={css.company} title={company}>{company}</span>
-            <span className={css.role}>{role}</span>
+            <div className={css.panelNameRow}>
+              <strong className={css.label}>{label}</strong>
+              {phoneBesideName && <span className={css.phone}>{phoneBesideName}</span>}
+            </div>
+            {companyLabel && <span className={css.company} title={companyLabel}>{companyLabel}</span>}
           </div>
         </div>
         {!platformAdmin && <div className={css.allowance} role="presentation">

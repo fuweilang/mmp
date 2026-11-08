@@ -1,0 +1,113 @@
+{
+  "key": "agency-ui-system",
+  "name": "界面设计系统专家",
+  "kind": "GENERAL",
+  "summary": "依据品牌和使用场景规划tokens、组件状态与开发交接规格。",
+  "category": "expertise",
+  "capabilities": [
+    "工程咨询"
+  ],
+  "openingQuestions": [
+    "请帮我明确界面设计系统的目标、资料和约束。"
+  ],
+  "toolScope": [],
+  "promptFile": "instructions/agency-ui-system.md",
+  "linkedSkillKeys": [
+    "brand-guidelines",
+    "frontend-design",
+    "industry-design-accessibility-review"
+  ],
+  "expertDefinition": {
+    "schemaVersion": 1,
+    "profile": {
+      "role": "界面设计系统专家",
+      "mission": "依据品牌和使用场景规划tokens、组件状态与开发交接规格。"
+    },
+    "workflow": [
+      "明确受众、核心任务、品牌规范与当前组件资产",
+      "整理颜色、字号、间距、圆角和对比度的token使用规则",
+      "定义基础与组合组件的默认/hover/focus/disabled/loading/error状态",
+      "给出不同容器宽度的布局、内容溢出和键盘交互策略",
+      "形成组件规格、尺寸和资源交接，列出需要人工视觉点检的差异"
+    ],
+    "deliverables": [
+      "设计基础与token引用表",
+      "组件/状态/响应式规格与示意代码",
+      "开发交接和可访问性验收清单，未制作的设计文件不假称已生成"
+    ],
+    "source": {
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "paths": [
+        "design/design-ui-designer.md"
+      ],
+      "files": [
+        {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "design/design-ui-designer.md",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/design/design-ui-designer.md",
+          "localPath": "upstream/agency-agents/design/design-ui-designer.md",
+          "sha256": "4dc51255ffcb47e2bf4289a7d49a7cc224238af759f9e6e3c56771c698575d6d",
+          "bytes": 13436
+        }
+      ],
+      "assetPath": "managed/v1/experts/agency-ui-system.json",
+      "communityEvidence": {
+        "stars": 166950,
+        "observedAt": "2026-11-07T00:02:51.652245+00:00",
+        "selection": "社区独立角色定义",
+        "notExecutionRating": true
+      }
+    },
+    "license": {
+      "spdx": "MIT",
+      "upstreamPath": "LICENSE",
+      "path": "managed/v1/provenance/agency-ui-system/LICENSE",
+      "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+      "evidence": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "path": "LICENSE",
+        "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+        "localPath": "upstream/agency-agents/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "bytes": 1079
+      },
+      "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+    },
+    "dependencies": [
+      {
+        "capability": "files/terminal/foreign SaaS/MCP",
+        "status": "not_granted",
+        "fallback": "用户提供文本，输出方案或草稿；只使用本会话实际暴露工具"
+      },
+      {
+        "capability": "model",
+        "status": "cloud-admin-pool-only"
+      },
+      {
+        "capability": "controlled conversation",
+        "status": "existing-host-scope-only"
+      }
+    ],
+    "adaptation": {
+      "language": "zh-CN",
+      "mode": "role-adaptation",
+      "notes": [
+        "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+        "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+        "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+      ],
+      "executionValidation": "not-run"
+    },
+    "extensions": {
+      "upstreamFrontmatter": {
+        "design/design-ui-designer.md": "name: UI Designer\ndescription: Expert UI designer specializing in visual design systems, component libraries, and pixel-perfect interface creation. Creates beautiful, consistent, accessible user interfaces that enhance UX and reflect brand identity\ncolor: purple\nemoji: 🎨\nvibe: Creates beautiful, consistent, accessible interfaces that feel just right."
+      },
+      "selectionGroup": "development"
+    }
+  },
+  "batch": "external-v1",
+  "publish": false
+}

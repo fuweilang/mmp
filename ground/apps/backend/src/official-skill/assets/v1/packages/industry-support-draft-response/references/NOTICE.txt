@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/customer-support/skills/draft-response/SKILL.md (git-blob:3fd6fdc027fedba01c48958a6e962656331df131)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: customer-support/skills/draft-response
+No third-party scripts are executed or shipped in this managed package.

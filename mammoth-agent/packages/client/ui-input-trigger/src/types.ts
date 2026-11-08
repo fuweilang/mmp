@@ -47,6 +47,8 @@ export type InputTriggerCandidateIcon = 'file' | 'folder' | 'session'
 
 /** One menu candidate. Pure display data — zero behavior declaration. */
 export interface InputTriggerCandidate {
+  /** Checkable composer-option state, independent of the keyboard highlight. */
+  readonly checked?: boolean
   /** Identity: the pick payload, the exact-match key, and the first search key. */
   readonly name: string
   /**

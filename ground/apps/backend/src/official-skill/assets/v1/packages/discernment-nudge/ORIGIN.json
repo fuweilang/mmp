@@ -1,0 +1,17 @@
+{
+  "key": "discernment-nudge",
+  "name": "审慎判断提醒",
+  "summary": ">",
+  "category": "common",
+  "userCategoryLabel": "通用协作",
+  "references": [],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/discernment-nudge",
+    "immutableRef": "github:anthropics/skills@main:skills/discernment-nudge#1b42489bae8f"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

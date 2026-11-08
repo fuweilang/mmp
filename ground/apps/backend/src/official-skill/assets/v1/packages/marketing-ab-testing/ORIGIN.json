@@ -1,0 +1,63 @@
+{
+  "key": "marketing-ab-testing",
+  "name": "A/B 实验设计",
+  "summary": "组织实验假设、指标、样本与结果判定规则。",
+  "category": "business",
+  "userCategoryLabel": "运营增长",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "coreyhaines31",
+    "repo": "marketingskills",
+    "ref": "main",
+    "path": "skills/ab-testing",
+    "treeSha": "88c79f6528a9347420e57ceb1fff9a60de651768",
+    "skillBlobSha": "c9deeb82ba70977fbdf6eae4a7a4e0a818afec9e",
+    "immutableRef": "https://github.com/coreyhaines31/marketingskills/blob/main/skills/ab-testing/SKILL.md (git-blob:c9deeb82ba70977fbdf6eae4a7a4e0a818afec9e)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "7c48dd638a9ebed49a8ef0c0c4eea90105381cdf",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "coreyhaines31/marketingskills",
+      "html_url": "https://github.com/coreyhaines31/marketingskills",
+      "stargazers_count": 58856,
+      "forks_count": 8611,
+      "pushed_at": "2026-11-04T19:01:33Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Public MIT marketing skills collection; stars are popularity only, not quality tests."
+    },
+    "includedResources": [
+      {
+        "path": "skills/ab-testing/evals/evals.json",
+        "sha": "d3c8371460bf0925d318724062a07f32e94ae40c",
+        "mapped": "references/evals/evals.json"
+      },
+      {
+        "path": "skills/ab-testing/references/sample-size-guide.md",
+        "sha": "a39b5bda9445fe557a76947242ad6564b90363f7",
+        "mapped": "references/sample-size-guide.md"
+      },
+      {
+        "path": "skills/ab-testing/references/test-templates.md",
+        "sha": "1c517d889a30dff6d21c71f2ee765e97ed4c56da",
+        "mapped": "references/test-templates.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "bff52d70b4e072ae4c27373fe01006e2d2130cd3290f5f434e036ab6771bbe90"
+  },
+  "officialVsAdapted": "adapted"
+}

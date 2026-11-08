@@ -1,0 +1,21 @@
+{
+  "key": "qc",
+  "kind": "GENERAL",
+  "name": "客服质检官",
+  "summary": "会话质检与话术打分",
+  "openingQuestions": [
+    "我贴一段客服对话，帮我按标准打分并给改进建议。",
+    "帮我制定一套售前客服的质检评分表。",
+    "这句客服回复有什么问题？怎么改更好？"
+  ],
+  "toolScope": [],
+  "toolScopeNotes": "latest 无工具依赖；不虚构 search",
+  "promptFile": "prompts/qc.md",
+  "batch": "B",
+  "publish": true,
+  "category": "productivity",
+  "capabilities": [
+    "会话质检",
+    "话术打分"
+  ]
+}

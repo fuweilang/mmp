@@ -1,0 +1,5 @@
+Source: https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/writing-skills/SKILL.md (git-blob:f33f39f523c8a3ae2ec0eaf365a524571df8ff3d)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=3
+Original path: plugins/superpowers/skills/writing-skills
+No third-party scripts are executed or shipped in this managed package.

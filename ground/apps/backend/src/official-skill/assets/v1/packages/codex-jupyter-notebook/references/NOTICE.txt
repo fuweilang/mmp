@@ -1,0 +1,5 @@
+Source: https://github.com/openai/skills/blob/main/skills/.curated/jupyter-notebook/SKILL.md (git-blob:e1d1748cac9e9313c8229763751714628d1f6853)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=6
+Original path: skills/.curated/jupyter-notebook
+No third-party scripts are executed or shipped in this managed package.

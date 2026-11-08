@@ -33,7 +33,12 @@ export class ApplicationLog implements LoggerService, OnModuleDestroy {
   runRequest<T>(operation:(id:string)=>T):T { const requestId=randomUUID(); return this.context.run({requestId},()=>operation(requestId)); }
   event(level:'info'|'warn'|'error'|'debug', event:string, fields:Record<string,unknown> = {}):void {
     const line=JSON.stringify(redactLog({time:new Date().toISOString(),level,event,requestId:this.requestId(),...fields}));
-    if (level==='error') console.error(line); else console.log(line);
+    // Routine request traces stay in the jsonl file. Printing every http.start/finish to the
+    // `pnpm run dev` terminal turns normal agent polling into a continuous scroll.
+    const quietHttp = level === 'info' && (event === 'http.start' || event === 'http.finish');
+    if (!quietHttp) {
+      if (level==='error') console.error(line); else console.log(line);
+    }
     const day=new Date().toISOString().slice(0,10);
     this.queue=this.queue.then(async()=>{
       if(this.day!==day){

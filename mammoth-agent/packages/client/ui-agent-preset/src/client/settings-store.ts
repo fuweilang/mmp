@@ -54,6 +54,23 @@ export function requiresCodingTools(preset: AgentPresetOption | undefined): bool
   return preset !== undefined && isBuiltInPreset(preset) && (preset.id === 'ptc' || preset.id === 'minimal')
 }
 
+/** Built-ins ordinary Ground users must not pick (platform admins still see them). */
+export function isOrdinaryHiddenBuiltIn(preset: AgentPresetOption | undefined): boolean {
+  return preset !== undefined && isBuiltInPreset(preset) && (preset.id === 'ptc' || preset.id === 'cordis')
+}
+
+/** Filter roster rows for the signed-in role. Native/desktop (no Ground session) keeps the full list.
+ * @param presets Roster entries.
+ * @param access Role access from Ground `/me` (or native fallback).
+ */
+export function filterPresetsForRole<T extends AgentPresetOption>(
+  presets: readonly T[],
+  access: { kind: 'native' | 'ground'; isPlatformAdmin: boolean },
+): T[] {
+  if (access.kind === 'native' || access.isPlatformAdmin) return [...presets]
+  return presets.filter(preset => !isOrdinaryHiddenBuiltIn(preset))
+}
+
 /** One roster entry exactly as the host reports it. */
 export type RosterPreset = AgentPresetRoster['presets'][number]
 

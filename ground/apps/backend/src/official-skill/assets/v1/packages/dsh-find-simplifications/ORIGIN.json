@@ -1,0 +1,53 @@
+{
+  "key": "dsh-find-simplifications",
+  "name": "代码简化分析",
+  "summary": "定位重复结构与不必要复杂度，提出可审查的简化方案。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "deepseek-ai",
+    "repo": "deepseek-harness",
+    "ref": "master",
+    "path": ".agents/skills/dsh-find-simplifications",
+    "treeSha": "fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159",
+    "skillBlobSha": "d1ad560b81b58cf7c6a8ff1456c0690de59e2069",
+    "immutableRef": "https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-find-simplifications/SKILL.md (git-blob:d1ad560b81b58cf7c6a8ff1456c0690de59e2069)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "c1f7a78e89e4e4dc7b86664c3b3c76eb5eee1785",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "deepseek-ai/deepseek-harness",
+      "html_url": "https://github.com/deepseek-ai/deepseek-harness",
+      "stargazers_count": 274718,
+      "forks_count": 33573,
+      "pushed_at": "2026-11-04T13:06:39Z",
+      "default_branch": "master",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [
+      {
+        "path": ".agents/skills/dsh-find-simplifications/references/historical-patterns.md",
+        "sha": "a9199a9c8286465ab58a89727a6d5e7502d9f37b",
+        "mapped": "references/historical-patterns.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "f046c2946015b2ec23df43cff79804c7b560277546701e2390fa313197cf2547"
+  },
+  "officialVsAdapted": "adapted"
+}

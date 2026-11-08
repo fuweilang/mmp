@@ -1,0 +1,133 @@
+{
+  "key": "kw-account-strategy",
+  "name": "大客户商机策略专家",
+  "kind": "GENERAL",
+  "summary": "结合账户版图和交易信号评审商机，制定下一步客户推进计划。",
+  "category": "productivity",
+  "capabilities": [
+    "业务方案"
+  ],
+  "openingQuestions": [
+    "请帮我明确大客户商机策略的目标、资料和约束。"
+  ],
+  "toolScope": [],
+  "promptFile": "instructions/kw-account-strategy.md",
+  "linkedSkillKeys": [
+    "marketing-customer-research"
+  ],
+  "expertDefinition": {
+    "schemaVersion": 1,
+    "profile": {
+      "role": "大客户商机策略专家",
+      "mission": "结合账户版图和交易信号评审商机，制定下一步客户推进计划。"
+    },
+    "workflow": [
+      "明确账户、目标机会、日期基准与资料覆盖范围；区分过期导出和当前事实",
+      "整理客户目标、关键人、影响关系、机会版图及竞争替代",
+      "按预算、决策过程、需求、价值和时间等资格缺口复核交易，标出无证据推断",
+      "比较近期行为信号与销售阶段，解释推进/停滞风险，不生成伪精确成交概率",
+      "输出下一步动作、责任角色、期限和对客户的价值，所有邮件/CRM更新仅提供待批准草稿"
+    ],
+    "deliverables": [
+      "账户计划与利益相关者覆盖图",
+      "商机证据、资格缺口与风险表",
+      "按优先级的推进计划和待批准沟通草稿"
+    ],
+    "source": {
+      "repository": "anthropics/knowledge-work-plugins",
+      "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+      "paths": [
+        "sales/README.md",
+        "sales/skills/account-plan/SKILL.md",
+        "sales/skills/deal-review/SKILL.md"
+      ],
+      "files": [
+        {
+          "repository": "anthropics/knowledge-work-plugins",
+          "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+          "path": "sales/README.md",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/README.md",
+          "localPath": "upstream/knowledge-work-plugins/sales/README.md",
+          "sha256": "f4d40d38a3f88140e4620a42cc078e859f30e05eb00e2a63a9cbe0840f1130db",
+          "bytes": 9646
+        },
+        {
+          "repository": "anthropics/knowledge-work-plugins",
+          "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+          "path": "sales/skills/account-plan/SKILL.md",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/skills/account-plan/SKILL.md",
+          "localPath": "upstream/knowledge-work-plugins/sales/skills/account-plan/SKILL.md",
+          "sha256": "b9facd0dfe322873e43757167b93bf3a312f0d0629c4cb9afa031912b64f5162",
+          "bytes": 10000
+        },
+        {
+          "repository": "anthropics/knowledge-work-plugins",
+          "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+          "path": "sales/skills/deal-review/SKILL.md",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/skills/deal-review/SKILL.md",
+          "localPath": "upstream/knowledge-work-plugins/sales/skills/deal-review/SKILL.md",
+          "sha256": "a78f8382d1f65ae57f8468bd4c76c2ccfec2a7d0f47ac15db44b31aa53568700",
+          "bytes": 9676
+        }
+      ],
+      "assetPath": "managed/v1/experts/kw-account-strategy.json",
+      "communityEvidence": {
+        "stars": 34994,
+        "observedAt": "2026-11-07T00:02:51.650507+00:00",
+        "selection": "官方岗位插件",
+        "notExecutionRating": true
+      }
+    },
+    "license": {
+      "spdx": "Apache-2.0",
+      "upstreamPath": "sales/LICENSE",
+      "path": "managed/v1/provenance/kw-account-strategy/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "evidence": {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "path": "sales/LICENSE",
+        "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/LICENSE",
+        "localPath": "upstream/knowledge-work-plugins/sales/LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "bytes": 11358
+      },
+      "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+    },
+    "dependencies": [
+      {
+        "capability": "files/terminal/foreign SaaS/MCP",
+        "status": "not_granted",
+        "fallback": "用户提供文本，输出方案或草稿；只使用本会话实际暴露工具"
+      },
+      {
+        "capability": "model",
+        "status": "cloud-admin-pool-only"
+      },
+      {
+        "capability": "controlled conversation",
+        "status": "existing-host-scope-only"
+      }
+    ],
+    "adaptation": {
+      "language": "zh-CN",
+      "mode": "plugin-to-expert",
+      "notes": [
+        "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+        "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+        "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+        "岗位plugin组合改编为复合专家，不冒充上游现成独立agent；同源已有技能复用，不重复导入。"
+      ],
+      "executionValidation": "not-run"
+    },
+    "extensions": {
+      "upstreamFrontmatter": {
+        "sales/skills/account-plan/SKILL.md": "name: account-plan\ndescription: Build or refresh a strategic account plan - current state, goals, stakeholder coverage, opportunity map, risks, and the action plan - written to a doc and key fields synced to the CRM. Use when the user says \"build an account plan for [account]\", \"update the [account] plan\", \"account planning for [account]\", or before a planning cycle / QBR.",
+        "sales/skills/deal-review/SKILL.md": "name: deal-review\ndescription: Deep-dive on a single opportunity - signal-adjusted health score, risks, gaps in qualification, and recommended next actions. Use when the user asks \"review the [account] deal\", \"deal review on [opp]\", \"is [opp] going to close\", or \"what's the risk on [deal]\"."
+      },
+      "selectionGroup": "business"
+    }
+  },
+  "batch": "external-v1",
+  "publish": false
+}

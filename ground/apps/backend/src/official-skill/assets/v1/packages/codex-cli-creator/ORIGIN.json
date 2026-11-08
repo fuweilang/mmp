@@ -1,0 +1,49 @@
+{
+  "key": "codex-cli-creator",
+  "name": "命令行工具设计",
+  "summary": "指导可供人和智能体使用的 CLI 结构、输入输出与错误契约。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=1",
+  "source": {
+    "owner": "openai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/.curated/cli-creator",
+    "treeSha": "49f948faa9258a0c61caceaf225e179651397431",
+    "skillBlobSha": "60e5a9a03f89cf66a60aa798bfc6f3c3fa5ed8c4",
+    "immutableRef": "https://github.com/openai/skills/blob/main/skills/.curated/cli-creator/SKILL.md (git-blob:60e5a9a03f89cf66a60aa798bfc6f3c3fa5ed8c4)",
+    "licenseEvidence": [
+      {
+        "path": "skills/.curated/cli-creator/LICENSE.txt",
+        "blobSha": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/skills",
+      "html_url": "https://github.com/openai/skills",
+      "stargazers_count": 28549,
+      "forks_count": 1985,
+      "pushed_at": "2026-10-28T17:31:41Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [
+      {
+        "path": "skills/.curated/cli-creator/references/agent-cli-patterns.md",
+        "sha": "d0a43d08c7d60ce307a3b7a5a6a1247b7be43d27",
+        "mapped": "references/agent-cli-patterns.md"
+      }
+    ],
+    "omittedFiles": [
+      "agents/openai.yaml"
+    ],
+    "originalBodySha256": "f1fa9d8c8de114676eda7c0cb1dbd2206dc0938feea0acc8235570fe2c32e28c"
+  },
+  "officialVsAdapted": "adapted"
+}

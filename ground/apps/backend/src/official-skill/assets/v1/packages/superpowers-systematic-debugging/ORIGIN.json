@@ -1,0 +1,86 @@
+{
+  "key": "superpowers-systematic-debugging",
+  "name": "系统化问题排查",
+  "summary": "复现、形成假设、收集证据，再进行最小修复。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=3",
+  "source": {
+    "owner": "openai",
+    "repo": "plugins",
+    "ref": "main",
+    "path": "plugins/superpowers/skills/systematic-debugging",
+    "treeSha": "b767f8fa3be1a22b093127dd59956c91ecffca9d",
+    "skillBlobSha": "095d194ac041502905f15b01d22d294fb94db8b2",
+    "immutableRef": "https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/systematic-debugging/SKILL.md (git-blob:095d194ac041502905f15b01d22d294fb94db8b2)",
+    "licenseEvidence": [
+      {
+        "path": "plugins/superpowers/LICENSE",
+        "blobSha": "abf0390320aa14406af7a520b9b0739fdda9bf08",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/plugins",
+      "html_url": "https://github.com/openai/plugins",
+      "stargazers_count": 7785,
+      "forks_count": 1002,
+      "pushed_at": "2026-11-03T23:23:40Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "OpenAI-distributed curated Superpowers plugin; original author Jesse Vincent."
+    },
+    "includedResources": [
+      {
+        "path": "plugins/superpowers/skills/systematic-debugging/CREATION-LOG.md",
+        "sha": "9aa03092809feaf93c9bfa985252f6f1c9624692",
+        "mapped": "references/CREATION-LOG.md"
+      },
+      {
+        "path": "plugins/superpowers/skills/systematic-debugging/condition-based-waiting.md",
+        "sha": "70994f777c586f7d4c43033aac34c7cf0da6688b",
+        "mapped": "references/condition-based-waiting.md"
+      },
+      {
+        "path": "plugins/superpowers/skills/systematic-debugging/defense-in-depth.md",
+        "sha": "e2483354dc2b62478a2624e34ca18bc0efe887b2",
+        "mapped": "references/defense-in-depth.md"
+      },
+      {
+        "path": "plugins/superpowers/skills/systematic-debugging/root-cause-tracing.md",
+        "sha": "12ef5222e24e19ab92172b82b69ef1b0c30d9bfa",
+        "mapped": "references/root-cause-tracing.md"
+      },
+      {
+        "path": "plugins/superpowers/skills/systematic-debugging/test-academic.md",
+        "sha": "23a6ed7a2044e0c44d74c3101406140f4851aa41",
+        "mapped": "references/test-academic.md"
+      },
+      {
+        "path": "plugins/superpowers/skills/systematic-debugging/test-pressure-1.md",
+        "sha": "8d13b467e4a98abfffd12161cbc3c418021d6023",
+        "mapped": "references/test-pressure-1.md"
+      },
+      {
+        "path": "plugins/superpowers/skills/systematic-debugging/test-pressure-2.md",
+        "sha": "2d2315ec8a24ca872bc80d2f4056468ba051462a",
+        "mapped": "references/test-pressure-2.md"
+      },
+      {
+        "path": "plugins/superpowers/skills/systematic-debugging/test-pressure-3.md",
+        "sha": "89734b86fdc756488df315d53e5c3ac2d3752cd8",
+        "mapped": "references/test-pressure-3.md"
+      }
+    ],
+    "omittedFiles": [
+      "agents/openai.yaml",
+      "condition-based-waiting-example.ts",
+      "find-polluter.sh"
+    ],
+    "originalBodySha256": "f2f4b543fb375d5395e37675d5eb5159d52e26f22a34fd28ad53ee9b0202083a"
+  },
+  "officialVsAdapted": "adapted"
+}

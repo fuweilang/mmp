@@ -628,6 +628,7 @@ export const adminAuditApi = {
     pageSize?: number;
     tenantId?: string;
     action?: string;
+    actionPrefix?: string;
     actor?: string;
     from?: string;
     to?: string;
@@ -637,6 +638,7 @@ export const adminAuditApi = {
     q.set('pageSize', String(query.pageSize ?? 20));
     if (query.tenantId) q.set('tenantId', query.tenantId);
     if (query.action) q.set('action', query.action);
+    if (query.actionPrefix) q.set('actionPrefix', query.actionPrefix);
     if (query.actor) q.set('actor', query.actor);
     if (query.from) q.set('from', query.from);
     if (query.to) q.set('to', query.to);
@@ -780,4 +782,381 @@ export type AdminLlmListModelsResult = {
   latencyMs: number;
   message: string;
   models: Array<{ id: string; ownedBy?: string }>;
+};
+
+export type OfficialAgentStatus = 'DRAFT' | 'PUBLISHED' | 'OFFLINE';
+/** Managed expert metadata; upstream extensions are data, never host configuration. */
+export type ExpertDefinition = {
+  schemaVersion?: number;
+  profile?: { role?: string; mission?: string; [key: string]: unknown };
+  workflow?: string[];
+  deliverables?: string[];
+  source?: { repository?: string; ref?: string; paths?: string[]; [key: string]: unknown };
+  license?: { spdx?: string; path?: string; [key: string]: unknown };
+  dependencies?: unknown[];
+  adaptation?: { mode?: string; notes?: string[]; [key: string]: unknown };
+  extensions?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+export type OfficialAgentKind = 'GENERAL' | 'KNOWLEDGE';
+export type OfficialAgentGrantStatus = 'ACTIVE' | 'REVOKED';
+
+export type OfficialAgentVersion = {
+  id: string;
+  version: number;
+  name: string;
+  summary: string;
+  openingQuestions: string[];
+  systemPrompt: string;
+  toolScope: string[];
+  publishedByUserId: string | null;
+  publishedAt: string;
+  expertDefinition?: ExpertDefinition;
+  linkedSkillSummaries?: OfficialAgentLinkedSkill[];
+};
+
+export type OfficialAgentGrant = {
+  id: string;
+  tenant: { id: string; name: string; slug: string; status: string };
+  version: { id: string; version: number; name: string };
+  status: OfficialAgentGrantStatus;
+  revokedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OfficialAgentCategory =
+  | 'common'
+  | 'productivity'
+  | 'content'
+  | 'sales'
+  | 'expertise'
+  | 'analytics';
+
+export type OfficialAgentLinkedSkill = {
+  id: string;
+  key: string;
+  name: string;
+  summary: string;
+  category: string | null;
+  enabledAt: string | null;
+  packageRevision: number;
+  enabled: boolean;
+};
+
+export type OfficialAgentRow = {
+  id: string;
+  key: string;
+  kind: OfficialAgentKind;
+  category: OfficialAgentCategory | null;
+  capabilities: string[];
+  status: OfficialAgentStatus;
+  /** Public branding URL when an avatar file exists; null → first-character fallback. */
+  avatarUrl: string | null;
+  linkedSkillIds?: string[];
+  linkedSkills?: OfficialAgentLinkedSkill[];
+  draft: {
+    name: string;
+    summary: string;
+    openingQuestions: string[];
+    systemPrompt: string;
+    toolScope: string[];
+    expertDefinition?: ExpertDefinition;
+  };
+  onlineVersion: OfficialAgentVersion | null;
+  versions: OfficialAgentVersion[];
+  grants: OfficialAgentGrant[];
+  activeGrantCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OfficialAgentDraftPayload = {
+  name: string;
+  summary: string;
+  openingQuestions: string[];
+  systemPrompt: string;
+  toolScope: string[];
+  category?: OfficialAgentCategory;
+  capabilities?: string[];
+  linkedSkillIds?: string[];
+  expertDefinition?: ExpertDefinition;
+};
+
+export type OfficialAgentAssetCatalogItem = {
+  key: string;
+  name: string;
+  kind: OfficialAgentKind;
+  summary: string;
+  openingQuestionCount: number;
+  toolScope: string[];
+  batch: string | null;
+  linkedSkillKeys?: string[];
+  expertDefinition?: ExpertDefinition;
+  existing: { id: string; status: OfficialAgentStatus; hasOnlineVersion: boolean } | null;
+};
+
+export type OfficialAgentImportResult = {
+  imported: number;
+  results: Array<{
+    key: string;
+    action: 'created' | 'updated' | 'filled' | 'skipped' | 'error';
+    id?: string;
+    reason?: string;
+  }>;
+  errors: Array<{ key: string; message: string }>;
+  summary: {
+    created: number;
+    updated: number;
+    filled: number;
+    skipped: number;
+    errors: number;
+  };
+};
+
+export type OfficialAgentBulkOfflineResult = {
+  results: Array<{
+    id: string;
+    key?: string;
+    action: 'offlined' | 'skipped' | 'error';
+    reason?: string;
+  }>;
+  summary: { offlined: number; skipped: number; errors: number };
+};
+
+export type OfficialAgentBulkGrantResult = {
+  agent: OfficialAgentRow;
+  results: Array<{
+    tenantId: string;
+    action: 'granted' | 'reactivated' | 'upgraded' | 'skipped' | 'error';
+    reason?: string;
+    versionId?: string;
+  }>;
+  summary: {
+    granted: number;
+    reactivated: number;
+    upgraded: number;
+    skipped: number;
+    errors: number;
+  };
+};
+
+export type OfficialAgentBulkRevokeResult = {
+  agent: OfficialAgentRow;
+  results: Array<{
+    tenantId: string;
+    action: 'revoked' | 'skipped' | 'error';
+    reason?: string;
+    versionId?: string | null;
+  }>;
+  summary: { revoked: number; skipped: number; errors: number };
+};
+
+export const adminOfficialAgentApi = {
+  list: (params: { keyword?: string; status?: OfficialAgentStatus | '' } = {}) => {
+    const query = new URLSearchParams();
+    if (params.keyword) query.set('keyword', params.keyword);
+    if (params.status) query.set('status', params.status);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return adminHttp<OfficialAgentRow[]>(`/official-agents${suffix}`);
+  },
+  detail: (id: string) => adminHttp<OfficialAgentRow>(`/official-agents/${id}`),
+  assetCatalog: () => adminHttp<OfficialAgentAssetCatalogItem[]>('/official-agents/asset-catalog'),
+  importAssets: (body: { keys?: string[] } = {}) =>
+    adminHttp<OfficialAgentImportResult>('/official-agents/import-assets', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  create: (body: OfficialAgentDraftPayload & { key: string; kind: OfficialAgentKind }) =>
+    adminHttp<OfficialAgentRow>('/official-agents', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: Partial<OfficialAgentDraftPayload>) =>
+    adminHttp<OfficialAgentRow>(`/official-agents/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  /** Image request is staged by the editor until Save; existing branding timing is retained. */
+  uploadAvatar: (id: string, body: FormData) =>
+    adminHttp<OfficialAgentRow>(`/official-agents/${id}/avatar`, { method: 'POST', body }),
+  removeAvatar: (id:string) => adminHttp<OfficialAgentRow>(`/official-agents/${id}/avatar`,{method:'DELETE'}),
+  publish: (id: string) =>
+    adminHttp<OfficialAgentRow>(`/official-agents/${id}/publish`, { method: 'POST' }),
+  offline: (id: string) =>
+    adminHttp<OfficialAgentRow>(`/official-agents/${id}/offline`, { method: 'POST' }),
+  bulkOffline: (ids: string[]) =>
+    adminHttp<OfficialAgentBulkOfflineResult>('/official-agents/bulk-offline', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
+  grant: (id: string, body: { tenantId: string; versionId?: string }) =>
+    adminHttp<OfficialAgentRow>(`/official-agents/${id}/grants`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  bulkGrant: (id: string, body: { tenantIds: string[]; versionId?: string }) =>
+    adminHttp<OfficialAgentBulkGrantResult>(`/official-agents/${id}/grants/bulk`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  bulkRevoke: (id: string, body: { tenantIds: string[] }) =>
+    adminHttp<OfficialAgentBulkRevokeResult>(`/official-agents/${id}/grants/bulk-revoke`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  revoke: (id: string, tenantId: string) =>
+    adminHttp<OfficialAgentRow>(`/official-agents/${id}/grants/${tenantId}`, { method: 'DELETE' }),
+};
+
+export type OfficialKnowledgeStatus = 'PENDING' | 'READY' | 'FAILED';
+
+export type OfficialKnowledgeRow = {
+  id: string;
+  agentId: string;
+  assetKey: string;
+  name: string;
+  originalName: string;
+  mimeType: string;
+  fileType: string;
+  sizeBytes: number;
+  status: OfficialKnowledgeStatus;
+  indexError: string | null;
+  active: boolean;
+  chunkCount: number;
+  createdAt: string;
+  updatedAt: string;
+  agent: {
+    id: string;
+    key: string;
+    name: string;
+    kind: OfficialAgentKind;
+    status: string;
+  };
+  effectiveVersion: { id: string; version: number; publishedAt: string } | null;
+};
+
+export type OfficialKnowledgeBindableAgent = {
+  id: string;
+  key: string;
+  name: string;
+  kind: OfficialAgentKind;
+  status: string;
+  hasOfficialKb: boolean;
+};
+
+export type OfficialKnowledgeContent = {
+  id: string;
+  name: string;
+  originalName: string;
+  mimeType: string;
+  truncated: boolean;
+  content: string;
+};
+
+export type OfficialKnowledgeChunks = {
+  documentId: string;
+  total: number;
+  chunks: Array<{ id: string; ordinal: number; preview: string; length: number }>;
+};
+
+export const adminOfficialKnowledgeApi = {
+  list: (params: {
+    keyword?: string;
+    agentId?: string;
+    status?: OfficialKnowledgeStatus | '';
+    activeOnly?: boolean;
+  } = {}) => {
+    const q = new URLSearchParams();
+    if (params.keyword?.trim()) q.set('keyword', params.keyword.trim());
+    if (params.agentId) q.set('agentId', params.agentId);
+    if (params.status) q.set('status', params.status);
+    if (params.activeOnly === false) q.set('activeOnly', 'false');
+    const suffix = q.toString() ? `?${q}` : '';
+    return adminHttp<OfficialKnowledgeRow[]>(`/official-knowledge${suffix}`);
+  },
+  agents: () => adminHttp<OfficialKnowledgeBindableAgent[]>('/official-knowledge/agents'),
+  detail: (id: string) => adminHttp<OfficialKnowledgeRow>(`/official-knowledge/${id}`),
+  content: (id: string) => adminHttp<OfficialKnowledgeContent>(`/official-knowledge/${id}/content`),
+  chunks: (id: string) => adminHttp<OfficialKnowledgeChunks>(`/official-knowledge/${id}/chunks`),
+  upload: (body: FormData) =>
+    adminHttp<OfficialKnowledgeRow>('/official-knowledge/upload', { method: 'POST', body }),
+  replace: (id: string, body: FormData) =>
+    adminHttp<OfficialKnowledgeRow>(`/official-knowledge/${id}/replace`, { method: 'POST', body }),
+  reindex: (id: string) =>
+    adminHttp<OfficialKnowledgeRow>(`/official-knowledge/${id}/reindex`, { method: 'POST' }),
+  fileUrl: (id: string) => `/admin/api/official-knowledge/${id}/file`,
+};
+
+
+
+export type OfficialSkillCategory = 'common' | 'content' | 'analytics' | 'office' | 'education' | 'expertise' | 'business' | 'ecommerce' | 'sales' | 'hr' | 'legal' | 'finance' | 'consulting' | 'research' | 'files' | 'search' | 'writing' | 'lifestyle';
+
+export type OfficialSkillRow = {
+  id: string;
+  key: string;
+  name: string;
+  summary: string;
+  category: OfficialSkillCategory | null;
+  enabledAt: string | null;
+  enabled: boolean;
+  packageRevision: number;
+  resourceCount: number;
+  instructionBytes: number;
+  linkedAgents: Array<{ id: string; key: string; name: string }>;
+  linkedAgentCount: number;
+  createdAt: string;
+  updatedAt: string;
+  instruction?: string;
+  avatarUrl?: string | null;
+};
+
+export type OfficialSkillOption = {
+  id: string;
+  key: string;
+  name: string;
+  summary: string;
+  category: OfficialSkillCategory | null;
+  packageRevision: number;
+  enabledAt: string | null;
+};
+
+export type OfficialSkillZipPreview = {
+  key: string;
+  name: string;
+  summary: string;
+  category: OfficialSkillCategory | null;
+  resourceCount: number;
+  instructionBytes: number;
+  keyConflict: boolean;
+  existingId: string | null;
+};
+
+export const adminOfficialSkillApi = {
+  list: (params: { keyword?: string; enabled?: 'true' | 'false' | '' } = {}) => {
+    const q = new URLSearchParams();
+    if (params.keyword?.trim()) q.set('keyword', params.keyword.trim());
+    if (params.enabled) q.set('enabled', params.enabled);
+    const suffix = q.toString() ? `?${q}` : '';
+    return adminHttp<OfficialSkillRow[]>(`/official-skills${suffix}`);
+  },
+  enabledOptions: () => adminHttp<OfficialSkillOption[]>('/official-skills/enabled-options'),
+  detail: (id: string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}`),
+  validateZip: (body: FormData) =>
+    adminHttp<OfficialSkillZipPreview>('/official-skills/validate-zip', { method: 'POST', body }),
+  createFromZip: (body: FormData) =>
+    adminHttp<OfficialSkillRow>('/official-skills/from-zip', { method: 'POST', body }),
+  createFromForm: (body: {
+    key: string;
+    name: string;
+    summary: string;
+    category?: OfficialSkillCategory;
+    instruction: string;
+  }) => adminHttp<OfficialSkillRow>('/official-skills/from-form', { method: 'POST', body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<{ name: string; summary: string; category: OfficialSkillCategory | ''; instruction: string }>,
+  ) => adminHttp<OfficialSkillRow>(`/official-skills/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  replaceZip: (id: string, body: FormData) =>
+    adminHttp<OfficialSkillRow>(`/official-skills/${id}/replace-zip`, { method: 'POST', body }),
+  uploadIcon: (id:string,body:FormData) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/icon`,{method:'POST',body}),
+  removeIcon: (id:string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/icon`,{method:'DELETE'}),
+  enable: (id: string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/enable`, { method: 'POST' }),
+  disable: (id: string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/disable`, { method: 'POST' }),
+  remove: (id: string) => adminHttp<{ ok: boolean }>(`/official-skills/${id}`, { method: 'DELETE' }),
 };

@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 /** Component specs for the Web-only desktop-download action. */
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ClientDownloadButton, type ClientDownloadButtonProps } from '../src/client/ClientDownloadButton.tsx'
 import { zh, type ClientDownloadKey } from '../src/client/locales.ts'
+import { clientLaunchUrl } from '../src/client/download.ts'
 import { apply } from '../src/client/index.ts'
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); vi.unstubAllGlobals() })
 
 const t = (key: ClientDownloadKey, params?: Record<string, string | number>) =>
   Object.entries(params ?? {}).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), zh[key])
@@ -18,20 +19,67 @@ function renderAction(wide = true) {
   return render(<ClientDownloadButton {...standard} wide={wide} t={t as ClientDownloadButtonProps['t']} />)
 }
 
+it.each([
+  ['localhost', 'mmp-dev://open'],
+  ['127.0.0.1', 'mmp-dev://open'],
+  ['[::1]', 'mmp-dev://open'],
+  ['mmai.vip', 'mmp://open'],
+  ['localhost.mmai.vip', 'mmp://open'],
+])('chooses the desktop protocol for %s', (hostname, expected) => {
+  expect(clientLaunchUrl(hostname)).toBe(expected)
+})
+
 describe('ClientDownloadButton', () => {
-  it('renders a labeled footer action and opens the dialog with three platform options', () => {
+  it('links to the desktop app and opens the existing download dialog from the fallback toast', () => {
+    vi.useFakeTimers()
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true)
     renderAction()
-    fireEvent.click(screen.getByRole('button', { name: zh.action }))
+    const link = screen.getByRole('link', { name: zh.openClient })
+    expect(link.getAttribute('href')).toBe('mmp-dev://open')
+    expect(within(link).getByText(zh.openInstalled)).toBeTruthy()
+    link.addEventListener('click', event => { event.preventDefault() })
+    fireEvent.click(link)
+    expect(screen.queryByRole('alert')).toBeNull()
+    act(() => { vi.advanceTimersByTime(1800) })
+
+    const toast = within(screen.getByRole('alert'))
+    expect(toast.getByText(zh.launchHint)).toBeTruthy()
+    fireEvent.click(toast.getByRole('button', { name: zh.action }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('dialog', { name: zh.dialogTitle })).toBeTruthy()
+  })
+
+  it('suppresses the fallback after the browser loses focus during launch', () => {
+    vi.useFakeTimers()
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true)
+    renderAction(false)
+    const link = screen.getByRole('link', { name: zh.openClient })
+    link.addEventListener('click', event => { event.preventDefault() })
+    fireEvent.click(link)
+    fireEvent.blur(window)
+    act(() => { vi.advanceTimersByTime(1800) })
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('renders the install card and opens the dialog with three platform options', () => {
+    renderAction()
+    expect(screen.getByRole('button', { name: zh.getApp })).toBeTruthy()
+    expect(screen.getByText(zh.openInstalled)).toBeTruthy()
+    expect(screen.queryByText(zh.subtitle)).toBeNull()
+    expect(screen.queryByText(zh.productName)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: zh.getApp }))
     expect(screen.getByRole('dialog', { name: zh.dialogTitle })).toBeTruthy()
     expect(screen.getByText(zh.optionMacArm)).toBeTruthy()
     expect(screen.getByText(zh.optionMacIntel)).toBeTruthy()
     expect(screen.getByText(zh.optionWindows)).toBeTruthy()
   })
 
-  it('hides the label in the collapsed rail but keeps the icon button', () => {
+  it('keeps a single download icon in the collapsed rail', () => {
     renderAction(false)
-    const button = screen.getByRole('button', { name: zh.action })
+    const button = screen.getByRole('button', { name: zh.getApp })
     expect(button.textContent).toBe('')
+    expect(screen.getAllByRole('button', { name: zh.getApp })).toHaveLength(1)
+    expect(screen.getByRole('link', { name: zh.openClient })).toBeTruthy()
   })
 
   it('marks Windows as the current system only when the OS is Windows', () => {
@@ -39,7 +87,7 @@ describe('ClientDownloadButton', () => {
     Object.defineProperty(window.navigator, 'platform', { value: 'Win32', configurable: true })
     try {
       renderAction()
-      fireEvent.click(screen.getByRole('button', { name: zh.action }))
+      fireEvent.click(screen.getByRole('button', { name: zh.getApp }))
       expect(screen.getByText(zh.currentSystem)).toBeTruthy()
     } finally {
       if (original) Object.defineProperty(window.navigator, 'platform', original)
@@ -51,7 +99,7 @@ describe('ClientDownloadButton', () => {
     Object.defineProperty(window.navigator, 'platform', { value: 'MacIntel', configurable: true })
     try {
       renderAction()
-      fireEvent.click(screen.getByRole('button', { name: zh.action }))
+      fireEvent.click(screen.getByRole('button', { name: zh.getApp }))
       expect(screen.queryByText(zh.currentSystem)).toBeNull()
     } finally {
       if (original) Object.defineProperty(window.navigator, 'platform', original)
@@ -61,7 +109,7 @@ describe('ClientDownloadButton', () => {
   it('starts only a published platform download and offers retry', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({ product: 'mammoth-agent', schema_version: 2, platforms: { 'darwin-arm64': { shell: { version: '1.2.3' } } } })))
     renderAction()
-    fireEvent.click(screen.getByRole('button', { name: zh.action }))
+    fireEvent.click(screen.getByRole('button', { name: zh.getApp }))
     await waitFor(() => expect(screen.getByText(zh.optionMacArm).closest('li')?.getAttribute('aria-disabled')).toBe('false'))
     expect(screen.getByText(zh.optionWindows).closest('li')?.getAttribute('aria-disabled')).toBe('true')
     fireEvent.click(screen.getByText(zh.optionMacArm))

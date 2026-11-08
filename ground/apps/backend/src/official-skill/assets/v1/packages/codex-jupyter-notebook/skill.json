@@ -1,0 +1,27 @@
+{
+  "key": "codex-jupyter-notebook",
+  "name": "Notebook 分析流程",
+  "description": "组织实验与教学 Notebook；运行需已有 Python/Jupyter 环境。",
+  "entry": "SKILL.md",
+  "category": "analytics",
+  "references": [
+    {
+      "path": "references/experiment-patterns.md"
+    },
+    {
+      "path": "references/notebook-structure.md"
+    },
+    {
+      "path": "references/quality-checklist.md"
+    },
+    {
+      "path": "references/tutorial-patterns.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

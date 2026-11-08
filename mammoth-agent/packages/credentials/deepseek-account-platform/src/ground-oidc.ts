@@ -228,9 +228,9 @@ export function groundSessionToken(token: GroundTokenResponse): string {
 /**
  * HTML served on the Host loopback /oauth/callback after Ground OIDC succeeds.
  * Web: bounce back to the app origin so the original UI can show the new session.
- * Desktop: the native account watcher focuses Electron; the browser returns to the Web terminal.
+ * Desktop: the native account watcher focuses Electron and the browser confirms completion.
  */
-export function groundOidcDoneHtml(locale: 'en_US' | 'zh_CN', loginSource: 'web' | 'desktop', terminalUrl = 'http://127.0.0.1:3080/'): string {
+export function groundOidcDoneHtml(locale: 'en_US' | 'zh_CN', loginSource: 'web' | 'desktop'): string {
   const zh = locale === 'zh_CN'
   const title = zh ? '登录成功' : 'Signed in'
   if (loginSource === 'web') {
@@ -244,19 +244,11 @@ export function groundOidcDoneHtml(locale: 'en_US' | 'zh_CN', loginSource: 'web'
       + `<h1>${title}</h1><p>${body}</p><p>${fallback}</p>`
       + `<script>try{window.close()}catch(e){}location.replace('/')</script></body></html>`
   }
-  const target = new URL(terminalUrl)
-  if (target.username || target.password || target.hash || target.search || target.pathname !== '/'
-    || !(target.protocol === 'https:' || (target.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(target.hostname)))) {
-    throw new Error('Invalid desktop sign-in return URL')
-  }
-  const terminal = target.href
-  const body = zh ? '客户端已登录，正在进入网页版终端…' : 'Desktop signed in. Opening the Web terminal…'
-  const hint = zh ? '若未自动跳转，请点击这里进入终端。' : 'If nothing happens, open the Web terminal.'
+  const body = zh ? '猛犸智能体客户端已登录。你可以关闭此页面。'
+    : 'Mammoth Agent is signed in. You can close this tab.'
   return `<!doctype html><html lang="${zh ? 'zh-CN' : 'en'}"><meta charset="utf-8"><title>${title}</title>`
-    + `<meta http-equiv="refresh" content="0;url=${terminal}">`
-    + `<body style="font-family:system-ui,sans-serif;padding:48px;text-align:center">`
-    + `<h1>${title}</h1><p>${body}</p><p><a href="${terminal}">${hint}</a></p>`
-    + `<script>location.replace(${JSON.stringify(terminal)})</script></body></html>`
+    + '<body style="font-family:system-ui,sans-serif;padding:48px;text-align:center">'
+    + `<h1>${title}</h1><p>${body}</p></body></html>`
 }
 
 /** @deprecated use groundOidcDoneHtml */

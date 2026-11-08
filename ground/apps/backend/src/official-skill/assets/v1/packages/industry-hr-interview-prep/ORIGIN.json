@@ -1,0 +1,47 @@
+{
+  "key": "industry-hr-interview-prep",
+  "name": "招聘面试准备",
+  "summary": "按岗位要求组织面试问题、评价维度和记录模板。",
+  "category": "hr",
+  "userCategoryLabel": "人力行政",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "human-resources/skills/interview-prep",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "853cf0f9e4f395c76a21ac55d5c902fcdc8495f6",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/human-resources/skills/interview-prep/SKILL.md (git-blob:853cf0f9e4f395c76a21ac55d5c902fcdc8495f6)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "f53c679acba79cbb292961fd9fb9e87ca20eab22",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "75db43c45314cd7fa56d1dedaa3039290c1d45cf2a7b3532997337e50c386a07"
+  },
+  "officialVsAdapted": "adapted"
+}

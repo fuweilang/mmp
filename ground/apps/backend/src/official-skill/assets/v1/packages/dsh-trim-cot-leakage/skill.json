@@ -1,0 +1,21 @@
+{
+  "key": "dsh-trim-cot-leakage",
+  "name": "推理泄露检查",
+  "description": "检查面向用户的回复中是否混入内部推理与实现细节。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/examples.md"
+    },
+    {
+      "path": "references/recall-batteries.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

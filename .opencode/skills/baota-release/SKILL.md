@@ -286,6 +286,138 @@ ssh "$HOST" 'rm -rf /tmp/mmp-web-build /tmp/mmp-web-build.log /tmp/mmp-release; 
 
 更新 `state.json` 为 `done`，按第 9 节格式汇报。
 
+## 4A. 提速与并行（2026-11-05 起建议照做）
+
+### 两条独立流水线，并行跑
+
+| 流水线 | 内容 | 是否占发布锁 | 依赖 |
+|---|---|---|---|
+| A：中台 + web | `release.sh`（Step 0–9） | 占 | 无 |
+| B：客户端安装包 | 本机打 dmg/exe | 不占 | 无，只有最后传 `downloads/` 才碰服务器 |
+
+客户端打包起步就是 30–60 分钟，**先把它在后台开跑，再发中台**；总时长 ≈ max(A, B) + 传 latest.json，而不是 A + B。
+
+### 流水线 A 内部的并行点（方式 B 手工时）
+
+1. **Step 1（本机前端构建）与 Step 3（服务器 web 镜像）互不依赖**：rsync 完源码立刻在服务器后台启动 `docker build`，回本机接着做前端和 api 镜像，别串行傻等。
+2. **Step 2（api 镜像 docker build）与 Step 1（pnpm build）可并行**，两个进程互不等。
+3. **api 镜像 `docker save | gzip` 上传与服务器 web build 并行**：一个吃本机上行带宽，一个吃服务器 CPU。
+
+### 流水线 B（客户端三包）的打法
+
+- 三个 target 的产物目录互相隔离（`.desktop-build/targets/<name>/`），但**不要三开**；本机建议只开一个 desktop target 与 `release.sh` 并行。
+- 打包是 CPU 密集型；本机核心数不多时：**客户端串行打包、中台并行**——出一个包校验一个，传的同时打下一个。
+- **Windows 包不能在 macOS 上打**：`package-target.ts` 明确要求 `win-x64` 使用 Windows x64 构建机；走 `.github/workflows/windows-package.yml`（发布必须 signed），本轮不打就在下载页显示“暂未提供”。
+- flock 平台包已内建进打包流程（`package-target.ts` 优先本地 cross-compiled 平台包，缺失才回退 registry），缺失会直接在 `prepare:packages` 报错，不会出坏包。
+- **别清 `.desktop-build/`**（Electron/pnpm store 缓存）和服务器 docker 层缓存，重复打包提速主要靠这两处。
+
+### 顺序总原则
+
+1. **先开客户端最慢的 target（mac-arm64）**，再跑中台 + web；客户端上传放最后，避开 api 镜像上传。
+2. 客户端包最后走 `downloads/`；`mammoth-latest.json` **永远最后传**（先传产物、备份旧 json、再改指针）。
+3. 任何一条流水线炸了，另一条不受影响，各自独立回滚。
+
+### 时间预期
+
+| 范围 | 顺利 | 踩坑 |
+|---|---|---|
+| 仅中台 + web | 20–40 分钟 | 1 小时 |
+| 全量（含三包 + 上传） | 1–1.5 小时（并行后） | 2–3 小时 |
+
+大头永远是客户端打包和安装包上传（取决于本机上行带宽），中台本身很快。
+
+## 4B. 2026-11-05 复盘：今天踩过并已解决的坑
+
+| # | 现象 | 根因 | 处理 | 以后规避 |
+|---|---|---|---|---|
+| 1 | web 镜像构建报 `ERR_MODULE_NOT_FOUND .../scripts/release/process.ts` | rsync 的 `--exclude release` 把嵌套的 `scripts/release/` 也排掉了 | 改成锚定根目录：`--exclude '/release' --exclude '/releases'`，重新同步 | 所有 rsync 排除根目录必须带 `/`；构建前 `test -s .../scripts/release/process.ts` |
+| 2 | 容器起来后本机 `curl` 健康检查 404/421 | 没带公网 Host，web 按 Host 路由 | 健康检查加 `-H 'Host: www.mmai.vip'` | 容器内检查也必须带 Host；最终以公网 smoke 为准 |
+| 3 | 跨架构 desktop 构建 TS 报找不到 `pack-registry-package` 类型 | 只有 `.mjs`，缺 `.d.mts` 声明 | 补 `apps/desktop/scripts/pack-registry-package.d.mts`，import 使用声明 | 新增 `.mjs` 同步补 `.d.mts`；跨架构打包前先跑 `pnpm --dir apps/desktop run build` |
+| 4 | 已装客户端第一轮会话报 `Cannot find module '@mammoth-ai/node-addon-system-<platform>-<arch>'` | 只打了入口包，目标平台原生包缺失；跨架构还可能优先拿到 registry 旧包 | `package-target.ts` 补打目标平台包；优先本地 cross-compiled addon，registry 兜底；`prepare-package-set.ts` 缺包直接报错 | 出包后检查 `app.asar.unpacked/.../node-addon-system-<platform>-<arch>`；首轮会话必须实测 |
+| 5 | 上传 x64 时容易拿到 `release/desktop/` 里的旧包（旧 `2f1e…` vs 当次 `dc2f…`） | 两套产物目录并存，按目录名取文件会拿错 | 只从 `.desktop-build/targets/mac-x64/unsigned-artifacts/` 取当次文件，重传并更新 manifest | 禁止从 `release/desktop/` 旧目录上传；state 记录 source path + sha256 + size |
+| 6 | 单平台重打后，manifest 里另一个平台仍可能指旧包 | 只重建了 arm64，没有逐个核对 x64 指针 | 重打所有对外平台，或只保留当次重打的平台并同步页面 | “一个平台重打，所有平台都核对 sha”；manifest 最后传 |
+| 7 | 本轮没出 Windows 包，页面/manifest 若保留 Windows 入口就会 404 | manifest 只有 darwin-arm64/darwin-amd64，没有 `windows-amd64` | 页面对 Windows 显示“暂未提供”，不生成可点链接 | 页面平台列表必须由 manifest 生成；smoke 逐个 GET manifest 里的文件 |
+| 8 | `mammoth-latest.json` 更新后客户端下载 404/旧包 | 先改指针后传产物，或旧 json 覆盖新 json | 先传产物并校验，备份旧 json，最后原子替换 json | 指针永远最后；保留 `.prev`，写清回滚命令 |
+| 9 | `release/*/state.json` 停在 `deploying` | 手工静态部署（middle-web-only）没有收尾 | 补 `status=done/failed`、`finished_at`、note | 任何部署都建 state 并收尾；新会话先读 `release/*/state.json` |
+| 10 | deploy 显示 done 但 `note=exit=1` | 上一次失败 note 残留，`state_update done` 未清空 | 以 status + smoke 为准，补写成功 note | `state_update done` 未传 note 时删除旧 note（脚本待补）；每次状态变更都写 note |
+| 11 | web-only 热修后默认工作区/首屏仍不对 | 容器 HOME、默认工作目录、冷启动路径未一起设置 | 设置 `HOME` + `default-workspace`，加 warmup splash；验证 657ms/3419ms | web-only 也要验收 `defaultWorkspaceId`、冷启动、`RestartCount=0` |
+| 12 | desktop 上传 state 已 done，之后又重传 arm64 但 state 没变 | 重传没有新建记录 | 新建 reupload step 或新 release id，更新 `finished_at` | 任何重传都必须留痕；manifest 的 `updated_at` 与 state 对得上 |
+| 13 | 客户端打包/上传时本机 CPU、上行被中台构建抢满 | 两条流水线同时抢本机资源 | 桌面只开一个 target，等中台到服务器 web build 再开下一个；上传错开 api 镜像 | 同一时间只跑一个 desktop target；大文件上传串行 |
+
+> 未闭环：今天 API 发版后，控制台权限 migration 是否已完全应用尚未单独复核；下次接手中台先查。
+
+## 4C. 并行发版执行卡（客户端 + 中台）
+
+**结论：可以并行。** 客户端打包不占 `/www/mmp-prod/.release.lock`，也不依赖中台镜像；只有最后写 `downloads/` 时才碰服务器。
+
+### 推荐时间线
+
+| 阶段 | 本机 | 服务器 | 目的 |
+|---|---|---|---|
+| T0 | 后台开 `mac-arm64`（最慢） | — | 先让最慢的跑起来 |
+| T0+1m | `release.sh --yes` | 抢锁、构建 | 两条独立流水线 |
+| 中台进入 `web-image` | 开 `mac-x64` | 服务器 build web | 本机让出 CPU，避免和 api 构建互抢 |
+| 中台 `deploy/smoke` | 继续 x64 / 准备上传 | 切流、验收 | 不要这时传大文件 |
+| 中台完成 | 传 DMG → 校验 → 最后传 json | 只读校验 | 避开 api 镜像上传带宽 |
+
+### 开跑命令
+
+```bash
+# 终端 1：客户端先开一个 target，别三开
+cd /Users/fuweilang/Documents/code/mmp/mammoth-agent
+export PATH="$HOME/.nvm/versions/node/v24.22.2/bin:$PATH"
+nohup caffeinate -dimsu pnpm --dir apps/desktop run package:mac:arm64:unsigned \
+  > /tmp/mmp-desktop-arm64.log 2>&1 &
+echo $! > /tmp/mmp-desktop-arm64.pid
+tail -f /tmp/mmp-desktop-arm64.log
+```
+
+```bash
+# 终端 2：中台同时发
+cd /Users/fuweilang/Documents/code/mmp
+./ground/infra/production/release.sh --yes
+```
+
+```bash
+# 中台进入 web-image 后，再开 x64；win-x64 不在 macOS 上打
+cd /Users/fuweilang/Documents/code/mmp/mammoth-agent
+pnpm --dir apps/desktop run package:mac:x64:unsigned
+```
+
+### 并行边界
+
+| 可以并行 | 不要并行 |
+|---|---|
+| 客户端打包 vs `release.sh` | 两个 `release.sh` / 两个 nginx reload / 两个 `compose up` |
+| 本机前端构建 vs 服务器 web 镜像 | 三个 desktop target 同时开 |
+| api 镜像 docker build vs 本机前端构建 | DMG 上传 vs api 镜像上传 |
+| 下一个 target 打包 vs 上一个 target 校验 | `mammoth-latest.json` 先于产物上传 |
+
+### 资源竞争
+
+| 资源 | 风险 | 建议 |
+|---|---|---|
+| CPU | Electron/asar 与本地 Docker build 互抢 | 同一时间只开一个 desktop target；中台到服务器构建后再开下一个 |
+| 内存 | Colima + Electron + 打包缓存 | 至少留 8G；不够就先发中台，客户端排队 |
+| 上行 | DMG 200–300MB，api tar 约 300MB | 大文件串行；中台 smoke 通过后再传 DMG |
+| 磁盘 | 三包 + Electron 缓存约 2–3G | 打包前 `df -h`，别清 `.desktop-build` |
+| 休眠 | 合盖杀进程 | `caffeinate -dimsu`，长任务放独立终端 |
+
+## 4D. 其他可优化点（按优先级）
+
+| 优先级 | 建议 | 收益 | 落点 |
+|---|---|---|---|
+| P0 | 上传先写 `.tmp`，服务器 `mv` 原子替换；json 同样 | 客户端不会下到半个文件 | 第 6 节命令 |
+| P0 | `downloads/` 上传单独串行，或加 `.downloads.lock` | 防止两个会话互相覆盖 | `release.sh` / 客户端上传脚本 |
+| P0 | `state_update done` 未传 note 时清空旧 note，并补 `finished_at` | 不再出现 done + `exit=1` 的误导 | `release.sh`（待改） |
+| P0 | smoke 按 manifest 遍历所有平台，校验文件存在 + sha/大小 | Windows/arm64 漏传能立刻发现 | `smoke.sh` |
+| P1 | `release.sh --with-desktop`（建议新增）：自动后台开 mac-arm64，主流程结束后等待并上传 | 一条命令完成并行，不靠人记 | 新 wrapper 或 `release.sh` 开关 |
+| P1 | 废弃 `release/desktop/` 作为上传源，只认 `.desktop-build/targets/` | 消灭“旧包/新包”混用 | 文档 + 上传脚本 |
+| P1 | 下载页平台列表从 manifest 生成；无包平台显示“暂未提供” | 不再出现死链接 | 前端下载组件 |
+| P1 | 出包自动检查 `file`/`lipo` 架构 + `app.asar.unpacked` 原生包 | 跨架构坏包在打包阶段暴露 | `package-target.ts` / 校验脚本 |
+| P2 | manifest 增加可选 `bytes`、`built_at`；客户端忽略未知字段 | 大小一致性可机器校验 | schema v3 兼容 |
+| P2 | 桌面包保留上一版 + 一键回滚（DMG + json） | 客户端回滚不用手拼 | `downloads/` 备份 + 脚本 |
+
 ## 5. 网络与下载（最容易吃掉几小时）
 
 > 2026-11-04 这次发版，10h47m 里至少 3h 花在“拉文件”：GitHub 0 字节、Docker Hub 超时、
@@ -392,11 +524,101 @@ rsync -avP --partial middle-web.tar.gz "$HOST:/tmp/mmp-release/"
 
 ## 6. 客户端（可选，默认不发）
 
-只有用户明确要求才做。当前已知阻塞：
+只有用户明确要求才做。打包命令（本机 macOS arm64）：
 
-- `@mammoth-ai/mmp-llm-ground` 标记 `private: true`，且 `files` 指向不存在的 `lib/index.js` → host bundle 失败。
-- 未签名 arm64 可以出包，但需先修上面的打包声明。
-- 发之前必须检查 dmg 的 bundle id，**`com.tencent.octop` 是废弃包，禁止上线**。
+```bash
+cd /Users/fuweilang/Documents/code/mmp/mammoth-agent
+export PATH="$HOME/.nvm/versions/node/v24.22.2/bin:$PATH"
+pnpm --dir apps/desktop run package:mac:arm64:unsigned   # 本机架构，本地编译原生模块
+pnpm --dir apps/desktop run package:mac:x64:unsigned     # 跨架构，优先本地 cross-compiled darwin-x64，缺了才回退 registry
+# win-x64 不能在 macOS 上打：package-target.ts 要求 Windows x64 构建机
+# 走 .github/workflows/windows-package.yml（发布必须 signed；unsigned 仅内部调试）
+```
+
+### 6.1 三 target 对照表
+
+| target | 在哪打 | 本地产物（`.desktop-build/targets/<target>/unsigned-artifacts/`） | 服务器文件名 | manifest key |
+|---|---|---|---|---|
+| `mac-arm64` | 本机 Apple Silicon | `mammoth-ai-<version>-mac-arm64-unsigned.dmg` | `mammoth-agent-mac-arm64.dmg` | `darwin-arm64` |
+| `mac-x64` | 本机 Apple Silicon 跨架构 | `mammoth-ai-<version>-mac-x64-unsigned.dmg` | `mammoth-agent-mac-x64.dmg` | `darwin-amd64` |
+| `win-x64` | Windows x64 构建机/CI | `mammoth-ai-<version>-win-x64-unsigned.exe`（发布用 signed） | `mammoth-agent-win.exe` | `windows-amd64` |
+
+**只认 `.desktop-build/targets/<target>/unsigned-artifacts/` 下的当次产物。** `release/desktop/` 里的旧 DMG 只能用于对比/回滚，禁止上传。
+
+### 6.2 出包后先验本地
+
+```bash
+cd /Users/fuweilang/Documents/code/mmp/mammoth-agent
+VERSION="$(node -p "require('./apps/desktop/package.json').version")"
+TARGET=mac-arm64
+ARCH=arm64   # mac-x64 用 x64
+SRC="apps/desktop/.desktop-build/targets/$TARGET/unsigned-artifacts/mammoth-ai-$VERSION-$TARGET-unsigned.dmg"
+APP="apps/desktop/.desktop-build/targets/$TARGET/unsigned-artifacts/mac/猛犸智能体.app"
+
+shasum -a 256 "$SRC"
+stat -f%z "$SRC"
+file "$APP/Contents/MacOS/猛犸智能体"
+file "$APP/Contents/Resources/app.asar.unpacked/mmp/node_modules/@mammoth-ai/node-addon-system-darwin-$ARCH/bin/system.node"
+/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist"
+```
+
+- 架构必须匹配：x64 包主程序和 `system.node` 都应是 `x86_64`，arm64 包都应是 `arm64`。
+- bundle id **不能是 `com.tencent.octop`**（废弃包）。
+- `system.node` 缺失或架构不对，直接重打，不要上传。
+
+### 6.3 上传与三重校验
+
+```bash
+# 1) 先传临时名，再原子改名，避免客户端下到半个文件
+DEST=mammoth-agent-mac-arm64.dmg
+rsync -avP --partial "$SRC" "$HOST:/www/mmp-prod/downloads/.$DEST.tmp"
+ssh "$HOST" "mv '/www/mmp-prod/downloads/.$DEST.tmp' '/www/mmp-prod/downloads/$DEST'"
+
+# 2) 服务器校验
+ssh "$HOST" "sha256sum '/www/mmp-prod/downloads/$DEST'; stat -c%s '/www/mmp-prod/downloads/$DEST'"
+
+# 3) 公网校验（必须真下，不能只看 HEAD）
+curl -L --fail --max-time 600 -o "/tmp/$DEST" "https://www.mmai.vip/downloads/$DEST"
+shasum -a 256 "/tmp/$DEST"
+stat -f%z "/tmp/$DEST"
+```
+
+本地、服务器、公网三处 sha256 和字节数必须完全一致；不一致就重传，不要改 manifest 去“适配”。如果服务器对、公网不对，先怀疑 CDN/EdgeOne 缓存，purge 后重试。
+
+### 6.4 `mammoth-latest.json` 最后传
+
+1. 三个（或本轮实际构建的）安装包全部上传并三重校验。
+2. 备份旧 json：`mammoth-latest.prev-<ts>.json`。
+3. 按实际文件生成新 json，只写已上传的平台；Windows 没包就不要写 `windows-amd64`，页面显示“暂未提供”。
+4. 同样先传 `.tmp` 再 `mv`，最后再 `curl` 拉一次，解析 `file` + `sha256` 是否与服务器文件一致。
+
+```bash
+# 示例：只保留本轮实际有的平台
+cat > /tmp/mammoth-latest.json <<'JSON'
+{
+  "product": "mammoth-agent",
+  "schema_version": 2,
+  "updated_at": "2026-11-05T11:38:22Z",
+  "platforms": {
+    "darwin-arm64": {
+      "shell": { "version": "0.2.2-alpha.2" },
+      "file": "mammoth-agent-mac-arm64.dmg",
+      "sha256": "<本地/服务器/公网一致的 sha256>",
+      "signed": false,
+      "automatic_updates": false
+    }
+  }
+}
+JSON
+```
+
+回滚只改指针：
+
+```bash
+ssh "$HOST" 'cd /www/mmp-prod/downloads && cp mammoth-latest.prev-<ts>.json mammoth-latest.json'
+```
+
+发之前必须检查 dmg 的 bundle id，**`com.tencent.octop` 是废弃包，禁止上线**。
 
 无客户端时：`/agent` 返回 410，`downloads/` 可为空，preflight/smoke 跳过下载项，不阻塞中台发版。
 
@@ -410,12 +632,22 @@ rsync -avP --partial middle-web.tar.gz "$HOST:/tmp/mmp-release/"
 | `ERR_PNPM_OUTDATED_LOCKFILE` | lockfile 与 package.json 不一致 | `pnpm install` 更新后重试 |
 | `status: 128` 取 commit 失败 | 镜像内无 `.git` | 传 `MMP_CLIENT_COMMIT_HASH` |
 | `UNRESOLVED_ENTRY lib/types/index.js` | `*/lib` 被 rsync / `.dockerignore` 排除 | 去掉排除，重新同步 |
-| `ERR_MODULE_NOT_FOUND scripts/release/process.ts` | 源码同步不完整 | 重新 rsync，先 `test -s` 校验 |
+| `ERR_MODULE_NOT_FOUND .../scripts/release/process.ts` | rsync `--exclude release` 误排嵌套的 `scripts/release/` | 改 `--exclude '/release' --exclude '/releases'`，重同步并 `test -s` |
+| web 容器健康检查 404/421 | `curl 127.0.0.1:33080` 没带公网 Host | 加 `-H 'Host: www.mmai.vip'`；最终以公网 smoke 为准 |
 | `Cannot find module 'express'` | API 镜像依赖不全 | 重建 API 镜像；`require.resolve('express')` 验证 |
 | 首页白屏 / `failed to map segment` | 容器 `/tmp` `noexec`，原生模块无法执行 | tmpfs 加 `exec`，重建 web 镜像 |
 | `/admin` 报“返回的不是 JSON” | nginx 缺 `/admin/api/` | 补 location 后 reload |
-| 首次登录强制选工作区 | 容器无 `xdg-user-dir` | 加 shim，默认 `~/Documents/...` |
+| 首次登录强制选工作区 / 默认目录不对 | 容器无 `xdg-user-dir`、HOME/默认工作目录未设 | 加 shim，默认 `~/Documents/...`；web-only 也验 `defaultWorkspaceId` |
+| 跨架构 desktop TS 报缺少 `pack-registry-package` 类型 | 只有 `.mjs`，缺 `.d.mts` 声明 | 补 `pack-registry-package.d.mts`，重跑 `apps/desktop` build |
+| 本机打 win-x64 报 `requires a Windows x64 build host` | Windows 包不能从 macOS 交叉构建 | 用 `.github/workflows/windows-package.yml` / Windows x64 机器；本轮不打就页面隐藏 |
+| 客户端报 `Cannot find module '@mammoth-ai/node-addon-system-<platform>-<arch>'` | 未打目标平台原生包，或跨架构拿了 registry 旧包 | 优先本地 cross-compiled addon；缺包守卫直接报错；重打并查 `app.asar.unpacked` |
 | `/downloads/mammoth-latest.json` 404 | 本轮无客户端包 | 正常；页面提示即可 |
+| 下载页 Windows 入口 404 | 没构建/上传 win-x64，但页面或 manifest 写了 `windows-amd64` | 页面按 manifest 显示；无包写“暂未提供” |
+| 上传后 manifest sha 不对 / 仍下旧包 | 从 `release/desktop/` 旧目录取了文件，或先传 json | 只从 `.desktop-build/targets/` 取；本地/服务器/公网三处 sha 对齐；json 最后传 |
+| 客户端安装包下到半个文件 | 直接覆盖正式文件名 | 先传 `.tmp`，服务器 `mv` 原子替换 |
+| `release/*/state.json` 停在 `deploying` | 手工 middle-web 静态部署没写收尾 | 补 `status/finished_at/note`；任何部署都建 state |
+| state 显示 done 但 `note=exit=1` | 上次失败 note 残留 | `state_update done` 清空旧 note；以 smoke 结果为准 |
+| 重传安装包后 state 没变 | 重传没有新建记录 | 加 reupload step 或新 release id，更新 `finished_at` |
 | `docker compose up` 后 api 反复重启 | 镜像/依赖/env 错误 | `docker logs` 看第一个异常，不要反复 `up` |
 | GitHub 返回 302 但下载 0 字节 | 资源域被墙/代理空响应 | 换国内镜像；校验 `content-length` |
 | `docker pull` 卡十几分钟 | 镜像站挂起且命令无超时 | `timeout 180`，按源表换源 |
@@ -459,6 +691,8 @@ rsync -avP --partial middle-web.tar.gz "$HOST:/tmp/mmp-release/"
 ```
 
 新会话接手：先读 `release/*/state.json` + 服务器锁，再决定继续还是重来。禁止在不知道别人进度的前提下重新构建。
+
+> 2026-11-05 起：`state_update done` 必须清空旧 `note`；middle-web-only/静态部署也要建 state 并收尾；安装包重传必须新增记录，不能只改 `finished_at`。
 
 ## 9. 汇报格式
 
@@ -507,7 +741,10 @@ ssh "$HOST" 'cd /www/mmp-prod && rm -rf middle-web && cp -a middle-web.bak-<ts> 
 
 ## 11. 禁止
 
-- 禁止并行发版、禁止不拿锁就构建/上传。
+- 禁止并行发版（两个 `release.sh`、两个 nginx reload、两个 `compose up`）；客户端打包不算发版，但同一时间只跑一个 desktop target，上传串行。
+- 禁止不拿锁就构建/上传中台产物；客户端写 `downloads/` 也必须串行，禁止两个会话同时覆盖。
+- 禁止从 `release/desktop/` 旧目录上传安装包；只认 `.desktop-build/targets/<target>/unsigned-artifacts/` 当次产物。
+- 禁止先传 `mammoth-latest.json` 再传安装包；禁止把未构建的平台写进 manifest。
 - 禁止在 Apple Silicon 上构建 web 镜像。
 - 禁止把源码树、`.git`、`node_modules` 留在服务器。
 - 禁止把 `com.tencent.octop` 包当成新客户端发布。

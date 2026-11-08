@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/data-visualization/SKILL.md (git-blob:409cce60f59b463a8386c83cde03dc7e70be93f3)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: data/skills/data-visualization
+No third-party scripts are executed or shipped in this managed package.

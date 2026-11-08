@@ -1,0 +1,22 @@
+{
+  "key": "mammoth",
+  "kind": "GENERAL",
+  "name": "猛犸 AI",
+  "summary": "通用助手 · 有问必答",
+  "openingQuestions": [
+    "用三句话介绍一下你能帮我做什么。",
+    "帮我把这段话改得更简洁有力。",
+    "给我一份明日站会的提纲模板。"
+  ],
+  "toolScope": [
+    "web_search"
+  ],
+  "toolScopeNotes": "latest skills.search=true；Ground 经平台 DeepSeek Tools Search 代理，密钥不下发桌面",
+  "promptFile": "prompts/mammoth.md",
+  "batch": "A",
+  "publish": true,
+  "category": "common",
+  "capabilities": [
+    "日常问答"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "key": "marketing-community-marketing",
+  "name": "社群营销规划",
+  "description": "梳理社群价值、互动节奏和增长策略。",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evals/evals.json"
+    },
+    {
+      "path": "references/community-models.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

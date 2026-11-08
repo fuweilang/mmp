@@ -1,0 +1,204 @@
+{
+  "generatedAt": "2026-11-07T09:21:22.563642+08:00 Asia/Shanghai",
+  "scope": "Only official gallery Host/UI package resources and existing incremental watcher output; no tests/browser/fullbuild/typecheck",
+  "artifacts": [
+    {
+      "kind": "Host",
+      "path": "mammoth-agent/packages/preset/official-agent-gallery/lib/index.js",
+      "bytes": 48002,
+      "modifiedAt": "2026-11-07T09:09:08.659009+08:00 Asia/Shanghai",
+      "sha256": "681ab4ec5d7da3cfb87429dc56ba5c9bcc20fbef57095c2d603110e0003f8001",
+      "staticMarkers": {
+        "pageExperts": true,
+        "pageSkills": true,
+        "getCard": true
+      }
+    },
+    {
+      "kind": "Remote host codec",
+      "path": "mammoth-agent/packages/preset/official-agent-gallery/lib/typert.host.js",
+      "bytes": 44412,
+      "modifiedAt": "2026-11-07T09:03:20.504159+08:00 Asia/Shanghai",
+      "sha256": "3b4bbce902d91fb20336d33dc6c06cb8ba741e8528d5bd43641f2df2559b770d",
+      "staticMarkers": {
+        "pageExperts": true,
+        "pageSkills": true,
+        "expertFacets": true,
+        "skillFacets": true
+      }
+    },
+    {
+      "kind": "Remote client codec",
+      "path": "mammoth-agent/packages/preset/official-agent-gallery/lib/typert.remote-client.js",
+      "bytes": 35181,
+      "modifiedAt": "2026-11-07T09:03:20.504458+08:00 Asia/Shanghai",
+      "sha256": "80f8405330574417e08e087d3d9d248fa2f338a89d5e49a4733bafb3fb283b60",
+      "staticMarkers": {
+        "pageExperts": true,
+        "pageSkills": true,
+        "expertFacets": true,
+        "skillFacets": true
+      }
+    },
+    {
+      "kind": "Remote types",
+      "path": "mammoth-agent/packages/preset/official-agent-gallery/lib/typert.remote-client.d.ts",
+      "bytes": 3408,
+      "modifiedAt": "2026-11-07T09:03:20.504572+08:00 Asia/Shanghai",
+      "sha256": "8a01b9942ef3bfeb59798d2a8e1481f66aaa3b82281a608355edcc94a2f68694",
+      "staticMarkers": {
+        "pageExperts": true,
+        "pageSkills": true
+      }
+    },
+    {
+      "kind": "Shared UI",
+      "path": "mammoth-agent/packages/client/ui-official-agent-gallery/lib/client.js",
+      "bytes": 66292,
+      "modifiedAt": "2026-11-07T09:19:21.202000+08:00 Asia/Shanghai",
+      "sha256": "481b0053f1c6ddf2e6aa5213ca402a1d60fd6c8d0a2a5f187df6169346846381",
+      "staticMarkers": {
+        "pageExperts": true,
+        "pageSkills": true,
+        "IntersectionObserver": true,
+        "catalog-summary": true
+      }
+    },
+    {
+      "kind": "Backend experts",
+      "path": "ground/apps/backend/dist/official-agent/official-agent.service.js",
+      "bytes": 23067,
+      "modifiedAt": "2026-11-07T09:20:26.300025+08:00 Asia/Shanghai",
+      "sha256": "f030c829ed2c522564c887d7ade4268d53ba935653a30303ee0f56abfbebd662",
+      "staticMarkers": {
+        "catalogPage": true,
+        "catalogCard": true,
+        "CATALOG_EXPERT_SELECT": true
+      }
+    },
+    {
+      "kind": "Backend skills",
+      "path": "ground/apps/backend/dist/official-skill/official-skill.service.js",
+      "bytes": 32524,
+      "modifiedAt": "2026-11-07T09:20:26.238258+08:00 Asia/Shanghai",
+      "sha256": "7f507ff227c5296641e29d9dd44be2412c5b3822f9cf1cffb8296a03c6e09746",
+      "staticMarkers": {
+        "catalogPage": true,
+        "setIcon": true
+      }
+    },
+    {
+      "kind": "Backend discovery",
+      "path": "ground/apps/backend/dist/official-agent/catalog-discovery.js",
+      "bytes": 14067,
+      "modifiedAt": "2026-11-07T09:12:27.043062+08:00 Asia/Shanghai",
+      "sha256": "9b30e34e66f89e2db46d53b2e8744c4faf0947a72a7a2f3da1e4c55d6e54fbba",
+      "staticMarkers": {
+        "catalogFacets": true,
+        "displaySummary": true,
+        "catalogDiscoveryWhere": true
+      }
+    },
+    {
+      "kind": "Backend image storage",
+      "path": "ground/apps/backend/dist/knowledge/storage.js",
+      "bytes": 10400,
+      "modifiedAt": "2026-11-07T09:14:14.130226+08:00 Asia/Shanghai",
+      "sha256": "0e6311127bd37084dafd133ca0291f1b6fccab48794d16cb60988e20f9b591cc",
+      "staticMarkers": {
+        "VP8X": true,
+        "VP8L": true,
+        "图片尺寸过大": true
+      }
+    },
+    {
+      "kind": "Admin skill image route",
+      "path": "ground/apps/backend/dist/admin/admin-official-skills.controller.js",
+      "bytes": 8989,
+      "modifiedAt": "2026-11-07T09:20:26.286012+08:00 Asia/Shanghai",
+      "sha256": "11658d61570f3561de60cdf092e7e3891172d15585ff4c28af643ae8304d98d6",
+      "staticMarkers": {
+        ":id/icon": true
+      }
+    },
+    {
+      "kind": "Public image route",
+      "path": "ground/apps/backend/dist/official-agent/official-agent-avatar.controller.js",
+      "bytes": 2559,
+      "modifiedAt": "2026-11-07T09:14:14.131971+08:00 Asia/Shanghai",
+      "sha256": "b143f5a7bc9c09d449ebe4fdece710db9acc9941d97a0ab4b52c355038bf473e",
+      "staticMarkers": {
+        "nosniff": true
+      }
+    }
+  ],
+  "freshness": [
+    {
+      "source": "mammoth-agent/packages/preset/official-agent-gallery/src/index.ts",
+      "artifact": "mammoth-agent/packages/preset/official-agent-gallery/lib/index.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "mammoth-agent/packages/preset/official-agent-gallery/src/ground.ts",
+      "artifact": "mammoth-agent/packages/preset/official-agent-gallery/lib/index.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "mammoth-agent/packages/client/ui-official-agent-gallery/src/client/GalleryPage.tsx",
+      "artifact": "mammoth-agent/packages/client/ui-official-agent-gallery/lib/client.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "mammoth-agent/packages/client/ui-official-agent-gallery/src/client/CatalogIcon.tsx",
+      "artifact": "mammoth-agent/packages/client/ui-official-agent-gallery/lib/client.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "ground/apps/backend/src/knowledge/storage.ts",
+      "artifact": "ground/apps/backend/dist/knowledge/storage.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "ground/apps/backend/src/official-agent/official-agent.service.ts",
+      "artifact": "ground/apps/backend/dist/official-agent/official-agent.service.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "ground/apps/backend/src/official-skill/official-skill.service.ts",
+      "artifact": "ground/apps/backend/dist/official-skill/official-skill.service.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "ground/apps/backend/src/official-agent/official-agent-assets.ts",
+      "artifact": "ground/apps/backend/dist/official-agent/official-agent-assets.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "ground/apps/backend/src/official-agent/gallery-avatars.ts",
+      "artifact": "ground/apps/backend/dist/official-agent/gallery-avatars.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "ground/apps/backend/src/official-agent/official-agent-avatar.controller.ts",
+      "artifact": "ground/apps/backend/dist/official-agent/official-agent-avatar.controller.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "ground/apps/backend/src/official-agent/catalog-discovery.ts",
+      "artifact": "ground/apps/backend/dist/official-agent/catalog-discovery.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "ground/apps/backend/src/admin/admin-official-agents.service.ts",
+      "artifact": "ground/apps/backend/dist/admin/admin-official-agents.service.js",
+      "artifactAtLeastAsNew": true
+    },
+    {
+      "source": "ground/apps/backend/src/admin/admin-official-skills.service.ts",
+      "artifact": "ground/apps/backend/dist/admin/admin-official-skills.service.js",
+      "artifactAtLeastAsNew": true
+    }
+  ],
+  "adminDelivery": "Existing Vite loads current Vue sources directly; no frontend fullbuild",
+  "runtimeVerification": "not-run; restart DevHost and refresh; backend restart if not watcher managed"
+}

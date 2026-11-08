@@ -1,0 +1,17 @@
+{
+  "key": "wechat-mini-program-development",
+  "name": "微信小程序开发",
+  "summary": "WeChat mini-program development skill with standard project structure, request wrapper, and API management. Invoke when developing WeChat m…",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/wechat-mini-program-development",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/wechat-mini-program-development#3ef4054017e5"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

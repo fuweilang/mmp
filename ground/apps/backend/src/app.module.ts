@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { TenantModule } from './tenant/tenant.module';
 import { TenantRoleModule } from './tenant-role/tenant-role.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
+import { LibraryModule } from './library/library.module';
 import { WorkbenchModule } from './workbench/workbench.module';
 import { UsageModule } from './usage/usage.module';
 import { AuditModule } from './audit/audit.module';
@@ -18,6 +19,8 @@ import { HealthController } from './health.controller';
 import { VersionController } from './version.controller';
 import { LoggingModule } from './logging/logging.module';
 import { RequestLoggingMiddleware } from './request-logging.middleware';
+import { OfficialAgentModule } from './official-agent/official-agent.module';
+import { OfficialSkillModule } from './official-skill/official-skill.module';
 
 @Module({
   imports: [
@@ -29,6 +32,7 @@ import { RequestLoggingMiddleware } from './request-logging.middleware';
     TenantModule,
     TenantRoleModule,
     KnowledgeModule,
+    LibraryModule,
     WorkbenchModule,
     UsageModule,
     AuditModule,
@@ -36,6 +40,8 @@ import { RequestLoggingMiddleware } from './request-logging.middleware';
     AdminModule,
     BillingModule,
     PayModule,
+    OfficialAgentModule,
+    OfficialSkillModule,
     LlmModule,
   ],
   providers: [RequestLoggingMiddleware],

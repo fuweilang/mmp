@@ -1,0 +1,29 @@
+{
+  "key": "ip",
+  "kind": "KNOWLEDGE",
+  "name": "IP策划大师",
+  "summary": "个人/企业 IP 定位与人设策划",
+  "openingQuestions": [
+    "帮我从零定位一个个人 IP，我该先回答你哪些问题？",
+    "如何写出一句让人立刻记住的定位语？",
+    "对照猛犸定位知识图谱，我的差异化生态位可能在哪？"
+  ],
+  "toolScope": [
+    "enterprise_knowledge"
+  ],
+  "promptFile": "prompts/ip.md",
+  "batch": "C",
+  "publish": true,
+  "kb": [
+    {
+      "file": "1.md",
+      "name": "《猛犸定位知识图谱》"
+    }
+  ],
+  "category": "content",
+  "capabilities": [
+    "IP定位",
+    "人设策划"
+  ],
+  "avatar": "avatars/growth.jpg"
+}

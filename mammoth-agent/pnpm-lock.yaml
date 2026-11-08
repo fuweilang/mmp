@@ -1576,6 +1576,9 @@ importers:
       '@mammoth-ai/mmp-office-to-pdf':
         specifier: workspace:*
         version: link:../../document/office-to-pdf
+      '@mammoth-ai/mmp-official-agent-gallery':
+        specifier: workspace:*
+        version: link:../../preset/official-agent-gallery
       '@mammoth-ai/mmp-permission-presets':
         specifier: workspace:*
         version: link:../../interaction/permission-presets
@@ -3044,6 +3047,9 @@ importers:
       '@mammoth-ai/mmp-client-ui-directory-picker-native':
         specifier: workspace:*
         version: link:../../client/ui-directory-picker-native
+      '@mammoth-ai/mmp-client-ui-enterprise-library':
+        specifier: workspace:*
+        version: link:../../client/ui-enterprise-library
       '@mammoth-ai/mmp-client-ui-entry-customization':
         specifier: workspace:*
         version: link:../../client/ui-entry-customization
@@ -3071,6 +3077,9 @@ importers:
       '@mammoth-ai/mmp-client-ui-model-selection':
         specifier: workspace:*
         version: link:../../client/ui-model-selection
+      '@mammoth-ai/mmp-client-ui-official-agent-gallery':
+        specifier: workspace:*
+        version: link:../../client/ui-official-agent-gallery
       '@mammoth-ai/mmp-client-ui-open-in-app':
         specifier: workspace:*
         version: link:../../client/ui-open-in-app
@@ -3245,6 +3254,9 @@ importers:
       '@mammoth-ai/mmp-office-to-pdf':
         specifier: workspace:*
         version: link:../../document/office-to-pdf
+      '@mammoth-ai/mmp-official-agent-gallery':
+        specifier: workspace:*
+        version: link:../../preset/official-agent-gallery
       '@mammoth-ai/mmp-persona':
         specifier: workspace:*
         version: link:../../preset/persona
@@ -4468,6 +4480,60 @@ importers:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
 
+  packages/client/ui-enterprise-library:
+    devDependencies:
+      '@mammoth-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@mammoth-ai/mmp-api-session-controller':
+        specifier: workspace:*
+        version: link:../../api/session-controller
+      '@mammoth-ai/mmp-client-locale':
+        specifier: workspace:*
+        version: link:../locale
+      '@mammoth-ai/mmp-client-ui-commands':
+        specifier: workspace:*
+        version: link:../ui-commands
+      '@mammoth-ai/mmp-client-ui-conversation':
+        specifier: workspace:*
+        version: link:../ui-conversation
+      '@mammoth-ai/mmp-client-ui-input-trigger':
+        specifier: workspace:*
+        version: link:../ui-input-trigger
+      '@mammoth-ai/mmp-client-ui-layout':
+        specifier: workspace:*
+        version: link:../ui-layout
+      '@mammoth-ai/mmp-client-ui-primitives':
+        specifier: workspace:*
+        version: link:../ui-primitives
+      '@mammoth-ai/mmp-client-ui-renderer':
+        specifier: workspace:*
+        version: link:../ui-renderer
+      '@mammoth-ai/mmp-client-ui-session':
+        specifier: workspace:*
+        version: link:../ui-session
+      '@mammoth-ai/mmp-client-ui-sidebar':
+        specifier: workspace:*
+        version: link:../ui-sidebar
+      '@mammoth-ai/mmp-client-ui-slots':
+        specifier: workspace:*
+        version: link:../ui-slots
+      '@mammoth-ai/mmp-client-ui-workspace':
+        specifier: workspace:*
+        version: link:../ui-workspace
+      '@mammoth-ai/mmp-session':
+        specifier: workspace:*
+        version: link:../../core/session
+      '@testing-library/react':
+        specifier: ^16.3.3
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.3.1(react@18.3.1)
+
   packages/client/ui-entry-customization:
     devDependencies:
       '@mammoth-ai/cordis':
@@ -4908,6 +4974,54 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.3.1(react@18.3.1)
+
+  packages/client/ui-official-agent-gallery:
+    devDependencies:
+      '@mammoth-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@mammoth-ai/mmp-api-remotes':
+        specifier: workspace:*
+        version: link:../../api/remotes
+      '@mammoth-ai/mmp-client-locale':
+        specifier: workspace:*
+        version: link:../locale
+      '@mammoth-ai/mmp-client-test-runtime':
+        specifier: workspace:*
+        version: link:../../test-support/client-runtime
+      '@mammoth-ai/mmp-client-ui-commands':
+        specifier: workspace:*
+        version: link:../ui-commands
+      '@mammoth-ai/mmp-client-ui-layout':
+        specifier: workspace:*
+        version: link:../ui-layout
+      '@mammoth-ai/mmp-client-ui-primitives':
+        specifier: workspace:*
+        version: link:../ui-primitives
+      '@mammoth-ai/mmp-client-ui-renderer':
+        specifier: workspace:*
+        version: link:../ui-renderer
+      '@mammoth-ai/mmp-client-ui-sidebar':
+        specifier: workspace:*
+        version: link:../ui-sidebar
+      '@mammoth-ai/mmp-client-ui-slots':
+        specifier: workspace:*
+        version: link:../ui-slots
+      '@mammoth-ai/mmp-client-ui-workspace':
+        specifier: workspace:*
+        version: link:../ui-workspace
+      '@mammoth-ai/mmp-official-agent-gallery':
+        specifier: workspace:*
+        version: link:../../preset/official-agent-gallery
+      '@testing-library/react':
+        specifier: ^16.3.3
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -10358,6 +10472,9 @@ importers:
       '@mammoth-ai/cordis-plugin-loader':
         specifier: workspace:~
         version: link:../../../vendor/loader
+      '@mammoth-ai/mmp-atomic-write':
+        specifier: workspace:*
+        version: link:../../util/atomic-write
       '@mammoth-ai/mmp-brand':
         specifier: workspace:*
         version: link:../../util/brand
@@ -13342,6 +13459,9 @@ importers:
       '@mammoth-ai/mmp-llm':
         specifier: workspace:*
         version: link:../llm
+      '@mammoth-ai/mmp-session':
+        specifier: workspace:*
+        version: link:../../core/session
 
   packages/llm/llm-pi-ai:
     dependencies:
@@ -13953,6 +14073,91 @@ importers:
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
+
+  packages/preset/official-agent-gallery:
+    dependencies:
+      '@mammoth-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@mammoth-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@mammoth-ai/cordis-plugin-include':
+        specifier: workspace:~
+        version: link:../../../vendor/include
+      '@mammoth-ai/cordis-plugin-loader':
+        specifier: workspace:~
+        version: link:../../../vendor/loader
+      '@mammoth-ai/mmp-agent':
+        specifier: workspace:*
+        version: link:../../core/agent
+      '@mammoth-ai/mmp-agent-instructions':
+        specifier: workspace:*
+        version: link:../../context/agent-instructions
+      '@mammoth-ai/mmp-agent-preset-registry':
+        specifier: workspace:*
+        version: link:../agent-preset-registry
+      '@mammoth-ai/mmp-api-gateway':
+        specifier: workspace:*
+        version: link:../../api/gateway
+      '@mammoth-ai/mmp-api-remote-access':
+        specifier: workspace:*
+        version: link:../../api/remote-access
+      '@mammoth-ai/mmp-attachment':
+        specifier: workspace:*
+        version: link:../../attachment/attachment
+      '@mammoth-ai/mmp-client-connection':
+        specifier: workspace:*
+        version: link:../../client/connection
+      '@mammoth-ai/mmp-deepseek-account':
+        specifier: workspace:*
+        version: link:../../credentials/deepseek-account
+      '@mammoth-ai/mmp-llm':
+        specifier: workspace:*
+        version: link:../../llm/llm
+      '@mammoth-ai/mmp-llm-ground':
+        specifier: workspace:*
+        version: link:../../llm/llm-ground
+      '@mammoth-ai/mmp-persona':
+        specifier: workspace:*
+        version: link:../persona
+      '@mammoth-ai/mmp-scope':
+        specifier: workspace:*
+        version: link:../../core/scope
+      '@mammoth-ai/mmp-session':
+        specifier: workspace:*
+        version: link:../../core/session
+      '@mammoth-ai/mmp-session-projection':
+        specifier: workspace:*
+        version: link:../../session/session-projection
+      '@mammoth-ai/mmp-skill':
+        specifier: workspace:*
+        version: link:../../skill/skill
+      '@mammoth-ai/mmp-system-prompt':
+        specifier: workspace:*
+        version: link:../../core/system-prompt
+      '@mammoth-ai/mmp-tool-executor-native':
+        specifier: workspace:*
+        version: link:../../core/tool-executor-native
+      '@mammoth-ai/mmp-tool-testkit':
+        specifier: workspace:*
+        version: link:../../test-support/tool-testkit
+      '@mammoth-ai/mmp-tools':
+        specifier: workspace:*
+        version: link:../../core/tools
+      '@mammoth-ai/mmp-typert-protocol':
+        specifier: workspace:*
+        version: link:../../typert/protocol
+      '@mammoth-ai/mmp-typert-registry':
+        specifier: workspace:*
+        version: link:../../typert/registry
+      '@mammoth-ai/mmp-workspace':
+        specifier: workspace:*
+        version: link:../../workspace/workspace
 
   packages/preset/persona:
     dependencies:

@@ -1,0 +1,15 @@
+{
+  "key": "industry-support-kb-article",
+  "name": "客服知识文章",
+  "description": "把解决过程整理成可检索的知识库文章草稿。",
+  "entry": "SKILL.md",
+  "category": "sales",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

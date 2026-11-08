@@ -1,0 +1,5 @@
+Source: https://github.com/hackerFish/awesome-dsh-skills/blob/main/skills/dsh-plugin-dev/SKILL.md (git-blob:b2593ac79e3c6d9b68ccd3826875ba52b7e696be)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: skills/dsh-plugin-dev
+No third-party scripts are executed or shipped in this managed package.

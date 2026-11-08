@@ -1,0 +1,15 @@
+{
+  "key": "industry-legal-legal-risk-assessment",
+  "name": "法律风险辅助分析",
+  "description": "梳理事实、风险等级和升级建议，需专业人员复核。",
+  "entry": "SKILL.md",
+  "category": "legal",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

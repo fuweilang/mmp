@@ -1,0 +1,15 @@
+{
+  "key": "industry-hr-onboarding",
+  "name": "员工入职计划",
+  "description": "整理入职材料、协作角色与阶段安排。",
+  "entry": "SKILL.md",
+  "category": "hr",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

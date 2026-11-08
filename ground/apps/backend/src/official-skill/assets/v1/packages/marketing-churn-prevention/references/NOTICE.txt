@@ -1,0 +1,5 @@
+Source: https://github.com/coreyhaines31/marketingskills/blob/main/skills/churn-prevention/SKILL.md (git-blob:2cb8beed89c105207c10b88bc5371848b140f838)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: skills/churn-prevention
+No third-party scripts are executed or shipped in this managed package.

@@ -1,0 +1,68 @@
+{
+  "key": "marketing-copywriting",
+  "name": "营销文案写作",
+  "summary": "根据定位和客户价值撰写清晰的营销文案。",
+  "category": "business",
+  "userCategoryLabel": "运营增长",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "coreyhaines31",
+    "repo": "marketingskills",
+    "ref": "main",
+    "path": "skills/copywriting",
+    "treeSha": "88c79f6528a9347420e57ceb1fff9a60de651768",
+    "skillBlobSha": "2453731ab7a5e52535b7cf29beccbebe687d5a62",
+    "immutableRef": "https://github.com/coreyhaines31/marketingskills/blob/main/skills/copywriting/SKILL.md (git-blob:2453731ab7a5e52535b7cf29beccbebe687d5a62)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "7c48dd638a9ebed49a8ef0c0c4eea90105381cdf",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "coreyhaines31/marketingskills",
+      "html_url": "https://github.com/coreyhaines31/marketingskills",
+      "stargazers_count": 58856,
+      "forks_count": 8611,
+      "pushed_at": "2026-11-04T19:01:33Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Public MIT marketing skills collection; stars are popularity only, not quality tests."
+    },
+    "includedResources": [
+      {
+        "path": "skills/copywriting/evals/evals.json",
+        "sha": "f903d8b9db5b201c71589278aff29bf3293043fa",
+        "mapped": "references/evals/evals.json"
+      },
+      {
+        "path": "skills/copywriting/references/ai-tells.md",
+        "sha": "0a93ab3b88fc2c683ff6280db187644a7aa04612",
+        "mapped": "references/ai-tells.md"
+      },
+      {
+        "path": "skills/copywriting/references/copy-frameworks.md",
+        "sha": "c19bc984e6f64e89d7c234ee110a368e60284ab4",
+        "mapped": "references/copy-frameworks.md"
+      },
+      {
+        "path": "skills/copywriting/references/natural-transitions.md",
+        "sha": "5fba31a5d3bf0f35a9cc62605af5ceaa454a6186",
+        "mapped": "references/natural-transitions.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "981234d63867b3a0a56e73536b8525c179db516ad19323d1c1c706e775f653df"
+  },
+  "officialVsAdapted": "adapted"
+}

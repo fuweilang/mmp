@@ -1,0 +1,45 @@
+{
+  "key": "codex-security-best-practices",
+  "name": "安全编码实践",
+  "description": "按语言和框架检查代码安全风险与修复建议。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/golang-general-backend-security.md"
+    },
+    {
+      "path": "references/javascript-express-web-server-security.md"
+    },
+    {
+      "path": "references/javascript-general-web-frontend-security.md"
+    },
+    {
+      "path": "references/javascript-jquery-web-frontend-security.md"
+    },
+    {
+      "path": "references/javascript-typescript-nextjs-web-server-security.md"
+    },
+    {
+      "path": "references/javascript-typescript-react-web-frontend-security.md"
+    },
+    {
+      "path": "references/javascript-typescript-vue-web-frontend-security.md"
+    },
+    {
+      "path": "references/python-django-web-server-security.md"
+    },
+    {
+      "path": "references/python-fastapi-web-server-security.md"
+    },
+    {
+      "path": "references/python-flask-web-server-security.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

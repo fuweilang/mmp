@@ -1,0 +1,69 @@
+{
+  "key": "codex-jupyter-notebook",
+  "name": "Notebook 分析流程",
+  "summary": "组织实验与教学 Notebook；运行需已有 Python/Jupyter 环境。",
+  "category": "analytics",
+  "userCategoryLabel": "数据分析",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=6",
+  "source": {
+    "owner": "openai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/.curated/jupyter-notebook",
+    "treeSha": "49f948faa9258a0c61caceaf225e179651397431",
+    "skillBlobSha": "e1d1748cac9e9313c8229763751714628d1f6853",
+    "immutableRef": "https://github.com/openai/skills/blob/main/skills/.curated/jupyter-notebook/SKILL.md (git-blob:e1d1748cac9e9313c8229763751714628d1f6853)",
+    "licenseEvidence": [
+      {
+        "path": "skills/.curated/jupyter-notebook/LICENSE.txt",
+        "blobSha": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/skills",
+      "html_url": "https://github.com/openai/skills",
+      "stargazers_count": 28549,
+      "forks_count": 1985,
+      "pushed_at": "2026-10-28T17:31:41Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [
+      {
+        "path": "skills/.curated/jupyter-notebook/references/experiment-patterns.md",
+        "sha": "2d5093b256f328dabb89de16822286c5f2f4dda4",
+        "mapped": "references/experiment-patterns.md"
+      },
+      {
+        "path": "skills/.curated/jupyter-notebook/references/notebook-structure.md",
+        "sha": "681d36f53d55cb089b1d815bacaac9b363f76fa4",
+        "mapped": "references/notebook-structure.md"
+      },
+      {
+        "path": "skills/.curated/jupyter-notebook/references/quality-checklist.md",
+        "sha": "5482f282845271ac1614a33135000e18f54d95aa",
+        "mapped": "references/quality-checklist.md"
+      },
+      {
+        "path": "skills/.curated/jupyter-notebook/references/tutorial-patterns.md",
+        "sha": "2a360b089b904299f463f88b5cdae0ea9bdb1123",
+        "mapped": "references/tutorial-patterns.md"
+      }
+    ],
+    "omittedFiles": [
+      "agents/openai.yaml",
+      "assets/experiment-template.ipynb",
+      "assets/jupyter-small.svg",
+      "assets/jupyter.png",
+      "assets/tutorial-template.ipynb",
+      "scripts/new_notebook.py"
+    ],
+    "originalBodySha256": "d0f914167844d4863dc744814665fbe422f4426f4d51d52a1b88112105d936cc"
+  },
+  "officialVsAdapted": "adapted"
+}

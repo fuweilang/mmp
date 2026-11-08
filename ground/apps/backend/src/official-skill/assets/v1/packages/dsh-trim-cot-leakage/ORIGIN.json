@@ -1,0 +1,58 @@
+{
+  "key": "dsh-trim-cot-leakage",
+  "name": "推理泄露检查",
+  "summary": "检查面向用户的回复中是否混入内部推理与实现细节。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "deepseek-ai",
+    "repo": "deepseek-harness",
+    "ref": "master",
+    "path": ".agents/skills/dsh-trim-cot-leakage",
+    "treeSha": "fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159",
+    "skillBlobSha": "f8a852bd66f398fc8c29f50d336df07d47218c27",
+    "immutableRef": "https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-trim-cot-leakage/SKILL.md (git-blob:f8a852bd66f398fc8c29f50d336df07d47218c27)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "c1f7a78e89e4e4dc7b86664c3b3c76eb5eee1785",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "deepseek-ai/deepseek-harness",
+      "html_url": "https://github.com/deepseek-ai/deepseek-harness",
+      "stargazers_count": 274718,
+      "forks_count": 33573,
+      "pushed_at": "2026-11-04T13:06:39Z",
+      "default_branch": "master",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [
+      {
+        "path": ".agents/skills/dsh-trim-cot-leakage/references/examples.md",
+        "sha": "1d67019c66f80dccea3c91238ccdcf24ebfc3426",
+        "mapped": "references/examples.md"
+      },
+      {
+        "path": ".agents/skills/dsh-trim-cot-leakage/references/recall-batteries.md",
+        "sha": "8571622df5c6c27942c794f5c3635dfec9b2771b",
+        "mapped": "references/recall-batteries.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "7c66b88dd42531a8da2bbb649f918c5710b07cb60b736bcec9afb6efa95a5be5"
+  },
+  "officialVsAdapted": "adapted"
+}

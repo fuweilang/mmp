@@ -1,0 +1,48 @@
+{
+  "key": "spark-video",
+  "name": "spark-video-episode",
+  "description": "One-shot autopilot orchestrator — runs the full spark-video pipeline (screenwriter ↔ director per-scene parallel → render chain-DAG paralle…",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/AGENTS.md"
+    },
+    {
+      "path": "references/README.md"
+    },
+    {
+      "path": "references/README.zh.md"
+    },
+    {
+      "path": "references/spark-video-cast/SKILL.md"
+    },
+    {
+      "path": "references/spark-video-clip-review/SKILL.md"
+    },
+    {
+      "path": "references/spark-video-clip-review/rewrite-system.md"
+    },
+    {
+      "path": "references/spark-video-clip-review/rubric.md"
+    },
+    {
+      "path": "references/spark-video-director/SKILL.md"
+    },
+    {
+      "path": "references/spark-video-episode/SKILL.md"
+    },
+    {
+      "path": "references/spark-video-screenwriter/SKILL.md"
+    },
+    {
+      "path": "references/spark-video-vfx-review/SKILL.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "key": "kw-legal-review-lead",
+  "name": "合同与法律风险专家",
+  "group": "business",
+  "source": {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "paths": [
+      "legal/README.md",
+      "legal/skills/review-contract/SKILL.md",
+      "legal/skills/legal-risk-assessment/SKILL.md"
+    ],
+    "files": [
+      {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "path": "legal/README.md",
+        "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/README.md",
+        "localPath": "upstream/knowledge-work-plugins/legal/README.md",
+        "sha256": "8fb3696cc0a641d18213318dc503fed6086b3ea4aab5a2484b9cee3508ed5429",
+        "bytes": 9773
+      },
+      {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "path": "legal/skills/review-contract/SKILL.md",
+        "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/skills/review-contract/SKILL.md",
+        "localPath": "upstream/knowledge-work-plugins/legal/skills/review-contract/SKILL.md",
+        "sha256": "3a6413475f51adedbff130f4d5aabbeeacfb2abd323e0338bc91c21937fbfb76",
+        "bytes": 16708
+      },
+      {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "path": "legal/skills/legal-risk-assessment/SKILL.md",
+        "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/skills/legal-risk-assessment/SKILL.md",
+        "localPath": "upstream/knowledge-work-plugins/legal/skills/legal-risk-assessment/SKILL.md",
+        "sha256": "9f7985e3a98ac8419b52067cdaa1b72f754fa38c20489e7f0bf9de36347d4d89",
+        "bytes": 12581
+      }
+    ],
+    "assetPath": "managed/v1/experts/kw-legal-review-lead.json",
+    "communityEvidence": {
+      "stars": 34994,
+      "observedAt": "2026-11-07T00:02:51.649638+00:00",
+      "selection": "官方岗位插件",
+      "notExecutionRating": true
+    }
+  },
+  "license": {
+    "spdx": "Apache-2.0",
+    "upstreamPath": "legal/LICENSE",
+    "path": "managed/v1/provenance/kw-legal-review-lead/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "evidence": {
+      "repository": "anthropics/knowledge-work-plugins",
+      "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+      "path": "legal/LICENSE",
+      "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/LICENSE",
+      "localPath": "upstream/knowledge-work-plugins/legal/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358
+    },
+    "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+  },
+  "adaptation": {
+    "language": "zh-CN",
+    "mode": "plugin-to-expert",
+    "notes": [
+      "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+      "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+      "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+      "岗位plugin组合改编为复合专家，不冒充上游现成独立agent；同源已有技能复用，不重复导入。"
+    ],
+    "executionValidation": "not-run"
+  },
+  "linkedSkillKeys": [
+    "industry-legal-review-contract",
+    "industry-legal-legal-risk-assessment"
+  ],
+  "newSkills": []
+}

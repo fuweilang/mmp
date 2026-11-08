@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/human-resources/skills/org-planning/SKILL.md (git-blob:0f023937d9c270121a99c9fb9d0b8d8477707e6f)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: human-resources/skills/org-planning
+No third-party scripts are executed or shipped in this managed package.

@@ -1,0 +1,29 @@
+{
+  "key": "interview",
+  "kind": "KNOWLEDGE",
+  "name": "访谈大师",
+  "summary": "深度访谈问题与追问链设计",
+  "openingQuestions": [
+    "我要访谈一位创始人，请给我 45 分钟的问题清单。",
+    "如何设计不尴尬但能挖到故事的追问链？",
+    "访谈知识图谱里，开场与收束各有哪些要点？"
+  ],
+  "toolScope": [
+    "enterprise_knowledge"
+  ],
+  "promptFile": "prompts/interview.md",
+  "batch": "C",
+  "publish": true,
+  "kb": [
+    {
+      "file": "1.md",
+      "name": "《访谈知识图谱》"
+    }
+  ],
+  "category": "expertise",
+  "capabilities": [
+    "访谈设计",
+    "追问链"
+  ],
+  "avatar": "avatars/qc.jpg"
+}

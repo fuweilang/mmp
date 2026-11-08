@@ -1,0 +1,15 @@
+{
+  "key": "codex-define-goal",
+  "name": "目标定义与验收",
+  "description": "澄清目标、可交付物与可检查的成功条件。",
+  "entry": "SKILL.md",
+  "category": "common",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

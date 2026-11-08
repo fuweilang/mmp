@@ -1,0 +1,15 @@
+{
+  "key": "dsh-code-review",
+  "name": "DSH 代码审查",
+  "description": "针对 DSH 插件与框架给出代码审查清单。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

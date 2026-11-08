@@ -1,0 +1,15 @@
+{
+  "key": "community-dsh-plugin-client",
+  "name": "DSH 插件客户端开发",
+  "description": "指导插件客户端组件、入口与宿主集成。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

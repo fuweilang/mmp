@@ -1,0 +1,15 @@
+{
+  "key": "industry-ops-capacity-plan",
+  "name": "业务容量规划",
+  "description": "梳理需求、资源与容量缺口，形成规划备选方案。",
+  "entry": "SKILL.md",
+  "category": "consulting",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

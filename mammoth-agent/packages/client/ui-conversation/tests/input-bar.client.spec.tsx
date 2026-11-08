@@ -43,6 +43,20 @@ const useResource = (() => ({ status: 'none' as const, value: undefined, failure
 
 afterEach(cleanup)
 
+it('company materials has no permanent control and only shows a cancellable tag without editing text', () => {
+  const { view, shell } = bench({ draft: '产品保修多久？' })
+  expect(view.queryByText('引用企业资料')).toBeNull()
+  const before = shell.actions.captureInsertion()
+  act(() => { shell.actions.setEnterpriseKnowledge?.(true) })
+  expect(shell.snapshot.draft).toBe('产品保修多久？')
+  expect(shell.actions.captureInsertion()).toEqual(before)
+  expect(view.getByText('引用企业资料')).toBeTruthy()
+  fireEvent.click(view.getByRole('button', { name: '取消引用企业资料' }))
+  expect(shell.snapshot.enterpriseKnowledge).not.toBe(true)
+  expect(shell.snapshot.draft).toBe('产品保修多久？')
+  expect(view.queryByText('引用企业资料')).toBeNull()
+})
+
 // jsdom implements no Range geometry at all — `Range.prototype.getBoundingClientRect`
 // is absent — and the composer measures the caret with one when it restores the
 // selection after an edit it performed itself. Every case here runs against a

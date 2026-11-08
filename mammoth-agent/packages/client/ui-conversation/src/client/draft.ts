@@ -24,8 +24,11 @@ const quoteSchema = z.object({
   text: z.string().refine(text => text.trim() !== ''),
 })
 
+const catalogSelectionSchema=z.object({protocol:z.literal(1),selectionVersion:z.number().int().nonnegative(),expertRef:z.object({id:z.string(),versionId:z.string(),name:z.string(),icon:z.string().nullable().optional()}).nullable(),skillRef:z.object({id:z.string(),revision:z.number().int().positive(),name:z.string(),key:z.string(),icon:z.string().nullable().optional()}).nullable()})
 const snapshotSchema = z.object({
+  catalogSelection: catalogSelectionSchema.optional(),
   text: z.string(),
+  enterpriseKnowledge: z.boolean().optional(),
   references: z.array(referenceSchema),
   command: commandSchema.optional(),
   quotes: z.array(quoteSchema).optional(),
@@ -60,6 +63,8 @@ export function resolveDraftInput(input: DraftInput): DraftSnapshot {
   if (typeof input === 'string') return { text: input, references: [] }
   return {
     text: input.text,
+    ...(input.catalogSelection === undefined ? {} : { catalogSelection: structuredClone(input.catalogSelection) }),
+    ...(input.enterpriseKnowledge === true ? { enterpriseKnowledge: true } : {}),
     references: input.references.map(copyReference),
     ...(input.command === undefined ? {} : { command: { token: input.command.token } }),
     ...(input.quotes === undefined ? {} : { quotes: input.quotes.map(quote => ({ ...quote })) }),
@@ -77,6 +82,8 @@ export function parseStoredDraft(value: unknown): DraftSnapshot | undefined {
   if (!parsed.success) return undefined
   return {
     text: parsed.data.text,
+    ...(parsed.data.catalogSelection === undefined ? {} : { catalogSelection: parsed.data.catalogSelection }),
+    ...(parsed.data.enterpriseKnowledge === true ? { enterpriseKnowledge: true } : {}),
     ...parsed.data.quotes === undefined ? {} : { quotes: parsed.data.quotes },
     references: parsed.data.references.map(({ appearance, invalid, ...reference }) => ({
       ...reference,

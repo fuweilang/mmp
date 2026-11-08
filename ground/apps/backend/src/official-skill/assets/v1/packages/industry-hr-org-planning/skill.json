@@ -1,0 +1,15 @@
+{
+  "key": "industry-hr-org-planning",
+  "name": "组织规划辅助",
+  "description": "梳理岗位职责、团队结构和人员规划备选方案。",
+  "entry": "SKILL.md",
+  "category": "hr",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

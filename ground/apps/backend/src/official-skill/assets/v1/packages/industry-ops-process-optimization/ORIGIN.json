@@ -1,0 +1,47 @@
+{
+  "key": "industry-ops-process-optimization",
+  "name": "业务流程优化",
+  "summary": "梳理流程瓶颈、改进选项与衡量指标。",
+  "category": "consulting",
+  "userCategoryLabel": "企业咨询",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "operations/skills/process-optimization",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "8d1f2c9b81ff9b6c6cb4d32fd2ee7df3e525fd31",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/operations/skills/process-optimization/SKILL.md (git-blob:8d1f2c9b81ff9b6c6cb4d32fd2ee7df3e525fd31)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "f53c679acba79cbb292961fd9fb9e87ca20eab22",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "666beb05264247b720bcd730771d83c19da1d654c111c38c645fc6633545e06b"
+  },
+  "officialVsAdapted": "adapted"
+}

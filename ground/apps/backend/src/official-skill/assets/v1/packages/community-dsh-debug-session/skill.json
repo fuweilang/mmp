@@ -1,0 +1,15 @@
+{
+  "key": "community-dsh-debug-session",
+  "name": "DSH 会话排障",
+  "description": "根据用户提供的日志和会话状态定位问题，不读取未授权数据。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

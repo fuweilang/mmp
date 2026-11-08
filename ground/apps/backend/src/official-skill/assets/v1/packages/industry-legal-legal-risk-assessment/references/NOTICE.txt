@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/legal/skills/legal-risk-assessment/SKILL.md (git-blob:636075c5846c0da11fe41b3f26810b397ccb7735)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: legal/skills/legal-risk-assessment
+No third-party scripts are executed or shipped in this managed package.

@@ -1,0 +1,21 @@
+{
+  "key": "trans",
+  "kind": "GENERAL",
+  "name": "咨询转化教练",
+  "summary": "咨询逼单与异议处理",
+  "openingQuestions": [
+    "客户说“我再考虑考虑”，我该怎么回？",
+    "帮我分析这段咨询聊天记录，为什么没成交？",
+    "给我一套客户嫌贵时的异议处理话术。"
+  ],
+  "toolScope": [],
+  "toolScopeNotes": "latest 无工具依赖；不虚构 search",
+  "promptFile": "prompts/trans.md",
+  "batch": "B",
+  "publish": true,
+  "category": "sales",
+  "capabilities": [
+    "咨询转化",
+    "异议处理"
+  ]
+}

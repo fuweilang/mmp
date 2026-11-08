@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/sql-queries/SKILL.md (git-blob:f92e232c67054b078fcc1ee558101163ebdbb87d)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: data/skills/sql-queries
+No third-party scripts are executed or shipped in this managed package.

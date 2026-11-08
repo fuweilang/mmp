@@ -1,0 +1,15 @@
+{
+  "key": "industry-product-synthesize-research",
+  "name": "用户研究归纳",
+  "description": "根据提供的访谈与研究资料提炼主题、证据和产品启示。",
+  "entry": "SKILL.md",
+  "category": "consulting",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

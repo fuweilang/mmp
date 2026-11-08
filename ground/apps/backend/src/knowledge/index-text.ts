@@ -1,19 +1,68 @@
+import JSZip from 'jszip';
+import { XMLParser } from 'fast-xml-parser';
+import { PDFParse } from 'pdf-parse';
+import { Writable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+
 const CHUNK_SIZE = 800;
 const CHUNK_OVERLAP = 80;
 const EMBED_DIM = 64;
 
-export function extractText(originalName: string, buffer: Buffer) {
-  const lower = originalName.toLowerCase();
-  if (lower.endsWith('.txt') || lower.endsWith('.md')) {
-    return stripNul(buffer.toString('utf8'));
+const MAX_XML_BYTES = 16 * 1024 * 1024;
+const MAX_TEXT_CHARS = 400_000;
+const xml = new XMLParser({ preserveOrder: true, parseTagValue: false, trimValues: false });
+
+export async function extractText(originalName: string, buffer: Buffer) {
+  const name = originalName.toLowerCase();
+  if (name.endsWith('.txt') || name.endsWith('.md')) {
+    return buffer.toString('utf8').replace(/\0/g, '').trim().slice(0, MAX_TEXT_CHARS);
   }
-  if (lower.endsWith('.docx')) {
-    return extractTagged(buffer.toString('utf8'), /<w:t[^>]*>([^<]*)<\/w:t>/g);
+  if (name.endsWith('.pdf')) {
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
+    try {
+      return (await parser.getText()).text.replace(/\0/g, '').trim().slice(0, MAX_TEXT_CHARS);
+    } finally {
+      await parser.destroy();
+    }
   }
-  if (lower.endsWith('.pdf')) {
-    return extractPdfLike(buffer);
+  const docx = name.endsWith('.docx');
+  if (!docx && !name.endsWith('.pptx')) throw new Error('不支持此文件类型');
+  const archive = await JSZip.loadAsync(buffer);
+  const entries = docx
+    ? [archive.file('word/document.xml')].filter((entry) => entry !== null)
+    : archive.file(/^ppt\/slides\/slide\d+\.xml$/).sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }));
+  const paragraphs: string[] = [];
+  let remaining = MAX_XML_BYTES;
+  for (const entry of entries) {
+    const chunks: Buffer[] = [];
+    await pipeline(entry.nodeStream('nodebuffer'), new Writable({
+      write(chunk: Buffer, _encoding, done) {
+        remaining -= chunk.length;
+        if (remaining < 0) return done(new Error('文档展开后过大'));
+        chunks.push(chunk);
+        done();
+      },
+    }));
+    const source = Buffer.concat(chunks).toString('utf8');
+    if (/<!DOCTYPE|<!ENTITY/i.test(source)) throw new Error('不支持外部实体');
+    collectText(xml.parse(source), docx ? 'w' : 'a', paragraphs);
+    paragraphs.push('\n');
   }
-  return readableRuns(buffer.toString('utf8'));
+  return paragraphs.join('').trim().slice(0, MAX_TEXT_CHARS);
+}
+
+function collectText(nodes: unknown, prefix: string, output: string[]) {
+  if (!Array.isArray(nodes)) return;
+  for (const node of nodes) {
+    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      if (key === prefix + ':t' && Array.isArray(value)) {
+        for (const item of value) if (typeof item['#text'] === 'string') output.push(item['#text']);
+      } else {
+        collectText(value, prefix, output);
+        if (key === prefix + ':p') output.push('\n');
+      }
+    }
+  }
 }
 
 export function chunkText(text: string) {
@@ -47,31 +96,6 @@ export function vectorLiteral(values: number[]) {
   return `[${values.map((n) => n.toFixed(6)).join(',')}]`;
 }
 
-function extractTagged(raw: string, pattern: RegExp) {
-  const parts: string[] = [];
-  for (const match of raw.matchAll(pattern)) {
-    if (match[1]) parts.push(match[1]);
-  }
-  return parts.join('').replace(/\s+/g, ' ').trim();
-}
-
-function extractPdfLike(buffer: Buffer) {
-  const raw = buffer.toString('latin1');
-  const fromParens = [...raw.matchAll(/\((?:\\.|[^\\)]){4,}\) /g)]
-    .map((m) => m[0].slice(1, -1).replace(/\\[nrt]/g, ' '))
-    .join(' ');
-  const merged = `${fromParens} ${readableRuns(raw)}`;
-  return merged.replace(/\s+/g, ' ').trim();
-}
-
-function readableRuns(raw: string) {
-  const matches = raw.match(/[\u4e00-\u9fffA-Za-z0-9，。；、：？！“”‘’（）()《》\s]{8,}/g);
-  return (matches ?? []).join('\n').replace(/[^\S\n]+/g, ' ').trim();
-}
-
-function stripNul(text: string) {
-  return text.replace(/\u0000/g, '').trim();
-}
 
 function hash32(input: string) {
   let hash = 2166136261;

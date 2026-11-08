@@ -1,0 +1,59 @@
+{
+  "key": "superpowers-brainstorming",
+  "name": "开发方案头脑风暴",
+  "summary": "先澄清问题和约束，再形成可讨论的设计方案。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=6",
+  "source": {
+    "owner": "openai",
+    "repo": "plugins",
+    "ref": "main",
+    "path": "plugins/superpowers/skills/brainstorming",
+    "treeSha": "b767f8fa3be1a22b093127dd59956c91ecffca9d",
+    "skillBlobSha": "b56a3b5ed6ea0d6216501e0e401ecb00a1b4675f",
+    "immutableRef": "https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/brainstorming/SKILL.md (git-blob:b56a3b5ed6ea0d6216501e0e401ecb00a1b4675f)",
+    "licenseEvidence": [
+      {
+        "path": "plugins/superpowers/LICENSE",
+        "blobSha": "abf0390320aa14406af7a520b9b0739fdda9bf08",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/plugins",
+      "html_url": "https://github.com/openai/plugins",
+      "stargazers_count": 7785,
+      "forks_count": 1002,
+      "pushed_at": "2026-11-03T23:23:40Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "OpenAI-distributed curated Superpowers plugin; original author Jesse Vincent."
+    },
+    "includedResources": [
+      {
+        "path": "plugins/superpowers/skills/brainstorming/spec-document-reviewer-prompt.md",
+        "sha": "60993129de3c445efeff53987b5297dc1acf3eb1",
+        "mapped": "references/spec-document-reviewer-prompt.md"
+      },
+      {
+        "path": "plugins/superpowers/skills/brainstorming/visual-companion.md",
+        "sha": "c145e64388d4441710da016ea665fed5699e2e91",
+        "mapped": "references/visual-companion.md"
+      }
+    ],
+    "omittedFiles": [
+      "agents/openai.yaml",
+      "scripts/frame-template.html",
+      "scripts/helper.js",
+      "scripts/server.cjs",
+      "scripts/start-server.sh",
+      "scripts/stop-server.sh"
+    ],
+    "originalBodySha256": "7d55e2f844a8943d699a60210054bab233e5b3871dc4a32f62fdbacbe76337d5"
+  },
+  "officialVsAdapted": "adapted"
+}

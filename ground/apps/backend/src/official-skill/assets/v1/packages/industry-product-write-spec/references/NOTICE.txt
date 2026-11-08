@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/product-management/skills/write-spec/SKILL.md (git-blob:183cf053df391e761c21431bc0dfb791b6d52b80)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: product-management/skills/write-spec
+No third-party scripts are executed or shipped in this managed package.

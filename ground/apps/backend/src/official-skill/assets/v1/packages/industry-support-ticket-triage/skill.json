@@ -1,0 +1,15 @@
+{
+  "key": "industry-support-ticket-triage",
+  "name": "客户工单分流",
+  "description": "对提供的工单整理优先级、分类与处理建议，不自动发出。",
+  "entry": "SKILL.md",
+  "category": "sales",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

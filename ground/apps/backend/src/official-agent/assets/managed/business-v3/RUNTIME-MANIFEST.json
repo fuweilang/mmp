@@ -1,0 +1,160 @@
+{
+  "timeAsiaShanghai": "2026-11-07T17:31:26.549437+08:00",
+  "checks": {
+    "skill_provider_deny_in_runtime": true,
+    "instructions_deny_in_runtime": true,
+    "host_managed_profile": true,
+    "generated_scoped_download": true,
+    "client_download": true,
+    "actual_cloud_wire_hook": true,
+    "admin10_experts": true,
+    "admin10_skills": true
+  },
+  "files": [
+    {
+      "path": "M/packages/preset/official-agent-gallery/src/admission.ts",
+      "bytes": 816,
+      "sha256": "011cab9db4df4b05a9ebc6f805bbdcdf2c840c82e362422df42f0f17b8f31090"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/src/index.ts",
+      "bytes": 38812,
+      "sha256": "f10996786ea5633540496b99984172f9716bb9fd3a67ee9b6062883128da7765"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/src/managed-runtime.ts",
+      "bytes": 11899,
+      "sha256": "802db3fec3c554b90a9ce671bcb1b3f9bc4e71927e2323187e248f84d32448b9"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/src/skill-provider.ts",
+      "bytes": 6653,
+      "sha256": "c2a63c4dd7bbf513f9f04b0288488c79c2a0fb562d8c31fe5abc791da76066d8"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/src/types.ts",
+      "bytes": 7476,
+      "sha256": "9f7ed781a4548a1338d15ef79401225916e2823801935f42ea563afaee418896"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/package.json",
+      "bytes": 3587,
+      "sha256": "df8173543413a65d8b94e65030305c346aa6e44ff840d2ef3cfac415c65841c5"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/tsconfig.json",
+      "bytes": 1063,
+      "sha256": "558d9cf2a21ed9df778b6518fe65cb9fbf3c062130198b78196b8b9ff1eb7f24"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/tests/managed-business.spec.ts",
+      "bytes": 19112,
+      "sha256": "5b3fe739d979ff850af3f0094afcd9595d2806cabb17e01ae1026e3507c8ac89"
+    },
+    {
+      "path": "M/packages/skill/skill/src/index.ts",
+      "bytes": 36293,
+      "sha256": "c4fa504f90cb22b9775ec6666eab54cc433f3b6c1e4a01a428daac2b07009afd"
+    },
+    {
+      "path": "M/packages/context/agent-instructions/src/index.ts",
+      "bytes": 16491,
+      "sha256": "f50bee87bce150116d00d5a5f7249f3b09cc7227b3997b3097b80e74acddf63f"
+    },
+    {
+      "path": "M/packages/llm/llm-ground/src/adapter.ts",
+      "bytes": 14703,
+      "sha256": "10c36585bbc968dc1df7b2daa6a859e7e3f37b4a2e311e9da77b814a5c1f2dce"
+    },
+    {
+      "path": "M/packages/llm/llm-ground/src/index.ts",
+      "bytes": 2944,
+      "sha256": "fbeb5cd4a372ac2abf2350df12b5c531a11cb9ed1f1e987475f9efcbfef0d051"
+    },
+    {
+      "path": "M/packages/client/ui-official-agent-gallery/src/client/index.ts",
+      "bytes": 5873,
+      "sha256": "f03f6f1489a5ce8ec2856923185dc059e012c2e53d839944b6e9737eeca3dec8"
+    },
+    {
+      "path": "M/packages/client/ui-official-agent-gallery/src/client/GallerySourceLabel.tsx",
+      "bytes": 3609,
+      "sha256": "6d9d2d6d35aeff8e2e65809186dbf0e3745aab14711041b2185f82905ea52d1e"
+    },
+    {
+      "path": "M/packages/client/ui-official-agent-gallery/src/client/GallerySourceLabel.module.css",
+      "bytes": 1006,
+      "sha256": "81431fd81d519fb7ddf9be8725b00e20f0e3a3e4c0d615001bd81045e3b17888"
+    },
+    {
+      "path": "M/packages/client/ui-official-agent-gallery/src/client/locales.ts",
+      "bytes": 20042,
+      "sha256": "19bcb4b470083318e8bf3e14a7071e25045b936b36985e716ed72f202766614b"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/lib/index.js",
+      "bytes": 76391,
+      "sha256": "9eab2de8207944b6327b89ba89ff48950d0383b19e69f3bd992a059c1f50e836"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/lib/types/managed-runtime.js",
+      "bytes": 12380,
+      "sha256": "ea332b57bb6df90a24cf51870e2950e193c966997cbac217b7f895ce5875d5e5"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/lib/typert.remote-client.d.ts",
+      "bytes": 4425,
+      "sha256": "c4b731a901afc625382ca90df740d9e538d2c1d03da473c8da6840185a5cc024"
+    },
+    {
+      "path": "M/packages/skill/skill/lib/index.js",
+      "bytes": 23894,
+      "sha256": "5de189817f8afc2eaafbe151ad6ec07b42f6cedd81d1aa9ae7bf0bc02747017c"
+    },
+    {
+      "path": "M/packages/context/agent-instructions/lib/index.js",
+      "bytes": 63352,
+      "sha256": "6c72c2f40173cab22a978a93ff657baf55d3407885b71b47346f0605e71bd9b8"
+    },
+    {
+      "path": "M/packages/llm/llm-ground/lib/types/adapter.js",
+      "bytes": 14689,
+      "sha256": "fdb3ad7de51e824717b86d6c78607414c5d3608947574b3ca7b733ec1da8bbbd"
+    },
+    {
+      "path": "M/packages/llm/llm-ground/lib/types/index.js",
+      "bytes": 2443,
+      "sha256": "bb2d17611145d15af26b0ca1eb20441b416b9689eaf7bccb2310996245a9d9a4"
+    },
+    {
+      "path": "M/packages/llm/llm-ground/lib/index.js",
+      "bytes": 32693,
+      "sha256": "593753d750fbad83683a5a4603e28b549dbb096ee76cdfcaa045a88cf6fb410a"
+    },
+    {
+      "path": "M/packages/client/ui-official-agent-gallery/lib/client.js",
+      "bytes": 78657,
+      "sha256": "8918db19cb3859dc42d43cd3105302799de6c80e3d5f302fbf4267d7e552a08c"
+    },
+    {
+      "path": "M/packages/client/ui-official-agent-gallery/lib/client.js.map",
+      "bytes": 91469,
+      "sha256": "2f13650baa81a6303f774643d675da4109e60494189869f299ecc9339b6108b0"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/lib/typert.host.js",
+      "bytes": 104819,
+      "sha256": "143ac306f56482f987bc696454a57e72dacbf88d65c84e397774e803af3744e0"
+    },
+    {
+      "path": "M/packages/preset/official-agent-gallery/lib/typert.remote-client.js",
+      "bytes": 45813,
+      "sha256": "5ff9b422197530135d01cf7acf46781e88d2ce213bf5f804af0fa74b44670a55"
+    }
+  ],
+  "missing": [],
+  "liveCloudVerified": false,
+  "browserVerified": false,
+  "focusedSource": 9,
+  "focusedBuilt": 9
+}

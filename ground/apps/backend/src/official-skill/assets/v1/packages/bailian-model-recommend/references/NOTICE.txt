@@ -1,0 +1,4 @@
+Source: github:modelstudioai/skills@main:skills/bailian-model-recommend#df4d99637999
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=5; dropped=0
+No scripts shipped.

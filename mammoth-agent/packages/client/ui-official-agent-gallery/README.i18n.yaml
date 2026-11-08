@@ -1,0 +1,22 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/client/ui-official-agent-gallery/README.md
+/:
+  en: 3dac48ed43885902
+  zh: 9ab0a0278bf9255f
+/mammoth-ai-mmp-client-ui-official-agent-gallery:
+  en: c4c1e3100836a697
+  zh: 0b7da241ca08f1d7
+/mammoth-ai-mmp-client-ui-official-agent-gallery/summary:
+  en: 76aa7d270bc86b35
+  zh: b15f29a76f234676
+/mammoth-ai-mmp-client-ui-official-agent-gallery/model-experience:
+  en: e6aedf7cd5bcf059
+  zh: b918b737a1f23b6c
+/mammoth-ai-mmp-client-ui-official-agent-gallery/model-experience/kv-cache-effect:
+  en: 3ea75ba385041342
+  zh: d402d639e8d0b1e3
+/mammoth-ai-mmp-client-ui-official-agent-gallery/known-limitations-and-deferred-work:
+  en: 8e90f6d7b88a7445
+  zh: 4a66785eba41a867

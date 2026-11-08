@@ -1,0 +1,17 @@
+{
+  "key": "mcp-builder",
+  "name": "MCP 构建指南",
+  "summary": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-desig…",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/mcp-builder",
+    "immutableRef": "github:anthropics/skills@main:skills/mcp-builder#694b9f88f6e9"
+  },
+  "adaptation": "strip-scripts; stripped=4; dropped=5"
+}

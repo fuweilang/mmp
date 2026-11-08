@@ -9,7 +9,7 @@ const ADMIN_AUDIT_PERM = 'portal.admin.audit';
 const PLATFORM_TENANT_FILTER = '__platform__';
 
 const SENSITIVE_KEY_RE =
-  /(password|passwd|pwd|token|secret|authorization|cookie|credential|api[_-]?key|private[_-]?key)/i;
+  /(password|passwd|pwd|token|secret|authorization|cookie|credential|api[_-]?key|private[_-]?key|system[_-]?prompt|prompt|search[_-]?query|queryText|document[_-]?body)/i;
 const PHONE_KEY_RE = /(phone|mobile|tel)/i;
 
 @Injectable()
@@ -46,6 +46,7 @@ export class AuditService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
     const action = query.action?.trim();
+    const actionPrefix = query.actionPrefix?.trim();
     const actorKeyword = query.actor?.trim();
     const tenantFilter = query.tenantId?.trim();
 
@@ -57,7 +58,11 @@ export class AuditService {
       where.tenantId = tenantFilter;
     }
 
-    if (action) where.action = action;
+    if (action) {
+      where.action = action;
+    } else if (actionPrefix) {
+      where.action = { startsWith: actionPrefix };
+    }
 
     const createdAt = this.buildCreatedAtFilter(query.from, query.to);
     if (createdAt) where.createdAt = createdAt;

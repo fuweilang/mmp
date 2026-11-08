@@ -1,0 +1,15 @@
+{
+  "key": "superpowers-verification-before-completion",
+  "name": "完成前证据检查",
+  "description": "避免无依据宣称完成，核对实际验证记录。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

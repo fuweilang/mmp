@@ -380,7 +380,7 @@ export class AdminSupportService {
     }
   }
 
-  /** 子企业/自定义智能体/知识库属于真实业务资产，仍拦截删除；用量日志随租户一并清理。 */
+  /** 子企业/自定义专家/知识库属于真实业务资产，仍拦截删除；用量日志随租户一并清理。 */
   hasEnterpriseBusinessData(tenant: {
     agents: Array<{ name: string }>;
     _count: {
@@ -439,7 +439,7 @@ export class AdminSupportService {
     const customAgents = tenant.agents.filter((agent) => agent.name !== '企业助手');
     const blockedReasons: string[] = [];
     if (tenant._count.children > 0) blockedReasons.push(`有 ${tenant._count.children} 个子企业`);
-    if (customAgents.length > 0) blockedReasons.push(`有 ${customAgents.length} 个自定义智能体`);
+    if (customAgents.length > 0) blockedReasons.push(`有 ${customAgents.length} 个自定义专家`);
     if (tenant._count.kbFolders > 0) blockedReasons.push(`有 ${tenant._count.kbFolders} 个知识库目录`);
     if (tenant._count.kbDocuments > 0) blockedReasons.push(`有 ${tenant._count.kbDocuments} 篇知识库文档`);
 

@@ -1,3 +1,4 @@
+import type { CatalogDraftSelection } from '../contract/draft-editor.ts'
 /**
  * SessionInput shell: owns the per-session Lexical editor (text + chip
  * truth) and the pure SubmitMachine (phase/claim/attempt), and choreographs
@@ -69,6 +70,8 @@ export interface SessionInputDeps {
     mode: InputSubmitMode,
     signal: AbortSignal,
     accept: () => void,
+    enterpriseKnowledge?: boolean,
+    catalogSelection?: CatalogDraftSelection,
   ): Promise<SubmitOutcome>
   /** Live Session and composer-block policy for transcript insertion. */
   quoteInsertionAllowed?: () => boolean
@@ -140,6 +143,8 @@ export class SessionInputShell implements SessionInput {
   }
   /** The public provide-channel action face (one stable identity per session). */
   readonly actions: InputActions = {
+    setCatalogSelection: (value, initializeOnly) => this.setCatalogSelection(value, initializeOnly),
+    setEnterpriseKnowledge: enabled => { this.setEnterpriseKnowledge(enabled) },
     insertQuote: text => this.insertQuote(text),
     captureInsertion: () => ({ ...this.caretSpan(), draftRev: this.rev }),
     insertText: (text, span) => {
@@ -160,6 +165,9 @@ export class SessionInputShell implements SessionInput {
   private get projection(): EditorProjection {
     return this.draftEditor.projection
   }
+  private catalogSelection: CatalogDraftSelection | undefined
+  private enterpriseKnowledge = false
+  private knowledgeRevision = 0
   private rev = 0
   private readonly unregister: () => void
   private noticeSeq = 0
@@ -222,6 +230,7 @@ export class SessionInputShell implements SessionInput {
    */
   setDraft(text: DraftInput): void {
     const draft = resolveDraftInput(text)
+    if (typeof text !== 'string') { this.catalogSelection = draft.catalogSelection; this.draftSnapshotCache = undefined; this.updateEnterpriseKnowledge(draft.enterpriseKnowledge === true) }
     this.cancelCommandRestore()
     if (draft.references.length === 0 && (draft.quotes?.length ?? 0) === 0) this.draftEditor.setDraft(draft.text)
     else this.draftEditor.restoreDraft(draft.text, draft.references, draft.quotes, { remove: this.deps.quoteRemoveLabel?.() ?? '' })
@@ -282,11 +291,33 @@ export class SessionInputShell implements SessionInput {
   /** Current semantic document, stable until its content revision changes. */
   get draftSnapshot(): DraftSnapshot {
     if (this.draftSnapshotCache?.revision === this.rev) return this.draftSnapshotCache.value
-    const value = snapshotDraft(
+    const value = { ...snapshotDraft(
       this.projection.clipboardText, this.projection.occurrences, this.projection.command?.token, this.projection.quotes,
-    )
+    ), ...(this.catalogSelection === undefined ? {} : { catalogSelection: this.catalogSelection }), ...(this.enterpriseKnowledge ? { enterpriseKnowledge: true } : {}) }
     this.draftSnapshotCache = { revision: this.rev, value }
     return value
+  }
+
+  /** Explicit option changes never edit text, caret or editor revision. */
+  setCatalogSelection(value: CatalogDraftSelection, initializeOnly=false): boolean {
+    if(this.disposed||frozen(this.core.state.phase)||(initializeOnly&&this.catalogSelection!==undefined)||(!initializeOnly&&this.catalogSelection!==undefined&&value.selectionVersion<=this.catalogSelection.selectionVersion))return false
+    this.catalogSelection=structuredClone(value)
+    this.draftSnapshotCache=undefined
+    this.publish()
+    return true
+  }
+
+  setEnterpriseKnowledge(enabled: boolean): void {
+    if (this.disposed || frozen(this.core.state.phase)) return
+    this.updateEnterpriseKnowledge(enabled)
+  }
+
+  private updateEnterpriseKnowledge(enabled: boolean): void {
+    if (this.enterpriseKnowledge === enabled) return
+    this.enterpriseKnowledge = enabled
+    this.knowledgeRevision += 1
+    this.draftSnapshotCache = undefined
+    this.publish()
   }
 
   /** Persist the latest document without changing the editor or binding a writer. */
@@ -409,6 +440,9 @@ export class SessionInputShell implements SessionInput {
     }
     this.dispatchRun({
       type: 'enter',
+      ...(this.catalogSelection === undefined ? {} : { catalogSelection: structuredClone(this.catalogSelection) }),
+      enterpriseKnowledge: this.enterpriseKnowledge,
+      knowledgeRevision: this.knowledgeRevision,
       mode,
       draft: this.projection.clipboardText,
       occurrences: [...this.projection.occurrences],
@@ -527,6 +561,12 @@ export class SessionInputShell implements SessionInput {
     if (span.draftRev !== this.rev) return false
     const tail = this.projection.detectText.slice(span.end, span.end + 1)
     return this.draftEditor.insertReference(span, ref, tail)
+  }
+
+  /** @inheritdoc */
+  appendReference(ref: ReferenceInsert): boolean {
+    const end = this.projection.detectText.length
+    return this.insertReference(ref, { start: end, end, draftRev: this.rev })
   }
 
   /**
@@ -726,7 +766,7 @@ export class SessionInputShell implements SessionInput {
     })
     const send = (text: string): void => {
       if (this.dead(attempt)) return
-      this.settleSink(attempt, this.deps.defaultSink(text, attachmentIds, mode, attempt.signal, () => { this.acceptSink(attempt) }))
+      this.settleSink(attempt, this.deps.defaultSink(text, attachmentIds, mode, attempt.signal, () => { this.acceptSink(attempt) }, attempt.enterpriseKnowledge, attempt.catalogSelection))
     }
     if (!(prompt instanceof Promise)) { send(prompt); return }
     void prompt.then(send, (error: unknown) => { this.failSink(attempt, error) })
@@ -761,6 +801,7 @@ export class SessionInputShell implements SessionInput {
 
   private applySinkOutcome(attempt: SubmitAttempt, outcome: SubmitOutcome): void {
     const accepted = outcome.kind === 'success'
+    if (accepted && attempt.knowledgeRevision === this.knowledgeRevision) this.updateEnterpriseKnowledge(false)
     if (accepted && attempt.attachmentIds.length > 0) {
       const sent = new Set(attempt.attachmentIds)
       this.attachmentIds = this.attachmentIds.filter(id => !sent.has(id))
@@ -846,6 +887,8 @@ export class SessionInputShell implements SessionInput {
     const core = this.core.state
     return {
       draft: this.projection.clipboardText,
+      ...(this.catalogSelection === undefined ? {} : { catalogSelection: this.catalogSelection }),
+      ...(this.enterpriseKnowledge ? { enterpriseKnowledge: true } : {}),
       attachmentIds: this.attachmentIds,
       draftRev: this.rev,
       phase: core.phase,

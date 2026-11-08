@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/human-resources/skills/performance-review/SKILL.md (git-blob:02310addbe621a8866932e8cc0280f15114f5190)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: human-resources/skills/performance-review
+No third-party scripts are executed or shipped in this managed package.

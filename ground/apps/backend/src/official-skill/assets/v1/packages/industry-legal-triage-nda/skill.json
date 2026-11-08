@@ -1,0 +1,15 @@
+{
+  "key": "industry-legal-triage-nda",
+  "name": "保密协议初筛",
+  "description": "按协议条款标出需进一步法律复核的问题。",
+  "entry": "SKILL.md",
+  "category": "legal",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

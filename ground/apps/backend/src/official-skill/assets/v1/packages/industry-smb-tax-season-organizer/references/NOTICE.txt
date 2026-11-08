@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/small-business/skills/tax-season-organizer/SKILL.md (git-blob:a0dd4967e02cc64745fd30d9934a527e335aa367)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: small-business/skills/tax-season-organizer
+No third-party scripts are executed or shipped in this managed package.

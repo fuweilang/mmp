@@ -1,4 +1,4 @@
-/** Official 猛犸智能体 occupants for the generic browser-brand slots. */
+/** Official 猛犸AI occupants for the generic browser-brand slots. */
 import type { Context as ClientContext } from '@mammoth-ai/cordis'
 import type {} from '@mammoth-ai/mmp-client-ui-renderer/client'
 import type {} from '@mammoth-ai/mmp-client-ui-sidebar/client'

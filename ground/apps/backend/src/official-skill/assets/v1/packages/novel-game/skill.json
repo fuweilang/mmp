@@ -1,0 +1,21 @@
+{
+  "key": "novel-game",
+  "name": "互动小说游戏",
+  "description": ">-",
+  "entry": "SKILL.md",
+  "category": "content",
+  "references": [
+    {
+      "path": "references/README.md"
+    },
+    {
+      "path": "references/README.zh.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

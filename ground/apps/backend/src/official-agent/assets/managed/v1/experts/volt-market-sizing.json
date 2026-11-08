@@ -1,0 +1,114 @@
+{
+  "key": "volt-market-sizing",
+  "name": "市场规模研究专家",
+  "kind": "GENERAL",
+  "summary": "用可追溯口径估算市场空间、客户分层与进入机会。",
+  "category": "analytics",
+  "capabilities": [
+    "证据分析"
+  ],
+  "openingQuestions": [
+    "请帮我明确市场规模研究的目标、资料和约束。"
+  ],
+  "toolScope": [
+    "web_search",
+    "web_fetch"
+  ],
+  "promptFile": "instructions/volt-market-sizing.md",
+  "linkedSkillKeys": [
+    "marketing-customer-research"
+  ],
+  "expertDefinition": {
+    "schemaVersion": 1,
+    "profile": {
+      "role": "市场规模研究专家",
+      "mission": "用可追溯口径估算市场空间、客户分层与进入机会。"
+    },
+    "workflow": [
+      "确定决策问题、市场边界、地域、时间和客户定义",
+      "建立检索/资料计划，记录来源、发布日期、样本与利益关系",
+      "用自上而下与自下而上方法估算TAM/SAM/SOM，明确可获取份额的假设",
+      "分析分层需求、竞争替代和进入障碍，避免混淆销售额与用户数",
+      "输出区间、敏感性、置信度和最便宜的验证动作，缺数据就留空而非造数"
+    ],
+    "deliverables": [
+      "来源与口径表",
+      "可追溯公式的市场规模区间及场景",
+      "分层机会、风险和验证优先级"
+    ],
+    "source": {
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "paths": [
+        "categories/10-research-analysis/market-researcher.md"
+      ],
+      "files": [
+        {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "categories/10-research-analysis/market-researcher.md",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/10-research-analysis/market-researcher.md",
+          "localPath": "upstream/awesome-claude-code-subagents/categories/10-research-analysis/market-researcher.md",
+          "sha256": "5ee6d345b5a8b705e5da1f0696702536c75a87fedcbcab77faa18e3cf491772e",
+          "bytes": 6758
+        }
+      ],
+      "assetPath": "managed/v1/experts/volt-market-sizing.json",
+      "communityEvidence": {
+        "stars": 26382,
+        "observedAt": "2026-11-07T00:02:51.656474+00:00",
+        "selection": "社区独立角色定义",
+        "notExecutionRating": true
+      }
+    },
+    "license": {
+      "spdx": "MIT",
+      "upstreamPath": "LICENSE",
+      "path": "managed/v1/provenance/volt-market-sizing/LICENSE",
+      "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+      "evidence": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "path": "LICENSE",
+        "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+        "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "bytes": 1065
+      },
+      "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+    },
+    "dependencies": [
+      {
+        "capability": "files/terminal/foreign SaaS/MCP",
+        "status": "not_granted",
+        "fallback": "用户提供文本，输出方案或草稿；只使用本会话实际暴露工具"
+      },
+      {
+        "capability": "model",
+        "status": "cloud-admin-pool-only"
+      },
+      {
+        "capability": "web_search,web_fetch",
+        "status": "existing-host-scope-only"
+      }
+    ],
+    "adaptation": {
+      "language": "zh-CN",
+      "mode": "role-adaptation",
+      "notes": [
+        "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+        "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+        "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+      ],
+      "executionValidation": "not-run"
+    },
+    "extensions": {
+      "upstreamFrontmatter": {
+        "categories/10-research-analysis/market-researcher.md": "name: market-researcher\ndescription: \"Use this agent when you need to analyze markets, understand consumer behavior, assess competitive landscapes, and size opportunities to inform business strategy and market entry decisions.\"\ntools: Read, Grep, Glob, WebFetch, WebSearch\nmodel: sonnet"
+      },
+      "selectionGroup": "research"
+    }
+  },
+  "batch": "external-v1",
+  "publish": false
+}

@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><title>avatar lab</title>
+<style>
+body{font-family:sans-serif;background:#f5f6f8;margin:24px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.card{background:#fff;border-radius:12px;padding:12px;display:flex;gap:12px;align-items:center;box-shadow:0 0 0 1px #e5e7eb}
+img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:#eee}
+.glyph{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#e8eef8;font-weight:600}
+.meta{font-size:13px;line-height:1.4}.meta b{display:block;font-size:14px}
+</style></head><body>
+<h1>Official agent avatars (lab)</h1>
+<div class="grid" id="grid"></div>
+<script>
+const rows = [{"key":"boss","name":"猛犸大总管","avatarField":null,"resolved":"avatars/boss.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/boss.jpg"},{"key":"c3274112ed041","name":"商业命名大师","avatarField":null,"resolved":null,"source":"glyph-fallback","url":null},{"key":"copy","name":"获客文案大师","avatarField":null,"resolved":"avatars/copy.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/copy.jpg"},{"key":"data","name":"数据分析师","avatarField":null,"resolved":"avatars/data.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/data.jpg"},{"key":"growth","name":"增长战略顾问","avatarField":null,"resolved":"avatars/growth.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/growth.jpg"},{"key":"gzh","name":"公众号改写专家","avatarField":"avatars/copy.jpg","resolved":"avatars/copy.jpg","source":"explicit","url":"http://127.0.0.1:5201/api/official-agents/avatars/copy.jpg"},{"key":"interview","name":"访谈大师","avatarField":"avatars/qc.jpg","resolved":"avatars/qc.jpg","source":"explicit","url":"http://127.0.0.1:5201/api/official-agents/avatars/qc.jpg"},{"key":"ip","name":"IP策划大师","avatarField":"avatars/growth.jpg","resolved":"avatars/growth.jpg","source":"explicit","url":"http://127.0.0.1:5201/api/official-agents/avatars/growth.jpg"},{"key":"live","name":"直播话术专家","avatarField":null,"resolved":"avatars/live.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/live.jpg"},{"key":"mammoth","name":"猛犸 AI","avatarField":null,"resolved":null,"source":"glyph-fallback","url":null},{"key":"method","name":"方法论大师","avatarField":"avatars/trans.jpg","resolved":"avatars/trans.jpg","source":"explicit","url":"http://127.0.0.1:5201/api/official-agents/avatars/trans.jpg"},{"key":"niche","name":"利基战略顾问","avatarField":"avatars/data.jpg","resolved":"avatars/data.jpg","source":"explicit","url":"http://127.0.0.1:5201/api/official-agents/avatars/data.jpg"},{"key":"pyq","name":"朋友圈内容大师","avatarField":null,"resolved":"avatars/pyq.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/pyq.jpg"},{"key":"qc","name":"客服质检官","avatarField":null,"resolved":"avatars/qc.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/qc.jpg"},{"key":"sell","name":"卖点大师","avatarField":"avatars/live.jpg","resolved":"avatars/live.jpg","source":"explicit","url":"http://127.0.0.1:5201/api/official-agents/avatars/live.jpg"},{"key":"sifu","name":"私域运营大师","avatarField":null,"resolved":"avatars/sifu.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/sifu.jpg"},{"key":"spy","name":"竞品情报官","avatarField":null,"resolved":"avatars/spy.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/spy.jpg"},{"key":"trans","name":"咨询转化教练","avatarField":null,"resolved":"avatars/trans.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/trans.jpg"},{"key":"video","name":"短视频脚本官","avatarField":null,"resolved":"avatars/video.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/video.jpg"},{"key":"xhs","name":"爆款小红书专家","avatarField":null,"resolved":"avatars/xhs.jpg","source":"same-key","url":"http://127.0.0.1:5201/api/official-agents/avatars/xhs.jpg"}];
+const grid = document.getElementById('grid');
+for (const row of rows) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.key = row.key;
+  if (row.url) {
+    const img = document.createElement('img');
+    img.src = row.url;
+    img.alt = row.name;
+    img.dataset.key = row.key;
+    card.appendChild(img);
+  } else {
+    const g = document.createElement('div');
+    g.className = 'glyph';
+    g.textContent = (row.name || '?').slice(0, 1);
+    card.appendChild(g);
+  }
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.innerHTML = '<b>' + row.name + '</b>' + row.key + '<br>' + (row.source + (row.resolved ? ' · ' + row.resolved : ''));
+  card.appendChild(meta);
+  grid.appendChild(card);
+}
+</script></body></html>

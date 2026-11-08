@@ -1,0 +1,25 @@
+{
+  "timeAsiaShanghai": "2026-11-07T19:44:38.831171+08:00",
+  "files": [
+    {
+      "path": "packages/client/ui-official-agent-gallery/src/client/GalleryPage.tsx",
+      "sha256": "18c9060956a13ed31d99b2211e493b49af6a22b0fff371ca679496959e12dba8"
+    },
+    {
+      "path": "packages/client/ui-official-agent-gallery/src/client/GalleryPage.module.css",
+      "sha256": "3515dd6b84dd790fe9b347f5f4cefd5779f6d28e1c58fa3f2a73593bb2e789ab"
+    },
+    {
+      "path": "packages/client/ui-official-agent-gallery/lib/client.js",
+      "sha256": "6c31cd1c3ec890076f5a89d7abd63fafd80c0cf207337606c807cfc63d3342c3"
+    }
+  ],
+  "findings": {
+    "undefinedModalBackgroundToken": "--dsw-alias-bg-elevated",
+    "realModalSurfaceToken": "--dsw-alias-bg-layer-2",
+    "oldBundleContainsInvalidToken": true,
+    "nativeDialogShowModalAlreadyUsed": true,
+    "oldBodyScrollsWholeDialog": true,
+    "browserInspection": false
+  }
+}

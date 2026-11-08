@@ -1,0 +1,18 @@
+{
+  "key": "superpowers-requesting-code-review",
+  "name": "代码送审准备",
+  "description": "组织差异、风险、验证记录与审查重点。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/code-reviewer.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

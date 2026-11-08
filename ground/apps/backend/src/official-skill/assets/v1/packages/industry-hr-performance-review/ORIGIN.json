@@ -1,0 +1,47 @@
+{
+  "key": "industry-hr-performance-review",
+  "name": "绩效回顾草案",
+  "summary": "依据已提供事实形成公平、可追溯的绩效反馈草案。",
+  "category": "hr",
+  "userCategoryLabel": "人力行政",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "human-resources/skills/performance-review",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "02310addbe621a8866932e8cc0280f15114f5190",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/human-resources/skills/performance-review/SKILL.md (git-blob:02310addbe621a8866932e8cc0280f15114f5190)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "f53c679acba79cbb292961fd9fb9e87ca20eab22",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "a59006b27d62064b6936841dea7a2ca4645197cf58ce4e5bb11666aae5c27442"
+  },
+  "officialVsAdapted": "adapted"
+}

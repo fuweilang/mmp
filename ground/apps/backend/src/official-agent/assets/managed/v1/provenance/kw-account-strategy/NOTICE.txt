@@ -1,0 +1,9 @@
+Adapted from https://github.com/anthropics/knowledge-work-plugins at ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d.
+Applicable license: Apache-2.0; upstream path: sales/LICENSE.
+Original copyright and license retained in LICENSE and upstream source files.
+Changes: substantive Chinese role/profile, workflow and deliverables; host-specific tool/model limitations and explicit no-execution claims.
+No affiliation or upstream endorsement is implied. No tests or execution validation performed.
+中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。
+来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。
+文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。
+岗位plugin组合改编为复合专家，不冒充上游现成独立agent；同源已有技能复用，不重复导入。

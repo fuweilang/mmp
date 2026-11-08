@@ -1,0 +1,39 @@
+{
+  "key": "marketing-referrals",
+  "name": "推荐增长方案",
+  "description": "设计推荐激励、传播路径和效果衡量方案。",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evals/evals.json"
+    },
+    {
+      "path": "references/affiliate-operations.md"
+    },
+    {
+      "path": "references/affiliate-programs.md"
+    },
+    {
+      "path": "references/program-examples.md"
+    },
+    {
+      "path": "references/review-platform-rules.md"
+    },
+    {
+      "path": "references/review-program-operations.md"
+    },
+    {
+      "path": "references/review-programs.md"
+    },
+    {
+      "path": "references/viral-mechanisms.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

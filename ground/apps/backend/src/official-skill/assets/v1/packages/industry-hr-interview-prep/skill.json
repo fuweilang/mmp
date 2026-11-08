@@ -1,0 +1,15 @@
+{
+  "key": "industry-hr-interview-prep",
+  "name": "招聘面试准备",
+  "description": "按岗位要求组织面试问题、评价维度和记录模板。",
+  "entry": "SKILL.md",
+  "category": "hr",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

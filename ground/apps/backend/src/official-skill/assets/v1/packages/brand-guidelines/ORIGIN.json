@@ -1,0 +1,17 @@
+{
+  "key": "brand-guidelines",
+  "name": "品牌视觉规范",
+  "summary": "Applies Anthropic's official brand colors and typography to any sort of artifact that may benefit from having Anthropic's look-and-feel. Us…",
+  "category": "content",
+  "userCategoryLabel": "中文写作/内容",
+  "references": [],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/brand-guidelines",
+    "immutableRef": "github:anthropics/skills@main:skills/brand-guidelines#d3f4f52bc89b"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

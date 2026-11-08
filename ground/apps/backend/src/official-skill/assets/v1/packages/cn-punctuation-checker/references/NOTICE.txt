@@ -1,0 +1,4 @@
+Source: github:trae-community/trae-skills@main:skills/cn-punctuation-checker#dd16200086ef
+License: MIT
+Adaptation: strip-scripts; stripped=0; dropped=0
+No scripts shipped.

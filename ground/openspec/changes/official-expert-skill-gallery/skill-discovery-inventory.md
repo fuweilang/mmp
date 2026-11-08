@@ -1,0 +1,158 @@
+# 技能能力/行业映射清单（展示投影）
+
+115 个已存在官方 key；每个恰好一个主能力。行业可为空/多标。没有新增技能、改包或改库。
+
+## 能力数量
+- 代码开发: 10
+- 调试排障: 4
+- 代码审查: 6
+- 界面设计: 5
+- 视觉创作: 4
+- 视频创作: 5
+- 安全分析: 2
+- 测试验证: 2
+- 部署运维: 3
+- 文档处理: 5
+- 数据分析: 8
+- 内容写作: 9
+- 翻译本地化: 1
+- 检索研究: 9
+- 规划协作: 7
+- 运营增长: 9
+- 客户服务: 3
+- 经营管理: 6
+- 人事管理: 4
+- 财税分析: 7
+- 法律合规: 4
+- 知识整理: 1
+- 知识学习: 1
+
+## 行业数量（多标，不可相加当总数）
+- 软件与 IT: 47
+- 财税金融: 7
+- 法律服务: 4
+- 电商零售: 2
+- 人力资源: 4
+- 内容传媒: 11
+- 教育学习: 2
+- 具身智能: 1
+- 无行业标签: 39
+
+## 逐项映射
+- academy-guide | 学院学习指南 | 知识学习 | 教育学习
+- algorithmic-art | 算法艺术创作 | 视觉创作 | 内容传媒
+- bailian-docs-llm-wiki | 百炼文档百科 | 检索研究 | 软件与 IT
+- bailian-model-recommend | bailian-model-recommend | 检索研究 | 软件与 IT
+- brand-guidelines | 品牌视觉规范 | 视觉创作 | 内容传媒
+- canvas-design | 画布视觉设计 | 视觉创作 | 内容传媒
+- cloudbase | 云开发指南 | 部署运维 | 软件与 IT
+- cn-punctuation-checker | 中文标点校对 | 内容写作 | 不限定行业
+- codex-cli-creator | 命令行工具设计 | 代码开发 | 软件与 IT
+- codex-define-goal | 目标定义与验收 | 规划协作 | 不限定行业
+- codex-jupyter-notebook | Notebook 分析流程 | 数据分析 | 软件与 IT, 教育学习
+- codex-pdf | PDF 文档处理指南 | 文档处理 | 不限定行业
+- codex-security-best-practices | 安全编码实践 | 安全分析 | 软件与 IT
+- codex-security-threat-model | 应用威胁建模 | 安全分析 | 软件与 IT
+- community-dsh-debug-session | DSH 会话排障 | 调试排障 | 软件与 IT
+- community-dsh-plugin-client | DSH 插件客户端开发 | 代码开发 | 软件与 IT
+- community-dsh-plugin-dev | DSH 社区插件开发 | 代码开发 | 软件与 IT
+- community-dsh-preset-authoring | DSH 预设编写 | 代码开发 | 软件与 IT
+- community-dsh-skill-adapter | DSH 技能适配 | 代码开发 | 软件与 IT
+- cycle-delivery | 周期交付协作 | 规划协作 | 软件与 IT
+- daily-hot-news | 热点资讯整理 | 检索研究 | 不限定行业
+- daily-trend-writer | 热点内容写作 | 内容写作 | 内容传媒
+- discernment-nudge | 审慎判断提醒 | 规划协作 | 不限定行业
+- docx-diff-comment | 文档差异批注 | 文档处理 | 不限定行业
+- dsh-client-ui-ux | DSH 客户端体验规范 | 界面设计 | 软件与 IT
+- dsh-code-review | DSH 代码审查 | 代码审查 | 软件与 IT
+- dsh-doc | DSH 技术文档维护 | 内容写作 | 软件与 IT
+- dsh-error-handling | DSH 错误处理 | 调试排障 | 软件与 IT
+- dsh-find-simplifications | 代码简化分析 | 代码审查 | 软件与 IT
+- dsh-pr-description | 变更说明撰写 | 内容写作 | 软件与 IT
+- dsh-prose-standard | 技术文档表达规范 | 内容写作 | 软件与 IT
+- dsh-responsive-ui | 响应式界面设计 | 界面设计 | 软件与 IT
+- dsh-speed-up-perf | 性能瓶颈优化指导 | 调试排障 | 软件与 IT
+- dsh-translate-docs | DSH 文档翻译 | 翻译本地化 | 软件与 IT
+- dsh-trim-cot-leakage | 推理泄露检查 | 代码审查 | 软件与 IT
+- entropy-box-zh | 熵盒知识整理 | 检索研究 | 具身智能
+- find-skill-skillhub | SkillHub 技能检索 | 检索研究 | 不限定行业
+- frontend-design | 前端界面设计 | 界面设计 | 软件与 IT
+- gbr-pair | 结对协作规范 | 部署运维 | 软件与 IT
+- git-commit-generator | 提交信息生成 | 内容写作 | 软件与 IT
+- happyhorse-prompt-studio | happyhorse-prompt-studio | 视频创作 | 内容传媒
+- industry-accounting-audit-support | 审计材料整理 | 财税分析 | 财税金融
+- industry-accounting-close-management | 财务结账流程 | 财税分析 | 财税金融
+- industry-accounting-financial-statements | 财务报表整理 | 财税分析 | 财税金融
+- industry-accounting-reconciliation | 财务对账辅助 | 财税分析 | 财税金融
+- industry-accounting-variance-analysis | 财务差异分析 | 财税分析 | 财税金融
+- industry-commerce-inventory-planner | 库存规划辅助 | 经营管理 | 电商零售
+- industry-commerce-restock | 补货清单草拟 | 经营管理 | 电商零售
+- industry-data-data-visualization | 数据图表设计 | 数据分析 | 不限定行业
+- industry-data-explore-data | 探索性数据分析 | 数据分析 | 不限定行业
+- industry-data-sql-queries | SQL 查询编写 | 数据分析 | 不限定行业
+- industry-data-statistical-analysis | 统计分析指导 | 数据分析 | 不限定行业
+- industry-data-validate-data | 数据结果校验 | 数据分析 | 不限定行业
+- industry-design-accessibility-review | 无障碍设计审阅 | 界面设计 | 软件与 IT
+- industry-design-user-research | 用户研究方案 | 检索研究 | 不限定行业
+- industry-hr-interview-prep | 招聘面试准备 | 人事管理 | 人力资源
+- industry-hr-onboarding | 员工入职计划 | 人事管理 | 人力资源
+- industry-hr-org-planning | 组织规划辅助 | 人事管理 | 人力资源
+- industry-hr-performance-review | 绩效回顾草案 | 人事管理 | 人力资源
+- industry-legal-compliance-check | 合规检查整理 | 法律合规 | 法律服务
+- industry-legal-legal-risk-assessment | 法律风险辅助分析 | 法律合规 | 法律服务
+- industry-legal-review-contract | 合同风险审阅 | 法律合规 | 法律服务
+- industry-legal-triage-nda | 保密协议初筛 | 法律合规 | 法律服务
+- industry-ops-capacity-plan | 业务容量规划 | 经营管理 | 不限定行业
+- industry-ops-process-optimization | 业务流程优化 | 经营管理 | 不限定行业
+- industry-ops-risk-assessment | 经营风险梳理 | 经营管理 | 不限定行业
+- industry-ops-runbook | 操作手册编写 | 经营管理 | 不限定行业
+- industry-product-synthesize-research | 用户研究归纳 | 检索研究 | 不限定行业
+- industry-product-write-spec | 产品规格编写 | 规划协作 | 软件与 IT
+- industry-smb-tax-prep | 税务资料准备 | 财税分析 | 财税金融
+- industry-smb-tax-season-organizer | 报税季材料清单 | 财税分析 | 财税金融
+- industry-support-draft-response | 客户答复草拟 | 客户服务 | 不限定行业
+- industry-support-kb-article | 客服知识文章 | 客户服务 | 不限定行业
+- industry-support-ticket-triage | 客户工单分流 | 客户服务 | 不限定行业
+- internal-comms | 内部沟通文案 | 内容写作 | 不限定行业
+- kz-article-deep-analysis | 文章深度解读 | 检索研究 | 不限定行业
+- marketing-ab-testing | A/B 实验设计 | 数据分析 | 不限定行业
+- marketing-churn-prevention | 客户流失预防 | 运营增长 | 不限定行业
+- marketing-community-marketing | 社群营销规划 | 运营增长 | 不限定行业
+- marketing-content-strategy | 内容策略规划 | 运营增长 | 不限定行业
+- marketing-copywriting | 营销文案写作 | 内容写作 | 不限定行业
+- marketing-customer-research | 客户需求研究 | 检索研究 | 不限定行业
+- marketing-launch | 产品发布策划 | 运营增长 | 不限定行业
+- marketing-marketing-plan | 营销计划制定 | 运营增长 | 不限定行业
+- marketing-marketing-psychology | 营销心理学应用 | 运营增长 | 不限定行业
+- marketing-pricing | 定价策略分析 | 运营增长 | 不限定行业
+- marketing-referrals | 推荐增长方案 | 运营增长 | 不限定行业
+- marketing-seo-audit | SEO 诊断清单 | 运营增长 | 不限定行业
+- mcp-builder | MCP 构建指南 | 代码开发 | 软件与 IT
+- novel-game | 互动小说游戏 | 内容写作 | 软件与 IT, 内容传媒
+- office-docx-zh | Word 文档处理 | 文档处理 | 不限定行业
+- office-pptx-zh | PPT 演示文稿 | 文档处理 | 不限定行业
+- office-router-zh | 办公文档总览 | 文档处理 | 不限定行业
+- office-xlsx-zh | Excel 表格处理 | 数据分析 | 不限定行业
+- project-governance | 项目治理文档 | 知识整理 | 软件与 IT
+- skill-creator | 技能编写指南 | 代码开发 | 软件与 IT
+- skillhub-trace-evaluator | 技能轨迹评估 | 代码审查 | 软件与 IT
+- spark-video | spark-video-episode | 视频创作 | 内容传媒
+- superpowers-brainstorming | 开发方案头脑风暴 | 规划协作 | 软件与 IT
+- superpowers-executing-plans | 分步实施计划 | 规划协作 | 软件与 IT
+- superpowers-receiving-code-review | 代码评审意见处理 | 代码审查 | 软件与 IT
+- superpowers-requesting-code-review | 代码送审准备 | 代码审查 | 软件与 IT
+- superpowers-systematic-debugging | 系统化问题排查 | 调试排障 | 软件与 IT
+- superpowers-test-driven-development | 测试驱动开发指南 | 测试验证 | 软件与 IT
+- superpowers-verification-before-completion | 完成前证据检查 | 测试验证 | 软件与 IT
+- superpowers-writing-plans | 实现计划编写 | 规划协作 | 软件与 IT
+- superpowers-writing-skills | 技能写作与迭代 | 代码开发 | 软件与 IT
+- theme-factory | 主题配色工厂 | 视觉创作 | 内容传媒
+- trae-claw-install | trae-claw-install | 部署运维 | 软件与 IT
+- video-to-keyframes | video-to-keyframes | 视频创作 | 内容传媒
+- vox-video-director | vox-video-director | 视频创作 | 内容传媒
+- web-artifacts-builder | 网页产物构建 | 代码开发 | 软件与 IT
+- web-design-teroop | 网页设计指导 | 界面设计 | 软件与 IT
+- wechat-mini-program-development | 微信小程序开发 | 代码开发 | 软件与 IT
+- zopia-ai-skills | zopia-api | 视频创作 | 内容传媒
+
+指令章节依据与各包文件 SHA256 基线见 skill-discovery-inventory.json。这里只做内容映射与资源同步，不是运行质量评分或测试验收。

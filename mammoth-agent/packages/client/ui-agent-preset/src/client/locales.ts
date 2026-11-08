@@ -15,6 +15,8 @@ export type AgentPresetSettingsKey =
   | 'view'
   | 'presetStandardName'
   | 'presetStandardDescription'
+  | 'presetChatName'
+  | 'presetChatDescription'
   | 'presetPtcName'
   | 'presetPtcDescription'
   | 'presetMinimalName'
@@ -49,15 +51,23 @@ export const en: Record<AgentPresetSettingsKey, string> = {
 
   presetStandardName: 'Standard mode',
   presetStandardDescription:
+
     'Work with code, files, and information. Suitable for most tasks, with search, editing, terminal commands, and other tools available as needed.',
+  presetChatName: 'Dialogue mode',
+  presetChatDescription:
+
+    'Chat only — no tools. Faster answers for Q&A and discussion. Switch to Standard mode when you need files changed, commands run, or other work done.',
   presetPtcName: 'PTC mode',
   presetPtcDescription:
+
     'Includes all Standard mode capabilities. Better suited to tasks that call tools in batches and then filter, organize, deduplicate, count, or summarize the results.',
   presetMinimalName: 'Minimal mode',
   presetMinimalDescription:
+
     'The agent uses a terminal and image reading, with context compaction. Useful for testing and comparing its basic performance.',
   presetCordisName: 'Creator mode',
   presetCordisDescription:
+
     'Customize MMP through conversation. Let the agent write plugins that add features or UI, or combine tools and prompts to create your own mode.',
 
   inUse: 'New task default',
@@ -94,6 +104,8 @@ export const zh: Record<AgentPresetSettingsKey, string> = {
 
   presetStandardName: '标准模式',
   presetStandardDescription: '处理代码、文件和资料，适合大多数任务。Agent 会按需使用检索、编辑和终端等工具。',
+  presetChatName: '对话模式',
+  presetChatDescription: '只聊天，不调用工具，回答更快。改文件、跑命令或做任务时请切到「标准模式」。',
   presetPtcName: 'PTC 模式',
   presetPtcDescription: '包含标准模式的所有能力，更适合批量调用工具，并对结果进行筛选、整理、去重、统计或汇总的任务。',
   presetMinimalName: '极简模式',
@@ -139,6 +151,8 @@ export const ja = {
   'view': '設定を表示',
   'presetStandardName': '標準モード',
   'presetStandardDescription': 'コード、ファイル、情報を扱います。検索、編集、ターミナルコマンドなどのツールを必要に応じて利用でき、ほとんどのタスクに適しています。',
+  'presetChatName': '対話モード',
+  'presetChatDescription': 'ツールを使わずに会話だけします。Q&A や議論向けです。ファイル変更やコマンド実行が必要なときは自動モードに切り替えてください。',
   'presetPtcName': 'PTC モード',
   'presetPtcDescription': '標準モードのすべての機能を含みます。ツールを一括で呼び出し、その結果を絞り込み、整理、重複排除、集計、要約するタスクに適しています。',
   'presetMinimalName': '最小モード',
@@ -174,15 +188,23 @@ export const es = {
 
   presetStandardName: 'Modo estándar',
   presetStandardDescription:
+
     'Trabaje con código, archivos e información. Adecuado para la mayoría de las tareas, con búsqueda, edición, comandos de terminal y otras herramientas disponibles según sea necesario.',
+  presetChatName: 'Modo diálogo',
+  presetChatDescription:
+
+    'Solo chat, sin herramientas. Respuestas más rápidas para preguntas y debate. Cambie al modo Estándar para editar archivos, ejecutar comandos u otro trabajo.',
   presetPtcName: 'Modo PTC',
   presetPtcDescription:
+
     'Incluye todas las capacidades del modo Estándar. Más adecuado para tareas que llaman a herramientas en lotes y luego filtran, organizan, deduplican, cuentan o resumen los resultados.',
   presetMinimalName: 'modo mínimo',
   presetMinimalDescription:
+
     'El agente utiliza un terminal y lectura de imágenes, con compactación de contexto. Útil para probar y comparar su rendimiento básico.',
   presetCordisName: 'Modo creador',
   presetCordisDescription:
+
     'Personaliza MMP a través de la conversación. Deje que el agente escriba complementos que agreguen funciones o interfaz de usuario, o combine herramientas e indicaciones para crear su propio modo.',
 
   inUse: 'Nueva tarea predeterminada',
@@ -219,15 +241,23 @@ export const fr = {
 
   presetStandardName: 'Mode standard',
   presetStandardDescription:
+
     'Travaillez avec du code, des fichiers et des informations. Convient à la plupart des tâches, avec recherche, édition, commandes de terminal et autres outils disponibles selon les besoins.',
+  presetChatName: 'Mode dialogue',
+  presetChatDescription:
+
+    'Discussion seule, sans outils. Réponses plus rapides pour les questions et échanges. Passez en mode Auto pour modifier des fichiers, lancer des commandes ou autre travail.',
   presetPtcName: 'Mode PTC',
   presetPtcDescription:
+
     'Inclut toutes les fonctionnalités du mode Standard. Mieux adapté aux tâches qui appellent des outils par lots, puis filtrent, organisent, dédupliquent, comptent ou résument les résultats.',
   presetMinimalName: 'Mode minimal',
   presetMinimalDescription:
+
     "L'agent utilise un terminal et une lecture d'image, avec compactage du contexte. Utile pour tester et comparer ses performances de base.",
   presetCordisName: 'Mode Créateur',
   presetCordisDescription:
+
     "Personnalisez MMP via la conversation. Laissez l'agent écrire des plugins qui ajoutent des fonctionnalités ou une interface utilisateur, ou combinez des outils et des invites pour créer votre propre mode.",
 
   inUse: 'Nouvelle tâche par défaut',
@@ -264,15 +294,23 @@ export const de = {
 
   presetStandardName: 'Standardmodus',
   presetStandardDescription:
+
     'Arbeiten Sie mit Code, Dateien und Informationen. Geeignet für die meisten Aufgaben, da bei Bedarf Suche, Bearbeitung, Terminalbefehle und andere Tools verfügbar sind.',
+  presetChatName: 'Dialogmodus',
+  presetChatDescription:
+
+    'Nur Chat, ohne Tools. Schnellere Antworten für Fragen und Diskussion. Wechseln Sie zum Auto-Modus, um Dateien zu ändern, Befehle auszuführen oder andere Arbeit zu erledigen.',
   presetPtcName: 'PTC-Modus',
   presetPtcDescription:
+
     'Beinhaltet alle Funktionen des Standardmodus. Besser geeignet für Aufgaben, bei denen Tools stapelweise aufgerufen und die Ergebnisse dann gefiltert, organisiert, dedupliziert, gezählt oder zusammengefasst werden.',
   presetMinimalName: 'Minimalmodus',
   presetMinimalDescription:
+
     'Der Agent verwendet ein Terminal und das Lesen von Bildern mit Kontextkomprimierung. Nützlich zum Testen und Vergleichen der Grundleistung.',
   presetCordisName: 'Erstellermodus',
   presetCordisDescription:
+
     'Passen Sie MMP durch Gespräche an. Lassen Sie den Agenten Plugins schreiben, die Funktionen oder Benutzeroberflächen hinzufügen, oder kombinieren Sie Tools und Eingabeaufforderungen, um Ihren eigenen Modus zu erstellen.',
 
   inUse: 'Neuer Aufgabenstandard',
@@ -309,15 +347,23 @@ export const ru = {
 
   presetStandardName: 'Стандартный режим',
   presetStandardDescription:
+
     'Работайте с кодом, файлами и информацией. Подходит для большинства задач, с поиском, редактированием, командами терминала и другими инструментами, доступными по мере необходимости.',
+  presetChatName: 'Режим диалога',
+  presetChatDescription:
+
+    'Только чат, без инструментов. Быстрее для вопросов и обсуждений. Перейдите в стандартный режим, чтобы менять файлы, запускать команды или выполнять другую работу.',
   presetPtcName: 'Режим PTC',
   presetPtcDescription:
+
     'Включает все возможности стандартного режима. Лучше подходит для задач, которые вызывают инструменты в пакетном режиме, а затем фильтруют, организуют, дедуплицируют, подсчитывают или суммируют результаты.',
   presetMinimalName: 'Минимальный режим',
   presetMinimalDescription:
+
     'Агент использует терминал и чтение изображений со сжатием контекста. Полезно для тестирования и сравнения его базовой производительности.',
   presetCordisName: 'Режим автора',
   presetCordisDescription:
+
     'Настройте MMP через разговор. Позвольте агенту писать плагины, которые добавляют функции или пользовательский интерфейс, или комбинируйте инструменты и подсказки для создания собственного режима.',
 
   inUse: 'Новая задача по умолчанию',
@@ -354,15 +400,23 @@ export const pt = {
 
   presetStandardName: 'Modo padrão',
   presetStandardDescription:
+
     'Trabalhe com código, arquivos e informações. Adequado para a maioria das tarefas, com pesquisa, edição, comandos de terminal e outras ferramentas disponíveis conforme necessário.',
+  presetChatName: 'Modo diálogo',
+  presetChatDescription:
+
+    'Apenas conversa, sem ferramentas. Respostas mais rápidas para perguntas e discussão. Mude para o modo Estándar para editar arquivos, executar comandos ou outro trabalho.',
   presetPtcName: 'modo PTC',
   presetPtcDescription:
+
     'Inclui todos os recursos do modo Padrão. Mais adequado para tarefas que chamam ferramentas em lotes e depois filtram, organizam, desduplicam, contam ou resumem os resultados.',
   presetMinimalName: 'Modo mínimo',
   presetMinimalDescription:
+
     'O agente utiliza terminal e leitura de imagens, com compactação de contexto. Útil para testar e comparar seu desempenho básico.',
   presetCordisName: 'Modo criador',
   presetCordisDescription:
+
     'Personalize MMP por meio de conversa. Deixe o agente escrever plug-ins que adicionem recursos ou UI, ou combine ferramentas e prompts para criar seu próprio modo.',
 
   inUse: 'Novo padrão de tarefa',

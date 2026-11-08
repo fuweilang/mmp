@@ -1,0 +1,49 @@
+{
+  "key": "superpowers-requesting-code-review",
+  "name": "代码送审准备",
+  "summary": "组织差异、风险、验证记录与审查重点。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=1",
+  "source": {
+    "owner": "openai",
+    "repo": "plugins",
+    "ref": "main",
+    "path": "plugins/superpowers/skills/requesting-code-review",
+    "treeSha": "b767f8fa3be1a22b093127dd59956c91ecffca9d",
+    "skillBlobSha": "fa4f2f9965591d6d8a7ef4ad47e6ba4d5ac344d0",
+    "immutableRef": "https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/requesting-code-review/SKILL.md (git-blob:fa4f2f9965591d6d8a7ef4ad47e6ba4d5ac344d0)",
+    "licenseEvidence": [
+      {
+        "path": "plugins/superpowers/LICENSE",
+        "blobSha": "abf0390320aa14406af7a520b9b0739fdda9bf08",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/plugins",
+      "html_url": "https://github.com/openai/plugins",
+      "stargazers_count": 7785,
+      "forks_count": 1002,
+      "pushed_at": "2026-11-03T23:23:40Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "OpenAI-distributed curated Superpowers plugin; original author Jesse Vincent."
+    },
+    "includedResources": [
+      {
+        "path": "plugins/superpowers/skills/requesting-code-review/code-reviewer.md",
+        "sha": "b898cb982e8a368e847d31136ac106001173b1d5",
+        "mapped": "references/code-reviewer.md"
+      }
+    ],
+    "omittedFiles": [
+      "agents/openai.yaml"
+    ],
+    "originalBodySha256": "64553cd983c12d6f767a8a1989028a72a8deda878e479bf1731a349e0c985616"
+  },
+  "officialVsAdapted": "adapted"
+}

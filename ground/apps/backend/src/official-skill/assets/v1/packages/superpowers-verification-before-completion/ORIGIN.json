@@ -1,0 +1,43 @@
+{
+  "key": "superpowers-verification-before-completion",
+  "name": "完成前证据检查",
+  "summary": "避免无依据宣称完成，核对实际验证记录。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=1",
+  "source": {
+    "owner": "openai",
+    "repo": "plugins",
+    "ref": "main",
+    "path": "plugins/superpowers/skills/verification-before-completion",
+    "treeSha": "b767f8fa3be1a22b093127dd59956c91ecffca9d",
+    "skillBlobSha": "7d45333cc4a49c57a80df6c1fe2fa777a207afbc",
+    "immutableRef": "https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/verification-before-completion/SKILL.md (git-blob:7d45333cc4a49c57a80df6c1fe2fa777a207afbc)",
+    "licenseEvidence": [
+      {
+        "path": "plugins/superpowers/LICENSE",
+        "blobSha": "abf0390320aa14406af7a520b9b0739fdda9bf08",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/plugins",
+      "html_url": "https://github.com/openai/plugins",
+      "stargazers_count": 7785,
+      "forks_count": 1002,
+      "pushed_at": "2026-11-03T23:23:40Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "OpenAI-distributed curated Superpowers plugin; original author Jesse Vincent."
+    },
+    "includedResources": [],
+    "omittedFiles": [
+      "agents/openai.yaml"
+    ],
+    "originalBodySha256": "b0731a3f55239aed86a40c7c13682fd34396c0fc50d5c00e41ff2d3acfc44304"
+  },
+  "officialVsAdapted": "adapted"
+}

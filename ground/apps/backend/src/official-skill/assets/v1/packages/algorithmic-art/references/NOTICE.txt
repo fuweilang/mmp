@@ -1,0 +1,4 @@
+Source: github:anthropics/skills@main:skills/algorithmic-art#2e7af3985155
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=1; dropped=1
+No scripts shipped.

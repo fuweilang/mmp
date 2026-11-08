@@ -1,0 +1,20 @@
+{
+  "key": "bailian-docs-llm-wiki",
+  "name": "百炼文档百科",
+  "summary": ">-",
+  "category": "common",
+  "userCategoryLabel": "检索研究",
+  "references": [
+    "references/README.md",
+    "references/llms.txt"
+  ],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "modelstudioai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/bailian-docs-llm-wiki",
+    "immutableRef": "github:modelstudioai/skills@main:skills/bailian-docs-llm-wiki#c02033e2c82e"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=2668"
+}

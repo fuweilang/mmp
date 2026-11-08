@@ -1,0 +1,5 @@
+Source: https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-trim-cot-leakage/SKILL.md (git-blob:f8a852bd66f398fc8c29f50d336df07d47218c27)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: .agents/skills/dsh-trim-cot-leakage
+No third-party scripts are executed or shipped in this managed package.

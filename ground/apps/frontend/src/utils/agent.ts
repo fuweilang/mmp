@@ -14,8 +14,14 @@ function normalizeAgentWebUrl(value: string | undefined): string {
 /** 智能终端网页版地址；生产构建必须显式配置。 */
 export const agentWebUrl = normalizeAgentWebUrl(import.meta.env.VITE_AGENT_WEB_URL);
 
+/** 本机开发入口与已安装客户端使用独立协议。 */
+function agentClientUrl(): string {
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+  return local ? 'mmp-dev://open' : 'mmp://open';
+}
+
 export function openAgentClient() {
-  window.location.href = 'mmp://open';
+  window.location.href = agentClientUrl();
 }
 
 export function openAgentWeb() {

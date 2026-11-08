@@ -1,0 +1,94 @@
+{
+  "capturedAt": "2026-11-07T22:49:54.349438+08:00",
+  "scope": "t175 after completed t174; t170/171 remain paused",
+  "sourceTests": {
+    "numPassedTests": 14,
+    "numFailedTests": 0
+  },
+  "builtTests": {
+    "numPassedTests": 3,
+    "numFailedTests": 0
+  },
+  "preFixActualCordisMenuFailure": [
+    "[ui-input-trigger] source \"command\" candidates failed: TypeError: session.getSnapshot is not a function",
+    "    at Object.available (/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-official-agent-gallery/src/client/task-catalog.tsx:37:244)",
+    "    at CommandUiRuntime.candidates (/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-commands/src/client/service.ts:237:25)",
+    "[ui-input-trigger] source \"command\" candidates failed: TypeError: session.getSnapshot is not a function",
+    "    at Object.available (/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-official-agent-gallery/src/client/task-catalog.tsx:37:244)",
+    "    at CommandUiRuntime.candidates (/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-commands/src/client/service.ts:237:25)",
+    "[ui-input-trigger] source \"command\" candidates failed: TypeError: session.getSnapshot is not a function",
+    "    at Object.available (/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-official-agent-gallery/src/client/task-catalog.tsx:37:244)",
+    "    at CommandUiRuntime.candidates (/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-commands/src/client/service.ts:237:25)"
+  ],
+  "checks": {
+    "actualClientBindingLookup": true,
+    "oldSessionFaceMistakeRemoved": true,
+    "pausedSevenFilesUnchanged": true
+  },
+  "sourceFiles": {
+    "packages/client/ui-official-agent-gallery/src/client/task-catalog.tsx": "85e9b5c8ffcdffd4073bcf4657e25d7401cfcc64ddac9e9686434b0a4fc9391c",
+    "packages/client/ui-official-agent-gallery/tsconfig.json": "a449223531581bf01bf59cc961042728d4c4126162b6375645a3ac3170f4f7e3",
+    "packages/client/ui-official-agent-gallery/package.json": "7198803cd8649790a9d3614a0d2aedf4a9c9f43673380eee6f82042d3cae38d7",
+    "pnpm-lock.yaml": "2abb480affbc1a26f66a648f3ca89f399763411282cbbeb7f3924a5619499c07",
+    "packages/client/ui-official-agent-gallery/tests/task-menu.client.spec.tsx": "877bfaafe9fc1ffd44bcf976ae4a621f59b36d9fd00bcf332378dd9dc759cc7b"
+  },
+  "builtFiles": {
+    "packages/client/ui-official-agent-gallery/lib/client.js": "d00a145d25e05cd30d3dc0222287b1711c4c3d208e1f0b6a190cdade3f3aa2d8",
+    "packages/client/ui-official-agent-gallery/lib/client.js.map": "529e1cbb6cff02728e628a18ca6f634d65d3bd47c30f580ea31dce0c13c13cff",
+    "packages/client/ui-official-agent-gallery/lib/typert.remote-client.d.ts.map": "ff56c9b044161ba5d579747e1b13549b2e303973ee1d68c65a6752f29d25bbda",
+    "packages/client/ui-official-agent-gallery/lib/typert.host.js": "3d2554aba2b6e020d8c42320d5e5badad723607bf97e30d22d485f693b12c7bb",
+    "packages/client/ui-official-agent-gallery/lib/index.js": "9eb26b7accaf55a9e4f7ec26223a3ce924c78d3b7b3e9b8ead21681050ee66ce",
+    "packages/client/ui-official-agent-gallery/lib/typert.remote-client.js": "4429853c9026c715ca015273c24130f7375ba830330868a41c29e4a1fdc6a157",
+    "packages/client/ui-official-agent-gallery/lib/types/projection.js.map": "0b9059fca13fdb4617f6e798842d2306e85e816746b195ed4c3e6d5c689e6cac",
+    "packages/client/ui-official-agent-gallery/lib/types/ground.js.map": "780206bbbcc36e6448ce5cabcfba7927b04060bdcbf64ce515fb1d05f441da1f",
+    "packages/client/ui-official-agent-gallery/lib/types/types.js": "01ae2a5b120382f9a648ced7ee8507493a134f216d100fc61600c6c9738235d2",
+    "packages/client/ui-official-agent-gallery/lib/types/types.js.map": "17307f7387fbcf31645bdc6c61dd25c80edefb6fbacbb2909f503b879227b631",
+    "packages/client/ui-official-agent-gallery/lib/types/projection.d.ts.map": "8dc1ce19906b7e03c8e0b146762905fefd8aa85c2da9085e26cd2510d0fca2ef",
+    "packages/client/ui-official-agent-gallery/lib/types/index.js": "a0122369868ce9a28aec68597b1d416ec5170cd429393b5c961cb45c654f2dab",
+    "packages/client/ui-official-agent-gallery/lib/types/ground.js": "1552e6c22933c288c3673f65cd2f256eb0133eecf6cc6f9866fd945b90d8d948",
+    "packages/client/ui-official-agent-gallery/lib/types/projection.js": "6291cc07dae0e1f23454077d36f6bdc1f70367b8a6edec589b950ccbcbb1f4f7",
+    "packages/client/ui-official-agent-gallery/lib/types/index.js.map": "1e6f90a85e23dd79299ea4cefb9fe621d2a0f5c6dfdb41f3941758501b8cbc4e",
+    "packages/client/ui-official-agent-gallery/lib/types/ground.d.ts.map": "0e66cbccbee69665b487132346981be4455b0c50824f547988c929e06bc0a0de",
+    "packages/client/ui-official-agent-gallery/lib/types/types.d.ts.map": "9ecf4bd231c741f016fbcb6eba1d3f98669d8e960acbb41e0c132d9d0ae613a0",
+    "packages/client/ui-official-agent-gallery/lib/types/index.d.ts.map": "8f4478213df11155a74088f0091bc5c4d06754b0507eeb9559cc734b5374abbe",
+    "packages/client/ui-official-agent-gallery/lib/types/client/official-avatars.d.ts.map": "a96525c99c061405e447556a70bab70bd13224d97e71dc7f68e0c3af90c897fb",
+    "packages/client/ui-official-agent-gallery/lib/types/client/locales.js.map": "0efac1328b86188222a4e226fe0d74e714c486fcb59375adfbd2ce0f285854f9",
+    "packages/client/ui-official-agent-gallery/lib/types/client/task-catalog.js": "61b70cdd621dfa4cc05a49e6348c4aa5ad25917e196ed4836025bdd772cbb646",
+    "packages/client/ui-official-agent-gallery/lib/types/client/SkillPanel.d.ts.map": "7c305d1f3e7fa34000e3139086f57d093fadc241f8f7261a968490118a28c7c3",
+    "packages/client/ui-official-agent-gallery/lib/types/client/official-avatars.js": "ca456f9c8273cdd27bb3913d6e4888187bb03d36caea0c724972f7692a456a9e",
+    "packages/client/ui-official-agent-gallery/lib/types/client/GalleryPage.js.map": "7cff76c8df044ddc87500121e12119b1e1302c5c6e083b1418b9c6d4dfc34f4a",
+    "packages/client/ui-official-agent-gallery/lib/types/client/CatalogIcon.js": "08a86ef8938cb1215e6ac8703d27bd1f44c12e351c9e1bef34d6661f82c77f24",
+    "packages/client/ui-official-agent-gallery/lib/types/client/GalleryPage.d.ts.map": "cb8e75c5c1c322c577092b07ac2453e23f99db29d49468dcebd0aebbb5377cf5",
+    "packages/client/ui-official-agent-gallery/lib/types/client/skill-facets.d.ts.map": "1f3cebef0f47a35f57bf4ed6f4ff21dd5baac1a7e93b95303c7ba195901c705e",
+    "packages/client/ui-official-agent-gallery/lib/types/client/index.js": "59e54b146bd40fa513745bf31010604441bae4d501eb2509f560e6ccef46975c",
+    "packages/client/ui-official-agent-gallery/lib/types/client/CatalogIcon.d.ts.map": "659f3e63a0e66be2fe858355812aad4a9bb0b4704046b2bd878d9b120f124d50",
+    "packages/client/ui-official-agent-gallery/lib/types/client/task-catalog.d.ts.map": "c3ce1e8d3cd89d73798df9f70fda82b36bd1e5f8ef0f3732cef33612af26c14e",
+    "packages/client/ui-official-agent-gallery/lib/types/client/SkillPanel.js": "6b64f74bfdd9e25bd81b6070c841963bf06ead1f8f9c0c11e75196b82f48f239",
+    "packages/client/ui-official-agent-gallery/lib/types/client/skill-facets.js.map": "4682449c1f5152f3f9cd7eb87292ad44399a72f10aa03350ddb8748df670f02d",
+    "packages/client/ui-official-agent-gallery/lib/types/client/GallerySourceLabel.js.map": "122fb99aa261bdacbe15cecdebf96a5ea8e697afc1b6cd021502e55f08ffc99e",
+    "packages/client/ui-official-agent-gallery/lib/types/client/GallerySourceLabel.js": "e3af17eb5572499d503ef4be5e4bce0ab2dd5d8f0d3114f475af98206496d6b7",
+    "packages/client/ui-official-agent-gallery/lib/types/client/index.js.map": "f196daf0a080730c4b21a4266f839b5fbd8008b8c118becbf4478a8de968d89d",
+    "packages/client/ui-official-agent-gallery/lib/types/client/skill-facets.js": "e6bb16d231f9745d1597921d7751e4fa6099bdba5728ce4f2a49687a24451c71",
+    "packages/client/ui-official-agent-gallery/lib/types/client/CatalogIcon.js.map": "8a61aef56c182fe6b1071a27ea5e2800f45251143e55515f113c6fba595588c4",
+    "packages/client/ui-official-agent-gallery/lib/types/client/GalleryPage.js": "e6cc79e73ccda2430ff7a3d453268a46dd086ff25054ef990eb79ce84967b2f4",
+    "packages/client/ui-official-agent-gallery/lib/types/client/task-catalog.js.map": "3e24c54be61164501cc5f15a3f74a5cfb2c02ad1f4ea0099fe3763db5983d692",
+    "packages/client/ui-official-agent-gallery/lib/types/client/locales.js": "4ad11494e3cb3e90c12aa8455a5971abb8579343152e421cbf9af8f3ff896c3d",
+    "packages/client/ui-official-agent-gallery/lib/types/client/GallerySourceLabel.d.ts.map": "90b1f483ff423fd2acda6043cefa25b4264cbcb12275eba1f855e9a0fea75061",
+    "packages/client/ui-official-agent-gallery/lib/types/client/index.d.ts.map": "4a5e39d0c7c23aef337df893f1a56cca1910cf7d459bca5ec3fbf8f6ed9e130b",
+    "packages/client/ui-official-agent-gallery/lib/types/client/official-avatars.js.map": "4f54bba97c1caf3147d420addcffb5360cd8324cbf95c1e6036cdf449b2cf19c",
+    "packages/client/ui-official-agent-gallery/lib/types/client/SkillPanel.js.map": "fba9c79d6e29fe2401dbff24a07e080f5ea2109a3f2e4b8300920469cfd512e6",
+    "packages/client/ui-official-agent-gallery/lib/types/client/locales.d.ts.map": "5a6b3874db97c8aa4b01f9a3cbaef0552c3b334faf01091ce160dbf136d8f870"
+  },
+  "commands": [
+    {
+      "command": "node_modules/.bin/tsc -p packages/client/ui-official-agent-gallery/tsconfig.json --pretty false",
+      "exitCode": 0
+    },
+    {
+      "cwd": "packages/client/ui-official-agent-gallery",
+      "command": "../../../node_modules/.bin/tsdown --env.MMP_BUILD_FACE client --no-clean --logLevel error",
+      "exitCode": 0
+    }
+  ],
+  "limitations": "Real Cordis/Slots/InputHub/trigger/controller/command/selector and actual client ModuleSystem bundle materialization; fixture catalog+Session transport+retrieval, not live account/cloud/browser. Root-filter bundling initially did not refresh client; corrected package-local build and repeated actual built interaction. Failed initial tsc outside-root emits (84 own generated files) retained in tsc-stray-emit-backup, none left in source."
+}

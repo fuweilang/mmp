@@ -1,0 +1,47 @@
+{
+  "key": "industry-support-kb-article",
+  "name": "客服知识文章",
+  "summary": "把解决过程整理成可检索的知识库文章草稿。",
+  "category": "sales",
+  "userCategoryLabel": "客户销售",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "customer-support/skills/kb-article",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "d9f3274c1954099a7a4ff0c9fabd0d2e9d5235c0",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/customer-support/skills/kb-article/SKILL.md (git-blob:d9f3274c1954099a7a4ff0c9fabd0d2e9d5235c0)",
+    "licenseEvidence": [
+      {
+        "path": "customer-support/LICENSE",
+        "blobSha": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "41e4a70173519a3c7560554464b2c8439829df675132df2ff58ebf8fff3e8b1a"
+  },
+  "officialVsAdapted": "adapted"
+}

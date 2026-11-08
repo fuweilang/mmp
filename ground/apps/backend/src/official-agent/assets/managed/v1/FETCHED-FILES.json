@@ -1,0 +1,362 @@
+[
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "LICENSE",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+    "localPath": "upstream/agency-agents/LICENSE",
+    "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+    "bytes": 1079
+  },
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "specialized/hr-onboarding.md",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/hr-onboarding.md",
+    "localPath": "upstream/agency-agents/specialized/hr-onboarding.md",
+    "sha256": "28a52c26f27ab24d7fe11f5e48cfe712f6d27da142ec97911683b4a3ad92332c",
+    "bytes": 23923
+  },
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "specialized/customer-success-manager.md",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/customer-success-manager.md",
+    "localPath": "upstream/agency-agents/specialized/customer-success-manager.md",
+    "sha256": "2fc5ebc10734a621d65d1bfe0a253158f0a7418ee39b7c93a18efe6b26661cfe",
+    "bytes": 23313
+  },
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "specialized/operations-manager.md",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/operations-manager.md",
+    "localPath": "upstream/agency-agents/specialized/operations-manager.md",
+    "sha256": "3c133a31ae1542922444d77d7c8f9964127704ba94638dde12e37a9ad0fd35bd",
+    "bytes": 19209
+  },
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "specialized/supply-chain-strategist.md",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/supply-chain-strategist.md",
+    "localPath": "upstream/agency-agents/specialized/supply-chain-strategist.md",
+    "sha256": "aa6c0f0e7bfc7948a9ac5c76d3a0c140c54a59393eac54bdf15b12a9555662da",
+    "bytes": 33078
+  },
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "specialized/business-strategist.md",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/business-strategist.md",
+    "localPath": "upstream/agency-agents/specialized/business-strategist.md",
+    "sha256": "9314906805d8dee81c3e2d10cb93513a391731d9fceb2e4c936257005a144b92",
+    "bytes": 25296
+  },
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "specialized/corporate-training-designer.md",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/corporate-training-designer.md",
+    "localPath": "upstream/agency-agents/specialized/corporate-training-designer.md",
+    "sha256": "e70733229e87dde01bd404f502d2f5b491821f681d7230b314b18d98111b898c",
+    "bytes": 15673
+  },
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "project-management/project-manager-senior.md",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/project-management/project-manager-senior.md",
+    "localPath": "upstream/agency-agents/project-management/project-manager-senior.md",
+    "sha256": "70fb27cab174c97375293311211d5563c5ac257fba274450d1ca9c05b540ef2d",
+    "bytes": 5308
+  },
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "engineering/engineering-frontend-developer.md",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/engineering/engineering-frontend-developer.md",
+    "localPath": "upstream/agency-agents/engineering/engineering-frontend-developer.md",
+    "sha256": "71eeb60cbeedd94b41b2e5852d8986c909e8d150c324b4bb99e3b184ae202094",
+    "bytes": 9633
+  },
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "engineering/engineering-backend-architect.md",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/engineering/engineering-backend-architect.md",
+    "localPath": "upstream/agency-agents/engineering/engineering-backend-architect.md",
+    "sha256": "45d94306c8f0f4c51efb76066008297fa4e87ce5b69f509cfede224084b74dfb",
+    "bytes": 11263
+  },
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "design/design-ui-designer.md",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/design/design-ui-designer.md",
+    "localPath": "upstream/agency-agents/design/design-ui-designer.md",
+    "sha256": "4dc51255ffcb47e2bf4289a7d49a7cc224238af759f9e6e3c56771c698575d6d",
+    "bytes": 13436
+  },
+  {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "path": "design/design-ux-researcher.md",
+    "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/design/design-ux-researcher.md",
+    "localPath": "upstream/agency-agents/design/design-ux-researcher.md",
+    "sha256": "25f59c4333df2d0f1170ff7a1b11ea8415fd3d0ef80c3e0985209aeb4018680f",
+    "bytes": 13030
+  },
+  {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "path": "LICENSE",
+    "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+    "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+    "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+    "bytes": 1065
+  },
+  {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "path": "categories/01-core-development/api-designer.md",
+    "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/01-core-development/api-designer.md",
+    "localPath": "upstream/awesome-claude-code-subagents/categories/01-core-development/api-designer.md",
+    "sha256": "dc8547318598b6abecfad8d3c5709c9bb21fc38c2e5f5b4f452bb02f668df1be",
+    "bytes": 6115
+  },
+  {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "path": "categories/04-quality-security/security-auditor.md",
+    "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/04-quality-security/security-auditor.md",
+    "localPath": "upstream/awesome-claude-code-subagents/categories/04-quality-security/security-auditor.md",
+    "sha256": "62b0e511c9e0d8f1ec02b2fe0f4a1806134c850508c55420f558457225b1eb7d",
+    "bytes": 6781
+  },
+  {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "path": "categories/04-quality-security/code-reviewer.md",
+    "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/04-quality-security/code-reviewer.md",
+    "localPath": "upstream/awesome-claude-code-subagents/categories/04-quality-security/code-reviewer.md",
+    "sha256": "cf8235884dd8b4bc15aa20cc822f727ecbde2b65823b7ba2b027a638804dfc78",
+    "bytes": 6607
+  },
+  {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "path": "categories/04-quality-security/debugger.md",
+    "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/04-quality-security/debugger.md",
+    "localPath": "upstream/awesome-claude-code-subagents/categories/04-quality-security/debugger.md",
+    "sha256": "7e39938967cb1313f803a603e215ad0d8c778e0913328ccee220bb8470d617f3",
+    "bytes": 6577
+  },
+  {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "path": "categories/03-infrastructure/devops-engineer.md",
+    "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/03-infrastructure/devops-engineer.md",
+    "localPath": "upstream/awesome-claude-code-subagents/categories/03-infrastructure/devops-engineer.md",
+    "sha256": "0d62477d005660f1e43691a35bb5a94b40195cbe0c7e8da42de29a61c536b309",
+    "bytes": 6948
+  },
+  {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "path": "categories/05-data-ai/database-optimizer.md",
+    "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/05-data-ai/database-optimizer.md",
+    "localPath": "upstream/awesome-claude-code-subagents/categories/05-data-ai/database-optimizer.md",
+    "sha256": "3871a9853fce7bbf686fcec592a2770d91a9591c29fb4893e6f48760a6cf0e85",
+    "bytes": 6553
+  },
+  {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "path": "categories/10-research-analysis/market-researcher.md",
+    "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/10-research-analysis/market-researcher.md",
+    "localPath": "upstream/awesome-claude-code-subagents/categories/10-research-analysis/market-researcher.md",
+    "sha256": "5ee6d345b5a8b705e5da1f0696702536c75a87fedcbcab77faa18e3cf491772e",
+    "bytes": 6758
+  },
+  {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "path": "categories/10-research-analysis/scientific-literature-researcher.md",
+    "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/10-research-analysis/scientific-literature-researcher.md",
+    "localPath": "upstream/awesome-claude-code-subagents/categories/10-research-analysis/scientific-literature-researcher.md",
+    "sha256": "84c2657b9715a207494fd084e80fb80fc4c066e64b0c856fd95bfbb93a7295d7",
+    "bytes": 5250
+  },
+  {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "path": "categories/05-data-ai/data-scientist.md",
+    "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/05-data-ai/data-scientist.md",
+    "localPath": "upstream/awesome-claude-code-subagents/categories/05-data-ai/data-scientist.md",
+    "sha256": "d5d51ae2ac59e57a6537d94e6a3cb1ec38e8430d3aad0595cba7296c6b98fb97",
+    "bytes": 6876
+  },
+  {
+    "repository": "VoltAgent/awesome-claude-code-subagents",
+    "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+    "path": "README.md",
+    "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/README.md",
+    "localPath": "upstream/awesome-claude-code-subagents/README.md",
+    "sha256": "7d6162f0c116aa0d728d084022175bfd257aded077de8d8630ea4765f42bbde8",
+    "bytes": 36098
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "LICENSE",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/LICENSE",
+    "localPath": "upstream/knowledge-work-plugins/LICENSE",
+    "sha256": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+    "bytes": 11607
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "finance/README.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/README.md",
+    "localPath": "upstream/knowledge-work-plugins/finance/README.md",
+    "sha256": "055ceb266a9f8f45607ca1ee28e1ace10b8d761d83d8fc7bf142f46ef84def2b",
+    "bytes": 5248
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "finance/skills/close-management/SKILL.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/skills/close-management/SKILL.md",
+    "localPath": "upstream/knowledge-work-plugins/finance/skills/close-management/SKILL.md",
+    "sha256": "6c2df93bcd15eddf65017445fa44f3eb0b16a755711a5e0602d73ca595e73732",
+    "bytes": 10278
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "finance/skills/financial-statements/SKILL.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/skills/financial-statements/SKILL.md",
+    "localPath": "upstream/knowledge-work-plugins/finance/skills/financial-statements/SKILL.md",
+    "sha256": "1a9ba1cc85495eef32fa250b8a4c05e4854430af574a290b855f919dbb557dfc",
+    "bytes": 14699
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "legal/README.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/README.md",
+    "localPath": "upstream/knowledge-work-plugins/legal/README.md",
+    "sha256": "8fb3696cc0a641d18213318dc503fed6086b3ea4aab5a2484b9cee3508ed5429",
+    "bytes": 9773
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "legal/skills/review-contract/SKILL.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/skills/review-contract/SKILL.md",
+    "localPath": "upstream/knowledge-work-plugins/legal/skills/review-contract/SKILL.md",
+    "sha256": "3a6413475f51adedbff130f4d5aabbeeacfb2abd323e0338bc91c21937fbfb76",
+    "bytes": 16708
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "legal/skills/legal-risk-assessment/SKILL.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/skills/legal-risk-assessment/SKILL.md",
+    "localPath": "upstream/knowledge-work-plugins/legal/skills/legal-risk-assessment/SKILL.md",
+    "sha256": "9f7985e3a98ac8419b52067cdaa1b72f754fa38c20489e7f0bf9de36347d4d89",
+    "bytes": 12581
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "sales/README.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/README.md",
+    "localPath": "upstream/knowledge-work-plugins/sales/README.md",
+    "sha256": "f4d40d38a3f88140e4620a42cc078e859f30e05eb00e2a63a9cbe0840f1130db",
+    "bytes": 9646
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "sales/skills/account-plan/SKILL.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/skills/account-plan/SKILL.md",
+    "localPath": "upstream/knowledge-work-plugins/sales/skills/account-plan/SKILL.md",
+    "sha256": "b9facd0dfe322873e43757167b93bf3a312f0d0629c4cb9afa031912b64f5162",
+    "bytes": 10000
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "sales/skills/deal-review/SKILL.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/skills/deal-review/SKILL.md",
+    "localPath": "upstream/knowledge-work-plugins/sales/skills/deal-review/SKILL.md",
+    "sha256": "a78f8382d1f65ae57f8468bd4c76c2ccfec2a7d0f47ac15db44b31aa53568700",
+    "bytes": 9676
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "data/README.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/README.md",
+    "localPath": "upstream/knowledge-work-plugins/data/README.md",
+    "sha256": "4c7eb5edd9298a3cec8bb6a3cd703f28c81d3bf405ff790d6a70588d7131db70",
+    "bytes": 5067
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "data/skills/analyze/SKILL.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/skills/analyze/SKILL.md",
+    "localPath": "upstream/knowledge-work-plugins/data/skills/analyze/SKILL.md",
+    "sha256": "4ee816363d944c7a959e43384576d979a414f37fff7071c0bfb8935aae10143e",
+    "bytes": 4432
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "data/skills/validate-data/SKILL.md",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/skills/validate-data/SKILL.md",
+    "localPath": "upstream/knowledge-work-plugins/data/skills/validate-data/SKILL.md",
+    "sha256": "1e424822043480375b80aef9416227b1c8083af749ca536568716265f79ca54b",
+    "bytes": 14916
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "finance/LICENSE",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/LICENSE",
+    "localPath": "upstream/knowledge-work-plugins/finance/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "bytes": 11358
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "legal/LICENSE",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/LICENSE",
+    "localPath": "upstream/knowledge-work-plugins/legal/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "bytes": 11358
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "sales/LICENSE",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/LICENSE",
+    "localPath": "upstream/knowledge-work-plugins/sales/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "bytes": 11358
+  },
+  {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "path": "data/LICENSE",
+    "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/LICENSE",
+    "localPath": "upstream/knowledge-work-plugins/data/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "bytes": 11358
+  }
+]

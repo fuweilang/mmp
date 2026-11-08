@@ -1,0 +1,30 @@
+{
+  "key": "project-governance",
+  "name": "项目治理文档",
+  "summary": "为 AI 长期项目建立「项目记忆 + 文件索引 + 工作规则 + 版本记录」的治理系统，让 AI 在长期项目里「不忘事、不乱改、不重复犯错」，换会话后仍能接着做。Set up and maintain a project governance workspace for AI-…",
+  "category": "business",
+  "userCategoryLabel": "通用协作",
+  "references": [
+    "references/README.md",
+    "references/templates/AGENTS.md",
+    "references/templates/ARCHITECTURE.md",
+    "references/templates/CHANGELOG.md",
+    "references/templates/LESSONS.md",
+    "references/templates/PROJECT.md",
+    "references/templates/VERSIONS.md",
+    "references/templates/blacklist.json",
+    "references/templates/index.md",
+    "references/templates/index_notes.json",
+    "references/templates/session_handoff.md",
+    "references/templates/whitelist.json"
+  ],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/project-governance",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/project-governance#d276b911df97"
+  },
+  "adaptation": "strip-scripts; stripped=1; dropped=0"
+}

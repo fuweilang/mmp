@@ -1,0 +1,17 @@
+{
+  "key": "academy-guide",
+  "name": "学院学习指南",
+  "summary": ">",
+  "category": "common",
+  "userCategoryLabel": "通用协作",
+  "references": [],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/academy-guide",
+    "immutableRef": "github:anthropics/skills@main:skills/academy-guide#cb36bd4f78b4"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

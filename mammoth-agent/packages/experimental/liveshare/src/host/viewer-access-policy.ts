@@ -100,6 +100,7 @@ const VIEWER_GLOBAL_ROLE: RemoteAccessRole<'global'> = {
     'commands/list',
     'llm/listConfigurableProviders',
     'llm/listProviders',
+    'officialAgentGallery/list',
     'session/canOpenWorkspacePath',
     'session/control',
     'session/list',
@@ -231,6 +232,10 @@ assertSameViewerActions(
  * @param kind - Endpoint kind to expose.
  * @returns The actions this share may expose, in a stable order.
  */
+const OWNER_ONLY_ACTIONS=new Set(Object.entries(VIEWER_ENDPOINT_CLASSES).filter(([,kind])=>kind==='owner-only').map(([action])=>action))
+
+function hasCatalogSelection(action:string,args:Readonly<Record<string,unknown>>|undefined):boolean { const request=args?.request;return action==='session/prompt'&&request!==null&&typeof request==='object'&&Object.prototype.hasOwnProperty.call(request,'catalogSelection') }
+
 function exposedCapabilities(
   offered: readonly ViewerCapabilityGroup[],
   selected: readonly ViewerCapabilityGroup[],
@@ -242,7 +247,7 @@ function exposedCapabilities(
     const chosenByOwner = chosen.get(group.plugin)
     if (chosenByOwner === undefined) continue
     for (const action of group[kind]) {
-      if (chosenByOwner.has(action) && !POLICY_DECIDED_ACTIONS.has(action)) exposed.add(action)
+      if (!OWNER_ONLY_ACTIONS.has(action) && chosenByOwner.has(action) && !POLICY_DECIDED_ACTIONS.has(action)) exposed.add(action)
     }
   }
   return [...exposed].sort()
@@ -477,7 +482,7 @@ export function createViewerAccessPolicy(facts: ViewerAccessFacts): RemoteAccess
         {
           role: VIEWER_SOURCE_WRITE_ROLE,
           resource: { kind: 'session', id: source },
-          condition: () => answer(sourceWriteRefusal(mode, facts.sourceConfined(viewer.shareId))),
+          condition: ({action,args}:SessionConditionRequest) => answer(hasCatalogSelection(action,args)?'liveshare/read-only':sourceWriteRefusal(mode, facts.sourceConfined(viewer.shareId))),
         },
       ]
       for (const child of children) {
@@ -498,7 +503,7 @@ export function createViewerAccessPolicy(facts: ViewerAccessFacts): RemoteAccess
           {
             role: VIEWER_CHILD_ROLE,
             resource: { kind: 'session', id },
-            condition: ({ action, args }: SessionConditionRequest) => answer(childWriteRefusal(
+            condition: ({ action, args }: SessionConditionRequest) => answer(hasCatalogSelection(action,args)?'liveshare/read-only':childWriteRefusal(
               child, action, args !== undefined, () => facts.forks.allowsPrompt(child.childSessionId, viewer.actor),
             )),
           },

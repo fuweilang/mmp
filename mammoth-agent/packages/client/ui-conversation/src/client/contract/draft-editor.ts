@@ -46,7 +46,10 @@ export interface DraftCommand {
  * token; runtime node identities are excluded.
  */
 export interface DraftSnapshot {
+  readonly catalogSelection?: CatalogDraftSelection
   readonly text: string
+  /** Explicit per-message company-material retrieval; absent is off, independent of text. */
+  readonly enterpriseKnowledge?: boolean
   readonly references: readonly DraftReference[]
   readonly command?: DraftCommand
   readonly quotes?: readonly DraftQuote[]
@@ -138,4 +141,11 @@ export interface Occurrence {
   readonly clipboardText: string
   /** Owner-resolution failure flag: the chip renders the failure treatment. */
   readonly invalid?: boolean
+}
+
+/** Per-task next-send selection. Names/icons are display metadata, never execution authority. */
+export interface CatalogDraftSelection {
+ readonly protocol:1;readonly selectionVersion:number
+ readonly expertRef:{readonly id:string;readonly versionId:string;readonly name:string;readonly icon?:string|null|undefined}|null
+ readonly skillRef:{readonly id:string;readonly revision:number;readonly name:string;readonly key:string;readonly icon?:string|null|undefined}|null
 }

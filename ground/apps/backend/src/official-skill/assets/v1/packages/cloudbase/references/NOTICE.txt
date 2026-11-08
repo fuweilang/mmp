@@ -1,0 +1,4 @@
+Source: github:trae-community/trae-skills@main:skills/cloudbase#649b915c3a61
+License: MIT
+Adaptation: strip-scripts; stripped=0; dropped=0
+No scripts shipped.

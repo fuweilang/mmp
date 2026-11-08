@@ -27,6 +27,13 @@ describe('system Documents directory', () => {
       .rejects.toThrow('unavailable')
   })
 
+  it('falls back to the conventional Documents folder when xdg-user-dir is absent', async () => {
+    const missing = Object.assign(new Error('spawn xdg-user-dir ENOENT'), { code: 'ENOENT' })
+    const run: NativeCommandRunner = async () => { throw missing }
+    await expect(defaultWorkspaceDirectory(undefined, new AbortController().signal, { platform: 'linux', home: '/home/a', run }))
+      .resolves.toBe('/home/a/Documents/deepseek-harness/default-workspace')
+  })
+
   it('propagates lookup failure and cancellation', async () => {
     const run: NativeCommandRunner = async () => { throw new Error('lookup denied') }
     await expect(defaultWorkspaceDirectory(undefined, new AbortController().signal, { platform: 'darwin', run }))

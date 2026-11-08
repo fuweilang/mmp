@@ -1,0 +1,15 @@
+{
+  "key": "wechat-mini-program-development",
+  "name": "微信小程序开发",
+  "description": "WeChat mini-program development skill with standard project structure, request wrapper, and API management. Invoke when developing WeChat m…",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

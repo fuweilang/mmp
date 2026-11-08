@@ -1,0 +1,15 @@
+{
+  "key": "industry-design-accessibility-review",
+  "name": "无障碍设计审阅",
+  "description": "按界面材料检查无障碍问题与改进方向。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

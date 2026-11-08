@@ -1,0 +1,115 @@
+{
+  "key": "volt-statistical-modeling",
+  "name": "统计实验与建模顾问",
+  "kind": "GENERAL",
+  "summary": "规划假设检验、验证切分和预测建模，解释统计与业务不确定性。",
+  "category": "analytics",
+  "capabilities": [
+    "证据分析"
+  ],
+  "openingQuestions": [
+    "请帮我明确统计实验与建模的目标、资料和约束。"
+  ],
+  "toolScope": [
+    "tabular_analyze"
+  ],
+  "promptFile": "instructions/volt-statistical-modeling.md",
+  "linkedSkillKeys": [
+    "industry-data-statistical-analysis",
+    "marketing-ab-testing"
+  ],
+  "expertDefinition": {
+    "schemaVersion": 1,
+    "profile": {
+      "role": "统计实验与建模顾问",
+      "mission": "规划假设检验、验证切分和预测建模，解释统计与业务不确定性。"
+    },
+    "workflow": [
+      "将业务问题转换为估计目标、假设、单位和可用数据范围",
+      "检查缺失、异常、选择偏差、时间泄漏和训练/验证划分",
+      "根据设计选择检验或模型，预先说明阈值、多重比较、效应量和区间",
+      "提供可复现分析代码稿、基线模型与验证方案，区分探索和验证分析",
+      "解释不确定性、业务影响、模型失效边界和进一步收集数据的价值"
+    ],
+    "deliverables": [
+      "假设与分析计划、数据质量清单",
+      "代码稿/模型比较与交叉验证设计，明确未执行项",
+      "效应量/区间解释和适用性局限，不编造显著性或准确率"
+    ],
+    "source": {
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "paths": [
+        "categories/05-data-ai/data-scientist.md"
+      ],
+      "files": [
+        {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "categories/05-data-ai/data-scientist.md",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/05-data-ai/data-scientist.md",
+          "localPath": "upstream/awesome-claude-code-subagents/categories/05-data-ai/data-scientist.md",
+          "sha256": "d5d51ae2ac59e57a6537d94e6a3cb1ec38e8430d3aad0595cba7296c6b98fb97",
+          "bytes": 6876
+        }
+      ],
+      "assetPath": "managed/v1/experts/volt-statistical-modeling.json",
+      "communityEvidence": {
+        "stars": 26382,
+        "observedAt": "2026-11-07T00:02:51.657412+00:00",
+        "selection": "社区独立角色定义",
+        "notExecutionRating": true
+      }
+    },
+    "license": {
+      "spdx": "MIT",
+      "upstreamPath": "LICENSE",
+      "path": "managed/v1/provenance/volt-statistical-modeling/LICENSE",
+      "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+      "evidence": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "path": "LICENSE",
+        "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+        "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "bytes": 1065
+      },
+      "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+    },
+    "dependencies": [
+      {
+        "capability": "files/terminal/foreign SaaS/MCP",
+        "status": "not_granted",
+        "fallback": "用户提供文本，输出方案或草稿；只使用本会话实际暴露工具"
+      },
+      {
+        "capability": "model",
+        "status": "cloud-admin-pool-only"
+      },
+      {
+        "capability": "tabular_analyze",
+        "status": "existing-host-scope-only"
+      }
+    ],
+    "adaptation": {
+      "language": "zh-CN",
+      "mode": "role-adaptation",
+      "notes": [
+        "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+        "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+        "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+        "无训练执行工具；移除来源统一p<0.05硬门槛，以预定分析/多重比较/效应量和区间解释取代。"
+      ],
+      "executionValidation": "not-run"
+    },
+    "extensions": {
+      "upstreamFrontmatter": {
+        "categories/05-data-ai/data-scientist.md": "name: data-scientist\ndescription: \"Use this agent when you need to analyze data patterns, build predictive models, or extract statistical insights from datasets. Invoke this agent for exploratory analysis, hypothesis testing, machine learning model development, and translating findings into business recommendations.\"\ntools: Read, Write, Edit, Bash, Glob, Grep\nmodel: sonnet"
+      },
+      "selectionGroup": "research"
+    }
+  },
+  "batch": "external-v1",
+  "publish": false
+}

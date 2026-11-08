@@ -1,0 +1,277 @@
+{
+  "generatedAt": "2026-11-07 09:14:38 Asia/Shanghai",
+  "schemaChange": "official_skill.custom_avatar_path nullable, default null",
+  "before": {
+    "agents": 46,
+    "versions": 47,
+    "skills": 115,
+    "packages": 115,
+    "links": 44,
+    "grants": 14
+  },
+  "after": {
+    "experts": 46,
+    "published": 22,
+    "draft": 24,
+    "versions": 47,
+    "skills": 115,
+    "enabledSkills": 115,
+    "packages": 115,
+    "links": 44,
+    "grants": 14
+  },
+  "preserved": true,
+  "mismatches": [],
+  "originalExpertFullRowEvidence": {
+    "records": 22,
+    "mismatches": [],
+    "includesPriorAvatarPath": true
+  },
+  "iconPaths": {
+    "expertsWithUpload": 1,
+    "skillsWithUpload": 0,
+    "newSkillIconColumnAllNull": true
+  },
+  "facets": {
+    "allExperts": {
+      "total": 46,
+      "capabilities": [
+        {
+          "id": "business",
+          "count": 8
+        },
+        {
+          "id": "research-data",
+          "count": 9
+        },
+        {
+          "id": "design",
+          "count": 2
+        },
+        {
+          "id": "marketing",
+          "count": 9
+        },
+        {
+          "id": "development",
+          "count": 8
+        },
+        {
+          "id": "sales-customer",
+          "count": 5
+        },
+        {
+          "id": "people-learning",
+          "count": 2
+        },
+        {
+          "id": "product-project",
+          "count": 1
+        },
+        {
+          "id": "finance-legal",
+          "count": 2
+        }
+      ],
+      "industries": [
+        {
+          "id": "media",
+          "count": 9
+        },
+        {
+          "id": "it",
+          "count": 10
+        },
+        {
+          "id": "hr",
+          "count": 1
+        },
+        {
+          "id": "ecommerce",
+          "count": 1
+        },
+        {
+          "id": "education",
+          "count": 1
+        },
+        {
+          "id": "finance-tax",
+          "count": 1
+        },
+        {
+          "id": "legal-services",
+          "count": 1
+        }
+      ]
+    },
+    "publishedExperts": {
+      "total": 22,
+      "capabilities": [
+        {
+          "id": "business",
+          "count": 5
+        },
+        {
+          "id": "research-data",
+          "count": 4
+        },
+        {
+          "id": "design",
+          "count": 1
+        },
+        {
+          "id": "marketing",
+          "count": 9
+        },
+        {
+          "id": "sales-customer",
+          "count": 3
+        }
+      ],
+      "industries": [
+        {
+          "id": "media",
+          "count": 9
+        }
+      ]
+    },
+    "enabledSkills": {
+      "total": 115,
+      "capabilities": [
+        {
+          "id": "code-development",
+          "count": 10
+        },
+        {
+          "id": "learning",
+          "count": 1
+        },
+        {
+          "id": "visual-design",
+          "count": 4
+        },
+        {
+          "id": "research",
+          "count": 9
+        },
+        {
+          "id": "devops",
+          "count": 3
+        },
+        {
+          "id": "writing",
+          "count": 9
+        },
+        {
+          "id": "planning",
+          "count": 7
+        },
+        {
+          "id": "file-processing",
+          "count": 5
+        },
+        {
+          "id": "interface-design",
+          "count": 5
+        },
+        {
+          "id": "video-production",
+          "count": 5
+        },
+        {
+          "id": "data-analysis",
+          "count": 8
+        },
+        {
+          "id": "knowledge",
+          "count": 1
+        },
+        {
+          "id": "code-review",
+          "count": 6
+        },
+        {
+          "id": "security",
+          "count": 2
+        },
+        {
+          "id": "debugging",
+          "count": 4
+        },
+        {
+          "id": "translation",
+          "count": 1
+        },
+        {
+          "id": "accounting",
+          "count": 7
+        },
+        {
+          "id": "business-operations",
+          "count": 6
+        },
+        {
+          "id": "people-operations",
+          "count": 4
+        },
+        {
+          "id": "legal-compliance",
+          "count": 4
+        },
+        {
+          "id": "customer-service",
+          "count": 3
+        },
+        {
+          "id": "marketing",
+          "count": 9
+        },
+        {
+          "id": "testing",
+          "count": 2
+        }
+      ],
+      "industries": [
+        {
+          "id": "it",
+          "count": 47
+        },
+        {
+          "id": "education",
+          "count": 2
+        },
+        {
+          "id": "media",
+          "count": 11
+        },
+        {
+          "id": "robotics",
+          "count": 1
+        },
+        {
+          "id": "finance-tax",
+          "count": 7
+        },
+        {
+          "id": "ecommerce",
+          "count": 2
+        },
+        {
+          "id": "hr",
+          "count": 4
+        },
+        {
+          "id": "legal-services",
+          "count": 4
+        }
+      ]
+    }
+  },
+  "displayOverrides": {
+    "experts": 19,
+    "publishedExperts": 19,
+    "skills": 7
+  },
+  "noBusinessDataWrites": true,
+  "hashExclusion": "customAvatarPath only (new skill column); all prior content/revisions/status/permissions/timestamps compared"
+}

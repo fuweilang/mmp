@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "notAcceptance": true,
+  "groundSourceSha256": {
+    "apps/backend/prisma/schema.prisma": "2ec802166c27dd7c458782d96f9fb34e38dfe709b48d2a0b3ae16e58b06b9dd3",
+    "apps/backend/prisma/migrations/20261107030000_gallery_discovery_detail/migration.sql": "ec69085920329eec9fc74f00246e789da384663bbdac678951ef3c436b6f5517",
+    "apps/backend/scripts/gallery-enhancement-preservation.mjs": "2e9f99d337e8de98e3a377792bacd5259dce6e027e60f2dcd59c5d108a94aa71",
+    "apps/backend/scripts/gallery-enhancement-focused-check.mjs": "c54cb35c23237cbe87f588c27193f2e0f6126c594a909dee05d3cf79001d0068",
+    "apps/backend/src/official-agent/discovery-detail.ts": "72bfdf0b9d18937afb21f798de493d0226e444eae059698e688e404d5c2df66a",
+    "apps/backend/src/official-agent/expert-definition.ts": "9aa515659c2441bc16290b25fb14f97bd7a98f5dfa290ee2ad35a4456f67356c",
+    "apps/backend/src/official-agent/official-agent.service.ts": "4cae2f41b108e0d37d70caed8ddb4a3b47f1e481acebb0697bad70c15aa55071",
+    "apps/backend/src/official-agent/official-agent.controller.ts": "15783fa3abec8cd4f316d100dac88adc794fa5accbc8495fd85d387987b69dc8",
+    "apps/backend/src/official-skill/official-skill.service.ts": "ca2a45b508ad5a2136b22951c39608ac518879ace0c83e24c320182e3dc494e1",
+    "apps/backend/src/official-skill/official-skill.controller.ts": "82787a3143fd385871a190876322466da4b3c993da812881e4f39507dd897ca0",
+    "apps/backend/src/admin/admin-official-agents.controller.ts": "c36df3aa2a8db4e996fa029027a2ad6fd27ff3e45eeae43a44ae136159cb6b2f",
+    "apps/backend/src/admin/admin-official-agents.service.ts": "2eb84e2004f4899438aec476ee06e7776b3b14cc94b12e89f56d1004956b1c32",
+    "apps/backend/src/admin/admin-official-skills.controller.ts": "1e0996c0d054b874415b8b6fe2f87ef3a533cc3f110ee62c5089f0ed5d697aa8",
+    "apps/backend/src/admin/admin-official-skills.service.ts": "da243180f3488a06c0a52c89044f757f4303483dc1af4b7002be3a7bd8d0adb9",
+    "apps/backend/src/admin/dto/official-agent.dto.ts": "f89b3a5a3c6cf7de7cb4c1db0bdcf3058f1286dd18df530618e6abb6e7baa4cc",
+    "apps/backend/src/admin/dto/official-skill.dto.ts": "b109fbd19816e4733431f4df1ac0a97125bc3e09d83c0199fc059e20f55c5e89",
+    "apps/frontend/src/components/CatalogDiscoveryEditor.vue": "04c7791967d668f784c9f53868b99323cf6cbd9addc0ecdb3d300e54ce819642",
+    "apps/frontend/src/views/admin/AdminOfficialAgents.vue": "f0b3dea5dc20b94a68037348bd242a0be9323f0bee7b43ff3b77bc4b6bb7067b",
+    "apps/frontend/src/views/admin/AdminOfficialSkills.vue": "cfe57ca9aecd2181af1e79dbad3a0e5db34effcde00441b9f372a82b3e90e7df"
+  },
+  "mammothSourceSha256": {
+    "packages/preset/official-agent-gallery/src/admission.ts": "f2bf30e263a6b04a57b5856540a1e59c6945d4b567f07a1b88dd5b5c1bb24094",
+    "packages/preset/official-agent-gallery/src/index.ts": "d9141700c1a233d25568fc1094116ea02584a69837a601fd635cf2a7af55bd04",
+    "packages/preset/official-agent-gallery/src/ground.ts": "bec10d0cb0ead9589845d984e2f3853dce5bd1cfb1612980ff1b88fdef50607a",
+    "packages/preset/official-agent-gallery/src/types.ts": "fbbaee2b0e03f767e718e67b23f4ce46bf0002412a5a4624e600cba1d85ac865",
+    "packages/client/ui-official-agent-gallery/src/client/index.ts": "15bf086c92ba0872bf5cb083b5ebf9b93d3ab80bbdcfabbc2a4e2bd979e27fc0",
+    "packages/client/ui-official-agent-gallery/src/client/GalleryPage.tsx": "18c9060956a13ed31d99b2211e493b49af6a22b0fff371ca679496959e12dba8",
+    "packages/client/ui-official-agent-gallery/src/client/GalleryPage.module.css": "3515dd6b84dd790fe9b347f5f4cefd5779f6d28e1c58fa3f2a73593bb2e789ab",
+    "packages/client/ui-official-agent-gallery/src/client/GallerySourceLabel.tsx": "6f5e3279ffebf3abc0cfeaeb4750a812a2a66a15821b8aa1f3d2c2bce266486d",
+    "packages/client/ui-official-agent-gallery/src/client/locales.ts": "6647ba38b813460342e08fd4040f243ab97e46f0c4d716a01fe04db7d581986f"
+  },
+  "mammothRuntimeSha256": {
+    "packages/preset/official-agent-gallery/lib/index.js": "70fa8ad45e1792c133b8a8f068cd1eb538c933ac972809dea5a20ec4c6b774ca",
+    "packages/preset/official-agent-gallery/lib/typert.host.js": "d8d52e614eca12284a01c5074e3251b856b1cf58281611a3b2b297be8e68b34a",
+    "packages/preset/official-agent-gallery/lib/typert.host.d.ts": "9d37343139c050832cd1f1dd9b9084b396bfbd09af0d93058b4bcaec2281376b",
+    "packages/preset/official-agent-gallery/lib/typert.remote-client.js": "64a2def0df428b3fdc14d6a202f15b0fb5eb2b7be44c5c07d4989f469a3f0e49",
+    "packages/preset/official-agent-gallery/lib/typert.remote-client.d.ts": "33445e3012bf6b4a5ddd7e5970e1113f1465d4bcc78bce68a8aee3e0eb22ce9e",
+    "packages/preset/official-agent-gallery/lib/types/index.js": "a12e93b7e793e14759dffa92349830d25e1a5bad50723b13291dfb236844dc8a",
+    "packages/preset/official-agent-gallery/lib/types/admission.js": "9643a4380e0da3eb46f6f3af9efbf26816dbf56a2bc0c77c0bb9c36ddae6e782",
+    "packages/preset/official-agent-gallery/lib/types/ground.js": "4869a83a0ffd0f2122bfc85349509bafab0c3626d8f1c1e5dafe51a5f520e0f2",
+    "packages/preset/official-agent-gallery/lib/types/types.d.ts": "d7012aa605053e447f9a6deb7250f33095ed27d2198cf8039da92b91ca24583c",
+    "packages/client/ui-official-agent-gallery/lib/index.js": "9eb26b7accaf55a9e4f7ec26223a3ce924c78d3b7b3e9b8ead21681050ee66ce",
+    "packages/client/ui-official-agent-gallery/lib/client.js": "eae3c10dd7f4710afe4a7a25b66ae6856b374051b2ee9bb0272f429f089d1449",
+    "packages/client/ui-official-agent-gallery/lib/client.js.map": "259352e06fa357e20c9f1df77035dd52faaee2506bea40377d0aa2d667646742"
+  },
+  "groundRuntimeSha256": {
+    "apps/backend/dist/official-agent/discovery-detail.js": "46700dcddb0d6af919c2a8f4beabc340b9dc86bfdd3e031140af861cfcae4232",
+    "apps/backend/dist/official-agent/expert-definition.js": "615ee4ea825ba539e7b80317fba2b3be9ce9d4063483931a5bb32a5d0fda6c68",
+    "apps/backend/dist/official-agent/official-agent.service.js": "2df3293aaf19ed4a52f37e97df85d22ce36b3e2f5bd159667179124e47dc0692",
+    "apps/backend/dist/official-agent/official-agent.controller.js": "ac6373fbf4715aa7158d02414d72974ba6ad6ed74b3442f02f50620a9fd58ed5",
+    "apps/backend/dist/official-skill/official-skill.service.js": "12a8a934af4d347123f64681ad737d87c0cb5975f818d4b1a27ce1cfbe5e3a1a",
+    "apps/backend/dist/official-skill/official-skill.controller.js": "a0de0af482e9ee56f686a776a70e4de479be4d743e2d08cc6a75a15841d77f35",
+    "apps/backend/dist/admin/admin-official-agents.service.js": "0938fe61eddcdaffaab4b8a226715ac9174233f32d0fa7631dfe8594f299e3d0",
+    "apps/backend/dist/admin/admin-official-agents.controller.js": "4ede8f06d0f172b32a8466a7e188d37c463e958c99dddf7ab5c3e78d11290964",
+    "apps/backend/dist/admin/admin-official-skills.service.js": "a1b8d6cbfceb42eb3fd1f84e89477936f850583476aaf8d04ace2226f3cd71b0",
+    "apps/backend/dist/admin/admin-official-skills.controller.js": "905bb610f25d8d00e9392a25ee4ade7be18654170d4f3f3ec1018be171da4897"
+  },
+  "executionAvailable": false,
+  "checks": {
+    "hostBundleAdmission": true,
+    "remoteDetailCodec": true,
+    "uiDetailAndClosedState": true,
+    "backendDetailPresent": true
+  }
+}

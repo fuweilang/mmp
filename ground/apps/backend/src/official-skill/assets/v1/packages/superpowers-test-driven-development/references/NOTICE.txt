@@ -1,0 +1,5 @@
+Source: https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/test-driven-development/SKILL.md (git-blob:4320d8879a639d0536c2239bb80c9d7257ad8947)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=1
+Original path: plugins/superpowers/skills/test-driven-development
+No third-party scripts are executed or shipped in this managed package.

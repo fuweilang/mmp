@@ -40,8 +40,8 @@ const CALL = { request: {} }
  * set, so the two are read together when a role changes.
  */
 const GLOBAL_ACTIONS = [
-  'commands/list', 'llm/listConfigurableProviders', 'llm/listProviders', 'session/canOpenWorkspacePath',
-  'session/control', 'session/list', 'session/modelCatalog', 'workspace/follow',
+  'commands/list', 'llm/listConfigurableProviders', 'llm/listProviders', 'officialAgentGallery/list',
+  'session/canOpenWorkspacePath', 'session/control', 'session/list', 'session/modelCatalog', 'workspace/follow',
 ] as const
 /** Session reads the served page's startup and render paths need; see {@link GLOBAL_ACTIONS}. */
 const SESSION_READS = [
@@ -655,4 +655,14 @@ describe('plugin capabilities a share exposes', () => {
     expect(source).toContain(READABLE)
     expect(source).not.toContain('session/prompt')
   })
+})
+
+it('t168 actual reader policy denies account catalog, destructive mutations and artifacts globally and on source/own-child even if a plugin offers them',async()=>{
+ const h=await fixture(),endpoints=['officialAgentGallery/catalogDetail','officialAgentGallery/createSkill','officialAgentGallery/downloadArtifact','officialAgentGallery/expertCard','officialAgentGallery/expertFacets','officialAgentGallery/favourite','officialAgentGallery/listSkillFacets','officialAgentGallery/listSkills','officialAgentGallery/pageExperts','officialAgentGallery/pageSkills','officialAgentGallery/preferences','officialAgentGallery/skillFacets','session/deleteTask'] as const
+ for(const action of endpoints)for(const resource of [GLOBAL,session('source'),session('own-child'),workspace('project')])expect(h.decide(action,resource).kind).toBe('deny')
+ h.offer([capabilityGroup(endpoints,endpoints)]);h.select([capabilityGroup(endpoints,endpoints)])
+ for(const action of endpoints)for(const resource of [GLOBAL,session('source'),session('own-child'),workspace('project')])expect(h.decide(action,resource).kind).toBe('deny')
+ expect(h.decide('futureUnknown/unclassified',GLOBAL).kind).toBe('deny')
+ for(const id of ['source','own-child'])expect(h.decide('session/prompt',session(id),{request:{catalogSelection:{protocol:1,selectionVersion:1,expertRef:null,skillRef:null}}}).kind).toBe('deny')
+ expect(h.decide('session/page',session('source')).kind).toBe('allow')
 })

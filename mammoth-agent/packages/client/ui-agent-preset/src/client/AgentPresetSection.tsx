@@ -16,7 +16,7 @@ import css from './AgentPresetSection.module.css'
 export interface AgentPresetSectionInjected {
   hooks: {
     agentPresetSection: SnapshotStore<AgentPresetSectionState>
-    /** Shared Coding Tools preference; off hides the built-in PTC and Minimal cards. */
+    /** Shared Show coding view preference; off hides built-in PTC and Minimal cards for admins who can open this section. */
     developerTools: ObservableSnapshot<boolean>
   }
   /** Stage the `cordis` preset and start a Creator-mode task; absent without a conversation flow. */

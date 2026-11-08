@@ -1,0 +1,61 @@
+{
+  "capturedAt": "2026-11-07T23:02:09.113366+08:00",
+  "sourceFix": "packages/test-support/client-runtime/src/workspaces.ts",
+  "rootCause": "Optional retryList? was retained as an optional never entry by the homomorphic method-key mapped type; indexed access added undefined to WorkspaceAction. Removing optional modifiers with -? preserves the existing required-callable selection and exact Parameters/ReturnType constraints. No production interface or behavior changed.",
+  "verification": [
+    {
+      "name": "CLIENT-BEFORE",
+      "exitCode": 2,
+      "summary": null,
+      "passedGates": [],
+      "log": "CLIENT-BEFORE.log"
+    },
+    {
+      "name": "CLIENT-AFTER",
+      "exitCode": 0,
+      "summary": null,
+      "passedGates": [],
+      "log": "CLIENT-AFTER.log"
+    },
+    {
+      "name": "DESKTOP-ARTIFACTS",
+      "exitCode": 0,
+      "summary": "run-gates: 8 passed, 0 failed, 0 skipped in 17.76s.",
+      "passedGates": [
+        "run-gates: PASS native addon (0.59s)",
+        "run-gates: PASS Host Typert (4.06s)",
+        "run-gates: PASS host compiler (0.48s)",
+        "run-gates: PASS Host bundle (4.04s)",
+        "run-gates: PASS Desktop bundle (1.03s)",
+        "run-gates: PASS client compiler (0.43s)",
+        "run-gates: PASS Client bundle (3.68s)",
+        "run-gates: PASS Web build (4.02s)"
+      ],
+      "log": "DESKTOP-ARTIFACTS.log"
+    },
+    {
+      "name": "AGENT-WEB-ARTIFACTS",
+      "exitCode": 0,
+      "summary": "run-gates: 7 passed, 0 failed, 0 skipped in 15.33s.",
+      "passedGates": [
+        "run-gates: PASS native addon (0.41s)",
+        "run-gates: PASS Host Typert (4.22s)",
+        "run-gates: PASS host compiler (0.47s)",
+        "run-gates: PASS Host bundle (3.44s)",
+        "run-gates: PASS client compiler (0.45s)",
+        "run-gates: PASS Client bundle (3.60s)",
+        "run-gates: PASS Web build (3.14s)"
+      ],
+      "log": "AGENT-WEB-ARTIFACTS.log"
+    }
+  ],
+  "protectedNativeAndGallerySourcesUnchanged": true,
+  "pausedT170T171SourcesUnchanged": true,
+  "artifactHashes": {
+    "packages/test-support/client-runtime/lib/types/workspaces.d.ts": "728793775e9fa0387240a88952e11dd822c03b840ed1b7c657fdc3c99d3dfbd7",
+    "packages/test-support/client-runtime/lib/types/workspaces.js": "6e0fc05f8032581f9cd000dfd325810c80b5632aaef9fef7534f835a707b4d67",
+    "packages/client/ui-official-agent-gallery/lib/client.js": "d00a145d25e05cd30d3dc0222287b1711c4c3d208e1f0b6a190cdade3f3aa2d8",
+    "packages/preset/official-agent-gallery/lib/index.js": "083b044fb29e79bc6d2b238c56ba21a265764f2f5b8c8c28aa92e85aacc90e02"
+  },
+  "limitations": "No desktop/dev server started; no GUI/cloud/API runtime acceptance; build scripts rebuilt current existing WIP artifacts, including unchanged paused sources. No DB/permission/model/mode edits or manual dependency reinstall."
+}

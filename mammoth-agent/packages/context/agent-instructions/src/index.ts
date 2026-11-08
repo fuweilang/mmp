@@ -82,6 +82,7 @@ function filePathFromExecution(exec: ToolExecution): string | undefined {
   return filePath.length > 0 ? filePath : undefined
 }
 
+
 export function apply(ctx: Context, config: Config): void {
   const resolved: ResolvedConfig = resolveConfig(config)
   const instructionVersions: InstructionVersionCache = new WeakMap()

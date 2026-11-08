@@ -38,6 +38,12 @@ enum KbStatus {
 }
 
 model User {
+  libraryOwned LibraryNode[] @relation("LibraryOwner")
+  libraryVersions LibraryVersion[] @relation("LibraryVersionAuthor")
+  libraryRecents LibraryRecent[]
+  custodyGrants LibraryCustody[] @relation("CustodyGrantor")
+  custodyReceived LibraryCustody[] @relation("CustodyGrantee")
+
   id               String      @id @default(cuid())
   phone            String      @unique
   email            String?     @unique
@@ -58,6 +64,12 @@ model User {
 }
 
 model Tenant {
+  libraryNodes LibraryNode[]
+  libraryVersions LibraryVersion[]
+  libraryChunks LibraryChunk[]
+  libraryRecents LibraryRecent[]
+  libraryCustodies LibraryCustody[]
+
   id               String      @id @default(cuid())
   name             String
   slug             String      @unique
@@ -82,7 +94,8 @@ model Tenant {
   aiRechargeOrders AiRechargeOrder[]
   tokenUsageTurns  TokenUsageTurn[]
   orgPresetOverrides OrgPresetOverride[]
-  llmModelAssignments LlmTenantModel[]
+  llmModelAssignments  LlmTenantModel[]
+  officialAgentGrants OfficialAgentTenantGrant[]
 
   @@map("tenant")
 }
@@ -128,6 +141,242 @@ model AuditLog {
   @@index([tenantId, createdAt])
   @@index([userId])
   @@map("audit_log")
+}
+
+enum OfficialAgentKind {
+  GENERAL
+  KNOWLEDGE
+}
+
+enum OfficialAgentStatus {
+  DRAFT
+  PUBLISHED
+  OFFLINE
+}
+
+
+enum OfficialAgentCategory {
+  common
+  productivity
+  content
+  sales
+  expertise
+  analytics
+}
+
+enum OfficialAgentGrantStatus {
+  ACTIVE
+  REVOKED
+}
+
+/// 可编辑草稿；线上配置只通过 OfficialAgentVersion 快照读取。
+model OfficialAgent {
+  id               String                    @id @default(cuid())
+  key              String                    @unique
+  kind             OfficialAgentKind
+  /// 广场主分类；挂在可编辑父级，改分类不发新版本。
+  category         OfficialAgentCategory?
+  /// 内容向能力标签（中文）；工具能力由线上 version.toolScope 派生后合并，最多展示 3 个。
+  capabilities     Json                      @default("[]")
+  status           OfficialAgentStatus       @default(DRAFT)
+  name             String
+  summary          String                    @default("") @db.Text
+  openingQuestions Json                      @default("[]") @map("opening_questions")
+  systemPrompt     String                    @default("") @map("system_prompt") @db.Text
+  toolScope        Json                      @default("[]") @map("tool_scope")
+  onlineVersionId  String?                   @unique @map("online_version_id")
+  onlineVersion    OfficialAgentVersion?     @relation("OnlineVersion", fields: [onlineVersionId], references: [id], onDelete: SetNull)
+  versions         OfficialAgentVersion[]    @relation("AgentVersions")
+  grants           OfficialAgentTenantGrant[]
+  /// 专家关联的官方技能（草稿侧；发布时快照到 version.linkedSkillSummaries）。
+  skillLinks       OfficialAgentSkillLink[]
+  /// 猛犸官方知识资产（非企业私库）；按 agent 隔离检索。
+  officialDocuments OfficialKbDocument[]
+  /// Admin 上传的自定义头像相对路径（uploads/official-avatars/<uuid>.ext）；空则回退资产默认图。
+  customAvatarPath String?                   @map("custom_avatar_path")
+  createdAt        DateTime                  @default(now()) @map("created_at")
+  updatedAt        DateTime                  @updatedAt @map("updated_at")
+
+  @@map("official_agent")
+  /// 增量专家定义与来源；旧记录为空，不回写旧指令。
+  expertDefinition Json @default("{}") @map("expert_definition")
+
+}
+
+/// 发布时冻结展示和执行配置；版本行发布后不再更新。
+model OfficialAgentVersion {
+  id               String                    @id @default(cuid())
+  agentId          String                    @map("agent_id")
+  version          Int
+  name             String
+  summary          String                    @default("") @db.Text
+  openingQuestions Json                      @default("[]") @map("opening_questions")
+  systemPrompt     String                    @default("") @map("system_prompt") @db.Text
+  toolScope        Json                      @default("[]") @map("tool_scope")
+  publishedByUserId String?                  @map("published_by_user_id")
+  publishedAt      DateTime                  @default(now()) @map("published_at")
+  agent            OfficialAgent             @relation("AgentVersions", fields: [agentId], references: [id], onDelete: Cascade)
+  onlineFor        OfficialAgent?            @relation("OnlineVersion")
+  grants           OfficialAgentTenantGrant[]
+  /// 发布时冻结的关联技能摘要（id/key/name/summary/packageRevision/enabledAt）。
+  linkedSkillSummaries Json @default("[]") @map("linked_skill_summaries")
+  /// 本版本发布时同步/绑定的官方知识文档快照引用。
+  officialDocuments OfficialKbDocument[]
+
+  @@unique([agentId, version])
+  @@map("official_agent_version")
+  /// 增量专家定义与来源；旧记录为空，不回写旧指令。
+  expertDefinition Json @default("{}") @map("expert_definition")
+
+}
+
+/// 企业开通固定到指定版本；撤销保留记录，执行侧每次仍需核验状态。
+model OfficialAgentTenantGrant {
+  id              String                   @id @default(cuid())
+  agentId         String                   @map("agent_id")
+  tenantId        String                   @map("tenant_id")
+  versionId       String                   @map("version_id")
+  status          OfficialAgentGrantStatus @default(ACTIVE)
+  /// 仅资料型智能体使用；空数组表示不检索，绝不回退到全库。
+  kbFolderIds     Json                     @default("[]") @map("kb_folder_ids")
+  grantedByUserId String?                  @map("granted_by_user_id")
+  revokedAt       DateTime?                @map("revoked_at")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+  agent           OfficialAgent            @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  tenant          Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  version         OfficialAgentVersion     @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, tenantId])
+  @@index([tenantId, status])
+  @@map("official_agent_tenant_grant")
+}
+
+/// 官方智能体专属知识文档（猛犸资产）。不挂企业 tenantId，检索仅按 agentId 隔离。
+/// active=true 表示线上检索可见；替换时先建 active=false 的 staging，索引 READY 后再切换，失败保留旧知识。
+model OfficialKbDocument {
+  id            String                @id @default(cuid())
+  agentId       String                @map("agent_id")
+  /// 最近一次同步时绑定的冻结版本；便于审计追踪，检索仍按 agentId。
+  versionId     String?               @map("version_id")
+  /// 资产内相对键，如 1.md；同一 agent 下同时仅允许一份 active。
+  assetKey      String                @map("asset_key")
+  name          String
+  originalName  String                @map("original_name")
+  mimeType      String                @map("mime_type")
+  sizeBytes     Int                   @map("size_bytes")
+  storagePath   String                @map("storage_path")
+  status        KbStatus              @default(PENDING)
+  indexError    String?               @map("index_error")
+  /// 线上生效标记。检索只读 active=true 且 status=READY。
+  active        Boolean               @default(true)
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+  agent         OfficialAgent         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  version       OfficialAgentVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  chunks        OfficialKbChunk[]
+
+  @@index([agentId, status])
+  @@index([agentId, active, status])
+  @@index([agentId, assetKey])
+  @@map("official_kb_document")
+}
+
+model OfficialKbChunk {
+  id         String             @id @default(cuid())
+  agentId    String             @map("agent_id")
+  documentId String             @map("document_id")
+  ordinal    Int
+  content    String
+  createdAt  DateTime           @default(now()) @map("created_at")
+  document   OfficialKbDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([documentId])
+  @@map("official_kb_chunk")
+}
+
+
+enum OfficialSkillCategory {
+  common
+  content
+  business
+  expertise
+  analytics
+  office
+  education
+  ecommerce
+  sales
+  hr
+  legal
+  finance
+  consulting
+  research
+  files
+  search
+  writing
+  lifestyle
+}
+
+/// 官方技能（Ground 唯一内容源）。enabledAt 为空表示停用/未启用。
+model OfficialSkill {
+  id               String                 @id @default(cuid())
+  key              String                 @unique
+  name             String
+  summary          String                 @default("") @db.Text
+  category         OfficialSkillCategory?
+  /// null = 停用/未启用；非空 = 启用时间（全员可见目录）。
+  enabledAt        DateTime?              @map("enabled_at")
+  currentRevision  Int                    @default(0) @map("current_revision")
+  currentPackageId String?                @unique @map("current_package_id")
+  currentPackage   OfficialSkillPackage?  @relation("CurrentPackage", fields: [currentPackageId], references: [id], onDelete: SetNull)
+  packages         OfficialSkillPackage[] @relation("SkillPackages")
+  agentLinks       OfficialAgentSkillLink[]
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  @@index([enabledAt])
+  @@index([category])
+  @@map("official_skill")
+  customAvatarPath String? @map("custom_avatar_path")
+  /// Independent public discovery text; never package instructions or permissions.
+  discoveryDetail Json @default("{}") @map("discovery_detail")
+
+}
+
+/// 技能包 revision 快照；包文件落盘，数据库只存路径与最小 manifest。
+model OfficialSkillPackage {
+  id               String        @id @default(cuid())
+  skillId          String        @map("skill_id")
+  revision         Int
+  /// uploads/official-skills/<skillId>/r<revision>/ 相对目录
+  storagePath      String        @map("storage_path")
+  /// 最小 manifest（key/name/description/entry/category/references），不含正文
+  manifest         Json
+  instructionBytes Int           @map("instruction_bytes")
+  resourceCount    Int           @default(0) @map("resource_count")
+  sourceZipPath    String?       @map("source_zip_path")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  skill            OfficialSkill @relation("SkillPackages", fields: [skillId], references: [id], onDelete: Cascade)
+  currentFor       OfficialSkill? @relation("CurrentPackage")
+
+  @@unique([skillId, revision])
+  @@index([skillId])
+  @@map("official_skill_package")
+}
+
+/// 官方智能体草稿侧关联技能；发布时另快照到 OfficialAgentVersion.linkedSkillSummaries。
+model OfficialAgentSkillLink {
+  id        String        @id @default(cuid())
+  agentId   String        @map("agent_id")
+  skillId   String        @map("skill_id")
+  createdAt DateTime      @default(now()) @map("created_at")
+  agent     OfficialAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  skill     OfficialSkill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, skillId])
+  @@index([skillId])
+  @@map("official_agent_skill_link")
 }
 
 model AgentRef {
@@ -180,6 +429,7 @@ model KbDocument {
   sizeBytes    Int         @map("size_bytes")
   storagePath  String      @map("storage_path")
   status       KbStatus    @default(PENDING)
+  indexError   String?     @map("index_error")
   visibility   AccessScope @default(ALL)
   createdAt    DateTime    @default(now()) @map("created_at")
   tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -585,4 +835,162 @@ model SyncedConversationMessage {
 
   @@unique([conversationId, sourceSeq])
   @@map("synced_conversation_message")
+}
+
+// t166: user/active-tenant library references only; no copied packages or execution grants.
+model OfficialCatalogPreference {
+  id String @id @default(cuid())
+  scope String
+  userId String @map("user_id")
+  kind String
+  resourceId String @map("resource_id")
+  favourite Boolean @default(false)
+  lastUsedAt DateTime? @map("last_used_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@unique([scope, userId, kind, resourceId])
+  @@index([scope, userId, kind, lastUsedAt])
+  @@map("official_catalog_preference")
+}
+
+enum LibraryScope {
+  PRIVATE
+  ENTERPRISE
+}
+
+enum LibraryKind {
+  FILE
+  FOLDER
+  LINK
+}
+
+enum LibraryState {
+  ACTIVE
+  RECYCLED
+  PURGED
+}
+
+enum LibraryParseStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+  DOWNLOAD_ONLY
+  NOT_APPLICABLE
+}
+
+enum LibraryCustodyScope {
+  ENTERPRISE
+  PRIVATE_OWNER
+}
+
+enum LibraryCustodyPower {
+  READ
+  CRUD
+}
+
+/// 企业资料库节点。可见性与物理文件分开。私人默认仅所有者。
+model LibraryNode {
+  id               String        @id
+  tenantId         String        @map("tenant_id")
+  ownerUserId      String        @map("owner_user_id")
+  parentId         String?       @map("parent_id")
+  kind             LibraryKind
+  name             String
+  scope            LibraryScope  @default(PRIVATE)
+  state            LibraryState  @default(ACTIVE)
+  linkUrl          String?       @map("link_url")
+  currentVersionId String?       @map("current_version_id")
+  recycledAt       DateTime?     @map("recycled_at")
+  purgedAt         DateTime?     @map("purged_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  tenant           Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner            User          @relation("LibraryOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  parent           LibraryNode?  @relation("LibraryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children         LibraryNode[] @relation("LibraryTree")
+  versions         LibraryVersion[]
+  recents          LibraryRecent[]
+
+  @@index([tenantId, state, scope])
+  @@index([ownerUserId])
+  @@index([parentId])
+  @@map("library_node")
+}
+
+/// 文件的一个字节版本。替换只追加，不改旧版本。
+model LibraryVersion {
+  id               String              @id
+  nodeId           String              @map("node_id")
+  tenantId         String              @map("tenant_id")
+  versionNo        Int                 @map("version_no")
+  originalName     String              @map("original_name")
+  mimeType         String              @map("mime_type")
+  sizeBytes        Int                 @map("size_bytes")
+  storageKey       String              @map("storage_key")
+  sha256           String
+  parseStatus      LibraryParseStatus  @default(PENDING) @map("parse_status")
+  parseReason      String?             @map("parse_reason")
+  extractTruncated Boolean             @default(false) @map("extract_truncated")
+  createdByUserId  String              @map("created_by_user_id")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  node             LibraryNode         @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy        User                @relation("LibraryVersionAuthor", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  chunks           LibraryChunk[]
+
+  @@unique([nodeId, versionNo])
+  @@index([tenantId])
+  @@map("library_version")
+}
+
+model LibraryChunk {
+  id          String         @id
+  versionId   String         @map("version_id")
+  tenantId    String         @map("tenant_id")
+  ordinal     Int
+  content     String         @db.Text
+  locator     String
+  locatorKind String         @map("locator_kind")
+  version     LibraryVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, ordinal])
+  @@index([tenantId, versionId])
+  @@map("library_chunk")
+}
+
+model LibraryRecent {
+  id         String      @id
+  tenantId   String      @map("tenant_id")
+  userId     String      @map("user_id")
+  nodeId     String      @map("node_id")
+  accessedAt DateTime    @default(now()) @map("accessed_at")
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  node       LibraryNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, nodeId])
+  @@index([userId, accessedAt])
+  @@map("library_recent")
+}
+
+/// 平台代管。默认不存在。到期或撤销后不能再读正文。
+model LibraryCustody {
+  id           String               @id
+  tenantId     String               @map("tenant_id")
+  grantorUserId String              @map("grantor_user_id")
+  granteeUserId String              @map("grantee_user_id")
+  contentScope LibraryCustodyScope  @map("content_scope")
+  ownerUserId  String?              @map("owner_user_id")
+  powers       LibraryCustodyPower
+  expiresAt    DateTime             @map("expires_at")
+  revokedAt    DateTime?            @map("revoked_at")
+  reason       String
+  createdAt    DateTime             @default(now()) @map("created_at")
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  grantor      User                 @relation("CustodyGrantor", fields: [grantorUserId], references: [id], onDelete: Cascade)
+  grantee      User                 @relation("CustodyGrantee", fields: [granteeUserId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, granteeUserId])
+  @@map("library_custody")
 }

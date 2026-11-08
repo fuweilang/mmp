@@ -1,0 +1,88 @@
+{
+  "key": "marketing-referrals",
+  "name": "推荐增长方案",
+  "summary": "设计推荐激励、传播路径和效果衡量方案。",
+  "category": "business",
+  "userCategoryLabel": "运营增长",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "coreyhaines31",
+    "repo": "marketingskills",
+    "ref": "main",
+    "path": "skills/referrals",
+    "treeSha": "88c79f6528a9347420e57ceb1fff9a60de651768",
+    "skillBlobSha": "d5fb5946d0a033de986d47205afb3a80bdae9e04",
+    "immutableRef": "https://github.com/coreyhaines31/marketingskills/blob/main/skills/referrals/SKILL.md (git-blob:d5fb5946d0a033de986d47205afb3a80bdae9e04)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "7c48dd638a9ebed49a8ef0c0c4eea90105381cdf",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "coreyhaines31/marketingskills",
+      "html_url": "https://github.com/coreyhaines31/marketingskills",
+      "stargazers_count": 58856,
+      "forks_count": 8611,
+      "pushed_at": "2026-11-04T19:01:33Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Public MIT marketing skills collection; stars are popularity only, not quality tests."
+    },
+    "includedResources": [
+      {
+        "path": "skills/referrals/evals/evals.json",
+        "sha": "bc1166831dda453c3f38b8649dc80966ea5332d1",
+        "mapped": "references/evals/evals.json"
+      },
+      {
+        "path": "skills/referrals/references/affiliate-operations.md",
+        "sha": "b443fe4a7d01773849adb52f6a6dab6023361006",
+        "mapped": "references/affiliate-operations.md"
+      },
+      {
+        "path": "skills/referrals/references/affiliate-programs.md",
+        "sha": "e7e7b1d84d875146ac3942c6222193f96158ac68",
+        "mapped": "references/affiliate-programs.md"
+      },
+      {
+        "path": "skills/referrals/references/program-examples.md",
+        "sha": "2edfcd3fd9910c98b35529e0751731750391d3af",
+        "mapped": "references/program-examples.md"
+      },
+      {
+        "path": "skills/referrals/references/review-platform-rules.md",
+        "sha": "4fa0266733815e40de15994716a2b7fad1db4114",
+        "mapped": "references/review-platform-rules.md"
+      },
+      {
+        "path": "skills/referrals/references/review-program-operations.md",
+        "sha": "5c9be56021a6c17a9d951d2f07f34b86f9634eaf",
+        "mapped": "references/review-program-operations.md"
+      },
+      {
+        "path": "skills/referrals/references/review-programs.md",
+        "sha": "891b52dc2107675b30f971aa1ebfd87b2e750afc",
+        "mapped": "references/review-programs.md"
+      },
+      {
+        "path": "skills/referrals/references/viral-mechanisms.md",
+        "sha": "f8947a70a6fec34b6e4f0c16dce3b40ca9233878",
+        "mapped": "references/viral-mechanisms.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "5081a6c764f0e64d1c0c2e78aed796f03769a727108461ead613ccb53d6fab8f"
+  },
+  "officialVsAdapted": "adapted"
+}

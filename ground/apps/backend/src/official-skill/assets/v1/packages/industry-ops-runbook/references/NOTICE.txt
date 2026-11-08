@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/operations/skills/runbook/SKILL.md (git-blob:f3610539eeb61b4a3909aa836df16792bd499c7d)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: operations/skills/runbook
+No third-party scripts are executed or shipped in this managed package.

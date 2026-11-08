@@ -1,0 +1,4 @@
+Source: github:anthropics/skills@main:skills/academy-guide#cb36bd4f78b4
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=0; dropped=0
+No scripts shipped.

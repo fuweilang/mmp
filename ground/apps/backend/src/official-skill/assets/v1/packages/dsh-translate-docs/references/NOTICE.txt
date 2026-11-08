@@ -1,0 +1,5 @@
+Source: https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-translate-docs/SKILL.md (git-blob:6ff2650c74c7f581e6ff7f095b36eb82584c785c)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: .agents/skills/dsh-translate-docs
+No third-party scripts are executed or shipped in this managed package.

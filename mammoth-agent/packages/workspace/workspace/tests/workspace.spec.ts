@@ -1545,3 +1545,19 @@ declare module '@mammoth-ai/mmp-workspace/types' {
     'probe-items': true
   }
 }
+
+it('t166 canonical delete writes archive barrier first and waits for actual stop before removing owned records',async()=>{
+ const temp=await mkdtemp(join(tmpdir(),'mmp-t166-owned-')),path=await realpath(temp),h=await harness({sessions:[header('t166-owned',path)]}),id=SessionId('t166-owned');onTestFinished(async()=>{await h.ctx.fiber.dispose();await rm(temp,{recursive:true,force:true})});const owner=await h.registry.create(path);await owner.attachSession(id);expect(owner.sessionIds).toContain(id);let active=true
+ h.ctx.on('workspace/session-activity',async(_p,next)=>active?[...(await next()),{kind:'turn' as const}]:next())
+ h.ctx.on('workspace/session-stop',async()=>{expect(h.registry.archivedSessionIds).toContain(id);active=false})
+ const remove=vi.fn(async()=>{expect(active).toBe(false);expect(h.registry.archivedSessionIds).toContain(id);h.setSessions([])})
+ await h.registry.deleteSession(id,remove);expect(remove).toHaveBeenCalledTimes(1);expect(h.registry.archivedSessionIds).not.toContain(id);expect(owner.sessionIds).not.toContain(id)
+})
+it('t166 canonical delete refuses uncertain running state; failed removal stays archived and concurrent restore cannot resurrect deletion',async()=>{
+ const h=await harness({sessions:[header('t166-busy')]}),id=SessionId('t166-busy');onTestFinished(()=>h.ctx.fiber.dispose());let active=true
+ h.ctx.on('workspace/session-activity',async(_p,next)=>active?[...(await next()),{kind:'turn' as const}]:next())
+ const remove=vi.fn(async()=>{});await expect(h.registry.deleteSession(id,remove)).rejects.toThrow();expect(remove).not.toHaveBeenCalled();expect(h.registry.archivedSessionIds).toContain(id)
+ active=false;await expect(h.registry.deleteSession(id,async()=>{throw Error('fixture disk failure')})).rejects.toThrow('fixture disk failure');expect(h.registry.archivedSessionIds).toContain(id)
+ let started!:()=>void,release!:()=>void;const ready=new Promise<void>(r=>{started=r}),wait=new Promise<void>(r=>{release=r})
+ const deleting=h.registry.deleteSession(id,async()=>{started();await wait;h.setSessions([])});await ready;const restoring=h.registry.unarchiveSession(id);release();await deleting;await restoring;expect(h.registry.archivedSessionIds).not.toContain(id);await expect(h.registry.archiveSession(id)).rejects.toThrow()
+})

@@ -1,0 +1,15 @@
+{
+  "key": "industry-hr-performance-review",
+  "name": "绩效回顾草案",
+  "description": "依据已提供事实形成公平、可追溯的绩效反馈草案。",
+  "entry": "SKILL.md",
+  "category": "hr",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

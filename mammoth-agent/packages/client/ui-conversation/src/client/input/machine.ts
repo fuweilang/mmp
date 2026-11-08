@@ -1,3 +1,4 @@
+import type { CatalogDraftSelection } from '../contract/draft-editor.ts'
 /**
  * SubmitMachine: the pure per-session submit-plane state machine.
  * Events in, effects out; zero React / DOM / cordis. Package-private; the
@@ -111,6 +112,9 @@ export class SubmitMachine {
     quotes: readonly DraftQuote[],
     attachmentIds: readonly DraftAttachmentId[],
     submission?: MessageSubmission,
+    enterpriseKnowledge?: boolean,
+    knowledgeRevision?: number,
+    catalogSelection?: CatalogDraftSelection,
   ): SubmitAttempt {
     const controller = new AbortController()
     this.seq += 1
@@ -118,6 +122,9 @@ export class SubmitMachine {
       seq: this.seq,
       signal: controller.signal,
       draftSnapshot: draft,
+      ...(catalogSelection === undefined ? {} : { catalogSelection: structuredClone(catalogSelection) }),
+      ...(enterpriseKnowledge === true ? { enterpriseKnowledge: true } : {}),
+      ...(knowledgeRevision === undefined ? {} : { knowledgeRevision }),
       occurrences,
       quotes,
       attachmentIds,
@@ -139,13 +146,13 @@ export class SubmitMachine {
     if (this.phase === 'adjudicating' || this.phase === 'submitting' || this.phase === 'sending') return []
     const { mode, draft, occurrences, quotes, attachmentIds, submission } = ev
     if (this.phase === 'claimed' && this.claim !== undefined) {
-      const attempt = this.beginAttempt(mode, draft, occurrences, quotes, attachmentIds, submission)
+      const attempt = this.beginAttempt(mode, draft, occurrences, quotes, attachmentIds, submission, ev.enterpriseKnowledge, ev.knowledgeRevision, ev.catalogSelection)
       this.phase = 'submitting'
       return [{ type: 'begin-submit', attempt, claim: this.claim, args: argsAfter(draft, this.claim.token) }]
     }
     const trimmed = draft.trim()
     if (trimmed === '' && attachmentIds.length === 0) return []
-    const attempt = this.beginAttempt(mode, draft, occurrences, quotes, attachmentIds, submission)
+    const attempt = this.beginAttempt(mode, draft, occurrences, quotes, attachmentIds, submission, ev.enterpriseKnowledge, ev.knowledgeRevision, ev.catalogSelection)
     if (trimmed.startsWith('/')) {
       this.phase = 'adjudicating'
       return [{ type: 'adjudicate', attempt, draft }]

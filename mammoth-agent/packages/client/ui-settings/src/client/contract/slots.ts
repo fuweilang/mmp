@@ -153,3 +153,5 @@ export interface SettingsLauncherOwnerProps {
   /** @param id - registered onboarding editor to open explicitly. */
   openOnboarding: (id: string) => void
 }
+
+declare module '@mammoth-ai/cordis' { interface Events { 'settings/open-section'(id: string): void } }

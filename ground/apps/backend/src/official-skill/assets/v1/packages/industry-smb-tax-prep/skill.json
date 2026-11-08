@@ -1,0 +1,15 @@
+{
+  "key": "industry-smb-tax-prep",
+  "name": "税务资料准备",
+  "description": "按适用地区和年度整理税务材料与待核实问题；不是税务申报或税务意见。",
+  "entry": "SKILL.md",
+  "category": "legal",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

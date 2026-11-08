@@ -1,0 +1,15 @@
+{
+  "key": "dsh-pr-description",
+  "name": "变更说明撰写",
+  "description": "根据实际代码改动组织 PR 描述、背景和风险说明。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

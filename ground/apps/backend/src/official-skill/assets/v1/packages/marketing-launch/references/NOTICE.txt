@@ -1,0 +1,5 @@
+Source: https://github.com/coreyhaines31/marketingskills/blob/main/skills/launch/SKILL.md (git-blob:b7783f50953c77cfc1d21fab4425549c2cd3ac33)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: skills/launch
+No third-party scripts are executed or shipped in this managed package.

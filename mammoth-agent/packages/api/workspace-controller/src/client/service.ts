@@ -47,6 +47,8 @@ export interface WorkspaceSource {
 export interface IWorkspaces {
   /** Host-authoritative Workspace rows, order, archive set, and follow lifecycle. */
   readonly list: WorkspaceSource
+  /** Retry this connection's failed metadata follow, without changing archive records. */
+  retryList?(): Promise<void>
   /**
    * Register an existing path as a Workspace.
    * @param input - Host create payload.
@@ -122,9 +124,14 @@ export class WorkspaceController extends Service implements IWorkspaces {
    * @param ctx - Client root Context.
    * @param model - Remote-backed Workspace state model.
    */
-  constructor(ctx: Context, private readonly model: ClientWorkspaceModel) {
+  constructor(ctx: Context, private readonly model: ClientWorkspaceModel, private readonly retryFollow?: () => Promise<void>) {
     super(ctx, 'workspaces')
     this.list = model
+  }
+
+  async retryList(): Promise<void> {
+    if (!this.retryFollow) throw new Error('Workspace metadata retry is unavailable')
+    await this.retryFollow()
   }
 
   async create(input: { path: string }): Promise<WorkspaceView> {

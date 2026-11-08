@@ -1,0 +1,5 @@
+Source: https://github.com/coreyhaines31/marketingskills/blob/main/skills/copywriting/SKILL.md (git-blob:2453731ab7a5e52535b7cf29beccbebe687d5a62)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: skills/copywriting
+No third-party scripts are executed or shipped in this managed package.

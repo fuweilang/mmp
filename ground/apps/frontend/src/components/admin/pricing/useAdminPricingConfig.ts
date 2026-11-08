@@ -292,7 +292,7 @@ export function useAdminPricingConfig() {
       if (cfg.modelsSource?.error) {
         modelsSourceHint.value = `模型目录读取异常：${cfg.modelsSource.error}（仍可手改充值 N / 开户赠送）`;
       } else if (cfg.catalogEmpty && !cfg.historicalPricesOnly) {
-        modelsSourceHint.value = '模型目录为空：Octop 已废弃，模型目录待 猛犸智能体 / 中台配置；无 octop.db 时为空';
+        modelsSourceHint.value = '模型目录为空：Octop 已废弃，模型目录待 猛犸专家 / 中台配置；无 octop.db 时为空';
       } else if (cfg.historicalPricesOnly) {
         modelsSourceHint.value = '目录空，以下为历史单价（只读）';
       }

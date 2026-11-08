@@ -1,0 +1,27 @@
+{
+  "path": "packages/test-support/client-runtime/src/workspaces.ts",
+  "beforeHash": "e5ce639aac05fb27bad4487716a6e3c3e7c055e89ef36d62769bcc9f649770ab",
+  "beforeSnippet": "  [Key in keyof IWorkspaces]: IWorkspaces[Key] extends (...args: never[]) => unknown ? Key : never",
+  "pausedSourceHashes": {
+    "packages/client/ui-workspace/src/client/index.ts": "4da1d77e2fb4466cee11f2c21fbfa609eaad4e64aeba709817ae168a9a9e994b",
+    "packages/client/ui-workspace/src/client/task-data.tsx": "ee2e40c80ff2a4787ea1b30398003b15d54e8b76bd5a0cbc9008f760be98ce5f",
+    "packages/client/ui-workspace/src/client/locales.ts": "02352ee8203a15313acbe113b3b2ac0c7e6a189ad2f682b795b27d7332d8d864",
+    "packages/client/ui-workspace/tests/task-data-regression.client.spec.tsx": "4cc7f0127ee34e2c6a27757f1dbe31e879f7d9ea4a864fb80114d41444d4b678",
+    "packages/api/workspace-controller/src/client/service.ts": "5186f74bef02b36a1531f40c1089ae316e66dcac154a6087aabf1cb4af8d283e",
+    "packages/api/workspace-controller/src/client/index.ts": "c8898c1fc1f91b937ebf34ef3d1ef58c44bd1fea09834da87f82f1982b9b949e",
+    "packages/api/workspace-controller/tests/transport.client.spec.ts": "b099f435e4d06f9b7ed9395349bb305692aba798e688e82c0e80c24627d483e0"
+  },
+  "protectedSourceHashes": {
+    "packages/preset/official-agent-gallery/src/index.ts": "b25c9d67e99150811ca6972b63458abd593a5ff22b19eb857534188cb3780ac9",
+    "packages/preset/official-agent-gallery/src/managed-runtime.ts": "737362db941451c845d657c26b111ce73b82731de216d540d09b7318b4626a1c",
+    "packages/core/tools/src/index.ts": "d5c627d007b6ffc1b6bc59ea333304e66df79ec39652196a6e68361a34fba370",
+    "packages/context/agent-instructions/src/index.ts": "fa2cf64df713e10f3ae5a856d880a6c452c61b79ab8d7de3693c000be454acf3",
+    "packages/skill/skill/src/index.ts": "7678ec82e2ad4465d74c239a5e69f6fa59550f8e15b3af3a55e4a7c1d0cd1ba6",
+    "packages/llm/llm-ground/src/index.ts": "fbb25454068c2b02583addf72816515f2e1e67e67baeec1cbdddd46d1326a9aa",
+    "packages/llm/llm-ground/src/adapter.ts": "5cd4185deca9adb8f895a1848861eabcfda38c1e1b06453c2889fb330c2daf10",
+    "packages/client/ui-agent-preset/src/client/index.ts": "b6ca431a69172793c4163a4b30560ba3cbda5dbd026f7c78babe770a8018d1ac",
+    "packages/client/ui-official-agent-gallery/src/client/task-catalog.tsx": "85e9b5c8ffcdffd4073bcf4657e25d7401cfcc64ddac9e9686434b0a4fc9391c"
+  },
+  "afterHash": "6dde515663d9ded7b28359c4633d24305e1b29da9ab2aace6b81055adc90dd8d",
+  "afterSnippet": "  [Key in keyof IWorkspaces]-?: IWorkspaces[Key] extends (...args: never[]) => unknown ? Key : never"
+}

@@ -1,0 +1,21 @@
+{
+  "key": "cycle-delivery",
+  "name": "周期交付协作",
+  "description": "Governs evidence-gated software delivery through the local Cycle control plane. Use when the user wants a change shipped as complete, teste…",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evidence-protocol.md"
+    },
+    {
+      "path": "references/tools.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

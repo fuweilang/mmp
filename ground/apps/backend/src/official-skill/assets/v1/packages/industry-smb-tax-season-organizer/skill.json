@@ -1,0 +1,33 @@
+{
+  "key": "industry-smb-tax-season-organizer",
+  "name": "报税季材料清单",
+  "description": "整理收入、费用与凭证材料，交由专业人员复核，不自动提交。",
+  "entry": "SKILL.md",
+  "category": "legal",
+  "references": [
+    {
+      "path": "references/reference/calculation-assumptions.md"
+    },
+    {
+      "path": "references/reference/connector-queries.md"
+    },
+    {
+      "path": "references/reference/examples/quarterly-estimate.md"
+    },
+    {
+      "path": "references/reference/examples/year-end-1099.md"
+    },
+    {
+      "path": "references/reference/gotchas.md"
+    },
+    {
+      "path": "references/reference/output-formats.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

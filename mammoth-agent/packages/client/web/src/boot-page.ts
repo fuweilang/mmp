@@ -34,7 +34,7 @@ export class BootPage {
     this.root = div(css.boot)
     this.root.dataset.mmpBoot = ''
     this.card = div(css.card)
-    this.wordmark = div(css.wordmark, '猛犸智能体')
+    this.wordmark = div(css.wordmark, '猛犸AI')
     this.spinner = div(css.spinner)
     this.spinner.dataset.mmpBootSpinner = ''
     this.hint = div(css.hint, 'Loading plugins…')

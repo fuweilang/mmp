@@ -1,0 +1,4 @@
+Source: github:anthropics/skills@main:skills/brand-guidelines#d3f4f52bc89b
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=0; dropped=0
+No scripts shipped.

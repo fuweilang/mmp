@@ -24,6 +24,9 @@
       "path": "../../credentials/deepseek-account"
     },
     {
+      "path": "../../core/session"
+    },
+    {
       "path": "../../util/brand"
     }
   ]

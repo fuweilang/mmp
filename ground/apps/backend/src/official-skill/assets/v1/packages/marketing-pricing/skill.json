@@ -1,0 +1,30 @@
+{
+  "key": "marketing-pricing",
+  "name": "定价策略分析",
+  "description": "组织价值、分层、竞争信息与定价实验方案。",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evals/evals.json"
+    },
+    {
+      "path": "references/pricing-models.md"
+    },
+    {
+      "path": "references/pricing-page-teardown.md"
+    },
+    {
+      "path": "references/research-methods.md"
+    },
+    {
+      "path": "references/tier-structure.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

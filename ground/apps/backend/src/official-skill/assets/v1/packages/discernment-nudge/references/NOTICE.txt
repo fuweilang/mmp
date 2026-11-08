@@ -1,0 +1,4 @@
+Source: github:anthropics/skills@main:skills/discernment-nudge#1b42489bae8f
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=0; dropped=0
+No scripts shipped.

@@ -73,6 +73,24 @@ describe('desktop account data isolation', () => {
     expect(data.home).toBe(accountDataHome('/data', grant('bob'), data.anonymousHome))
   })
 
+  it('settles only after the replacement Host is applied', async () => {
+    const replaced = Promise.withResolvers<void>()
+    const data = new DesktopAccountData('/data', {
+      block: vi.fn(), restart: async () => { await replaced.promise }, resume: async () => {},
+      failed: error => { throw error },
+    })
+    data.update(grant('alice'))
+    let settled = false
+    const waiting = data.whenSettled().then(() => { settled = true })
+    await vi.waitFor(() => { expect(data.switching).toBe(true) })
+    expect(settled).toBe(false)
+    replaced.resolve()
+    await waiting
+    expect(settled).toBe(true)
+    expect(data.settled).toBe(true)
+    expect(data.home).toBe(accountDataHome('/data', grant('alice'), data.anonymousHome))
+  })
+
   it('fails closed when the old Host cannot stop', async () => {
     const failed = vi.fn(), resume = vi.fn(async () => {})
     const data = new DesktopAccountData('/data', {

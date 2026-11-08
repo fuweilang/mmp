@@ -1,0 +1,24 @@
+{
+  "key": "marketing-content-strategy",
+  "name": "内容策略规划",
+  "description": "组织目标受众、内容主题、分发渠道和衡量方式。",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evals/evals.json"
+    },
+    {
+      "path": "references/content-distribution.md"
+    },
+    {
+      "path": "references/headless-cms.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

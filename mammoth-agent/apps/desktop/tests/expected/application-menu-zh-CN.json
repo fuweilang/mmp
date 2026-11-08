@@ -1,6 +1,6 @@
 [
   {
-    "label": "关于猛犸智能体",
+    "label": "关于猛犸AI",
     "role": "about"
   },
   {
@@ -24,7 +24,7 @@
   },
   {
     "role": "hide",
-    "label": "隐藏猛犸智能体"
+    "label": "隐藏猛犸AI"
   },
   {
     "role": "hideOthers",
@@ -39,6 +39,6 @@
   },
   {
     "role": "quit",
-    "label": "退出猛犸智能体"
+    "label": "退出猛犸AI"
   }
 ]

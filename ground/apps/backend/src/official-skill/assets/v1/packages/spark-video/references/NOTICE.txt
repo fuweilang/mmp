@@ -1,0 +1,4 @@
+Source: github:modelstudioai/skills@main:skills/spark-video#874dc98eb2cc
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=33; dropped=24
+No scripts shipped.

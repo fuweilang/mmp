@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Post, Res, UseGuards } from '@nestjs/common';
 import { User } from '@prisma/client';
 import type { Response } from 'express';
 import { CurrentTenantId, CurrentUser } from '../auth/current-user';
 import { JwtGuard } from '../auth/jwt.guard';
+import { OfficialAgentService } from '../official-agent/official-agent.service';
 import { LlmChatGatewayService } from './llm-chat.gateway.service';
 
 /**
@@ -18,7 +19,10 @@ import { LlmChatGatewayService } from './llm-chat.gateway.service';
 @Controller('v1')
 @UseGuards(JwtGuard)
 export class LlmChatController {
-  constructor(private gateway: LlmChatGatewayService) {}
+  constructor(
+    private gateway: LlmChatGatewayService,
+    private officialAgents: OfficialAgentService,
+  ) {}
 
   @Get('models')
   listModels(
@@ -33,8 +37,21 @@ export class LlmChatController {
     @CurrentUser() user: User,
     @CurrentTenantId() tenantId: string | null,
     @Body() body: Record<string, unknown>,
+    @Headers('x-mmp-official-agent-id') agentId: string | undefined,
+    @Headers('x-mmp-official-agent-version-id') versionId: string | undefined,
+    @Headers('x-mmp-session-id') sessionId: string | undefined,
     @Res() res: Response,
   ) {
-    await this.gateway.proxyChatCompletions(user, tenantId, body, res);
+    if (!agentId !== !versionId) {
+      throw new BadRequestException('官方专家归因信息不完整');
+    }
+    const execution = agentId && versionId
+      ? await this.officialAgents.resolve(user, tenantId, agentId, versionId)
+      : undefined;
+    await this.gateway.proxyChatCompletions(user, tenantId, body, res, execution ? {
+      agentId: execution.agentId,
+      versionId: execution.versionId,
+      ...(sessionId ? { sessionId: sessionId.slice(0, 128) } : {}),
+    } : sessionId ? { sessionId: sessionId.slice(0, 128) } : undefined);
   }
 }

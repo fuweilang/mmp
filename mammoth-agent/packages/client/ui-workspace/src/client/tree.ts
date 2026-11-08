@@ -17,6 +17,9 @@ import { workspaceTitleOf } from '@mammoth-ai/mmp-util-workspace-path'
 /** Group key for Sessions outside every Workspace. */
 export const UNGROUPED_KEY = ''
 
+/** Browser-local expansion key for the fixed Archived sessions section. */
+export const ARCHIVED_SECTION_KEY = '__archived__'
+
 /**
  * Resolve the Workspace browser group that owns one Session.
  * @param workspaces - authoritative Workspace membership.

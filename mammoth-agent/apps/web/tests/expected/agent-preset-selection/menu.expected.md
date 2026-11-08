@@ -1,5 +1,6 @@
 - menu:
-  - menuitem "Standard mode Work with code, files, and information. Suitable for most tasks, with search, editing, terminal commands, and other tools available as needed."
-  - menuitem "PTC mode Includes all Standard mode capabilities. Better suited to tasks that call tools in batches and then filter, organize, deduplicate, count, or summarize the results."
+  - menuitem "Auto mode Hand work to Mammoth; it chooses a suitable way to run. Answers knowledge questions directly, and uses search, editing, terminal, and other tools when you need concrete work done."
+  - menuitem "Dialogue mode Chat only — no tools. Faster answers for Q&A and discussion. Switch to Auto mode when you need files changed, commands run, or other work done."
+  - menuitem "PTC mode Includes all Auto mode capabilities. Better suited to tasks that call tools in batches and then filter, organize, deduplicate, count, or summarize the results."
   - menuitem "Minimal mode The agent uses a terminal and image reading, with context compaction. Useful for testing and comparing its basic performance."
   - menuitem "Creator mode Customize MMP through conversation. Let the agent write plugins that add features or UI, or combine tools and prompts to create your own mode."

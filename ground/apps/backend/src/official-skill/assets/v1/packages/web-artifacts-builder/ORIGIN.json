@@ -1,0 +1,17 @@
+{
+  "key": "web-artifacts-builder",
+  "name": "网页产物构建",
+  "summary": "Suite of tools for creating elaborate, multi-component claude.ai HTML artifacts using modern frontend web technologies (React, Tailwind CSS…",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/web-artifacts-builder",
+    "immutableRef": "github:anthropics/skills@main:skills/web-artifacts-builder#1c1c1f4b89de"
+  },
+  "adaptation": "strip-scripts; stripped=3; dropped=0"
+}

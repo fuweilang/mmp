@@ -1,0 +1,47 @@
+{
+  "key": "industry-ops-capacity-plan",
+  "name": "业务容量规划",
+  "summary": "梳理需求、资源与容量缺口，形成规划备选方案。",
+  "category": "consulting",
+  "userCategoryLabel": "企业咨询",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "operations/skills/capacity-plan",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "34c8cfc668c2f0389ac86d8034017f3fc321f6e8",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/operations/skills/capacity-plan/SKILL.md (git-blob:34c8cfc668c2f0389ac86d8034017f3fc321f6e8)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "f53c679acba79cbb292961fd9fb9e87ca20eab22",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "b83000f6cf42362090ca062715012ade875716a9c677645dca7512418bc0166f"
+  },
+  "officialVsAdapted": "adapted"
+}

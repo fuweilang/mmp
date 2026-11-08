@@ -1,0 +1,15 @@
+{
+  "key": "industry-accounting-financial-statements",
+  "name": "财务报表整理",
+  "description": "依据已提供账务数据整理报表草案并提示异常。",
+  "entry": "SKILL.md",
+  "category": "legal",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

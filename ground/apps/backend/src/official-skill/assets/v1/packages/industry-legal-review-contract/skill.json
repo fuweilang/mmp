@@ -1,0 +1,15 @@
+{
+  "key": "industry-legal-review-contract",
+  "name": "合同风险审阅",
+  "description": "整理合同条款、偏离点和风险清单，仅作辅助审阅，不替代律师。",
+  "entry": "SKILL.md",
+  "category": "legal",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

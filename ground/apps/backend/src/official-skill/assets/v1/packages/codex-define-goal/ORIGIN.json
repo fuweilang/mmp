@@ -1,0 +1,43 @@
+{
+  "key": "codex-define-goal",
+  "name": "目标定义与验收",
+  "summary": "澄清目标、可交付物与可检查的成功条件。",
+  "category": "common",
+  "userCategoryLabel": "效率工具",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=1",
+  "source": {
+    "owner": "openai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/.curated/define-goal",
+    "treeSha": "49f948faa9258a0c61caceaf225e179651397431",
+    "skillBlobSha": "87f111bd700e0d993465f7ac741847b5daee57d6",
+    "immutableRef": "https://github.com/openai/skills/blob/main/skills/.curated/define-goal/SKILL.md (git-blob:87f111bd700e0d993465f7ac741847b5daee57d6)",
+    "licenseEvidence": [
+      {
+        "path": "skills/.curated/define-goal/LICENSE.txt",
+        "blobSha": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/skills",
+      "html_url": "https://github.com/openai/skills",
+      "stargazers_count": 28549,
+      "forks_count": 1985,
+      "pushed_at": "2026-10-28T17:31:41Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [
+      "agents/openai.yaml"
+    ],
+    "originalBodySha256": "6b92680346cfb6ebc36e9b0a3dacec0e21ee7e67ec95e6bafccd21c9da59e5f9"
+  },
+  "officialVsAdapted": "adapted"
+}

@@ -1,0 +1,39 @@
+{
+  "key": "daily-trend-writer",
+  "name": "热点内容写作",
+  "description": "全自动化的公众号内容生产流水线。每日发现实用工具、社区热点、教程经验等\"小而美\"选题，深挖后输出\"咪蒙风格\"与\"技术干货\"两篇高质量公众号文章。",
+  "entry": "SKILL.md",
+  "category": "content",
+  "references": [
+    {
+      "path": "references/examples/input.md"
+    },
+    {
+      "path": "references/examples/output.md"
+    },
+    {
+      "path": "references/trend-sources.md"
+    },
+    {
+      "path": "references/subskills/doc-coauthoring.md"
+    },
+    {
+      "path": "references/subskills/mimeng-writing.md"
+    },
+    {
+      "path": "references/subskills/wechat-article-writer.md"
+    },
+    {
+      "path": "references/templates/topic-brief.md"
+    },
+    {
+      "path": "references/templates/trend-board.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

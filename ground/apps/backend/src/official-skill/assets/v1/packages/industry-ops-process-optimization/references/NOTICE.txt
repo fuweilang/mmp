@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/operations/skills/process-optimization/SKILL.md (git-blob:8d1f2c9b81ff9b6c6cb4d32fd2ee7df3e525fd31)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: operations/skills/process-optimization
+No third-party scripts are executed or shipped in this managed package.

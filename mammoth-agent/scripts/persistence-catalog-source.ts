@@ -1,6 +1,6 @@
 /** Source discovery and declaration validation shared by persistence documentation and schemas. */
 
-import { globSync, readFileSync } from 'node:fs'
+import { existsSync, globSync, readFileSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
 import ts from 'typescript'
 import { parseJsDoc, pointer, rawJsDoc, reportViolations } from './jsdoc.ts'
@@ -141,6 +141,9 @@ export function collectLogEvents(scanRoot: string = root): LogEventEntry[] {
   let owningDecl: string | null = null
   for (const rel of globSync('packages/*/*/src/**/*.{ts,tsx}', { cwd: scanRoot }).map(s => s.split(sep).join('/')).sort()) {
     const abs = resolve(scanRoot, rel)
+    // An emitted sibling declaration repeats the source merge; retain standalone
+    // ambient declarations, but never count a .ts/.tsx and its .d.ts twice.
+    if (rel.endsWith('.d.ts') && (existsSync(abs.slice(0, -5) + '.ts') || existsSync(abs.slice(0, -5) + '.tsx'))) continue
     const text = readFileSync(abs, 'utf8')
     if (!text.includes('SessionEventMap')) continue
     const sf = ts.createSourceFile(abs, text, ts.ScriptTarget.Latest, true)

@@ -17,6 +17,7 @@ import { AccountUnauthorizedError, PlatformAuthError, platformHeaders, platformO
 import { createGroundWebIdentity, GroundWebIdentityConflict, groundWebTokenClaims, type GroundWebIdentity } from './web-sso.ts'
 import type {} from '@mammoth-ai/mmp-client-connection'
 import { installGroundBilling } from './ground-billing.ts'
+import { installGroundLibrary } from './ground-library.ts'
 import { buildAuthorizeUrl, exchangeGroundCode, fetchGroundSessionMe, fetchGroundUserinfo, groundBrowserLogoutUrl, groundOidcDoneHtml, groundOidcEndpoints, groundSessionToken, groundSessionProfile } from './ground-oidc.ts'
 
 const KEY = credentialKey('deepseek-account-platform', 'default')
@@ -194,6 +195,7 @@ export class PlatformAccount extends DeepSeekAccount {
     if (this.authMode === 'oidc') {
       // Same-origin recharge proxy for the client RechargeDialog (Ground JWT stays on the Host).
       installGroundBilling(ctx, this.origin, () => this.groundSessionJwt(), token => this.rejectToken(token))
+      installGroundLibrary(ctx, this.origin, () => this.groundSessionJwt(), token => this.rejectToken(token), this.requestTimeout)
       if (resolved.historySync) installGroundHistory(ctx, { origin: this.origin, account: this,
         intervalMs: resolved.historySyncIntervalMs, batchSize: resolved.historyBatchSize, requestTimeoutMs: this.requestTimeout,
         clientKind: resolved.desktopPlatform === null ? 'web' : 'desktop' })
@@ -269,12 +271,15 @@ export class PlatformAccount extends DeepSeekAccount {
     }
     if (owner === undefined) await this.ctx.credentials.modifyRecord(WEB_OWNER, () => Promise.resolve({ kind: 'grant', payload: identity }))
     const previous = current?.kind === 'grant' ? grant.parse(current.payload) : undefined
-    if (previous?.token !== token || previous.issuer !== this.origin) {
+    const grantChanged = previous?.token !== token || previous.issuer !== this.origin
+    if (grantChanged) {
       await this.ctx.credentials.modifyRecord(KEY, () => Promise.resolve({ kind: 'grant', payload: { version: 1, token, issuer: this.origin } }))
       this.invalidateDetails()
     }
     this.cacheProfile(token, { status: 'ready', value: groundSessionProfile(session) })
-    this.changed()
+    // Same browser credential must not wake account watchers on every index auth; that
+    // re-triggers getProfile → /api/auth/me and floods `pnpm run dev` request logs.
+    if (grantChanged) this.changed()
   }
 
   override async getState(): Promise<AccountView> {
@@ -402,20 +407,36 @@ export class PlatformAccount extends DeepSeekAccount {
     return profile.value.id
   }
 
-  private async getDetail<K extends keyof AccountDetails>(field: K, headers: Record<string, string>,
-    captured?: { lifetime: AbortController; stored: z.infer<typeof grant> }): Promise<AccountDetails[K] | null> {
+  private getDetail(
+    field: 'profile',
+    headers: Record<string, string>,
+    captured?: { lifetime: AbortController; stored: z.infer<typeof grant> },
+  ): Promise<AccountDetails['profile'] | null>
+  private getDetail(
+    field: 'balance',
+    headers: Record<string, string>,
+    captured?: { lifetime: AbortController; stored: z.infer<typeof grant> },
+  ): Promise<AccountDetails['balance'] | null>
+  private async getDetail(
+    field: keyof AccountDetails,
+    headers: Record<string, string>,
+    captured?: { lifetime: AbortController; stored: z.infer<typeof grant> },
+  ): Promise<AccountDetails[keyof AccountDetails] | null> {
     const lifetime = captured?.lifetime ?? this.detailsLifetime
     const stored = captured?.stored ?? await this.readCurrentGrant(lifetime)
     if (stored === null || lifetime.signal.aborted) return null
     if (field === 'profile' && this.attempt?.initialProfile?.token === stored.token) {
       const initial = this.attempt.initialProfile.value
       delete this.attempt.initialProfile
-      return initial as AccountDetails[K]
+      return initial
     }
     try {
       if (this.authMode === 'oidc') {
         if (field === 'balance') {
-          return { status: 'failed' } as AccountDetails[K]
+          // Ground SSO has no DeepSeek wallet API; AI-coin balance is loaded via /ground-billing/wallet.
+          // Return an empty ready wallet so the account UI stays silent instead of console.error'ing.
+          const emptyBalance: AccountDetails['balance'] = { status: 'ready', value: [], bonusWallets: [] }
+          return emptyBalance
         }
         // Grant stores Nest console_handoff_token; profile must use /api/auth/me (JwtGuard), not OIDC userinfo.
         const value = await fetchGroundSessionMe(
@@ -423,7 +444,8 @@ export class PlatformAccount extends DeepSeekAccount {
           stored.token,
           AbortSignal.any([lifetime.signal, AbortSignal.timeout(this.requestTimeout)]),
         )
-        return this.detailsLifetime !== lifetime ? null : ({ status: 'ready', value } as AccountDetails[K])
+        const readyProfile: AccountDetails['profile'] = { status: 'ready', value }
+        return this.detailsLifetime !== lifetime ? null : readyProfile
       }
       const details = await readAccountDetail(field, this.origin, stored.token,
         AbortSignal.any([lifetime.signal, AbortSignal.timeout(field === 'balance' ? this.balanceTimeout : this.requestTimeout)]), headers)
@@ -435,7 +457,10 @@ export class PlatformAccount extends DeepSeekAccount {
       }
       if (this.authMode === 'oidc') {
         // Soft-fail profile/balance for SSO slice; do not clear the grant on transient Ground errors.
-        if (error instanceof PlatformAuthError) return { status: 'failed' } as AccountDetails[K]
+        if (error instanceof PlatformAuthError) {
+          const failed: AccountDetails[keyof AccountDetails] = { status: 'failed' }
+          return failed
+        }
         throw error
       }
       // readAccountDetail exposes only authenticated credential rejection failures.
@@ -766,11 +791,11 @@ export class PlatformAccount extends DeepSeekAccount {
         // After local grant is durable, finish the browser on this same callback response.
         // (A second /oauth/done hop would race route disposal — DeepSeek uses an external completion URL.)
         delete attempt.completionUrl
-        const successHtml = groundOidcDoneHtml(attempt.locale, attempt.loginSource, new URL(this.origin).protocol === 'https:' ? new URL('/', this.origin).href : undefined)
+        const successHtml = groundOidcDoneHtml(attempt.locale, attempt.loginSource)
         const originalCallback = attempt.callback
         if (originalCallback !== undefined) {
           delete attempt.callback
-          // script-src needed so web can location.replace('/') and desktop can navigate mmp://open.
+          // The Web callback returns to its own origin. Desktop renders a confirmation.
           originalCallback.writeHead(200, {
             'content-type': 'text/html; charset=utf-8',
             'cache-control': 'no-store',

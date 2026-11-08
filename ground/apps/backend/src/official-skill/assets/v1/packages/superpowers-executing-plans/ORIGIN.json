@@ -1,0 +1,43 @@
+{
+  "key": "superpowers-executing-plans",
+  "name": "分步实施计划",
+  "summary": "按已确认计划分批执行并记录阻塞与结果。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=1",
+  "source": {
+    "owner": "openai",
+    "repo": "plugins",
+    "ref": "main",
+    "path": "plugins/superpowers/skills/executing-plans",
+    "treeSha": "b767f8fa3be1a22b093127dd59956c91ecffca9d",
+    "skillBlobSha": "b51d97d2cc4c2ecc5eabecf27e499aa8c933efac",
+    "immutableRef": "https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/executing-plans/SKILL.md (git-blob:b51d97d2cc4c2ecc5eabecf27e499aa8c933efac)",
+    "licenseEvidence": [
+      {
+        "path": "plugins/superpowers/LICENSE",
+        "blobSha": "abf0390320aa14406af7a520b9b0739fdda9bf08",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/plugins",
+      "html_url": "https://github.com/openai/plugins",
+      "stargazers_count": 7785,
+      "forks_count": 1002,
+      "pushed_at": "2026-11-03T23:23:40Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "OpenAI-distributed curated Superpowers plugin; original author Jesse Vincent."
+    },
+    "includedResources": [],
+    "omittedFiles": [
+      "agents/openai.yaml"
+    ],
+    "originalBodySha256": "d439d017c4a48c99d630fbc69be2070ad7037c99caec62410a21200d6e8e7c31"
+  },
+  "officialVsAdapted": "adapted"
+}

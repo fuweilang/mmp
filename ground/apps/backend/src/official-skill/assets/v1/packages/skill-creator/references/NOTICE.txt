@@ -1,0 +1,4 @@
+Source: github:anthropics/skills@main:skills/skill-creator#6feb3191b967
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=10; dropped=5
+No scripts shipped.

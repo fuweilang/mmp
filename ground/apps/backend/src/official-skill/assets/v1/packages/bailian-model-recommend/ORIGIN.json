@@ -1,0 +1,24 @@
+{
+  "key": "bailian-model-recommend",
+  "name": "bailian-model-recommend",
+  "summary": ">-",
+  "category": "common",
+  "userCategoryLabel": "检索研究",
+  "references": [
+    "references/README.md",
+    "references/README.zh.md",
+    "references/capability-codes.md",
+    "references/data-source.md",
+    "references/requirement-schema.md",
+    "references/samples-format.md"
+  ],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "modelstudioai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/bailian-model-recommend",
+    "immutableRef": "github:modelstudioai/skills@main:skills/bailian-model-recommend#df4d99637999"
+  },
+  "adaptation": "strip-scripts; stripped=5; dropped=0"
+}

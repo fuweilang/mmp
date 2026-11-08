@@ -1,0 +1,17 @@
+{
+  "key": "algorithmic-art",
+  "name": "算法艺术创作",
+  "summary": "Creating algorithmic art using p5.js with seeded randomness and interactive parameter exploration. Use this when users request creating art…",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/algorithmic-art",
+    "immutableRef": "github:anthropics/skills@main:skills/algorithmic-art#2e7af3985155"
+  },
+  "adaptation": "strip-scripts; stripped=1; dropped=1"
+}

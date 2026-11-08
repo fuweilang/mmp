@@ -3,71 +3,71 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/bundle/web-app/README.md
 /:
-  en: af2e4e5296596e8f
-  zh: 70c0b5ac93209d00
-/deepseek-ai-mmp-web-app:
-  en: a85684740ecd278a
-  zh: 7c54099b9edccf01
-/deepseek-ai-mmp-web-app/summary:
-  en: 0a2a9876194543e5
-  zh: ff472776a44ae260
-/deepseek-ai-mmp-web-app/table-of-contents:
+  en: d87c1ef10b4473fe
+  zh: e5395bfeb4caff6c
+/mammoth-ai-mmp-web-app:
+  en: ad857661609f21f3
+  zh: 9e9ea37e01920d54
+/mammoth-ai-mmp-web-app/summary:
+  en: 05a0eae76374a321
+  zh: 274fe1ca915c939c
+/mammoth-ai-mmp-web-app/table-of-contents:
   en: d152484eb41ac6b4
   zh: 09388d293f9be9cb
-/deepseek-ai-mmp-web-app/use-this-package:
+/mammoth-ai-mmp-web-app/use-this-package:
   en: 3bd37b85139d2fa7
   zh: ba86c807eb83866e
-/deepseek-ai-mmp-web-app/use-this-package/starting-the-web-gui:
-  en: e3cac911f080d8ef
-  zh: 60749e9f5c39c1bc
-/deepseek-ai-mmp-web-app/use-this-package/configuration:
-  en: b1787804544f2587
-  zh: ce09d2c248ffd999
-/deepseek-ai-mmp-web-app/use-this-package/listening-trust-and-public-deployments:
-  en: e6ddea1d2fc40501
-  zh: ff08b6fa3fc24136
-/deepseek-ai-mmp-web-app/use-this-package/running-over-ssh:
-  en: df205a26b6d49168
-  zh: e46ed7cf9e06248a
-/deepseek-ai-mmp-web-app/use-this-package/per-session-agent-setup:
-  en: fdf38cb6e1b24464
-  zh: c14a8bcac9d4e5cd
-/deepseek-ai-mmp-web-app/understand-the-implementation:
-  en: 323742a00cfe67b2
-  zh: eff5245a82fc16e7
-/deepseek-ai-mmp-web-app/understand-the-implementation/patch-semantics:
+/mammoth-ai-mmp-web-app/use-this-package/starting-the-web-gui:
+  en: fe38ed5bf51a1730
+  zh: 827e655b5a72f585
+/mammoth-ai-mmp-web-app/use-this-package/configuration:
+  en: d54d872bbcd2c4b8
+  zh: 678fb9612c7d0a66
+/mammoth-ai-mmp-web-app/use-this-package/listening-trust-and-public-deployments:
+  en: 21d529a5967611b9
+  zh: 3c357a10b9adfd3b
+/mammoth-ai-mmp-web-app/use-this-package/running-over-ssh:
+  en: 47c6cc6fe82822c9
+  zh: ec482a10aa1ff6b9
+/mammoth-ai-mmp-web-app/use-this-package/per-session-agent-setup:
+  en: 89b12f85394c27f0
+  zh: f85ffe7afecefa2d
+/mammoth-ai-mmp-web-app/understand-the-implementation:
+  en: 5ad1d65fc523fa8b
+  zh: 1cccc8c654139e64
+/mammoth-ai-mmp-web-app/understand-the-implementation/patch-semantics:
   en: a6d126f30b1594d7
   zh: 7f0ccc8a55d6f743
-/deepseek-ai-mmp-web-app/understand-the-implementation/advertised-application-url:
-  en: 0b22e03e28d41420
-  zh: fd45a97dd4336c25
-/deepseek-ai-mmp-web-app/understand-the-implementation/readiness:
+/mammoth-ai-mmp-web-app/understand-the-implementation/advertised-application-url:
+  en: 1d943de1de6b6cf2
+  zh: 3a16c04d8dfaf0ae
+/mammoth-ai-mmp-web-app/understand-the-implementation/readiness:
   en: 973128fd346869df
   zh: 54e6792f9f82a192
-/deepseek-ai-mmp-web-app/understand-the-implementation/source-map:
-  en: 58800b6f2142c34f
-  zh: 10bf512b16db1cb8
-/deepseek-ai-mmp-web-app/further-exploration:
-  en: f81694f7424e2988
-  zh: 6643f9227039e228
-/deepseek-ai-mmp-web-app/model-experience:
+/mammoth-ai-mmp-web-app/understand-the-implementation/source-map:
+  en: 6784fb9457bb1472
+  zh: 0ea73574704d0029
+/mammoth-ai-mmp-web-app/further-exploration:
+  en: f2687312d10b3498
+  zh: e7c915c0bd4436d4
+/mammoth-ai-mmp-web-app/model-experience:
   en: 215e7ba838619b7b
   zh: a311da3843709f90
-/deepseek-ai-mmp-web-app/model-experience/web-runtime-variable:
+/mammoth-ai-mmp-web-app/model-experience/web-runtime-variable:
   en: 623bf8a0bf05599d
   zh: 398ded2e7b20c1ea
-/deepseek-ai-mmp-web-app/model-experience/web-runtime-variable/what-the-model-sees:
-  en: ebaddc153ad7a835
-  zh: 21aa60f73d14f26c
-/deepseek-ai-mmp-web-app/model-experience/web-runtime-variable/token-effect:
+/mammoth-ai-mmp-web-app/model-experience/web-runtime-variable/what-the-model-sees:
+  en: 31f67b4ad4272e4a
+  zh: 68949584b44ff1f6
+/mammoth-ai-mmp-web-app/model-experience/web-runtime-variable/token-effect:
   en: 449fbfa3986f98f0
   zh: a7d66333594ab2dd
-/deepseek-ai-mmp-web-app/model-experience/web-runtime-variable/kv-cache-effect:
+/mammoth-ai-mmp-web-app/model-experience/web-runtime-variable/kv-cache-effect:
   en: 37542a8b81a744f5
   zh: c0048aaadecae296
-/deepseek-ai-mmp-web-app/known-limitations-and-deferred-work:
-  en: 635c1336e2f4e821
-  zh: caabdecb02e2df14
-/deepseek-ai-mmp-web-app/known-limitations-and-deferred-work/dev-note:
+/mammoth-ai-mmp-web-app/known-limitations-and-deferred-work:
+  en: b22b082748cade16
+  zh: 4d39fcc88ef01980
+/mammoth-ai-mmp-web-app/known-limitations-and-deferred-work/dev-note:
   en: 3f81b4f3beb74a0d
   zh: 2e377ca40822d093

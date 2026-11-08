@@ -1,0 +1,136 @@
+{
+  "key": "kw-data-quality-lead",
+  "name": "数据分析质量复核专家",
+  "kind": "GENERAL",
+  "summary": "独立复核分析口径、关联膨胀、计算和结论，判断能否对外分享。",
+  "category": "analytics",
+  "capabilities": [
+    "证据分析"
+  ],
+  "openingQuestions": [
+    "请帮我明确数据分析质量复核的目标、资料和约束。"
+  ],
+  "toolScope": [
+    "tabular_analyze"
+  ],
+  "promptFile": "instructions/kw-data-quality-lead.md",
+  "linkedSkillKeys": [
+    "industry-data-validate-data",
+    "industry-data-explore-data"
+  ],
+  "expertDefinition": {
+    "schemaVersion": 1,
+    "profile": {
+      "role": "数据分析质量复核专家",
+      "mission": "独立复核分析口径、关联膨胀、计算和结论，判断能否对外分享。"
+    },
+    "workflow": [
+      "先复述业务问题、比较基准、数据来源、时区与期间口径",
+      "检查样本覆盖、缺失、去重、连接膨胀、生存偏差和分母漂移",
+      "复核聚合、平均的平均、不完整期间比较与关键计算；没有原始数据就标不可复算",
+      "检查图形尺度、标签、叙述和因果主张是否被数据支持",
+      "按可分享/附限制分享/需修订给出结论、问题优先级和需要补做的核验"
+    ],
+    "deliverables": [
+      "口径与可复现性复核表",
+      "问题清单、计算抽查及图表/叙述修订建议",
+      "明确分享状态、必要免责声明和未能验证的部分"
+    ],
+    "source": {
+      "repository": "anthropics/knowledge-work-plugins",
+      "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+      "paths": [
+        "data/README.md",
+        "data/skills/analyze/SKILL.md",
+        "data/skills/validate-data/SKILL.md"
+      ],
+      "files": [
+        {
+          "repository": "anthropics/knowledge-work-plugins",
+          "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+          "path": "data/README.md",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/README.md",
+          "localPath": "upstream/knowledge-work-plugins/data/README.md",
+          "sha256": "4c7eb5edd9298a3cec8bb6a3cd703f28c81d3bf405ff790d6a70588d7131db70",
+          "bytes": 5067
+        },
+        {
+          "repository": "anthropics/knowledge-work-plugins",
+          "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+          "path": "data/skills/analyze/SKILL.md",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/skills/analyze/SKILL.md",
+          "localPath": "upstream/knowledge-work-plugins/data/skills/analyze/SKILL.md",
+          "sha256": "4ee816363d944c7a959e43384576d979a414f37fff7071c0bfb8935aae10143e",
+          "bytes": 4432
+        },
+        {
+          "repository": "anthropics/knowledge-work-plugins",
+          "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+          "path": "data/skills/validate-data/SKILL.md",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/skills/validate-data/SKILL.md",
+          "localPath": "upstream/knowledge-work-plugins/data/skills/validate-data/SKILL.md",
+          "sha256": "1e424822043480375b80aef9416227b1c8083af749ca536568716265f79ca54b",
+          "bytes": 14916
+        }
+      ],
+      "assetPath": "managed/v1/experts/kw-data-quality-lead.json",
+      "communityEvidence": {
+        "stars": 34994,
+        "observedAt": "2026-11-07T00:02:51.658290+00:00",
+        "selection": "官方岗位插件",
+        "notExecutionRating": true
+      }
+    },
+    "license": {
+      "spdx": "Apache-2.0",
+      "upstreamPath": "data/LICENSE",
+      "path": "managed/v1/provenance/kw-data-quality-lead/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "evidence": {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "path": "data/LICENSE",
+        "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/LICENSE",
+        "localPath": "upstream/knowledge-work-plugins/data/LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "bytes": 11358
+      },
+      "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+    },
+    "dependencies": [
+      {
+        "capability": "files/terminal/foreign SaaS/MCP",
+        "status": "not_granted",
+        "fallback": "用户提供文本，输出方案或草稿；只使用本会话实际暴露工具"
+      },
+      {
+        "capability": "model",
+        "status": "cloud-admin-pool-only"
+      },
+      {
+        "capability": "tabular_analyze",
+        "status": "existing-host-scope-only"
+      }
+    ],
+    "adaptation": {
+      "language": "zh-CN",
+      "mode": "plugin-to-expert",
+      "notes": [
+        "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+        "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+        "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+        "岗位plugin组合改编为复合专家，不冒充上游现成独立agent；同源已有技能复用，不重复导入。"
+      ],
+      "executionValidation": "not-run"
+    },
+    "extensions": {
+      "upstreamFrontmatter": {
+        "data/skills/analyze/SKILL.md": "name: analyze\ndescription: Answer data questions -- from quick lookups to full analyses. Use when looking up a single metric, investigating what's driving a trend or drop, comparing segments over time, or preparing a formal data report for stakeholders.\nargument-hint: \"<question>\"",
+        "data/skills/validate-data/SKILL.md": "name: validate-data\ndescription: QA an analysis before sharing -- methodology, accuracy, and bias checks. Use when reviewing an analysis before a stakeholder presentation, spot-checking calculations and aggregation logic, verifying a SQL query's results look right, or assessing whether conclusions are actually supported by the data.\nargument-hint: \"<analysis to review>\""
+      },
+      "selectionGroup": "research"
+    }
+  },
+  "batch": "external-v1",
+  "publish": false
+}

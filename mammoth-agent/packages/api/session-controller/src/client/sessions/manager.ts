@@ -520,7 +520,8 @@ export class SessionManager {
   ): Promise<RemoteResult<{ sessionId: SessionId }>> {
     const shared = {
       ...(opts.sessionId === undefined ? {} : { sessionId: opts.sessionId }),
-      ...(opts.agentPreset === undefined ? {} : { agentPreset: opts.agentPreset }),
+      // Named restoration preserves its recorded mode; only genuinely new tasks default to standard.
+      ...(opts.sessionId === undefined ? { agentPreset: 'standard' } : opts.agentPreset === undefined ? {} : { agentPreset: opts.agentPreset }),
     }
     const payload = opts.workspaceId !== undefined
       ? { workspaceId: opts.workspaceId, ...shared }

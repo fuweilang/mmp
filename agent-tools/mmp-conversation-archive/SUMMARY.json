@@ -1,0 +1,19 @@
+{
+  "startedAt": "2026-11-06 14:48:09 Asia/Shanghai",
+  "demoTitle": "archive-ui-demo-mw4m4w08",
+  "phone": "*******1003",
+  "steps": {
+    "startedMammoth": true,
+    "targetText": "猛犸AI是什么及其来源 1小时",
+    "archivedVia": "hover-button",
+    "archivedEntryVisible": true,
+    "archivedEntryLabel": "已归档会话，共 1 个",
+    "sidebarAfterArchive": "默认工作区\n新会话\n利基市场的本质特征\n已归档\n1",
+    "archivedExpanded": true,
+    "restoredVia": "hover-button",
+    "sidebarAfterRestore": "默认工作区\n新会话\n猛犸AI是什么及其来源\n1小时\n利基市场的本质特征\n1小时",
+    "demoBackInActive": true,
+    "archivedEntryAfterRestore": 0
+  },
+  "ok": true
+}

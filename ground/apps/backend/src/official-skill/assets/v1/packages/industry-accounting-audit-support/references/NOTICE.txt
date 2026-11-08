@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/audit-support/SKILL.md (git-blob:6480bcddb2d01d8c7ed1730a803f0df5065a0f23)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: finance/skills/audit-support
+No third-party scripts are executed or shipped in this managed package.

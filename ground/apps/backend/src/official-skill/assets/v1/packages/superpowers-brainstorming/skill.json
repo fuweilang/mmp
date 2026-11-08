@@ -1,0 +1,21 @@
+{
+  "key": "superpowers-brainstorming",
+  "name": "开发方案头脑风暴",
+  "description": "先澄清问题和约束，再形成可讨论的设计方案。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/spec-document-reviewer-prompt.md"
+    },
+    {
+      "path": "references/visual-companion.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

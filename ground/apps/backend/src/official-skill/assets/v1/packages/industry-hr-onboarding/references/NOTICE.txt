@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/human-resources/skills/onboarding/SKILL.md (git-blob:98a45db739e8f1024615ba9f8bfe46ae4a2cfda1)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: human-resources/skills/onboarding
+No third-party scripts are executed or shipped in this managed package.

@@ -1,0 +1,13 @@
+{
+  "key": "office-pptx-zh",
+  "name": "PPT 演示文稿",
+  "summary": "创建与编辑演示文稿，保持版式清晰，优先使用本地办公引擎。",
+  "category": "expertise",
+  "userCategoryLabel": "办公协作",
+  "license": "MIT",
+  "adaptation": "local-dsh-office-chinese-wrapper",
+  "source": {
+    "immutableRef": "local:mammoth-agent/packages/skill/skill-office/assets/office-pptx"
+  },
+  "officialVsAdapted": "adapted"
+}

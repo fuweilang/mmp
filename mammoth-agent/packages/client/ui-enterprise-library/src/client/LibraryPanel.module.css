@@ -1,0 +1,13 @@
+.page { display: flex; flex-direction: column; gap: 12px; padding: 16px; color: var(--dsw-text, inherit); }
+.views, .row { display: flex; gap: 8px; align-items: center; }
+.row { justify-content: space-between; }
+.error { color: var(--dsw-danger, #b42318); }
+.muted { opacity: 0.7; }
+
+.toolbar { display:flex; flex-wrap:wrap; gap:var(--space-3, 12px); align-items:center; padding:var(--space-3, 12px) 0; }
+.details { flex:1; min-width:160px; display:flex; flex-direction:column; gap:4px; overflow-wrap:anywhere; }
+.details small { color:var(--text-secondary); }
+.row { flex-wrap:wrap; }
+.dialog { position:fixed; inset:15% 20%; overflow:auto; max-height:70vh; padding:24px; background:var(--surface-primary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-md, 8px); z-index:20; }
+.dialog label { display:block; margin:12px 0; }
+.dialog pre { white-space:pre-wrap; overflow-wrap:anywhere; }

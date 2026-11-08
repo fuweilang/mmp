@@ -338,7 +338,8 @@ function normalizeUnions(input: readonly SchemaNode[]): SchemaNode[] {
  */
 export function schemaDigest(schema: CanonicalSchema): string {
   const version = schemaHasCompatibility(schema) ? 2 : 1
-  return createHash('sha256').update(`mmp-persistence-schema-v${String(version)}\n`).update(JSON.stringify(schema)).digest('hex')
+  // Keep the fingerprint domain used by accepted snapshots across product renames.
+  return createHash('sha256').update(`dsh-persistence-schema-v${String(version)}\n`).update(JSON.stringify(schema)).digest('hex')
 }
 
 /**

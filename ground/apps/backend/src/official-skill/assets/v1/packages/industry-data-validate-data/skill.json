@@ -1,0 +1,15 @@
+{
+  "key": "industry-data-validate-data",
+  "name": "数据结果校验",
+  "description": "检查数据分析中的口径、计算、偏差和结论证据。",
+  "entry": "SKILL.md",
+  "category": "analytics",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

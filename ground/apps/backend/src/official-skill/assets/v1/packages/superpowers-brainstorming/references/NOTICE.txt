@@ -1,0 +1,5 @@
+Source: https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/brainstorming/SKILL.md (git-blob:b56a3b5ed6ea0d6216501e0e401ecb00a1b4675f)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=6
+Original path: plugins/superpowers/skills/brainstorming
+No third-party scripts are executed or shipped in this managed package.

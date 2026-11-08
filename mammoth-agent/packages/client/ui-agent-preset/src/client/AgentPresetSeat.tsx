@@ -22,14 +22,17 @@ import {
 import type {} from '@mammoth-ai/mmp-client-ui-conversation/client'
 import type { AgentPresetSeatState } from './seat-store.ts'
 import { presetDisplayText } from './locales.ts'
-import { requiresCodingTools } from './settings-store.ts'
+import { filterPresetsForRole } from './settings-store.ts'
+import { roleAccessForFilter, type PresetRoleAccess } from './role-access.ts'
 import css from './AgentPresetSeat.module.css'
 
 /** Registration-side business face for the hero chip. */
 export interface AgentPresetSeatInjected {
   hooks: {
-    /** Shared Developer tools preference; off hides the PTC and Minimal menu choices. */
+    /** Shared Show coding view preference (`ui-settings.enabled`). */
     developerTools: ObservableSnapshot<boolean>
+    /** Ground role access for ordinary vs platform-admin preset visibility. */
+    presetRoleAccess: ObservableSnapshot<PresetRoleAccess>
     /** Seat snapshot bound by the renderer as useAgentPresetSeat. */
     agentPresetSeat: SnapshotStore<AgentPresetSeatState>
   }
@@ -79,9 +82,9 @@ export type AgentPresetSeatProps =
  * @returns The chip and any pending selection refusal, or null outside the main view.
  */
 export function AgentPresetSeat({
-  sessionId, useSessionRetainInfo, load, select, dismissRefusal, introduced, useAgentPresetSeat, useDeveloperTools, t,
+  sessionId, useSessionRetainInfo, load, select, dismissRefusal, introduced, useAgentPresetSeat, usePresetRoleAccess, t,
 }: AgentPresetSeatProps) {
-  const developerTools = useDeveloperTools(value => value)
+  const roleAccess = usePresetRoleAccess(value => value)
   const state = useAgentPresetSeat(snapshot => snapshot)
   const main = useSessionRetainInfo(info => sessionId === undefined
     || (info?.retainedBy.mainView ?? 0) > 0)
@@ -103,13 +106,22 @@ export function AgentPresetSeat({
   }, [load])
 
   const options = useMemo(
-    () => state.options.filter(option => developerTools || !requiresCodingTools(option)),
-    [state.options, developerTools],
+    () => filterPresetsForRole(state.options, roleAccessForFilter(roleAccess)),
+    [state.options, roleAccess],
   )
 
   useEffect(() => {
     setOpen(false)
-  }, [developerTools, options.length])
+  }, [roleAccess, options.length])
+
+  // Blank new-task only: if a hidden built-in is still staged/current, fall back to standard.
+  useEffect(() => {
+    if (sessionId !== undefined) return // started sessions keep composition
+    const allowed = new Set(options.map(option => option.id))
+    if (state.current && !allowed.has(state.current) && allowed.has('standard')) {
+      void select('standard')
+    }
+  }, [sessionId, options, state.current, select])
 
   const chosen = state.options.find(option => option.id === state.current)
   const chosenText = chosen === undefined ? undefined : presetDisplayText(chosen, t)

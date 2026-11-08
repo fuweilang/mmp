@@ -1,0 +1,537 @@
+{
+  "time": "2026-11-06T07:26:43.407Z",
+  "zone": "Asia/Shanghai",
+  "ok": true,
+  "checks": [
+    {
+      "name": "api_count_22",
+      "pass": true,
+      "detail": 22
+    },
+    {
+      "name": "api_all_have_category",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "api_all_have_capabilities_array",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "api_no_prompt_leak",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "count_common_1",
+      "pass": true,
+      "detail": {
+        "content": 9,
+        "expertise": 4,
+        "common": 1,
+        "sales": 5,
+        "productivity": 2,
+        "analytics": 1
+      }
+    },
+    {
+      "name": "count_productivity_2",
+      "pass": true,
+      "detail": {
+        "content": 9,
+        "expertise": 4,
+        "common": 1,
+        "sales": 5,
+        "productivity": 2,
+        "analytics": 1
+      }
+    },
+    {
+      "name": "count_content_9",
+      "pass": true,
+      "detail": {
+        "content": 9,
+        "expertise": 4,
+        "common": 1,
+        "sales": 5,
+        "productivity": 2,
+        "analytics": 1
+      }
+    },
+    {
+      "name": "count_sales_5",
+      "pass": true,
+      "detail": {
+        "content": 9,
+        "expertise": 4,
+        "common": 1,
+        "sales": 5,
+        "productivity": 2,
+        "analytics": 1
+      }
+    },
+    {
+      "name": "count_expertise_4",
+      "pass": true,
+      "detail": {
+        "content": 9,
+        "expertise": 4,
+        "common": 1,
+        "sales": 5,
+        "productivity": 2,
+        "analytics": 1
+      }
+    },
+    {
+      "name": "count_analytics_1",
+      "pass": true,
+      "detail": {
+        "content": 9,
+        "expertise": 4,
+        "common": 1,
+        "sales": 5,
+        "productivity": 2,
+        "analytics": 1
+      }
+    },
+    {
+      "name": "mammoth_common_web_search_cap",
+      "pass": true,
+      "detail": {
+        "id": "cmw41rwg70006gtks80xcfkpj",
+        "key": "mammoth",
+        "kind": "GENERAL",
+        "category": "common",
+        "versionId": "cmw4dtv550001fqc678ly67ea",
+        "version": 2,
+        "name": "猛犸 AI",
+        "summary": "通用助手 · 有问必答",
+        "openingQuestions": [
+          "用三句话介绍一下你能帮我做什么。",
+          "帮我把这段话改得更简洁有力。",
+          "给我一份明日站会的提纲模板。"
+        ],
+        "capabilities": [
+          "联网检索",
+          "日常问答"
+        ],
+        "executionGranted": true
+      }
+    },
+    {
+      "name": "data_analytics",
+      "pass": true,
+      "detail": {
+        "id": "cmw4gyoq30004i833kn4w8me4",
+        "key": "data",
+        "kind": "GENERAL",
+        "category": "analytics",
+        "versionId": "cmw4h5epk0001i8omufs8r9zb",
+        "version": 2,
+        "name": "数据分析师",
+        "summary": "经营表格洞察 · 确定性汇总与异常",
+        "openingQuestions": [
+          "我粘一段 CSV，帮我看各渠道转化率和异常值。",
+          "没有数据时，你需要我提供什么格式？",
+          "按城市分组，汇总销售额和订单数该怎么做？"
+        ],
+        "capabilities": [
+          "表格分析",
+          "经营洞察"
+        ],
+        "executionGranted": true
+      }
+    },
+    {
+      "name": "prompt_hash_unchanged",
+      "pass": true,
+      "detail": {
+        "before": "a81323f8e7bbb30aa6a9c556af80bbd0",
+        "after": "a81323f8e7bbb30aa6a9c556af80bbd0"
+      }
+    },
+    {
+      "name": "ui_has_subtitle",
+      "pass": true,
+      "detail": "猛犸AI\n0.2.2-alpha.2-7416ac6-dirty\n新会话\n⌥\n⌘\nN\n插件\n自动化任务\n智能体广场\n更多\n工作区\n默认工作区\n已归档\n0\n获取猛犸智能体\n已安装？直接打开\n↗\n华为试点员工\n华为\n智能体广场\n\n选择一个智能体，直接开始工作\n\n刷新\n全部 22\n常用 1\n工作提效 2\n内容营销 9\n销售增长 5\n专业知识 4\n数据分析 1\n文\n文案润色大师\nv6\n在不改变事实的前提下"
+    },
+    {
+      "name": "ui_has_all_22_chip",
+      "pass": true,
+      "detail": "全部 22"
+    },
+    {
+      "name": "ui_chip_常用",
+      "pass": true,
+      "detail": "常用"
+    },
+    {
+      "name": "ui_chip_工作提效",
+      "pass": true,
+      "detail": "工作提效"
+    },
+    {
+      "name": "ui_chip_内容营销",
+      "pass": true,
+      "detail": "内容营销"
+    },
+    {
+      "name": "ui_chip_销售增长",
+      "pass": true,
+      "detail": "销售增长"
+    },
+    {
+      "name": "ui_chip_专业知识",
+      "pass": true,
+      "detail": "专业知识"
+    },
+    {
+      "name": "ui_chip_数据分析",
+      "pass": true,
+      "detail": "数据分析"
+    },
+    {
+      "name": "ui_default_22_keys",
+      "pass": true,
+      "detail": 22
+    },
+    {
+      "name": "ui_content_filter_count",
+      "pass": true,
+      "detail": {
+        "ui": 9,
+        "api": 9,
+        "keys": [
+          "copy-polish-master",
+          "c3274112ed041",
+          "copy",
+          "live",
+          "pyq",
+          "video",
+          "xhs",
+          "gzh",
+          "ip"
+        ]
+      }
+    },
+    {
+      "name": "ui_analytics_filter_count",
+      "pass": true,
+      "detail": [
+        "data"
+      ]
+    },
+    {
+      "name": "ui_empty_state",
+      "pass": true,
+      "detail": "没有匹配的智能体"
+    },
+    {
+      "name": "ui_mammoth_start_visible",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "ui_left_gallery_into_chat",
+      "pass": true,
+      "detail": {
+        "stillGallery": false
+      }
+    },
+    {
+      "name": "chat_bound_expected_versionId",
+      "pass": true,
+      "detail": "cmw4dtv550001fqc678ly67ea"
+    }
+  ],
+  "mapping": [
+    {
+      "key": "copy-polish-master",
+      "name": "文案润色大师",
+      "category": "content",
+      "capabilities": [
+        "文案润色",
+        "表达优化"
+      ],
+      "version": 6,
+      "versionId": "cmw4j5nu000gei8bui4ckxutp"
+    },
+    {
+      "key": "enterprise-product-answer",
+      "name": "企业资料答疑助手",
+      "category": "expertise",
+      "capabilities": [
+        "企业资料",
+        "企业答疑"
+      ],
+      "version": 18,
+      "versionId": "cmw4iuizx001ii8lvouwsyi1s"
+    },
+    {
+      "key": "c3274112ed041",
+      "name": "商业命名大师",
+      "category": "content",
+      "capabilities": [
+        "品牌命名",
+        "传播力"
+      ],
+      "version": 1,
+      "versionId": "cmw41rwfn0002gtksr2teey2m"
+    },
+    {
+      "key": "mammoth",
+      "name": "猛犸 AI",
+      "category": "common",
+      "capabilities": [
+        "联网检索",
+        "日常问答"
+      ],
+      "version": 2,
+      "versionId": "cmw4dtv550001fqc678ly67ea"
+    },
+    {
+      "key": "copy",
+      "name": "获客文案大师",
+      "category": "content",
+      "capabilities": [
+        "获客文案",
+        "转化写作"
+      ],
+      "version": 1,
+      "versionId": "cmw47t9xe0002gtbt296w9v8j"
+    },
+    {
+      "key": "growth",
+      "name": "增长战略顾问",
+      "category": "sales",
+      "capabilities": [
+        "增长诊断",
+        "策略落地"
+      ],
+      "version": 1,
+      "versionId": "cmw47t9xv0008gtbtah3obdd6"
+    },
+    {
+      "key": "live",
+      "name": "直播话术专家",
+      "category": "content",
+      "capabilities": [
+        "留人话术",
+        "逼单话术"
+      ],
+      "version": 1,
+      "versionId": "cmw47t9y5000egtbtzan8gqpl"
+    },
+    {
+      "key": "pyq",
+      "name": "朋友圈内容大师",
+      "category": "content",
+      "capabilities": [
+        "人设内容",
+        "朋友圈运营"
+      ],
+      "version": 1,
+      "versionId": "cmw47t9yg000kgtbtkwm2mst7"
+    },
+    {
+      "key": "qc",
+      "name": "客服质检官",
+      "category": "productivity",
+      "capabilities": [
+        "会话质检",
+        "话术打分"
+      ],
+      "version": 1,
+      "versionId": "cmw47t9yp000qgtbtjdpy9zku"
+    },
+    {
+      "key": "sifu",
+      "name": "私域运营大师",
+      "category": "sales",
+      "capabilities": [
+        "私域成交",
+        "复购运营"
+      ],
+      "version": 1,
+      "versionId": "cmw47t9yz000wgtbtjvddh9vu"
+    },
+    {
+      "key": "trans",
+      "name": "咨询转化教练",
+      "category": "sales",
+      "capabilities": [
+        "咨询转化",
+        "异议处理"
+      ],
+      "version": 1,
+      "versionId": "cmw47t9z70012gtbt7xeil39g"
+    },
+    {
+      "key": "video",
+      "name": "短视频脚本官",
+      "category": "content",
+      "capabilities": [
+        "脚本分镜",
+        "钩子设计"
+      ],
+      "version": 1,
+      "versionId": "cmw47t9zi0018gtbtmm3c6g03"
+    },
+    {
+      "key": "xhs",
+      "name": "爆款小红书专家",
+      "category": "content",
+      "capabilities": [
+        "选题策划",
+        "笔记写作",
+        "投放建议"
+      ],
+      "version": 1,
+      "versionId": "cmw47t9zr001egtbtw2y705ft"
+    },
+    {
+      "key": "gzh",
+      "name": "公众号改写专家",
+      "category": "content",
+      "capabilities": [
+        "企业资料",
+        "公众号改写",
+        "二次创作"
+      ],
+      "version": 1,
+      "versionId": "cmw4fgj020002fqfdyofkcsgu"
+    },
+    {
+      "key": "interview",
+      "name": "访谈大师",
+      "category": "expertise",
+      "capabilities": [
+        "企业资料",
+        "访谈设计",
+        "追问链"
+      ],
+      "version": 1,
+      "versionId": "cmw4fgj2j000hfqfd7sobdh0t"
+    },
+    {
+      "key": "ip",
+      "name": "IP策划大师",
+      "category": "content",
+      "capabilities": [
+        "企业资料",
+        "IP定位",
+        "人设策划"
+      ],
+      "version": 1,
+      "versionId": "cmw4fgja0001nfqfdoned252c"
+    },
+    {
+      "key": "method",
+      "name": "方法论大师",
+      "category": "expertise",
+      "capabilities": [
+        "企业资料",
+        "方法论",
+        "SOP"
+      ],
+      "version": 1,
+      "versionId": "cmw4fgjdz002mfqfd0sbty8rf"
+    },
+    {
+      "key": "niche",
+      "name": "利基战略顾问",
+      "category": "expertise",
+      "capabilities": [
+        "企业资料",
+        "利基战略",
+        "差异化"
+      ],
+      "version": 1,
+      "versionId": "cmw4fgjfw0035fqfdiakzzeib"
+    },
+    {
+      "key": "sell",
+      "name": "卖点大师",
+      "category": "sales",
+      "capabilities": [
+        "企业资料",
+        "卖点提炼",
+        "营销文案"
+      ],
+      "version": 1,
+      "versionId": "cmw4fgjhu003efqfdnufqpvfn"
+    },
+    {
+      "key": "boss",
+      "name": "猛犸大总管",
+      "category": "productivity",
+      "capabilities": [
+        "团队协作",
+        "任务编排"
+      ],
+      "version": 2,
+      "versionId": "cmw4h5eq50004i8omly0toiu4"
+    },
+    {
+      "key": "data",
+      "name": "数据分析师",
+      "category": "analytics",
+      "capabilities": [
+        "表格分析",
+        "经营洞察"
+      ],
+      "version": 2,
+      "versionId": "cmw4h5epk0001i8omufs8r9zb"
+    },
+    {
+      "key": "spy",
+      "name": "竞品情报官",
+      "category": "sales",
+      "capabilities": [
+        "联网检索",
+        "网页阅读",
+        "竞品对比"
+      ],
+      "version": 1,
+      "versionId": "cmw4gyoto0049i833sasbmjyn"
+    }
+  ],
+  "counts": {
+    "content": 9,
+    "expertise": 4,
+    "common": 1,
+    "sales": 5,
+    "productivity": 2,
+    "analytics": 1
+  },
+  "promptHashBefore": "a81323f8e7bbb30aa6a9c556af80bbd0",
+  "promptHashAfter": "a81323f8e7bbb30aa6a9c556af80bbd0",
+  "errors": [],
+  "versionSnapshot": [
+    "boss\tv2\tcmw4h5eq50004i8omly0toiu4\tbe2a385a4c0df0a5",
+    "c3274112ed041\tv1\tcmw41rwfn0002gtksr2teey2m\t1c030e228e17c5ae",
+    "copy\tv1\tcmw47t9xe0002gtbt296w9v8j\t0feb47e7b75086d3",
+    "copy-polish-master\tv6\tcmw4j5nu000gei8bui4ckxutp\t3ff5c6d188e347a6",
+    "data\tv2\tcmw4h5epk0001i8omufs8r9zb\t8c5017a6161cc87c",
+    "enterprise-product-answer\tv18\tcmw4iuizx001ii8lvouwsyi1s\tac69f1f9a1381df0",
+    "growth\tv1\tcmw47t9xv0008gtbtah3obdd6\ta7af436ee02a1f81",
+    "gzh\tv1\tcmw4fgj020002fqfdyofkcsgu\t3a841a4e4f24ff6a",
+    "interview\tv1\tcmw4fgj2j000hfqfd7sobdh0t\taa6620ce6e3e739c",
+    "ip\tv1\tcmw4fgja0001nfqfdoned252c\t80225d2e5331d3b6",
+    "live\tv1\tcmw47t9y5000egtbtzan8gqpl\t6b5c747664b6ef4b",
+    "mammoth\tv2\tcmw4dtv550001fqc678ly67ea\t4f93a88eaae71b53",
+    "method\tv1\tcmw4fgjdz002mfqfd0sbty8rf\t5621e058a7ae528e",
+    "niche\tv1\tcmw4fgjfw0035fqfdiakzzeib\t00961bbdf8b62ca6",
+    "pyq\tv1\tcmw47t9yg000kgtbtkwm2mst7\tc4da66e6ea2d9f1e",
+    "qc\tv1\tcmw47t9yp000qgtbtjdpy9zku\t6964732900a80887",
+    "sell\tv1\tcmw4fgjhu003efqfdnufqpvfn\ta38597fa3d6d3d77",
+    "sifu\tv1\tcmw47t9yz000wgtbtjvddh9vu\t39476525d21078d6",
+    "spy\tv1\tcmw4gyoto0049i833sasbmjyn\tcf78f61e9c017ae5",
+    "trans\tv1\tcmw47t9z70012gtbt7xeil39g\td729e92277680ac5",
+    "video\tv1\tcmw47t9zi0018gtbtmm3c6g03\t7ddff2d2c505a896",
+    "xhs\tv1\tcmw47t9zr001egtbtw2y705ft\t31491b677536eb07"
+  ],
+  "passCount": 28,
+  "failCount": 0
+}

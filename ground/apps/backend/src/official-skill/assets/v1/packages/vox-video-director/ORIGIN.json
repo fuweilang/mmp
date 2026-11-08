@@ -1,0 +1,24 @@
+{
+  "key": "vox-video-director",
+  "name": "vox-video-director",
+  "summary": ">",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [
+    "references/examples/content-timing.beats.json",
+    "references/beat-layer.md",
+    "references/local-engine.md",
+    "references/models-and-gotchas.md",
+    "references/prompt-guide.md",
+    "references/voices.md"
+  ],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "modelstudioai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/vox-video-director",
+    "immutableRef": "github:modelstudioai/skills@main:skills/vox-video-director#aa7e1f304357"
+  },
+  "adaptation": "strip-scripts; stripped=19; dropped=1"
+}

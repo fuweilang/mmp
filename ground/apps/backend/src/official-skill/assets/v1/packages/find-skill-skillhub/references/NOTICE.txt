@@ -1,0 +1,3 @@
+Source: github:Tencent/skillhub@main:skills/find-skill-skillhub
+License: MIT
+Adaptation: strip-scripts=0

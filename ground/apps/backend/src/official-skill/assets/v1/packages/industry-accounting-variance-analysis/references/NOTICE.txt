@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/variance-analysis/SKILL.md (git-blob:4a430511eac2af771e55caf965bf713fff88d649)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: finance/skills/variance-analysis
+No third-party scripts are executed or shipped in this managed package.

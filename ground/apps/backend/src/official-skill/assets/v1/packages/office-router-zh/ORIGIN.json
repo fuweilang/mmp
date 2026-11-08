@@ -1,0 +1,13 @@
+{
+  "key": "office-router-zh",
+  "name": "办公文档总览",
+  "summary": "按需选择 Word/PPT/Excel/PDF 办公处理流程，适配猛犸本地办公引擎。",
+  "category": "expertise",
+  "userCategoryLabel": "办公协作",
+  "license": "MIT",
+  "adaptation": "local-dsh-office-chinese-wrapper",
+  "source": {
+    "immutableRef": "local:mammoth-agent/packages/skill/skill-office/assets/office"
+  },
+  "officialVsAdapted": "adapted"
+}

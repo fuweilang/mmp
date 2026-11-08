@@ -1,0 +1,83 @@
+{
+  "key": "kw-financial-controller",
+  "name": "财务关账统筹专家",
+  "group": "business",
+  "source": {
+    "repository": "anthropics/knowledge-work-plugins",
+    "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "paths": [
+      "finance/README.md",
+      "finance/skills/close-management/SKILL.md",
+      "finance/skills/financial-statements/SKILL.md"
+    ],
+    "files": [
+      {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "path": "finance/README.md",
+        "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/README.md",
+        "localPath": "upstream/knowledge-work-plugins/finance/README.md",
+        "sha256": "055ceb266a9f8f45607ca1ee28e1ace10b8d761d83d8fc7bf142f46ef84def2b",
+        "bytes": 5248
+      },
+      {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "path": "finance/skills/close-management/SKILL.md",
+        "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/skills/close-management/SKILL.md",
+        "localPath": "upstream/knowledge-work-plugins/finance/skills/close-management/SKILL.md",
+        "sha256": "6c2df93bcd15eddf65017445fa44f3eb0b16a755711a5e0602d73ca595e73732",
+        "bytes": 10278
+      },
+      {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "path": "finance/skills/financial-statements/SKILL.md",
+        "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/skills/financial-statements/SKILL.md",
+        "localPath": "upstream/knowledge-work-plugins/finance/skills/financial-statements/SKILL.md",
+        "sha256": "1a9ba1cc85495eef32fa250b8a4c05e4854430af574a290b855f919dbb557dfc",
+        "bytes": 14699
+      }
+    ],
+    "assetPath": "managed/v1/experts/kw-financial-controller.json",
+    "communityEvidence": {
+      "stars": 34994,
+      "observedAt": "2026-11-07T00:02:51.648736+00:00",
+      "selection": "官方岗位插件",
+      "notExecutionRating": true
+    }
+  },
+  "license": {
+    "spdx": "Apache-2.0",
+    "upstreamPath": "finance/LICENSE",
+    "path": "managed/v1/provenance/kw-financial-controller/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "evidence": {
+      "repository": "anthropics/knowledge-work-plugins",
+      "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+      "path": "finance/LICENSE",
+      "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/LICENSE",
+      "localPath": "upstream/knowledge-work-plugins/finance/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358
+    },
+    "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+  },
+  "adaptation": {
+    "language": "zh-CN",
+    "mode": "plugin-to-expert",
+    "notes": [
+      "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+      "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+      "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+      "岗位plugin组合改编为复合专家，不冒充上游现成独立agent；同源已有技能复用，不重复导入。"
+    ],
+    "executionValidation": "not-run"
+  },
+  "linkedSkillKeys": [
+    "industry-accounting-close-management",
+    "industry-accounting-financial-statements",
+    "industry-accounting-reconciliation"
+  ],
+  "newSkills": []
+}

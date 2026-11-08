@@ -1,0 +1,56 @@
+{
+  "files": [
+    {
+      "path": "packages/client/ui-conversation/lib/client.js",
+      "bytes": 940421,
+      "sha256": "417cdfdc2bd3a804fed49f262651476ce22fd4118ae092e04c05284acea4b64c"
+    },
+    {
+      "path": "packages/client/ui-conversation/lib/client.js.map",
+      "bytes": 1636399,
+      "sha256": "2f077ac550e57e404bae3e18b8a4a9502f098ad2b7c05ce8165493e2a4869190"
+    },
+    {
+      "path": "packages/client/ui-commands/lib/client.js",
+      "bytes": 91022,
+      "sha256": "ef4212ead2f147f2d676bc4c1679a2819eed107780c28875d00581371d728166"
+    },
+    {
+      "path": "packages/client/ui-commands/lib/client.js.map",
+      "bytes": 159293,
+      "sha256": "d759c706e1460ba7b894fc87239a13e5e823031db17e6e154f521c5575ad303f"
+    },
+    {
+      "path": "packages/client/ui-input-trigger/lib/client.js",
+      "bytes": 79947,
+      "sha256": "5fe939b01610064ea8417002be7d7d766aa54ee4b8c51b71a70041409614d797"
+    },
+    {
+      "path": "packages/client/ui-input-trigger/lib/client.js.map",
+      "bytes": 140930,
+      "sha256": "aa38d1809e33f1e7a1110895e2a9cfe6d50dfe47c17f01ff0345871241675dd5"
+    }
+  ],
+  "staticChecks": {
+    "noPrefixParserInHub": true,
+    "noPrefixParserInBuiltConversation": true,
+    "newLabelInBuiltConversation": true,
+    "menuActionInBuiltConversation": true,
+    "captureInBuiltConversation": true,
+    "preserveDraftInBuiltCommands": true,
+    "ariaCheckInBuiltMenu": true,
+    "selectedOnlyTag": true
+  },
+  "t153HostRuntimePreserved": {
+    "packages/core/session/src/known-event-types.ts": true,
+    "packages/core/session/lib/index.js": true,
+    "packages/core/session/lib/types/known-event-types.js": true,
+    "packages/core/session/lib/types/known-event-types.d.ts": true,
+    "packages/preset/official-agent-gallery/lib/index.js": true,
+    "packages/preset/official-agent-gallery/lib/types/managed-runtime.js": true,
+    "packages/preset/official-agent-gallery/lib/typert.host.js": true,
+    "packages/api/session-controller/lib/typert.host.js": true
+  },
+  "backendOrDBChanges": false,
+  "browserVisualVerification": false
+}

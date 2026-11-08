@@ -1,0 +1,24 @@
+{
+  "key": "dsh-client-ui-ux",
+  "name": "DSH 客户端体验规范",
+  "description": "按 DSH 客户端结构审视界面与交互改进。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/alignment.md"
+    },
+    {
+      "path": "references/icons.md"
+    },
+    {
+      "path": "references/spacing.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

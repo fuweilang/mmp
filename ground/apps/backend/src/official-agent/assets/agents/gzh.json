@@ -1,0 +1,29 @@
+{
+  "key": "gzh",
+  "kind": "KNOWLEDGE",
+  "name": "公众号改写专家",
+  "summary": "公众号爆文改写与二次创作",
+  "openingQuestions": [
+    "我有一篇原稿，想按专业 SOP 改成公众号爆文，怎么开始？",
+    "公众号改写一般分哪几步，每步我需要拍板什么？",
+    "帮我先提炼这篇文章的核心逻辑和段落大纲。"
+  ],
+  "toolScope": [
+    "enterprise_knowledge"
+  ],
+  "promptFile": "prompts/gzh.md",
+  "batch": "C",
+  "publish": true,
+  "kb": [
+    {
+      "file": "1.md",
+      "name": "公众号改写知识库"
+    }
+  ],
+  "category": "content",
+  "capabilities": [
+    "公众号改写",
+    "二次创作"
+  ],
+  "avatar": "avatars/copy.jpg"
+}

@@ -1,0 +1,60 @@
+{
+  "key": "find-skill-skillhub",
+  "name": "SkillHub 技能检索",
+  "description": "在 SkillHub 平台查找/搜索 Skill 技能。基于 skills 列表接口，支持关键词分词搜索、一级标签（一级分类）筛选、以及二者组合检索。当用户说『找个 xxx 技能』『有没有处理 PDF 的 skill』『SkillHub 上搜一下 xxx』『按分类看技能』『办公…",
+  "entry": "SKILL.md",
+  "category": "common",
+  "references": [
+    {
+      "path": "references/_meta.json"
+    },
+    {
+      "path": "references/ai-agent.md"
+    },
+    {
+      "path": "references/api.md"
+    },
+    {
+      "path": "references/business-ops.md"
+    },
+    {
+      "path": "references/categories.md"
+    },
+    {
+      "path": "references/content-creation.md"
+    },
+    {
+      "path": "references/data-analysis.md"
+    },
+    {
+      "path": "references/design-media.md"
+    },
+    {
+      "path": "references/dev-programming.md"
+    },
+    {
+      "path": "references/education.md"
+    },
+    {
+      "path": "references/it-ops-security.md"
+    },
+    {
+      "path": "references/knowledge-management.md"
+    },
+    {
+      "path": "references/life-service.md"
+    },
+    {
+      "path": "references/office-efficiency.md"
+    },
+    {
+      "path": "references/professional.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

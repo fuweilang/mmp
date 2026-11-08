@@ -45,6 +45,19 @@ describe('Ground local Web identity', () => {
     policy.dispose()
   })
 
+  it('reuses a verified Ground cookie without calling /api/auth/me again', async () => {
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ user: { id: 'user-1' }, currentTenant: { id: 'tenant-1' } })))
+    const { policy, acceptGrant } = setup()
+    const jwt = token()
+    expect(await policy.authorizeIndex(request(jwt))).toBe(true)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(acceptGrant).toHaveBeenCalledTimes(1)
+    expect(await policy.authorizeIndex(request(jwt))).toBe(true)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(acceptGrant).toHaveBeenCalledTimes(1)
+    policy.dispose()
+  })
+
   it('rejects account/tenant conflicts, expired credentials and Ground errors', async () => {
     const fetcher = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ user: { id: 'user-1' }, currentTenant: { id: 'tenant-1' } })))
     const { policy, acceptGrant } = setup()

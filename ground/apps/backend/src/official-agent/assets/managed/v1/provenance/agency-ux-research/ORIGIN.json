@@ -1,0 +1,61 @@
+{
+  "key": "agency-ux-research",
+  "name": "用户体验研究专家",
+  "group": "research",
+  "source": {
+    "repository": "msitarzewski/agency-agents",
+    "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+    "paths": [
+      "design/design-ux-researcher.md"
+    ],
+    "files": [
+      {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "path": "design/design-ux-researcher.md",
+        "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/design/design-ux-researcher.md",
+        "localPath": "upstream/agency-agents/design/design-ux-researcher.md",
+        "sha256": "25f59c4333df2d0f1170ff7a1b11ea8415fd3d0ef80c3e0985209aeb4018680f",
+        "bytes": 13030
+      }
+    ],
+    "assetPath": "managed/v1/experts/agency-ux-research.json",
+    "communityEvidence": {
+      "stars": 166950,
+      "observedAt": "2026-11-07T00:02:51.656029+00:00",
+      "selection": "社区独立角色定义",
+      "notExecutionRating": true
+    }
+  },
+  "license": {
+    "spdx": "MIT",
+    "upstreamPath": "LICENSE",
+    "path": "managed/v1/provenance/agency-ux-research/LICENSE",
+    "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+    "evidence": {
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+      "localPath": "upstream/agency-agents/LICENSE",
+      "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+      "bytes": 1079
+    },
+    "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+  },
+  "adaptation": {
+    "language": "zh-CN",
+    "mode": "role-adaptation",
+    "notes": [
+      "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+      "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+      "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+    ],
+    "executionValidation": "not-run"
+  },
+  "linkedSkillKeys": [
+    "industry-design-user-research",
+    "industry-product-synthesize-research"
+  ],
+  "newSkills": []
+}

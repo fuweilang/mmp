@@ -1,0 +1,5 @@
+Source: https://github.com/openai/skills/blob/main/skills/.curated/security-threat-model/SKILL.md (git-blob:abd3c1c95d49c4e0e0664f198f4bf168c6291aec)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=1
+Original path: skills/.curated/security-threat-model
+No third-party scripts are executed or shipped in this managed package.

@@ -5,33 +5,33 @@
 /:
   en: 03dc41b8fb76229e
   zh: a66439c4378fc6fc
-/deepseek-ai-mmp-client-ui-agent-preset:
-  en: e1743eaa8f8847d0
-  zh: 8cf1ba5beb7ad8ed
-/deepseek-ai-mmp-client-ui-agent-preset/summary:
+/mammoth-ai-mmp-client-ui-agent-preset:
+  en: 15495d708db6dbd5
+  zh: 350dd3f98a10608d
+/mammoth-ai-mmp-client-ui-agent-preset/summary:
   en: 405fc7224ffd6c97
   zh: 4ff5930a4c5bc64a
-/deepseek-ai-mmp-client-ui-agent-preset/table-of-contents:
+/mammoth-ai-mmp-client-ui-agent-preset/table-of-contents:
   en: d152484eb41ac6b4
   zh: b3ad7867f23dad1c
-/deepseek-ai-mmp-client-ui-agent-preset/use-this-package:
-  en: b53d5c356c6a7a83
-  zh: ade3f5f551e73c7e
-/deepseek-ai-mmp-client-ui-agent-preset/understand-the-implementation:
+/mammoth-ai-mmp-client-ui-agent-preset/use-this-package:
+  en: 8de87f3b6166f56f
+  zh: 7cca9d30148650cd
+/mammoth-ai-mmp-client-ui-agent-preset/understand-the-implementation:
   en: 0373c5425a952881
   zh: 609c5829283f515d
-/deepseek-ai-mmp-client-ui-agent-preset/further-exploration:
-  en: bbae8d79844bc481
-  zh: 4302107fd1f460e6
-/deepseek-ai-mmp-client-ui-agent-preset/model-experience:
+/mammoth-ai-mmp-client-ui-agent-preset/further-exploration:
+  en: 2571d364bccc2eaa
+  zh: b7a7f86395e33ea8
+/mammoth-ai-mmp-client-ui-agent-preset/model-experience:
   en: ff77436515de40ff
   zh: 6c6a23f85ba318bc
-/deepseek-ai-mmp-client-ui-agent-preset/model-experience/kv-cache-effect:
+/mammoth-ai-mmp-client-ui-agent-preset/model-experience/kv-cache-effect:
   en: 713c6916c3dd7360
   zh: 9c582f94b926d51b
-/deepseek-ai-mmp-client-ui-agent-preset/known-limitations-and-deferred-work:
-  en: 2c5e994e86b1ae4a
-  zh: 8bc5a90d3a2133ba
-/deepseek-ai-mmp-client-ui-agent-preset/known-limitations-and-deferred-work/dev-note:
+/mammoth-ai-mmp-client-ui-agent-preset/known-limitations-and-deferred-work:
+  en: 6b515b2a0e88a27d
+  zh: a88afd5813628a8f
+/mammoth-ai-mmp-client-ui-agent-preset/known-limitations-and-deferred-work/dev-note:
   en: e67f633dc6fe7773
   zh: 8ec3e73528ddb1a6

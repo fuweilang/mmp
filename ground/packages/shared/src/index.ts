@@ -1,5 +1,5 @@
 export { APP_VERSION } from './version';
-export const APP_NAME = '猛犸智能体';
+export const APP_NAME = '猛犸专家';
 
 export const TenantType = {
   PLATFORM: 'PLATFORM',
@@ -59,8 +59,8 @@ export const AuditActionLabel: Record<string, string> = {
   create_tenant: '创建租户',
   add_member: '添加成员',
   remove_member: '移除成员',
-  create_agent: '创建智能体',
-  update_agent: '更新智能体',
+  create_agent: '创建专家',
+  update_agent: '更新专家',
   create_kb_folder: '新建知识目录',
   upload_kb: '上传知识文件',
   update_kb: '更新知识文件',
@@ -92,7 +92,126 @@ export const AuditActionLabel: Record<string, string> = {
   billing_manual_adjust: '钱包调账',
   billing_update_config: '更新计价配置',
   upsert_org_member_preset_override: '覆盖企业成员预设权限',
+  admin_create_official_agent: '创建官方专家',
+  admin_import_official_agent_asset: '导入官方专家资产',
+  admin_update_official_agent_draft: '更新官方专家草稿',
+  admin_publish_official_agent: '发布官方专家',
+  admin_offline_official_agent: '下架官方专家',
+  admin_bulk_offline_official_agent: '批量下架官方专家',
+  admin_grant_official_agent: '开通官方专家',
+  admin_bulk_grant_official_agent: '批量开通官方专家',
+  admin_revoke_official_agent: '撤销官方专家授权',
+  admin_bulk_revoke_official_agent: '批量撤销官方专家授权',
+  admin_create_official_skill: '创建官方技能',
+  admin_update_official_skill: '更新官方技能',
+  admin_replace_official_skill_package: '替换官方技能包',
+  admin_enable_official_skill: '启用官方技能',
+  admin_disable_official_skill: '停用官方技能',
+  admin_delete_official_skill: '删除官方技能',
+  library_upload: '上传资料',
+  library_replace: '替换资料版本',
+  library_folder: '新建资料文件夹',
+  library_link: '新建资料链接',
+  library_rename: '重命名资料',
+  library_move: '移动资料',
+  library_share: '变更资料可见性',
+  library_recycle: '回收资料',
+  library_restore: '恢复资料',
+  library_purge: '彻底删除资料',
+  library_retry_parse: '重试资料解析',
+  library_ask: '资料问答',
+  library_custody_grant: '授予资料代管',
+  library_custody_read: '代管读取资料',
+  library_custody_revoke: '撤销资料代管',
 };
+
+/** 资料库解析状态。Console、Admin、Web 共用这一套文案。 */
+export const LibraryParseStatusLabel = {
+  PENDING: '待处理',
+  PROCESSING: '处理中',
+  READY: '可用于 AI',
+  FAILED: '失败',
+  DOWNLOAD_ONLY: '仅下载',
+  NOT_APPLICABLE: '无需解析',
+} as const;
+
+export type LibraryParseStatus = keyof typeof LibraryParseStatusLabel;
+
+export type LibraryPickItem = {
+  id: string;
+  kind: 'FILE' | 'FOLDER' | 'LINK';
+  name: string;
+  versionId: string | null;
+  versionNo: number | null;
+  parseStatus: LibraryParseStatus | null;
+  parseReason: string | null;
+};
+
+export type LibraryChip = {
+  nodeId: string;
+  versionId: string;
+  versionNo: number;
+  name: string;
+};
+
+export type LocalDraftFile = {
+  localId: string;
+  name: string;
+  persisted: false;
+};
+
+/** 本地临时文件只留在会话草稿，不入库。 */
+export function stageLocalFiles(names: string[]): LocalDraftFile[] {
+  return names.map((name, index) => ({
+    localId: `local-${index + 1}`,
+    name,
+    persisted: false,
+  }));
+}
+
+/** 明确保存时才入库，并且默认私人、不带共享确认。 */
+export function markSavedToLibrary(draft: LocalDraftFile): {
+  persist: true;
+  name: string;
+  scope: 'PRIVATE';
+  confirmShare: false;
+} {
+  return { persist: true, name: draft.name, scope: 'PRIVATE', confirmShare: false };
+}
+
+/** 弹窗确认只把资料挂到输入框，不发送。 */
+export function confirmLibrarySelection(current: LibraryChip[], picked: LibraryChip[]): {
+  chips: LibraryChip[];
+  sent: false;
+} {
+  const seen = new Set(current.map((chip) => chip.versionId));
+  const chips = [...current];
+  for (const chip of picked) {
+    if (seen.has(chip.versionId)) continue;
+    seen.add(chip.versionId);
+    chips.push(chip);
+  }
+  return { chips, sent: false };
+}
+
+/** 未就绪但看得到的条目展示原因，并且不能选。文件夹和链接不能当问答正文。 */
+export function libraryPickBlock(item: LibraryPickItem): { disabled: boolean; reason: string | null } {
+  if (item.kind === 'FOLDER') return { disabled: true, reason: '文件夹不能直接问答' };
+  if (item.kind === 'LINK') return { disabled: true, reason: '链接只保存网址，不能用于问答' };
+  if (!item.versionId || !item.parseStatus) return { disabled: true, reason: '没有可引用的版本' };
+  if (item.parseStatus !== 'READY') {
+    return {
+      disabled: true,
+      reason: item.parseReason || LibraryParseStatusLabel[item.parseStatus],
+    };
+  }
+  return { disabled: false, reason: null };
+}
+
+/** 列表请求失败时保留已经显示的资料和输入。 */
+export function retainRowsOnListError<T>(current: T[]): T[] {
+  return current;
+}
 
 export function hasPermission(
   session: SessionMe | null | undefined,
@@ -117,7 +236,7 @@ export function canAccessConsole(session: SessionMe | null | undefined): boolean
   return hasPermission(session, 'portal.console.access');
 }
 
-/** 是否有企业工作区（可切到智能体），不要求控制台权限包。 */
+/** 是否有企业工作区（可切到专家），不要求控制台权限包。 */
 export function hasEnterpriseWorkspace(
   session: SessionMe | null | undefined,
 ): boolean {

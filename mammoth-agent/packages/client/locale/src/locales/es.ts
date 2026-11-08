@@ -34,7 +34,7 @@ export const es = {
   'collapse': 'Contraer',
   'expand': 'Expandir',
   'back': 'Atrás',
-  'brand.localBuild': '猛犸智能体',
+  'brand.localBuild': '猛犸AI',
   'workspace.defaultName': 'Espacio de trabajo predeterminado',
   'unknown': 'Desconocido',
   'none': 'Ninguno',

@@ -1199,3 +1199,23 @@ describe('directory invalidation events', () => {
     expect(source.matchSpace!(proj('s2'), '/attach')).not.toBeUndefined()
   })
 })
+
+it('company materials checkable action preserves menu selection text and stays Session scoped', async () => {
+  const b = await bench()
+  const selected = new Map<string, boolean>()
+  const consume = vi.fn(() => true as const)
+  b.mint('s1').ctx.on('slash/input-consume-token', consume)
+  b.command.register({ name: 'company-materials', label: () => '引用企业资料',
+    available: () => true, checked: session => selected.get(session.sessionId) === true,
+    ui: { kind: 'action', preserveDraftOnMenu: true, run: session => { selected.set(session.sessionId, selected.get(session.sessionId) !== true) } },
+  })
+  const options = () => b.source.candidates(proj('s1'), { query: '', position: 'inline', drilled: false, signal: new AbortController().signal })
+  const row = (await options()).find(row => row.name === 'company-materials')!
+  expect(row.checked).toBe(false)
+  b.source.onPick({ candidate: row, session: proj('s1'), via: 'menu', action: 'pick', position: 'inline', span: { start: 1, end: 5, draftRev: 0 } })
+  expect(consume).not.toHaveBeenCalled()
+  expect((await options()).find(row => row.name === 'company-materials')?.checked).toBe(true)
+  expect((await b.source.candidates(proj('s2'), { query: '', position: 'leading', drilled: false, signal: new AbortController().signal })).find(row => row.name === 'company-materials')?.checked).toBe(false)
+  b.source.onPick({ candidate: row, session: proj('s1'), via: 'menu', action: 'pick', position: 'inline', span: { start: 1, end: 5, draftRev: 0 } })
+  expect((await options()).find(row => row.name === 'company-materials')?.checked).toBe(false)
+})

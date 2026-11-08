@@ -1,0 +1,3 @@
+Source: github:Tencent/skillhub@main:skills/skillhub-trace-evaluator
+License: MIT
+Adaptation: strip-scripts=1

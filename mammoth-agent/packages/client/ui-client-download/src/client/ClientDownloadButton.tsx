@@ -1,9 +1,9 @@
-/** Sidebar footer download action and its platform-choice dialog (Web only). */
-import { useEffect, useMemo, useState } from 'react'
-import { IconCheckOutlineMedium, IconChevronRightOutlineMedium, IconDownloadOutlineMedium, Modal } from '@mammoth-ai/mmp-client-ui-primitives'
+/** Sidebar footer actions for opening or downloading the desktop app (Web only). */
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { IconCheckOutlineMedium, IconDownloadOutlineMedium, IconWarningOutlineMedium, Modal, Toast } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import {
-  CLIENT_PLATFORM_OPTIONS, clientDownloadUrl, detectClientOs, fetchClientDownloadInfo,
+  CLIENT_PLATFORM_OPTIONS, clientDownloadUrl, clientLaunchUrl, detectClientOs, fetchClientDownloadInfo,
   type ClientDownloadInfo, type ClientPlatform,
 } from './download.ts'
 import css from './ClientDownloadButton.module.css'
@@ -36,9 +36,13 @@ export type ClientDownloadButtonProps =
  * Download action for the hosted Web build. The Desktop client already IS the
  * client, so the registration (not this component) skips Desktop.
  * @param props - sidebar column state plus the localized seat.
- * @returns footer action row and its dialog.
+ * @returns footer action card and its dialog.
  */
 export function ClientDownloadButton({ wide, t }: ClientDownloadButtonProps) {
+  const [launchHint, setLaunchHint] = useState(false)
+  const cancelLaunchCheck = useRef<(() => void) | undefined>(undefined)
+  useEffect(() => () => { cancelLaunchCheck.current?.() }, [])
+
   const [open, setOpen] = useState(false)
   const [started, setStarted] = useState<ClientPlatform | null>(null)
   const [info, setInfo] = useState<ClientDownloadInfo | null>(null)
@@ -59,6 +63,36 @@ export function ClientDownloadButton({ wide, t }: ClientDownloadButtonProps) {
     info.sizeMb === null ? '' : t('sizeLine', { sizeMb: info.sizeMb }),
   ].filter(Boolean).join(' · ')
 
+  const openDownloads = () => {
+    cancelLaunchCheck.current?.()
+    setLaunchHint(false)
+    setOpen(true)
+  }
+
+  const watchLaunch = () => {
+    cancelLaunchCheck.current?.()
+    setLaunchHint(false)
+
+    const stop = () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('blur', stop)
+      window.removeEventListener('pagehide', stop)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      cancelLaunchCheck.current = undefined
+    }
+    const onVisibilityChange = () => {
+      if (document.hidden) stop()
+    }
+    const timer = window.setTimeout(() => {
+      stop()
+      if (!document.hidden && document.hasFocus()) setLaunchHint(true)
+    }, 1800)
+    cancelLaunchCheck.current = stop
+    window.addEventListener('blur', stop)
+    window.addEventListener('pagehide', stop)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+  }
+
   const download = (platform: ClientPlatform) => {
     if (!info?.availablePlatforms.includes(platform)) return
     setStarted(platform)
@@ -66,14 +100,22 @@ export function ClientDownloadButton({ wide, t }: ClientDownloadButtonProps) {
   }
 
   return <>
-    <button type="button" className={css.action} data-wide={wide} title={t('action')}
-      aria-label={t('action')} onClick={() => setOpen(true)}>
-      <span className={css.actionIcon} aria-hidden="true"><IconDownloadOutlineMedium size={16} /></span>
-      {wide ? <>
-        <span className={css.actionLabel}>{t('action')}</span>
-        <span className={css.actionArrow} aria-hidden="true"><IconChevronRightOutlineMedium size={14} /></span>
-      </> : null}
-    </button>
+    <div className={css.actions} data-wide={wide}>
+      <button type="button" className={css.primary} title={t('getApp')}
+        aria-label={t('getApp')} onClick={openDownloads}>
+        <span className={css.primaryIcon} aria-hidden="true"><IconDownloadOutlineMedium size={16} /></span>
+        {wide ? <span className={css.primaryLabel}>{t('getApp')}</span> : null}
+      </button>
+      <a href={clientLaunchUrl(window.location.hostname)} className={css.open}
+        title={t('openClient')} aria-label={t('openClient')} onClick={watchLaunch}>
+        {wide ? <>
+          <span className={css.openLabel}>{t('openInstalled')}</span>
+          <span className={css.openArrow} aria-hidden="true">↗</span>
+        </> : null}
+      </a>
+    </div>
+    {launchHint ? <Toast text={t('launchHint')} icon={<IconWarningOutlineMedium size={16} />} holdMs={6500}
+      actions={[{ label: t('action'), prefix: ' ', onClick: openDownloads }]} onDone={() => setLaunchHint(false)} /> : null}
     <Modal open={open} title={t('dialogTitle')} closeLabel={t('close')}
       {...(css.dialog ? { className: css.dialog } : {})}
       onClose={() => { setOpen(false); setStarted(null) }}>

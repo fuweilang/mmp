@@ -1,0 +1,142 @@
+[
+  {
+    "key": "boss",
+    "name": "猛犸大总管",
+    "avatarField": null,
+    "resolved": "avatars/boss.jpg",
+    "source": "same-key"
+  },
+  {
+    "key": "c3274112ed041",
+    "name": "商业命名大师",
+    "avatarField": null,
+    "resolved": null,
+    "source": "glyph-fallback"
+  },
+  {
+    "key": "copy",
+    "name": "获客文案大师",
+    "avatarField": null,
+    "resolved": "avatars/copy.jpg",
+    "source": "same-key"
+  },
+  {
+    "key": "data",
+    "name": "数据分析师",
+    "avatarField": null,
+    "resolved": "avatars/data.jpg",
+    "source": "same-key"
+  },
+  {
+    "key": "growth",
+    "name": "增长战略顾问",
+    "avatarField": null,
+    "resolved": "avatars/growth.jpg",
+    "source": "same-key"
+  },
+  {
+    "key": "gzh",
+    "name": "公众号改写专家",
+    "avatarField": "avatars/copy.jpg",
+    "resolved": "avatars/copy.jpg",
+    "source": "explicit"
+  },
+  {
+    "key": "interview",
+    "name": "访谈大师",
+    "avatarField": "avatars/qc.jpg",
+    "resolved": "avatars/qc.jpg",
+    "source": "explicit"
+  },
+  {
+    "key": "ip",
+    "name": "IP策划大师",
+    "avatarField": "avatars/growth.jpg",
+    "resolved": "avatars/growth.jpg",
+    "source": "explicit"
+  },
+  {
+    "key": "live",
+    "name": "直播话术专家",
+    "avatarField": null,
+    "resolved": "avatars/live.jpg",
+    "source": "same-key"
+  },
+  {
+    "key": "mammoth",
+    "name": "猛犸 AI",
+    "avatarField": null,
+    "resolved": null,
+    "source": "glyph-fallback"
+  },
+  {
+    "key": "method",
+    "name": "方法论大师",
+    "avatarField": "avatars/trans.jpg",
+    "resolved": "avatars/trans.jpg",
+    "source": "explicit"
+  },
+  {
+    "key": "niche",
+    "name": "利基战略顾问",
+    "avatarField": "avatars/data.jpg",
+    "resolved": "avatars/data.jpg",
+    "source": "explicit"
+  },
+  {
+    "key": "pyq",
+    "name": "朋友圈内容大师",
+    "avatarField": null,
+    "resolved": "avatars/pyq.jpg",
+    "source": "same-key"
+  },
+  {
+    "key": "qc",
+    "name": "客服质检官",
+    "avatarField": null,
+    "resolved": "avatars/qc.jpg",
+    "source": "same-key"
+  },
+  {
+    "key": "sell",
+    "name": "卖点大师",
+    "avatarField": "avatars/live.jpg",
+    "resolved": "avatars/live.jpg",
+    "source": "explicit"
+  },
+  {
+    "key": "sifu",
+    "name": "私域运营大师",
+    "avatarField": null,
+    "resolved": "avatars/sifu.jpg",
+    "source": "same-key"
+  },
+  {
+    "key": "spy",
+    "name": "竞品情报官",
+    "avatarField": null,
+    "resolved": "avatars/spy.jpg",
+    "source": "same-key"
+  },
+  {
+    "key": "trans",
+    "name": "咨询转化教练",
+    "avatarField": null,
+    "resolved": "avatars/trans.jpg",
+    "source": "same-key"
+  },
+  {
+    "key": "video",
+    "name": "短视频脚本官",
+    "avatarField": null,
+    "resolved": "avatars/video.jpg",
+    "source": "same-key"
+  },
+  {
+    "key": "xhs",
+    "name": "爆款小红书专家",
+    "avatarField": null,
+    "resolved": "avatars/xhs.jpg",
+    "source": "same-key"
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "key": "industry-accounting-audit-support",
+  "name": "审计材料整理",
+  "description": "按用户提供材料整理审计证据和工作底稿，需审计人员复核。",
+  "entry": "SKILL.md",
+  "category": "legal",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

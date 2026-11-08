@@ -1,0 +1,5 @@
+Source: https://github.com/coreyhaines31/marketingskills/blob/main/skills/content-strategy/SKILL.md (git-blob:0efc441269144abe5af37603291d860f47a52430)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: skills/content-strategy
+No third-party scripts are executed or shipped in this managed package.

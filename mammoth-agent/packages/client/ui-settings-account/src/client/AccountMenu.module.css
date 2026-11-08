@@ -37,20 +37,21 @@
 
 .signedOutMenu [role='menuitem'] > span:first-child:not(:last-child) svg { width: 16px; height: 16px; }
 
-.trigger[data-signed-out='false']:not([data-collapsed='true']) { height: 60px; gap: 10px; padding: 8px; text-align: start; }
+.trigger[data-signed-out='false']:not([data-collapsed='true']) { height: 44px; gap: 10px; padding: 6px 8px; text-align: start; }
+.trigger[data-signed-out='false'][data-has-company='true']:not([data-collapsed='true']) { height: 60px; padding: 8px; }
 .trigger[data-signed-out='false']:not([data-collapsed='true']) .avatar { width: 32px; height: 32px; }
-.identity { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
+.identity { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 2px; justify-content: center; }
 .subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
 .chevron { display: flex; flex: none; color: var(--dsw-alias-label-tertiary); transition: transform 150ms ease; }
 .trigger[aria-expanded='true'] .chevron { transform: rotate(180deg); }
 .accountPanel[role='menu'] { width: 288px; max-width: calc(100vw - 24px); padding: 6px; }
-.panelHeader { display: flex; gap: 12px; padding: 14px 12px 16px; }
+.panelHeader { display: flex; align-items: center; gap: 12px; padding: 12px; }
 .panelAvatar { display: flex; align-items: center; justify-content: center; flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--dsw-alias-bg-skeleton); color: var(--dsw-alias-label-tertiary); }
-.panelIdentity { display: flex; flex: 1; min-width: 0; align-items: flex-start; flex-direction: column; gap: 5px; }
+.panelIdentity { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; justify-content: center; }
+.panelNameRow { display: flex; max-width: 100%; align-items: baseline; flex-wrap: wrap; gap: 8px; }
 .panelIdentity strong { max-width: 100%; font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); }
-.phone { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-secondary); }
+.phone { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-secondary); }
 .company { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--dsw-alias-label-secondary); }
-.role { font-size: 10px; padding: 2px 6px; border-radius: var(--dsw-radius-sm); background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-secondary); }
 .allowance { display: flex; flex-direction: column; gap: 7px; padding: 12px; margin: 0 6px 8px; border-radius: var(--dsw-radius-md); background: var(--dsw-alias-interactive-bg-hover); }
 .allowanceLabel, .allowanceHint { font-size: 11px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
 .allowanceAmount { color: var(--dsw-alias-label-primary); font-size: 20px; line-height: 26px; font-variant-numeric: tabular-nums; font-weight: 600; }

@@ -1,0 +1,2682 @@
+{
+  "scope": "115 curated skill keys; display-only, no database or package mutation",
+  "capabilities": {
+    "code-development": {
+      "label": "代码开发",
+      "count": 10
+    },
+    "debugging": {
+      "label": "调试排障",
+      "count": 4
+    },
+    "code-review": {
+      "label": "代码审查",
+      "count": 6
+    },
+    "interface-design": {
+      "label": "界面设计",
+      "count": 5
+    },
+    "visual-design": {
+      "label": "视觉创作",
+      "count": 4
+    },
+    "video-production": {
+      "label": "视频创作",
+      "count": 5
+    },
+    "security": {
+      "label": "安全分析",
+      "count": 2
+    },
+    "testing": {
+      "label": "测试验证",
+      "count": 2
+    },
+    "devops": {
+      "label": "部署运维",
+      "count": 3
+    },
+    "file-processing": {
+      "label": "文档处理",
+      "count": 5
+    },
+    "data-analysis": {
+      "label": "数据分析",
+      "count": 8
+    },
+    "writing": {
+      "label": "内容写作",
+      "count": 9
+    },
+    "translation": {
+      "label": "翻译本地化",
+      "count": 1
+    },
+    "research": {
+      "label": "检索研究",
+      "count": 9
+    },
+    "planning": {
+      "label": "规划协作",
+      "count": 7
+    },
+    "marketing": {
+      "label": "运营增长",
+      "count": 9
+    },
+    "customer-service": {
+      "label": "客户服务",
+      "count": 3
+    },
+    "business-operations": {
+      "label": "经营管理",
+      "count": 6
+    },
+    "people-operations": {
+      "label": "人事管理",
+      "count": 4
+    },
+    "accounting": {
+      "label": "财税分析",
+      "count": 7
+    },
+    "legal-compliance": {
+      "label": "法律合规",
+      "count": 4
+    },
+    "knowledge": {
+      "label": "知识整理",
+      "count": 1
+    },
+    "learning": {
+      "label": "知识学习",
+      "count": 1
+    }
+  },
+  "industries": {
+    "it": {
+      "label": "软件与 IT",
+      "count": 47
+    },
+    "finance-tax": {
+      "label": "财税金融",
+      "count": 7
+    },
+    "legal-services": {
+      "label": "法律服务",
+      "count": 4
+    },
+    "ecommerce": {
+      "label": "电商零售",
+      "count": 2
+    },
+    "hr": {
+      "label": "人力资源",
+      "count": 4
+    },
+    "media": {
+      "label": "内容传媒",
+      "count": 11
+    },
+    "education": {
+      "label": "教育学习",
+      "count": 2
+    },
+    "robotics": {
+      "label": "具身智能",
+      "count": 1
+    }
+  },
+  "noIndustry": 39,
+  "skills": [
+    {
+      "key": "academy-guide",
+      "name": "学院学习指南",
+      "capability": "learning",
+      "industries": [
+        "education"
+      ],
+      "evidenceHeadings": [
+        "# Claude Academy guide",
+        "## Purpose",
+        "## Rules",
+        "## The catalog"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "8a57d856ddeb6c9264405e7b30cebf1463fdf45e161320e721e4cae10d23da06",
+        "SKILL.md": "213c413ad106fbde9470a8756ba00fa8f7b37a2d30e6a9c90309f969d829b6e3",
+        "references/LICENSE.txt": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "references/NOTICE.txt": "383c5e9b56d5518d59fd4020f24e5c4b905ee6bc3dbf8445dcd1f3e17cc93565",
+        "skill.json": "1a66220cedb6003d0584a15c0cfeb40a3b213c4f59a5431731191c01ca63a06c"
+      }
+    },
+    {
+      "key": "algorithmic-art",
+      "name": "算法艺术创作",
+      "capability": "visual-design",
+      "industries": [
+        "media"
+      ],
+      "evidenceHeadings": [
+        "## ALGORITHMIC PHILOSOPHY CREATION",
+        "### THE CRITICAL UNDERSTANDING",
+        "### HOW TO GENERATE AN ALGORITHMIC PHILOSOPHY",
+        "### PHILOSOPHY EXAMPLES"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "c8dc825188dc04f62080723a2b7e376a570653ca9c7283fb3c5e8c05bfe84913",
+        "SKILL.md": "feef42290b97b4dbd005ca06aa47325fa80b16354fb37e0b88d78387942c8876",
+        "references/LICENSE.txt": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "references/NOTICE.txt": "3b3eb571b757b8615a319db53c991b759cec985c1be44b276d0c4428dfd9c5fe",
+        "skill.json": "0264824103152330afe49baff33208b5a0f966867e8ff6bc02a0101f37d97dd3"
+      }
+    },
+    {
+      "key": "bailian-docs-llm-wiki",
+      "name": "百炼文档百科",
+      "capability": "research",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# 百炼文档知识库",
+        "## 何时使用",
+        "## 何时**不要**使用",
+        "## 文档层级"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "2a634a5d6c4d5073fb601f3fbce752b229ff63702ec1b21e5a25e47ada3289c2",
+        "SKILL.md": "5003b9a2ff54c1be09a5394642209ea88e5770491ebc6b5f130f0fc6df18766e",
+        "references/LICENSE.txt": "b1213e16567b96867535f49ab9cd548f25bb7beaa910c26aabceed2dbe5e536c",
+        "references/NOTICE.txt": "5eb0c40ea82b063b23716648f708c26f0574a95b6b45d29cb1930c374a7a61bd",
+        "references/README.md": "fba0f4656fcb9704d7e1beacc70d79788c78ea35f34a820fe205b3b331fadd5d",
+        "references/llms.txt": "c50ba1e79b5d2532e251e4e2a89524dec24bf207ae10aeafac44a4a947b60469",
+        "skill.json": "4cd5d883737161364618394f3c36285a86fc0330ab45d204641ee2f388d17794"
+      }
+    },
+    {
+      "key": "bailian-model-recommend",
+      "name": "bailian-model-recommend",
+      "capability": "research",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# 百炼模型推荐",
+        "## 执行流程：一次命令 + 一次撰写",
+        "# 第一步：一条命令拿全量结果（候选 + 规格 + 负面清单 + 示例代码 + 端点提示）",
+        "## 适用场景"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "62a367e3c7bed738bf52f9999d94e059187e70ae503a23be3914527571d1b3c6",
+        "SKILL.md": "41a20d74f9d48459f0c55b79a5036b6a6906274101a93adc55e9fe454578e4e7",
+        "references/LICENSE.txt": "b1213e16567b96867535f49ab9cd548f25bb7beaa910c26aabceed2dbe5e536c",
+        "references/NOTICE.txt": "260c26636020b77299a8a551de5d432f335201d987b015ed624cfa9271e41ec2",
+        "references/README.md": "fba244852260db6529e7a3d1718c036bebfd133f8cddb7aced5a8cf8cd1ef33c",
+        "references/README.zh.md": "2d588b008e95107861a390ed8e0a8f2f0fee0371f24b59d231e08cd7ebd442e5",
+        "references/capability-codes.md": "7b4f0f87d0b2bf411286f83cfff1757434191c33c9c397ae948657cb5d63edaf",
+        "references/data-source.md": "cc8566348d13c20fe2a23410cda7dfebb13b54e688184b1a00e9c05b79ef1790",
+        "references/requirement-schema.md": "5ade85d70431d09f9fe03bb1fd4e091cad430390b2d69f24a0b34d8e57f580d1",
+        "references/samples-format.md": "8d9619ee70054a274dbe35140cdb62434f4ec8f817f0f919c69d3d8c015dfe39",
+        "skill.json": "3dcf7cc40814d593c497c7d3cb529c738bcf9b3e20caa5783eac379195148803"
+      }
+    },
+    {
+      "key": "brand-guidelines",
+      "name": "品牌视觉规范",
+      "capability": "visual-design",
+      "industries": [
+        "media"
+      ],
+      "evidenceHeadings": [
+        "# Anthropic Brand Styling",
+        "## Overview",
+        "## Brand Guidelines",
+        "### Colors"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "c94c4031dde48022bba40bb9b83479fe8a86c12d4a6fcbe694979fb95e48048c",
+        "SKILL.md": "042bbf5d08b399a724628cf0144a68201113e94ceeb80c2a7478c95062047473",
+        "references/LICENSE.txt": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "references/NOTICE.txt": "523d9bddbf8d98447cb4d35ded287cde0156d256b377e45a6ec413fe77ffe36a",
+        "skill.json": "a24a4e86410d0626a1860ce22031dfae49f3129ecae6528aceace6ff8b76f9dd"
+      }
+    },
+    {
+      "key": "canvas-design",
+      "name": "画布视觉设计",
+      "capability": "visual-design",
+      "industries": [
+        "media"
+      ],
+      "evidenceHeadings": [
+        "## DESIGN PHILOSOPHY CREATION",
+        "### THE CRITICAL UNDERSTANDING",
+        "### HOW TO GENERATE A VISUAL PHILOSOPHY",
+        "### PHILOSOPHY EXAMPLES"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "d6d382b95466e26e6f8ce6e00afdde457beb52c46656b036d3d13e6b40b23751",
+        "SKILL.md": "876638376ac66516589cc40cbf2993873fd43a1784e317ea3d140ab9266bfd8e",
+        "references/LICENSE.txt": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "references/NOTICE.txt": "5723bc84de46c390c2005e262abc38708adf988ba363ca0987a2edfdfc57b3f4",
+        "skill.json": "7821a0e4afd83091e7bce9b58bf4200de9eeae0b33e06992629fbbf6f74a32a1"
+      }
+    },
+    {
+      "key": "cloudbase",
+      "name": "云开发指南",
+      "capability": "devops",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# CloudBase (Tencent Cloud Development)",
+        "## Description",
+        "## Usage Scenario",
+        "## Preconditions"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "4f9d2239467ae27b7faa3a9b1fb17257ea694cde7ed1fd0ab4e11c3470cbe7df",
+        "SKILL.md": "5eb123d4bdd4d0f0fc75b8966de2c8010e4e801b9201fa5b3f733a3ba861d2f6",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "7f46de4cb2ad0eb98e4b72cf749863c9fa0d092efa52ba89529014893557a046",
+        "skill.json": "dcc4179a9bc1ba660b64dbe1d77b9aef4110dbddbf6aecd48824332d4afe3a5a"
+      }
+    },
+    {
+      "key": "cn-punctuation-checker",
+      "name": "中文标点校对",
+      "capability": "writing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Chinese Punctuation Checker",
+        "## Features",
+        "## Supported Punctuation Marks",
+        "## Usage"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "881814c60694e3543925ef63e903022d6911d70da6dcf00321b2d466bba6ddfc",
+        "SKILL.md": "2cdccac45de7c4c04735f52c744bdef61067720d9868fdaae57ad69a04258982",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "b356414b0924e19363cb335a0762598f1fd8bdee3f2d6f892e4b28927cd1fbe3",
+        "skill.json": "35f33c14953fc7665e91d65d8a2abc851c98b0d096cc8adc69429142b8b9d958"
+      }
+    },
+    {
+      "key": "codex-cli-creator",
+      "name": "命令行工具设计",
+      "capability": "code-development",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# CLI Creator",
+        "## Start",
+        "## Choose the Runtime",
+        "## Command Contract"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "b81f95f7cd933a3988d3ef05ca758994eb8d35d7f5a3947e07df91000b78bb3e",
+        "SKILL.md": "04557cac4e651d4131d632cb719bd8c02cb75afaf1e0106978e7dfe5cf93a081",
+        "references/LICENSE.txt": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "references/NOTICE.txt": "b79d7f1f89ac59c0ef039f52c0c4523277031cd158fb51f2db8001b4451369bf",
+        "references/agent-cli-patterns.md": "ac11612b780a80a97b15a5ffca23b21a182f854003911cce2363dd69b6126272",
+        "skill.json": "6d9ca1c82a0284bd0da0ed76643eb7e0d60fa9551ecdfb88e97468ff3aa69310"
+      }
+    },
+    {
+      "key": "codex-define-goal",
+      "name": "目标定义与验收",
+      "capability": "planning",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Define Goal",
+        "## Overview",
+        "## Workflow",
+        "## Goal Quality Bar"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "df853b4f057968638a618973db44dd71c327ded484e3135b7b408ee8067dee6e",
+        "SKILL.md": "8e4d9e1e96062c05a8e383a21a34cb9764525567dfcb64971a7680c30f027689",
+        "references/LICENSE.txt": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "references/NOTICE.txt": "6f7d970a0ef587dc6c7e02d0b1054776e11150e55ec93dcddf00c23ab94aefb0",
+        "skill.json": "060d793dce9dbea478be7578cf720a989ee1fe0c1b650674f49b3df526842dc3"
+      }
+    },
+    {
+      "key": "codex-jupyter-notebook",
+      "name": "Notebook 分析流程",
+      "capability": "data-analysis",
+      "industries": [
+        "it",
+        "education"
+      ],
+      "evidenceHeadings": [
+        "# Jupyter Notebook Skill",
+        "## When to use",
+        "## Decision tree",
+        "## Skill path (set once)"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "003b4be95d6fc939ca5e35ef604a3ab7e511122d7ad8871d73def50137dba709",
+        "SKILL.md": "d5d5c6950e31f3c61a4fca2e6442b3133f11e9fd18282489fe9ce3af1b2bc3e5",
+        "references/LICENSE.txt": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "references/NOTICE.txt": "8d3ade1f5c9c47454ad23b4daf0f9861147d024114bc64090e86d364881cb410",
+        "references/experiment-patterns.md": "1ff9c04281c01e8e2209bde9f1fd910b8e4b620dd1f1f040e2101f1d88513a91",
+        "references/notebook-structure.md": "a85051a2e88fd3424bbed2636e952ec5f858e7efa4e076c28d62a8cc2cc9dc06",
+        "references/quality-checklist.md": "ed01afe6ff47714d85935d11053b64c414772f02250fdc604e3fca65e5139136",
+        "references/tutorial-patterns.md": "8c194bb640de2fb7747e3db87006ecec5219252d301f53670975dbb5310ff659",
+        "skill.json": "9dd90aeb56312399b4536bd9c28a7925f59b4b3a4d1b7430708e640d9701be78"
+      }
+    },
+    {
+      "key": "codex-pdf",
+      "name": "PDF 文档处理指南",
+      "capability": "file-processing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# PDF Skill",
+        "## When to use",
+        "## Workflow",
+        "## Temp and output conventions"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "5920e669ddfac357c5a81d25adc192ad1b110f96c54f2175cb2d97a5684aa149",
+        "SKILL.md": "2c60f22b4a46ff1ccf37b1c11015d676e112edacf4bbbed5e54bff294483ae4b",
+        "references/LICENSE.txt": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "references/NOTICE.txt": "d13af28f2b8fbebe0ecb1df4115606e74f67ae4832daedd418f9d8e939d4e3a6",
+        "skill.json": "f2ea122f1e3efe29734bc966d1b73403cef3f7bd323b1e8503abf66e860b0180"
+      }
+    },
+    {
+      "key": "codex-security-best-practices",
+      "name": "安全编码实践",
+      "capability": "security",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Security Best Practices",
+        "## Overview",
+        "## Workflow",
+        "## Workflow Decision Tree"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "f0d8b9e6c2f064a5336864429b6f8c2193d8ca240e4711830f1ec08d24fe38ec",
+        "SKILL.md": "addcc720ca1bf2237f0cb6135017b012615de5500a6fd8e767dd0515219a18a9",
+        "references/LICENSE.txt": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "references/NOTICE.txt": "f758ed3c2b5e4cbb27c2ecc64ba11c5e3cd84658810e8dcfc11bfcc98fea9fa0",
+        "references/golang-general-backend-security.md": "a73c47c34497b120672d48411fe51dc90d426a571801a0b3f649e2ce4ec658b4",
+        "references/javascript-express-web-server-security.md": "427835cbb5be7ba96172ea6ca9af80ddd4419c833e9ebf870996740c80d8406c",
+        "references/javascript-general-web-frontend-security.md": "3a7bc7b3f6e7ff043db9dbaa8933894d7a19d987d0607e4ddae5d70184a63d63",
+        "references/javascript-jquery-web-frontend-security.md": "bcbad2fa6c2a02709e47e889e70102c76886bf36bc798624d27db570eccf40da",
+        "references/javascript-typescript-nextjs-web-server-security.md": "71c773f7a97ce60c853adfa100b3d88b3b7bc4c6b8acaef1432ffabd923ee182",
+        "references/javascript-typescript-react-web-frontend-security.md": "d3030c0f24bddb56b9bbb91bbec1ee49eb7778bce4d3e0297b2641b2fc6b0d9c",
+        "references/javascript-typescript-vue-web-frontend-security.md": "77c6a747f9f17e3df03aad0fcb20d99ac7898001b81aef8b80908e45ac14a688",
+        "references/python-django-web-server-security.md": "4fb69b5d45f10e588d1a8c35cdc5f59e18910f6b46a93e2d342d90f286f8dfd2",
+        "references/python-fastapi-web-server-security.md": "7383c7f4fc271190b05e562ada7e825982a2c76b6c79a9f95a1da7687b65a616",
+        "references/python-flask-web-server-security.md": "9606d69190c04c167fdeac57e61297547a57b0542fd89dede36f355970446929",
+        "skill.json": "36349b2c335ea576331b54b92b7a639ece6d2f7777fa40ea76d5b5ca892809a7"
+      }
+    },
+    {
+      "key": "codex-security-threat-model",
+      "name": "应用威胁建模",
+      "capability": "security",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Threat Model Source Code Repo",
+        "## Quick start",
+        "## Workflow",
+        "### 1) Scope and extract the system model"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "1f7e4a2a95485dcc161bb4418cd4d5021cade76170fec8e360f94ef292513860",
+        "SKILL.md": "92499c3e40ade0eb7c01768e9126e60601428e2fea3d8e08ce0005e305a85ed0",
+        "references/LICENSE.txt": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "references/NOTICE.txt": "d1efe8de13584a6df4d8faf71accec2529054fafca46d1deaec8ad946f8a8c59",
+        "references/prompt-template.md": "81a59aa3fb3ac3a739d6a26ab38e4015965f215581ee54becef21a2b121ec29b",
+        "references/security-controls-and-assets.md": "d536cfa9acad2523dc39134bcf33b9566c29dd9a57b407cbc9901637230c6b98",
+        "skill.json": "8767c9c2192e9db5a9e52a502653e72e07d70082d23513f7dfd4e7e55e51d75a"
+      }
+    },
+    {
+      "key": "community-dsh-debug-session",
+      "name": "DSH 会话排障",
+      "capability": "debugging",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# DSH 问题排查",
+        "## 先收集（一并写进求助帖）",
+        "## 排查顺序",
+        "## 备份与回滚"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "c2f077b6d7980f03ceaf5e674ff4d5a2742b319cebc6a8a6606ca7e72fd76b42",
+        "SKILL.md": "ef858a4587fa0c873971f25721659c9bbeafdcf3057099608fbd803bb7ec597f",
+        "references/LICENSE.txt": "47e52428b4e83783b45953ad87d06b5e340ae4146dd45cbe5e04259a3dee54e0",
+        "references/NOTICE.txt": "e8cf386bc40520c4154ff9f3d2e1fb4a2d12f79aaf6cda3af46154f1e05ede2a",
+        "skill.json": "815f724b2e2d31e61f36317fb55752911a40e003b13e3b5cb18ff10aca6c4b74"
+      }
+    },
+    {
+      "key": "community-dsh-plugin-client",
+      "name": "DSH 插件客户端开发",
+      "capability": "code-development",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# DSH 插件 client 半端（依据官方包实现与 dsh-voice-input 实战验证）",
+        "## 包结构",
+        "## 注册 UI（slots 契约）",
+        "## 构建（tsup 双目标）"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "51684522b8f811635036b42523a4912f486181ccae8f8754c8aa61e459064b22",
+        "SKILL.md": "637cf27853f8bb4e730115e272cdc5b69898cd7e04fad3aa909a23f24f6423f6",
+        "references/LICENSE.txt": "47e52428b4e83783b45953ad87d06b5e340ae4146dd45cbe5e04259a3dee54e0",
+        "references/NOTICE.txt": "307eeda0d6be692c4a99e86d82daf3c2c3010ddc2991e454d1576100e5163ae9",
+        "skill.json": "5364234ba8fa75cd6edba034767b43b8b3afd4df33bdfd272980131cd5b8c38f"
+      }
+    },
+    {
+      "key": "community-dsh-plugin-dev",
+      "name": "DSH 社区插件开发",
+      "capability": "code-development",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# DSH 插件开发（依据官方包验证过的结构）",
+        "## 最小形态",
+        "## 调试循环",
+        "## 发布与收录"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "69e7a3a3b0dc83f1b780e722e670d0e207e911441c66a7b089ae18632bb5e6db",
+        "SKILL.md": "ed13eac9a04c8a0bb5498f84d09465ee7beab3ee8361bc4a8f45e2b51beb0f53",
+        "references/LICENSE.txt": "47e52428b4e83783b45953ad87d06b5e340ae4146dd45cbe5e04259a3dee54e0",
+        "references/NOTICE.txt": "d3a22fe18b20b1306570c0dbe69a88d2bc194872802131e9f4fcc803e7fa97fd",
+        "skill.json": "6c5948368e6afef2d5b360a01d9f8c1db6ce0577fbe3be5d17c02e9c3d16d5b8"
+      }
+    },
+    {
+      "key": "community-dsh-preset-authoring",
+      "name": "DSH 预设编写",
+      "capability": "code-development",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# DSH Preset Authoring"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "88523969bfafef87e1321ee2b29fb9ae94f4afb8f429cd59df264c05c81864cf",
+        "SKILL.md": "eea2be78db9d60a2c7a33596a7d3eb4979341f8caed852d30dd27ed2e3634b20",
+        "references/LICENSE.txt": "47e52428b4e83783b45953ad87d06b5e340ae4146dd45cbe5e04259a3dee54e0",
+        "references/NOTICE.txt": "6a8c3a38548da649e3ae9c44f6ae8b2ac0752e69a8b3e942a5cd012b022f7149",
+        "skill.json": "250534452a6ca213524475ff3c7e9a8d59385d965e74d8fca1129513e6822497"
+      }
+    },
+    {
+      "key": "community-dsh-skill-adapter",
+      "name": "DSH 技能适配",
+      "capability": "code-development",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# DSH Skill Adapter"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "450a5c70c9736f8cc28218991a3c4bd021f1530df79c61ab050c4b7fd1f10935",
+        "SKILL.md": "14a1ac2bc8cf82db81b8bdef1ddd9c09a3a73f8eb5c5ccab9a2d2d22f9a6e71d",
+        "references/LICENSE.txt": "47e52428b4e83783b45953ad87d06b5e340ae4146dd45cbe5e04259a3dee54e0",
+        "references/NOTICE.txt": "fb11fb4a5e75132f711bd9ca411b5f4a42c82d69234597d03ba0b758cd8b5276",
+        "skill.json": "ab18f7749c185fd0bb67eb9870fb16dd5ecd96fa83a2444c7eea964bde2b358d"
+      }
+    },
+    {
+      "key": "cycle-delivery",
+      "name": "周期交付协作",
+      "capability": "planning",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Cycle Delivery",
+        "## Description",
+        "## Installation",
+        "## When to Use"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "67371a7d231f22b0c6677a5c0907cfdeed6e58f975decca2e4b15f5e83303d94",
+        "SKILL.md": "165f83c9310d800352deceee08a9a26e41925bb3e41a595448b22e86459fc902",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "ed6a43021967d118840ec8f16c4fd74f8cc23f249cdcf5b3395da16fdb7fa9ea",
+        "references/evidence-protocol.md": "801751e7f747c51f1427cd892afabb454686a76bdaad4f97b72cf0dd962ae5fe",
+        "references/tools.md": "1c98e9c84ea33788d9ff12dccf9a7cad33974777defd665ff79ee053ec2cdd99",
+        "skill.json": "4a7431673342f72b0b45c12e284ef9d76736370000ba357f8c2a790fe5d58dd9"
+      }
+    },
+    {
+      "key": "daily-hot-news",
+      "name": "热点资讯整理",
+      "capability": "research",
+      "industries": [],
+      "evidenceHeadings": [
+        "# 今日新闻热榜聚合助手",
+        "## Description",
+        "## Instructions",
+        "### 步骤1：确认用户需求"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "51f72f8e6aaf5a28e6438136c6b9766503d9a397ac4f329f4054d56d164788de",
+        "SKILL.md": "2f399860756b0517bde7c7f290e4185fbc0e81eb945a7f8954b23f0bddf53e85",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "58f6d6d1a9b4910f5b6fc117b3ea9821586217e82bc21d5ccf87f71165b5690f",
+        "references/references/api_sources.md": "dc6f0973928209cc44459a3fe088639e56b08ffc075ef2007082f6ec82c172bf",
+        "skill.json": "fd50d5f6a117a3082ecfe5e93a0caa551d7e16a65855f68e2221035ead193e2e"
+      }
+    },
+    {
+      "key": "daily-trend-writer",
+      "name": "热点内容写作",
+      "capability": "writing",
+      "industries": [
+        "media"
+      ],
+      "evidenceHeadings": [
+        "# Daily Trend Writer Workflow",
+        "### Phase 0: 时间同步",
+        "## Phase 1: 热点发现与榜单生成 (Trend Discovery)",
+        "## 📊 今日热点榜 ({日期})"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "12af22c91bef4f37809dfde3b44253efe2d5ce9351b7f08c1615bbf5f67ca5b6",
+        "SKILL.md": "a81b78531552a5bde17126d88f238beecc951bfdddc2ba935dc3a725f78e4408",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "a57db93f071793a204be2c9e4d3b3689d55d82a22636bbea543c569146fad7ee",
+        "references/examples/input.md": "8628db8b38c3b47293eb47ece17bf2cc08e0a6d84f56588ecd3071c23d29c39c",
+        "references/examples/output.md": "c4ac1dbd3f0a17ee3eabe8c956a792d5d5ab8f35e2228e27977c42999a67edad",
+        "references/subskills/doc-coauthoring.md": "2259112da3066b45429db8de425d1764f0f35dd706dba72da0d01e15d63cc9af",
+        "references/subskills/mimeng-writing.md": "6c73907fd54a33b002e41eaa45bbc875424629da5d4513a61da30f2fc3ab494f",
+        "references/subskills/wechat-article-writer.md": "d57d7e54b5b3117edd743df14fd345701a950f161d173693421eb2573fd36e01",
+        "references/templates/topic-brief.md": "939fffb76be958ddc733abbb1686806c88ef49f956f9e7b71f5057b6a01c9e31",
+        "references/templates/trend-board.md": "a18729ff1fe4c7227f71d3f2537c2b307663ef1faf6631f344c37dec2d61c5cb",
+        "references/trend-sources.md": "ffb9d9d13fb4b596ed73aa1870de35564b70fe22f96fa8d48d756529adc97c88",
+        "skill.json": "82d8fe451b6a7a3d8b4a8ed9286983a374fd08674c5da0a04244fdc1255c82e9"
+      }
+    },
+    {
+      "key": "discernment-nudge",
+      "name": "审慎判断提醒",
+      "capability": "planning",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Discernment nudge",
+        "## Why this exists",
+        "## When to offer the nudge",
+        "## When not to"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "c5fa0962183f5e28519365846e09595ef40f15857d3db3874230a427d094708c",
+        "SKILL.md": "5a7137de01c0ab27c684c8f286bc04cc719f1751262e405755c64e9369bc3b28",
+        "references/LICENSE.txt": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "references/NOTICE.txt": "8ac9e61acbe9d6bf8b3e32e4660c27231a25e2fe1a6bffdcdf58be66419d2b8a",
+        "skill.json": "a587ad40eaabde076a8e81c3ecdb9a169cc97fb34b9af17df6b1408515fab363"
+      }
+    },
+    {
+      "key": "docx-diff-comment",
+      "name": "文档差异批注",
+      "capability": "file-processing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Docx Diff & Comment",
+        "## Description",
+        "## Prerequisites",
+        "## Usage Scenario"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "0f3cddb39cbecc5aa01b18b1ef6dd323ed394ce3db0a7dab58f5c6078c99a845",
+        "SKILL.md": "c02e1361d07da2aa5844afde4dae590c6fd7cca2674076cff5555746957c906b",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "ea3d752bfe7ff14c933de5fe9998c795cee2e23cf21ca41d35e7363fe7a3cf08",
+        "skill.json": "f1263f032b353ac35e45ca0081be50685d5cff76ce2720086cb2f110d2d67103"
+      }
+    },
+    {
+      "key": "dsh-client-ui-ux",
+      "name": "DSH 客户端体验规范",
+      "capability": "interface-design",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# DeepSeek Harness UI development",
+        "## UI change workflow",
+        "### Minimum checks for affected UI",
+        "## Select the rule owners"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "89483f510de1fe2232b1fcd6141768cb317b96f0722c6bdae6c68862174c644c",
+        "SKILL.md": "b27a121672696d21fc3b95e6bb3c7955cce735fbd251ffea49a50b33008fdc19",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "b004a9a540ba963d155968ec1261c8b9eb3c03500cede10bf2d8613476e22860",
+        "references/alignment.md": "51e6af315f2e402062bd9173fe5b728d3fff400d2c2a42c7f9f7dc7bec615451",
+        "references/icons.md": "1897ffd91d37913ba8af7c1dfda21e1c3e1ece2e7b9ddcbc15137bb12cd97248",
+        "references/spacing.md": "b0bcc34fdbf1393c72d76a562739bed07ef033eaedc0a27594ca186429eb2dc4",
+        "skill.json": "2f2efacd94fe96146439b753ffa3f4848b5fde9a8b3046df34d747fb7bcf14c1"
+      }
+    },
+    {
+      "key": "dsh-code-review",
+      "name": "DSH 代码审查",
+      "capability": "code-review",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Reviewing a DeepSeek-Harness PR",
+        "## Sources of truth",
+        "## Blocking requirements",
+        "## Manual checks"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "d2e5ef564cc865514ef8a8d887184430fbed74029ce874d8eb6e71793581e398",
+        "SKILL.md": "1c85f01337b822a87352fe4354c4abce3f857c0c7c511b15379cd4d1873d9ab4",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "b2673d702c113970d33aa5a021ef3d6a072ec7ba1760ec432ace33cd88d6e6cb",
+        "skill.json": "ac25f65a0b4ec864aabd5688653dc5afd998c291fd20b807cccea8e5604fdfb5"
+      }
+    },
+    {
+      "key": "dsh-doc",
+      "name": "DSH 技术文档维护",
+      "capability": "writing",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# DeepSeek Harness documentation",
+        "## Summary",
+        "## Table of Contents",
+        "## Workflow"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "e331283121cca78889f046c62202c69851bcedeaa1623546082bcd055b5a2918",
+        "SKILL.md": "ffabcb0ee02acc561368d19b140314d4b87c8ac2de97710f60b1c2378369df41",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "97af6706fc452c40306688d88c18a2bd5bad308f2a2762c71bb45d5951c6f489",
+        "references/metadata-links-i18n.md": "279f79dec3a3f7dd29bb36722d1c7b176ed8409efa86ca7e2b1233d07eb1da1f",
+        "references/review.md": "81f5bb876ad13bd2e550953d7c4ff9962d47b5f73d57219932e968029a89a216",
+        "references/structure-hierarchy.md": "869ae393be457951c89175ed9a6f02957d013b7b4b9b44785efbbcfead40ca8e",
+        "references/style.md": "62600401bc7d771e17aaefd93748432153def0502cbc38b9176cdc15cc6167af",
+        "references/templates/package-bundle.md": "9f6751700f4886b85b2b7334f4caa6621dbe815e969d32e94e9af046bc3f2f51",
+        "references/templates/package-group.md": "53cb8a73b3d465e8cc318e530bcbd505f373c64b9f4bdb25d2253d2aab5d0e9a",
+        "references/templates/package-library.md": "e65883a53950806ec5322b06ebf6dedc43f0c9377f7145e9cdc21e5a60db3993",
+        "references/templates/package-reference.md": "b9e75748bd32b40960b51df2549afbe5ed4fb7454f235b134505e9b40d70f103",
+        "references/templates/persistence-change.md": "a4a91e28adcb6cd1ba0ae7fd0bb072c228f04deb35d718e35da7d9c842dd2c7b",
+        "references/templates/persistence-format.md": "8e2cfd248807a49feeb56cb50645812f57a0ac4c0bb8b2fdae63ab5d09fbd27d",
+        "references/templates/persistence-release.md": "641b2c8a78da2d880bcf6ca63773ecb95bd7239e4863cd271be79e6b8d1c0160",
+        "references/templates/upgrade-guide.md": "06ba6b63e6ccff6aad68f4aa11467cbc7786db880729a5eaf84c0fdf6d0c818f",
+        "references/website-sync.md": "6ab2dc43aa43c964350a800304f53d51fcc6280ee882aac2a3223dff3e52bdfc",
+        "skill.json": "8049acb4a97efadb38550639f07ce957a7dcaea8ec4186481b501dae0d06e676"
+      }
+    },
+    {
+      "key": "dsh-error-handling",
+      "name": "DSH 错误处理",
+      "capability": "debugging",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# DeepSeek Harness Error Handling",
+        "## Typed, structured failures",
+        "## Catch, recover, or stop",
+        "## Localized, actionable, visible reports"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "7b4b4d376cf1287feb599de3262e888169c5db2392ec9d0253e6a22a576267f3",
+        "SKILL.md": "302703c49e5f5b37f7dbbb5ba0139159a2121ab9e783e485240ad8240740be4c",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "32e2a65e3bde50017f2b875861b716aeb75f1d5ac1743616d2413b4b793d98b4",
+        "skill.json": "c0397e7d3c9df3f003655ac98bf97d82dd927267d23ffb23eabf4bdc5fdc4eb5"
+      }
+    },
+    {
+      "key": "dsh-find-simplifications",
+      "name": "代码简化分析",
+      "capability": "code-review",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Finding DeepSeek Harness Simplifications",
+        "## Establish scope and constraints",
+        "## Search for removable obligations",
+        "## Prove reachability and the trade-off"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "3d9fac399302e03a8dd1ddb90450097a732d491a80b100a24c49aae42330c0a5",
+        "SKILL.md": "6cd50cce36173389fe8c35bf1c5eaf9951207082dce16172e7ee07e9014c6499",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "095b200e3336d41dc02c32ecd1e729f06a624c7451b2641d70d639f9dfb8c57d",
+        "references/historical-patterns.md": "54291e69eb96e6840ddf9322d09d5d19e24d875e67c7984cd328c03d19ce0e37",
+        "skill.json": "8053ca480236e9e74fc5a9c5bfc18d2ea30c1bc7d6dc662cb82f9c5a4eade2e0"
+      }
+    },
+    {
+      "key": "dsh-pr-description",
+      "name": "变更说明撰写",
+      "capability": "writing",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Writing PR descriptions",
+        "## Scope",
+        "## Description structure",
+        "### Motivation"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "7ada434c83e4708561e8e265a182fbcd69919b222e514d180b1e4c474cb6a999",
+        "SKILL.md": "5d6f8d782458e15a23d24ac4de47049b11b71bdd8f591b77e57cdd99ff981543",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "eb14669456fe2c128b03f02b36f47e0f63b5c0a434344afbae6cc9045691c9d0",
+        "skill.json": "128a1984980419cef0d03f93ef0d3560504b02ea6bb5da602cedfb78cc2ce4ac"
+      }
+    },
+    {
+      "key": "dsh-prose-standard",
+      "name": "技术文档表达规范",
+      "capability": "writing",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# DeepSeek Harness Prose Standard",
+        "## Inputs and exclusions",
+        "## Preserve the complete proposition",
+        "## Required coverage by prose location"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "7abd82813028b89df39bdc7d4df80e275a7000f16c7c8bb3cf2fbcfae5313b98",
+        "SKILL.md": "565bf163b8975a70c7ad6213b7054395a45da460575da02d57ad785d6314b242",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "4367ab849d6e16fa37effdbb6c140e64b4a84e44303f7d08654ba588a09915ca",
+        "references/examples.md": "ea37f63a96458206edc436ee71aa1a89b5219347f74556aa413ba1dfd1246572",
+        "skill.json": "b3c9ed29602337686744f967ca860cfe18e9356083bbf559decfafc64d447e86"
+      }
+    },
+    {
+      "key": "dsh-responsive-ui",
+      "name": "响应式界面设计",
+      "capability": "interface-design",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Responsive client UI",
+        "## 1. Minimum viewport",
+        "## 2. Decision order",
+        "## 3. Text truncation"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "4d385db85a8a4e9838353ae1f7c8a4db597b0738b9d6ad9f55c928b3e5ce95ea",
+        "SKILL.md": "0279a9f43dcee57fa741f6f596f51c685c01fc5cc05596fdea989ebe8dcd6d3f",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "08a480dde7d635eaf53e5ca106f07028377a1d221b625275928a51e2b45269d0",
+        "skill.json": "8cab808715fb12f479a3ea64310dca740d2ff42540be0c8f7329bc6f0ce74d38"
+      }
+    },
+    {
+      "key": "dsh-speed-up-perf",
+      "name": "性能瓶颈优化指导",
+      "capability": "debugging",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Speed Up DeepSeek Harness",
+        "## Establish scope and current authority",
+        "## Survey user paths, then rank candidates",
+        "## Build realistic synthetic benchmarks first"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "b6fd118c0b0d90250db2099e1c31d8fec4d94d8ea63c8192ae7d464b221de824",
+        "SKILL.md": "42b995295b0ce2d1ba07e2a50ec7515d7310ae57531f71510c73e489a6d499d6",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "f280601cae64318dfde9294b20fff1d425e16a1ce39a20799f4a2989a24ce6d9",
+        "skill.json": "4aec20a17712ed23191e9310d3b699824d99821c0ee43590f96c48f5a3d557e8"
+      }
+    },
+    {
+      "key": "dsh-translate-docs",
+      "name": "DSH 文档翻译",
+      "capability": "translation",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Translating DeepSeek-Harness docs",
+        "## Invocation boundary",
+        "## What this skill is",
+        "## Triage by change type — this decides everything else"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "10590fd3b8effc3047c15e04fbef3bb087799063c566d1802ad077dc50e061c0",
+        "SKILL.md": "3cff25fb2d56877e4ceec23b64445b44c954d6770f82d4146bcbbb6b1bbe93ba",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "49b3b905c1df4e0e9d3f4d5a0c83cd173a246e12210621cddd82dec64e0680c1",
+        "skill.json": "08165ad2e09d61a44863f77b458d11cfd5039d833deac8ffc5cf2ed654573bb6"
+      }
+    },
+    {
+      "key": "dsh-trim-cot-leakage",
+      "name": "推理泄露检查",
+      "capability": "code-review",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Trimming Chain-of-Thought Leakage",
+        "## The one test",
+        "## Taxonomy",
+        "## What is not leakage"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "fe86ac21e9e900526c2617572f9d9f8e94c593af1405933ef40806f3048bf708",
+        "SKILL.md": "917794747fe8a7a32a19e9c50de18999fe8df738a0c1f896380243e7a0e390d4",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "ef8d4681b61af2fca8c1fa758de05198f1731b341d8185eb38f1c265a8ecee21",
+        "references/examples.md": "893ad4a0680ecd18d515ba8b4bc1487df783e4eb49a82316e1b065a5c8c28a90",
+        "references/recall-batteries.md": "179ef0336af3a4a33410bec4e11e802c7c78ba8a0bdf6d455503dbf539e2a34c",
+        "skill.json": "6980bf05dd433a6e8cbf3c061db617c5bbb35d2fc875e6b68257ff1b1a334714"
+      }
+    },
+    {
+      "key": "entropy-box-zh",
+      "name": "熵盒知识整理",
+      "capability": "research",
+      "industries": [
+        "robotics"
+      ],
+      "evidenceHeadings": [
+        "# 箱熵：具身智能全景图与知识编译器",
+        "## 使用场景（Usage Scenario）",
+        "## 这个 Skill 可以做什么",
+        "## 全景图范围"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "3c97918f97c95c9bf6870c869c9069024587244e9d4fc2dbf5275e0aac186317",
+        "SKILL.md": "554b9a85ac36d426872e42bc2e6d4772868263ee35d0c9bbae07220f68a80618",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "96021f4861565fb80a1590fbb6b020154e87dd2e403459d7ad7e4037822c5fca",
+        "references/api.md": "e253f1ee1713f3c685a62fd8287757b82c451651d090d5e36bfa01a2a90a5a0f",
+        "references/knowledge-compiler.md": "087c45a6cfc412caf985d52bb1467fe352033d78c9287780324e8b771b14eff4",
+        "references/panorama.md": "9df4c5d840351decff09c2c82b98542bbca4d50d7612e25ce93cafcf78b4fca5",
+        "skill.json": "8203eafa9e6355c8ca4ca02205e03ad22dc9b3c0ca9f46eed307bea0fa4ac622"
+      }
+    },
+    {
+      "key": "find-skill-skillhub",
+      "name": "SkillHub 技能检索",
+      "capability": "research",
+      "industries": [],
+      "evidenceHeadings": [
+        "# 在 SkillHub 查找 Skill",
+        "## 核心流程",
+        "### Step 1 · 理解场景",
+        "### Step 2 · 多次搜索"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "25ad6afd1348f3e1b3bd718be8c4aa048497fa83ced80f3d481d90f8404a5b4d",
+        "SKILL.md": "7fab158f33a6d27c8eacb00ad3c8426eeb744fa89e3c7a607df5e369fdc7dc8b",
+        "references/LICENSE.txt": "6d9e08aac94450e40d7310e36c9beaa41f6c36b069f3b07cc232e9c7ced594c4",
+        "references/NOTICE.txt": "bd2889b6f4de12cf5415871340faf9824ffae7d84145b47c2fa826deaa07bbe5",
+        "references/_meta.json": "85c4057012707dd9a5165d6d4b296fbc4b640317eed45e401c6941a1ac8b1fd2",
+        "references/ai-agent.md": "f97bab4c6d90e6c8eca71374ba90137c9524bd23ad4e38e539c480b6fa537a67",
+        "references/api.md": "1fd886722d7a6baf9ddfb0d0b66e7ddf50f4cb657c75e318057e2428dd90a527",
+        "references/business-ops.md": "00e24392ece6f88f6a66e124ce2000822300804ddea00e53d9709f83167a618c",
+        "references/categories.md": "a31eb5b4ffe8c7512c7630df9e963019019d274e0684bb2b0f73f60640ef2735",
+        "references/content-creation.md": "9ad20fc7708654f90b55db896bb19be70e522a55c46bc0c16092afd0d40e1152",
+        "references/data-analysis.md": "605c451d563ae4f9e1316213e138c41a24ae8023f8679acf4c11eb883904b1e8",
+        "references/design-media.md": "b856b0a830808fa648af9b33f59bc6832d7d0da1ab706107101ec25ffe401412",
+        "references/dev-programming.md": "e2142666a73efb69a0f70861f8ecb6b1009ea21956c6adcbfa01537008c4bb34",
+        "references/education.md": "924520535ca1739e89f7ccec3e5e1742ea0ee8611a8259d311e33fa98f1447f9",
+        "references/it-ops-security.md": "bf7434a228df3b6d5cc7cf3ba90fe8eb7e5d0e97407b641e2ca8a92d84536ee6",
+        "references/knowledge-management.md": "cf28d278fd8331a7e5559699a703940f21bee730368d8526363c1bf8c51b817b",
+        "references/life-service.md": "102624229be64a269d855963f3ddaf8c025ac14a3970d573fa9484a3400a4090",
+        "references/office-efficiency.md": "2ec61a30bd76100c2430d324bcaae483864d4db2a2b93f187e70f6f6bff6729b",
+        "references/professional.md": "b85080c5366862c5569400709cca155b53275df61f8bdd86f9d3aaa8bed34adc",
+        "skill.json": "4da98aea4818ebf1718eabb0e1b415e0ab3550da8a7d4f28167f0c3da4ace916"
+      }
+    },
+    {
+      "key": "frontend-design",
+      "name": "前端界面设计",
+      "capability": "interface-design",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Frontend Design",
+        "## Ground your designs in the subject matter",
+        "## Design principles",
+        "## Process: plan, review against the brief, build, critique"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "f91b8ac6aa735fdc124650eed7450dc5f0498fa9709918c29d02784d4820195d",
+        "SKILL.md": "ea24b16c6a48b9db7d3b4f1cb1c5f1970128ae10ca65e76e0bc3b8ac972360dc",
+        "references/LICENSE.txt": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+        "references/NOTICE.txt": "63e12983cbda7eb8e6def6a3989acafaabdc55ea4fbb89d1a62fbe46747e36ed",
+        "skill.json": "9ee4d239724424926ea2d52f8f28837d81cb8a9b0648ad35fa86b0b205f27349"
+      }
+    },
+    {
+      "key": "gbr-pair",
+      "name": "结对协作规范",
+      "capability": "devops",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Build Remote Agent pairing",
+        "# Build Remote Agent — answers (AEO)",
+        "## How do I control a desktop coding agent from my phone?",
+        "## What appears on the phone?"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "9e6897e100bd6f3b9636e064989eb79a0d2a39118038f5e647ce4a3cfb1b95dc",
+        "SKILL.md": "068daa74e024f1b77635a6cfb19218e4ef9a9e789bc05383118ba2db87978b15",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "3af0f6dac65a3ba8b8220706c104ab7f0758e62859c8798ad86c3d753d724c38",
+        "skill.json": "176df12cd6f62e5c25ad1d56e4ac5e07d90d49a98696a2570655688ed8ebc0ff"
+      }
+    },
+    {
+      "key": "git-commit-generator",
+      "name": "提交信息生成",
+      "capability": "writing",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Git Commit Generator",
+        "## Description",
+        "## Usage Scenario",
+        "## Instructions"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "f744e616e03e8a9369bd7c42b2991b9eb58c49eeec8cded4c2e2db35ac83d6e7",
+        "SKILL.md": "6f8664c364501658b695d75be94f4e990260cf7b22d162e918d065df711b8122",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "da130434a329da9130626dbdb3e378f21f3b45fb8e286ddb369eefd31db744f2",
+        "references/conventional-commits-types.md": "adca51a56eb2568e3b60e4e66cf3fbe0369214a2f2b2674e2be9c58df0be28e7",
+        "references/examples/input.md": "4f7e4e1a0fc2f05e4fd0b97bd39e58f84cb16e35eb3037fa609758bbb7f2b137",
+        "references/examples/output.md": "314fdf4c3fce09bfb4df27af5cf4b94593fb05167fbfb39254dc649d2d1693d0",
+        "references/templates/commit-message.txt": "f44cd112cc78afb53a3f1d55602fe47a035212c124b3055fc6e512094a5c3ad8",
+        "skill.json": "feeb7310237ffbbe62e4afe517e562cbae01e4bb3757ebad9a4128867f2fcea5"
+      }
+    },
+    {
+      "key": "happyhorse-prompt-studio",
+      "name": "happyhorse-prompt-studio",
+      "capability": "video-production",
+      "industries": [
+        "media"
+      ],
+      "evidenceHeadings": [
+        "# HappyHorse Prompt Studio",
+        "## Overview",
+        "## Phase 1 · Inspiration Menu (灵感菜单)",
+        "### Flavor A · \"让你的角色开口说话\""
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "1749dfae52e426c066d1805a108810425b91f9e2bef39496eb2bc53c9fe9f70a",
+        "SKILL.md": "d2d88721ad8e774c3472238a876ca611ff1c07b6a2fbf8bab77cf4ecb6eb1da7",
+        "references/LICENSE.txt": "b1213e16567b96867535f49ab9cd548f25bb7beaa910c26aabceed2dbe5e536c",
+        "references/NOTICE.txt": "acb1a3e0fc8807cee8ffb20b035c3a39076f409fc6a3ced8779c1fb4fedb5c29",
+        "references/README.md": "1291095f32174766cca83d2e279f67db030f851e1b76c3c2b6b90f0cffcbcea9",
+        "references/README.zh.md": "ccc3d980edebfc9dc77c574e0be9403cc0a7e12504e58c58d99eb59cc2376e2c",
+        "skill.json": "8d41158e9024689d6df2558a3c091a7b87399976155652516797d75e5b6f23c8"
+      }
+    },
+    {
+      "key": "industry-accounting-audit-support",
+      "name": "审计材料整理",
+      "capability": "accounting",
+      "industries": [
+        "finance-tax"
+      ],
+      "evidenceHeadings": [
+        "# Audit Support",
+        "## SOX 404 Control Testing Methodology",
+        "### Overview",
+        "### Scoping Significant Accounts"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "ff1318c4490a1b71a09638c5f63fa483b3578e90bfa3fb65215673b6f10badc2",
+        "SKILL.md": "0c01f422269876062238ec739415883bd68e5d06be3b3091cfbd3f8fe3c1cca2",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "ddc3724d9f5c87ffdedec9050f27ee6905f345ee39dc803e9aac085d80c0dbd9",
+        "skill.json": "44b90b9d46cee8f7c39c69ed5fd9927038801b1081424ca2377e19483f2fa881"
+      }
+    },
+    {
+      "key": "industry-accounting-close-management",
+      "name": "财务结账流程",
+      "capability": "accounting",
+      "industries": [
+        "finance-tax"
+      ],
+      "evidenceHeadings": [
+        "# Close Management",
+        "## Month-End Close Checklist",
+        "### Pre-Close (Last 2-3 Business Days of the Month)",
+        "### Close Day 1 (T+1: First Business Day After Month-End)"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "8fed4507350c7f95b3d145e6e96f8cf831d44436d1aaf87a0561696bd9480b50",
+        "SKILL.md": "ef576f25b67215c548e2f428e7bd8c92c41f0fa4e63ec2fc45c85e6a1f4697be",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "3f3b1b859b562723fd5976a424fd046a7533e041914f028bf37cc7d3d858e75f",
+        "skill.json": "b0c1b9022ef0a7178c4be0821b5a600b51b8c826b866534faf108f20559eb889"
+      }
+    },
+    {
+      "key": "industry-accounting-financial-statements",
+      "name": "财务报表整理",
+      "capability": "accounting",
+      "industries": [
+        "finance-tax"
+      ],
+      "evidenceHeadings": [
+        "# /financial-statements",
+        "## Usage",
+        "### Arguments",
+        "## Workflow"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "8b53fdf4ef8d8b7c5af446aa1ff0dfb9920fdea319ddd0d69ada57636f49521c",
+        "SKILL.md": "20e0749cafbc50dd471ab43298f1b8756455334d9f7b5cf0a34fee8ec3e28cc5",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "b5800b54e117c788d908e92e2720433ea7c8181664ec40c7de10114f5a376ba5",
+        "skill.json": "76b31bcd64fa0724a93aa5d36b79cc4a1d3b5a5e1138e6ec71f2a3a4aec2d9f1"
+      }
+    },
+    {
+      "key": "industry-accounting-reconciliation",
+      "name": "财务对账辅助",
+      "capability": "accounting",
+      "industries": [
+        "finance-tax"
+      ],
+      "evidenceHeadings": [
+        "# Reconciliation",
+        "## Reconciliation Types",
+        "### GL to Subledger Reconciliation",
+        "### Bank Reconciliation"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "99671620fca04e88d0a66bdfd2b907561ba6ffcd5a26b587779e3a802b22bf79",
+        "SKILL.md": "892b404e701c11a629b58a8b7961b5a73ede0f8a7186c3625d75e939ca485006",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "95cdd94adc1b8ec64c84eb474e9affe76a38f99ef3783d492f435d270b984851",
+        "skill.json": "4f3a880d46ae82a69be701d0ab9b37af323c7f04de58ce7e3d9e74c6d96532f4"
+      }
+    },
+    {
+      "key": "industry-accounting-variance-analysis",
+      "name": "财务差异分析",
+      "capability": "accounting",
+      "industries": [
+        "finance-tax"
+      ],
+      "evidenceHeadings": [
+        "# Variance Analysis",
+        "## Variance Decomposition Techniques",
+        "### Price / Volume Decomposition",
+        "### Rate / Mix Decomposition"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "f0abe155b028ebcd154c1033d2a9a919608d0ca45d706efd79ceb627c757d6ae",
+        "SKILL.md": "86d03d61d9aee226867e9339aee8b4149c22abcabd5a48911b145211ebb05a73",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "10681dea4e81dc4b19a4ab57a980faec45095f52370bfcec90cc1e3c52a2127f",
+        "skill.json": "a9373f76ab556e3fd77380ddc3796d306b234fb0827b06ac2565c5cc49893e8c"
+      }
+    },
+    {
+      "key": "industry-commerce-inventory-planner",
+      "name": "库存规划辅助",
+      "capability": "business-operations",
+      "industries": [
+        "ecommerce"
+      ],
+      "evidenceHeadings": [
+        "# Inventory Planner",
+        "## Step 1 — Get sales and stock",
+        "## Step 2 — Compute velocity, both windows",
+        "## Step 3 — Project stockout dates, conservatively"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "89aecc0deebaf8218ab9bc964e6d436ef94494ae015eae1d7dc71e1b6f1b0f34",
+        "SKILL.md": "88eb5fbdf10f190d2a56434d7c0d55bd6f94997a8d6d62e26c3df04221821ee8",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "7ff9307973f49271228002c54594e75652ef62e45e2d4945ad08134810c67c9a",
+        "references/reference/data_sources.md": "fe7401b8b0dacb2033ab3b6efedb7d816a95007de1597145978dd24b94d64c1d",
+        "references/reference/gotchas.md": "c9f3e2d58e1421aa94828d3bf29f0a3127ece5eeb369bd930914e3f6112a2fba",
+        "references/reference/po_drafting.md": "0a78e41c2f5cc8f5d8422dedfe46ab537f6ce8968d19263ef9e46b82af00248e",
+        "references/reference/seasonality.md": "c33416efc24f0e9c0a3f7109c3429efe253770548f680509dc7f21634aaeb841",
+        "references/reference/velocity_and_reorder.md": "a992eb66e9987b6903e02d1dcd173164948450ebbafaf85d67a84331c206e57c",
+        "skill.json": "f7f1dade62141c1cc5201cb3a23e91c0d6d9b7affef882e7a673ef282d3f38c0"
+      }
+    },
+    {
+      "key": "industry-commerce-restock",
+      "name": "补货清单草拟",
+      "capability": "business-operations",
+      "industries": [
+        "ecommerce"
+      ],
+      "evidenceHeadings": [
+        "# Restock",
+        "## Step 1 — Work out what to buy (inventory-planner)",
+        "## Step 2 — Draft the PO and the vendor email (inventory-planner)",
+        "## Step 3 — Leave a record the future bill can match against"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "a37ddfe98e0bada39c79530706942a24bf049efdc8ae9c8e7201d9d82e90cd65",
+        "SKILL.md": "205686d8ee8d4c71f20d3f593334e3b4a4dd946c686e4c2a2f6a336ad0452bc0",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "174b8571f19ba6e5c65a837e6d71465ece3aff2c1335f5004feda20295ef3fb9",
+        "skill.json": "de46f29b2c3452b6dfa25470efb6be34321676e92d9c2fbac107d5b3f0ffca4d"
+      }
+    },
+    {
+      "key": "industry-data-data-visualization",
+      "name": "数据图表设计",
+      "capability": "data-analysis",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Data Visualization Skill",
+        "## Chart Selection Guide",
+        "### Choose by Data Relationship",
+        "### When NOT to Use Certain Charts"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "3218e81e4dcbe4b461b41a68d17e0af9c97813bfce14bccf21fe952bd62b5519",
+        "SKILL.md": "89d966cdd67a995eccd494886c87afb575ecfb8ce42d0fb5cb0ebf2a4c46494d",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "481a372cd6e6fdb30143a427ab99ee8f6159724d7ea038ccea3cb2f31393557e",
+        "skill.json": "5cbd8d4c7d52d9e002b3f78975e7d6c4e7199ed11879425b7d07f0d6527c9893"
+      }
+    },
+    {
+      "key": "industry-data-explore-data",
+      "name": "探索性数据分析",
+      "capability": "data-analysis",
+      "industries": [],
+      "evidenceHeadings": [
+        "# /explore-data - Profile and Explore a Dataset",
+        "## Usage",
+        "## Workflow",
+        "### 1. Access the Data"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "cde0e774730e457ef0c2c07f860803cf72161d3bf3125d9abd67f2ad91ba9cd5",
+        "SKILL.md": "26c0c053a9330304f558e78fccd4e1afeb5675893bbd97a8e3e3e3a2c313a8aa",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "ab96b7e7b4dbf6e87b4d3e70aa266bccc8d553c7f7ecaf9d9c87da5836badea2",
+        "skill.json": "c4e5885113ab43a5c310aefcf4d5b46d78b9b0e6704341784098addbed804ada"
+      }
+    },
+    {
+      "key": "industry-data-sql-queries",
+      "name": "SQL 查询编写",
+      "capability": "data-analysis",
+      "industries": [],
+      "evidenceHeadings": [
+        "# SQL Queries Skill",
+        "## Dialect-Specific Reference",
+        "### PostgreSQL (including Aurora, RDS, Supabase, Neon)",
+        "### Snowflake"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "e1a241df7e0ca2a9913e0e92da86a6164e10d83dee96e8c5fa5c651b27e9923f",
+        "SKILL.md": "4c1c21057927df84b7559eed5a45457e936d28421b1db358de03c5ae6e295e99",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "b2cdeeb2abc43d83359bae427d3ae8871eaf6276a6dcf8ae504f462079370d84",
+        "skill.json": "a7efdadf803e863fe7498a24440f5423650b4c04a38ad3094fdc479c060411ab"
+      }
+    },
+    {
+      "key": "industry-data-statistical-analysis",
+      "name": "统计分析指导",
+      "capability": "data-analysis",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Statistical Analysis Skill",
+        "## Descriptive Statistics Methodology",
+        "### Central Tendency",
+        "### Spread and Variability"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "eca21ec0b73d970fce87d0a74bce2157bd320a1a70031f04ecc348564087ca51",
+        "SKILL.md": "a0cb011d8e2249de11ec87a50094fcbff151ddd70effc5273a7cb11d41f4a26a",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "975ff5a9b84f7290b202abcc966ccd283b86996dd997a700745a49e74b723758",
+        "skill.json": "ff32743ef5e3eabc53e5bd4517033476e35880cec9db6dec2fa08ab513ab4366"
+      }
+    },
+    {
+      "key": "industry-data-validate-data",
+      "name": "数据结果校验",
+      "capability": "data-analysis",
+      "industries": [],
+      "evidenceHeadings": [
+        "# /validate-data - Validate Analysis Before Sharing",
+        "## Usage",
+        "## Workflow",
+        "### 1. Review Methodology and Assumptions"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "54c42e1ea3ac79439f70c3b8467af3462e9a5addff31fe9d9cca32f3ee21b29a",
+        "SKILL.md": "46ff53712a5f4b0f43fde2cd4b37742e0c5734f79294561457d43c5ae667c60a",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "60ec9bc50db2dfff47db592befc1519ec1e4b0da6273add5f74d524b86d511b1",
+        "skill.json": "3a14934961233f1b6978f18f5005db409ed9aebf899000e5a2f8250d6175ba1b"
+      }
+    },
+    {
+      "key": "industry-design-accessibility-review",
+      "name": "无障碍设计审阅",
+      "capability": "interface-design",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# /accessibility-review",
+        "## Usage",
+        "## WCAG 2.1 AA Quick Reference",
+        "### Perceivable"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "4c41393d92c3b60d07365c87e8f94bd5a0c9fbeb93a3149efca7ac1230d3caf6",
+        "SKILL.md": "015c18a5d3d88266e900cd04be2a35974c7c088ddf712d1d7e476d4c5f878fc6",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "7a9c6ef43d9c22f24c60e95fb2518a95998c55fd037bbca0746f967a4a29e9f2",
+        "skill.json": "ff809b071a8176b25404fb78ff81ce57f237339e9e75ec4abe4b5b9539684913"
+      }
+    },
+    {
+      "key": "industry-design-user-research",
+      "name": "用户研究方案",
+      "capability": "research",
+      "industries": [],
+      "evidenceHeadings": [
+        "# User Research",
+        "## Research Methods",
+        "## Interview Guide Structure",
+        "## Analysis Framework"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "d597f63b09a2f4163ea5679d3eb34d1df9c78d3c934a28064aa49514fbcb4ab6",
+        "SKILL.md": "fc7cc14f06088b5d380ffcbfcc1da1a3c55f31e4ee5ab0a99fcc81e9fa7ab969",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "99506d9dea175e03bd060c2b0577e22d0bd8c0297ad3d0bf36de8290e0b0f3db",
+        "skill.json": "231d945d5a9a51faa589634aa766cabb56cab0e8154ff13138b19a7090e5a476"
+      }
+    },
+    {
+      "key": "industry-hr-interview-prep",
+      "name": "招聘面试准备",
+      "capability": "people-operations",
+      "industries": [
+        "hr"
+      ],
+      "evidenceHeadings": [
+        "# Interview Prep",
+        "## Interview Design Principles",
+        "## Interview Plan Components",
+        "### Role Competencies"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "c239dce0696750779277cb23ada8b5d27500632bda644081811c400bb071f290",
+        "SKILL.md": "593cc38b789593a00c74f1ae032206d2aefef54839bfbe4ee153f7271d87331a",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "c9c6f974cc276bd29e9f3d6d1b807af505ac3d5011290283012b27df68f2f782",
+        "skill.json": "6af90536eca9398fc53a3c22d7c4d61048bc98200fec664b73b9c896ca05b8ee"
+      }
+    },
+    {
+      "key": "industry-hr-onboarding",
+      "name": "员工入职计划",
+      "capability": "people-operations",
+      "industries": [
+        "hr"
+      ],
+      "evidenceHeadings": [
+        "# /onboarding",
+        "## Usage",
+        "## What I Need From You",
+        "## Output"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "6d6c4d375b75671f0e0e5f01ac0c26fc47dcbf3542c8c06f60de9e41099e878c",
+        "SKILL.md": "8df262d4d62b12ca98a31c3f9113ba1bb1e67c5474dde3823899a435d12c6763",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "7ddafbd3d41b121447a0bc5ba52c1ba353a92f4b343144b8d013fdd28d3f72f6",
+        "skill.json": "6ce8ecf65a31dfbab6b3832e599d8970f8425c1d4ee1e56354e3709da2960daa"
+      }
+    },
+    {
+      "key": "industry-hr-org-planning",
+      "name": "组织规划辅助",
+      "capability": "people-operations",
+      "industries": [
+        "hr"
+      ],
+      "evidenceHeadings": [
+        "# Org Planning",
+        "## Planning Dimensions",
+        "## Healthy Org Benchmarks",
+        "## Output"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "ff5314a12e4c48d931c907a25f4615fb172bbb6dfa5113352e0addd42de870b0",
+        "SKILL.md": "8079ce918909b1ac22517c97ecb1e62e244d7862e6c2c292c4547738b07cfec1",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "d839c709712d8682e11b223d68f31cdab495651117826f476826ea3600d835ad",
+        "skill.json": "6e9a570608f82f58e84ab59c85067879cbef63c67af425d3925a2c3c7064d5f8"
+      }
+    },
+    {
+      "key": "industry-hr-performance-review",
+      "name": "绩效回顾草案",
+      "capability": "people-operations",
+      "industries": [
+        "hr"
+      ],
+      "evidenceHeadings": [
+        "# /performance-review",
+        "## Usage",
+        "## Modes",
+        "## Output — Self-Assessment Template"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "611de0fb14fd680838fe44d12af5e3197069ccf72c13ff28be011228a929dec6",
+        "SKILL.md": "28a5f9b9bfa9e922e8e972208682b9ed93c264bc5cd62664b42aadaa86769807",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "9c9e479e694336eb7936c7c55925ff168c438bf76ed18f555c75c54051b82545",
+        "skill.json": "2614550778e58109b989a4480c5b54160a758136153df19d2447d4a7177027eb"
+      }
+    },
+    {
+      "key": "industry-legal-compliance-check",
+      "name": "合规检查整理",
+      "capability": "legal-compliance",
+      "industries": [
+        "legal-services"
+      ],
+      "evidenceHeadings": [
+        "# /compliance-check -- Compliance Review",
+        "## Usage",
+        "## What I Need From You",
+        "## Output"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "f749a7e82b0b8a94aacb88c920dc38db36d45bef6c71c326a3050f458d2f86ea",
+        "SKILL.md": "4746d979750afbfad0ac77d3af13b5b86af877f5fa1d28754a3a7a42cfd46475",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "994ce6ecfa5bdeb79e3425235d8803917df82cde3b551be4def07a743e8336c2",
+        "skill.json": "810475a5bdc6bf63a4703bf019b8bd18622dcb1d3461c644a2842f3c71e69622"
+      }
+    },
+    {
+      "key": "industry-legal-legal-risk-assessment",
+      "name": "法律风险辅助分析",
+      "capability": "legal-compliance",
+      "industries": [
+        "legal-services"
+      ],
+      "evidenceHeadings": [
+        "# Legal Risk Assessment Skill",
+        "## Risk Assessment Framework",
+        "### Severity x Likelihood Matrix",
+        "### Risk Score Calculation"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "15375e22132f7589bd37184d3aa4b7fa77944775845581d8313d23b6e27b0496",
+        "SKILL.md": "f1d04c3ecb9beb7481fddaba292cfd32d3d2a236d381ef4bd8f00fa6aaa82ddc",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "8199ca010f714000521f1aa712644ef80554c4cb5560a1e7a2cd16c9ff4e0b03",
+        "skill.json": "5d351345debae880e528c6185b896fd1279b9f825ef7d5b3448bf4f21b224fa2"
+      }
+    },
+    {
+      "key": "industry-legal-review-contract",
+      "name": "合同风险审阅",
+      "capability": "legal-compliance",
+      "industries": [
+        "legal-services"
+      ],
+      "evidenceHeadings": [
+        "# /review-contract -- Contract Review Against Playbook",
+        "## Invocation",
+        "## Workflow",
+        "### Step 1: Accept the Contract"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "3b12f01dd46a69f7abac198180a96786fe5893d1d1091a514a46d2715d1d05a0",
+        "SKILL.md": "bbe83aaa4aed978ab3d211a5db143a7035059e9624d0045c2450ae99a07a6866",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "0e2b7795da89d2be15a472bd3437bab21d985dc2e8f2c6595e0fa1bc38266406",
+        "skill.json": "c3907436d8d586ef8d946c33bdec94419def850d4367a8decd4f2fd01dbb54ed"
+      }
+    },
+    {
+      "key": "industry-legal-triage-nda",
+      "name": "保密协议初筛",
+      "capability": "legal-compliance",
+      "industries": [
+        "legal-services"
+      ],
+      "evidenceHeadings": [
+        "# /triage-nda -- NDA Pre-Screening",
+        "## Invocation",
+        "## Workflow",
+        "### Step 1: Accept the NDA"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "4687773658bfadb19c8608ec99394f22f5d1dbe2bff80e75f6d02733108e8919",
+        "SKILL.md": "f705b08d9d76bfeef499ccb8e6ff96f6a8971eababe9cbb000fab6949a0a367d",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "b3d81828336c77dc3b0e19807920f0b3976e5129ca6c084edcb080cdf2ecb4f3",
+        "skill.json": "b17eaf46dba23d70bfd3aac6d9c669559d1c33e743df30be45aca9b8dc0ac1aa"
+      }
+    },
+    {
+      "key": "industry-ops-capacity-plan",
+      "name": "业务容量规划",
+      "capability": "business-operations",
+      "industries": [],
+      "evidenceHeadings": [
+        "# /capacity-plan",
+        "## Usage",
+        "## What I Need From You",
+        "## Planning Dimensions"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "90ae474396ab74e8d6d288a0330b28c0368187ae77080e46a4ee75a1c22886c2",
+        "SKILL.md": "00497b74b12c0f3b76c0c8e5d96fc9d86c67891d4919a14f1fe3264a5c4dfb83",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "8517aab0db5f027bcd58c5f6c17412712edfa03b476bab1ecda61cb1393d14ef",
+        "skill.json": "0e6d75839a8e3ff0cc820b54ed869c1f27443309caf39a7765c5a5b8dce73a22"
+      }
+    },
+    {
+      "key": "industry-ops-process-optimization",
+      "name": "业务流程优化",
+      "capability": "business-operations",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Process Optimization",
+        "## Analysis Framework",
+        "### 1. Map Current State",
+        "### 2. Identify Waste"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "8d62c7b8e0b7ad06eb311921262dd098837eb04baf775c10506b807f2ca7f4d0",
+        "SKILL.md": "900c4fe6488c6c964bb0c785ea1d4d2c62f440ceb74101d257c9295d1d2ecfd6",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "4b2b3328e4f1ea3ce90f5e658956af2387ccb25764fee67203274720ef2b0c60",
+        "skill.json": "f7ae23e995051b51dee4b6db99f8d34d0e83431bd5a8e2692e5bd1512174177a"
+      }
+    },
+    {
+      "key": "industry-ops-risk-assessment",
+      "name": "经营风险梳理",
+      "capability": "business-operations",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Risk Assessment",
+        "## Risk Assessment Matrix",
+        "## Risk Categories",
+        "## Risk Register Format"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "348935eb0e20e4f16086edbb24e58e21b4f7357f292491e571709b9e3979d133",
+        "SKILL.md": "2361d95c9439788429ff0e88e55f31fb8a580e1ca422692b52ebad98b03799e7",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "76ca259686263e8b81f3b3bd8b658c60f85291c02c83f4adda351e16398766b8",
+        "skill.json": "77991a0ecc7b37865ef749538f6cffeeba91c96f7be732c6f9b58667929f14df"
+      }
+    },
+    {
+      "key": "industry-ops-runbook",
+      "name": "操作手册编写",
+      "capability": "business-operations",
+      "industries": [],
+      "evidenceHeadings": [
+        "# /runbook",
+        "## Usage",
+        "## Output",
+        "## Runbook: [Task Name]"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "42a306c884d365576376d8a61e7ec643a9d6ad6cc66c9f1cd4bf15a5c8940a49",
+        "SKILL.md": "a3eeff4f81788522481d5ec82bb2af22417458b9fc6bb9cb42a3dd8d657a5aed",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "a7bee6500112b158b698f9df9154641b420f6ebfb4807c89088d71f38333dc19",
+        "skill.json": "6817276e571cc4c09b979fd1abf0c32f5fdc54dce72f28ba1343a5833b9529dd"
+      }
+    },
+    {
+      "key": "industry-product-synthesize-research",
+      "name": "用户研究归纳",
+      "capability": "research",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Synthesize Research",
+        "## Usage",
+        "## Workflow",
+        "### 1. Gather Research Inputs"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "78d9a32592135d6065d567cfb44d9e314daabacb290afa36462d81a7389137ab",
+        "SKILL.md": "836baf727a98c7bd702f55c67108d98b5fcfe73172a8a783d465245014f2cdeb",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "46fccd16eba8acd0b4fb6d61b74b821e8c1521786cfa462b3628f193c63d5031",
+        "skill.json": "07b8dca6fa2283a98a467c84b23ca0405a2705ba2523cc41a8040042eac15a8f"
+      }
+    },
+    {
+      "key": "industry-product-write-spec",
+      "name": "产品规格编写",
+      "capability": "planning",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Write Spec",
+        "## Usage",
+        "## Workflow",
+        "### 1. Understand the Feature"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "0073cecba78c60bb9b44002368b42975b62a8d51dab8204a94b79dd3c6aaab47",
+        "SKILL.md": "cf8d90f93484ac48cf9a63ff2704cdd148093dbbfaf255a4f622a95ec5ded071",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "8cbb9cca1547c7a5f93cd8782043746ce3877193ed7a7e14b2dafdebf48a9921",
+        "skill.json": "ec27423061da373a3ef0b4ac739a68d10d3d93a8853c0fb64248f61dd7483653"
+      }
+    },
+    {
+      "key": "industry-smb-tax-prep",
+      "name": "税务资料准备",
+      "capability": "accounting",
+      "industries": [
+        "finance-tax"
+      ],
+      "evidenceHeadings": [
+        "## Step 0 — Confirm the mode",
+        "## Step 1 — Books first (month-end-prep)",
+        "### The gate before Step 2",
+        "## Step 2 — Tax materials (tax-season-organizer)"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "3a534e86c904a5b3e4899d26dd15305562f0cbdd52957a43ad15339fb5c04ce3",
+        "SKILL.md": "0693a12e35098b4f784e794c2299b7e67e93c8810c6b6e0d67108be15d5cf121",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "d2d75594e6ceabd8c0de0b86601805d9ec17eb586250bc1eefdf2272b64e10d6",
+        "skill.json": "92aaf289924e0f71467a267894c5514d39097014f5a8fac7a886ebbf06973c1b"
+      }
+    },
+    {
+      "key": "industry-smb-tax-season-organizer",
+      "name": "报税季材料清单",
+      "capability": "accounting",
+      "industries": [
+        "finance-tax"
+      ],
+      "evidenceHeadings": [
+        "# Tax Season Organizer",
+        "## Quick start",
+        "## Step 0 — Check the country first",
+        "## Determine mode"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "114664081a9638ef1c95d5f95b81a5fa93ede24a4a48a43717e03bd7154091d6",
+        "SKILL.md": "5c0942f7d9174d917bff63df264f41e12e1f4723ba2310143f36076b64c5da81",
+        "references/LICENSE.txt": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+        "references/NOTICE.txt": "8a246881f38059a2bb00853fbc77e0fdbc96944f3c0d39ae23a5a98daeada56b",
+        "references/reference/calculation-assumptions.md": "9df7c97562cdc4f9a0f58d6c2ace118f10a930422eb32804f19976bade3d4f47",
+        "references/reference/connector-queries.md": "d384c1fc2ebeeb7637e18bd6962114ae309d7c274d0bdf31319ff5ed1973293d",
+        "references/reference/examples/quarterly-estimate.md": "6d2c83625f21f7dd7953f3648418d7402f9a3d4774e6de32ece5d438e2eef6c5",
+        "references/reference/examples/year-end-1099.md": "ffdbd1235bcef34f0776deb892d2b903bfee9cd328d616a9d09b432510dba573",
+        "references/reference/gotchas.md": "e07720356db0a4a05cd233da7de938f8c2acba9099ca7520dd573295a85aa2e3",
+        "references/reference/output-formats.md": "13e4a6cf256f0341642cde35eb870e3cca5723d48ce877e9d9bdb5f06bce4e73",
+        "skill.json": "2b0f73ebd486cad8b7d38fdb2ab2f390580747169963098a4f69527fe672e826"
+      }
+    },
+    {
+      "key": "industry-support-draft-response",
+      "name": "客户答复草拟",
+      "capability": "customer-service",
+      "industries": [],
+      "evidenceHeadings": [
+        "# /draft-response",
+        "## Usage",
+        "## Workflow",
+        "### 1. Understand the Context"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "124235d024cfeff20e0cb941ff13fc5f33c7a881a53a444f48242729f1702928",
+        "SKILL.md": "36dc00803e6ac80867fc9380a4d818d2a10047476f91fd174eb426b90e48531e",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "12e2a729b657507cc95c318237b68c757d29ad8e7b9af34cd6e20f45ccb17a25",
+        "skill.json": "264be8624f94cf1031bf1376cff346cec084ac94eb462b518bc6c2ca5bf9a8fe"
+      }
+    },
+    {
+      "key": "industry-support-kb-article",
+      "name": "客服知识文章",
+      "capability": "customer-service",
+      "industries": [],
+      "evidenceHeadings": [
+        "# /kb-article",
+        "## Usage",
+        "## Workflow",
+        "### 1. Understand the Source Material"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "657ffd0bd879941542238486453b5cb6390f58ada62cbb074148db834f97f379",
+        "SKILL.md": "52bc576597f0a08f78dafbb46f64ae071c68cb90f070863acb90ed31bbd7ec4c",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "ec35613aae8feb758f042e2a015d925ddf8629e0ab381cf53e245cbdf258daa2",
+        "skill.json": "beb14627acbf0f0d4b75b04cbe598555600f7f4570cdb354cefa971a3432468d"
+      }
+    },
+    {
+      "key": "industry-support-ticket-triage",
+      "name": "客户工单分流",
+      "capability": "customer-service",
+      "industries": [],
+      "evidenceHeadings": [
+        "# /ticket-triage",
+        "## Usage",
+        "## Workflow",
+        "### 1. Parse the Issue"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "37c70a9358604ddca3dd427066d6edb891638760f70f71ddf615d32bd3d40cfb",
+        "SKILL.md": "ca31153096760a43a4b7a6c7b91bfa946502c3ab7d46b8328ceea7cd6f25cab2",
+        "references/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "references/NOTICE.txt": "d273bd90f4135510999d3bcb584e85c19efc9dcbf45707b5be0b729777677275",
+        "skill.json": "ffdf1678b9db1640837b3e32fc7e0224c59f5a97b6acc45600e2fd02eb34f18a"
+      }
+    },
+    {
+      "key": "internal-comms",
+      "name": "内部沟通文案",
+      "capability": "writing",
+      "industries": [],
+      "evidenceHeadings": [
+        "## When to use this skill",
+        "## How to use this skill",
+        "## Keywords"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "c2f2b9b79d19f5c9f7019d065cc1d993f64d98261a18aa5f0f73521325bf869c",
+        "SKILL.md": "d3d80489a28a387b412e55d4465022e278c8cbafd9b1e59b1dde118672df9fd8",
+        "references/LICENSE.txt": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "references/NOTICE.txt": "3adaa72bf26859f9dbb11961f2f041495732cb8a7893e521a4bab75a2d32bc89",
+        "references/examples/3p-updates.md": "087e4363c0f3513728a7e695eeb9ead5c3ecd12a4681b59340691180e65b68fc",
+        "references/examples/company-newsletter.md": "30f81cfbdb03858a006169c72169024089c7c5d3d32611d337782da4f38c86b5",
+        "references/examples/faq-answers.md": "5ecd3356cd6666937f2ebefa753253edfdbdca15e368d07baf398bfcced72484",
+        "references/examples/general-comms.md": "4d3a4bb198a77626bcf018e96b2b45a2dbabed172d4ade0fcd70d23ae8a47a47",
+        "skill.json": "5fee50872cec6016341c32488b9d14f753088babf7ef2779b1d8881e8f5ccd28"
+      }
+    },
+    {
+      "key": "kz-article-deep-analysis",
+      "name": "文章深度解读",
+      "capability": "research",
+      "industries": [],
+      "evidenceHeadings": [
+        "# 文章深度解读",
+        "## 核心任务",
+        "## 使用示例",
+        "## @工作流: 深度解读"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "7cce49ae2992c95f0a0ce9dbaf951ab16aaf373e358b50a8c632f38b26dea4f9",
+        "SKILL.md": "da9d4a2e842c3ccbbb5644c90a7064956daf21ea1bea1af013fc1be48e48a48f",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "c58e4b092f64bd4fa4f9c24605ffeead0b63fa811eb364812642942a556e5fcb",
+        "references/assets/template.md": "ed0712613491e987a0ad82114f7cd7131925cca77c5df5b981d3cfbc468a87cd",
+        "references/methodology.md": "327a48bebc011c17cb24478714ddcd168aedfea6cd8b43cb616112ec0d51d830",
+        "skill.json": "f0ba62d79e18ac024c5d33491518f2b11a12886b6c3c10b6869d9fac0c8945cb"
+      }
+    },
+    {
+      "key": "marketing-ab-testing",
+      "name": "A/B 实验设计",
+      "capability": "data-analysis",
+      "industries": [],
+      "evidenceHeadings": [
+        "# A/B Test Setup",
+        "## Initial Assessment",
+        "## Core Principles",
+        "### 1. Start with a Hypothesis"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "f69ae3ed245764f0fb2c206b71cb19244e870af44f4098af72fe18fe55690df7",
+        "SKILL.md": "a9238e635c1243f1c22607d200af1e264569c69777204fba48b7c152479ddfc5",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "d0fa1a51d3989ec2b14e905a2833d2c3387f634c506bcc4a742966ed882a5e92",
+        "references/evals/evals.json": "fb32e1f75fc70e339e71f88b1cf10bd9f3d1835178a62d1156ed7dddc278f061",
+        "references/sample-size-guide.md": "53525ddf0e904477262dc3dbc89d4bd4205f2e07d655616de91e22a310f768c4",
+        "references/test-templates.md": "761a40b9de8d16f18fa7f60b59e77aa749607ac8014af43e0b022f47fa87c812",
+        "skill.json": "40c3725bd9c30e9fe021c4776830487dc7e3f643d807049eb46dd9cd921ec38b"
+      }
+    },
+    {
+      "key": "marketing-churn-prevention",
+      "name": "客户流失预防",
+      "capability": "marketing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Churn Prevention",
+        "## Before Starting",
+        "### 1. Current Churn Situation",
+        "### 2. Billing & Platform"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "1f2eeea9fccbe3b791c76fdf2454861e8bec72da3e659a9ec532cebb40224049",
+        "SKILL.md": "af0ecbef394addd1c5044b634624cb258fd086b558ac48d9ff14ef72a29b49c0",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "905d873bcbb87d9226a2cde993814dfc469f72867013177e4f50e4bfa4d75ad9",
+        "references/cancel-flow-patterns.md": "d64b9282b956da6831ec97a1fffda5841c5c43a71721b512b66b04bde104c139",
+        "references/dunning-playbook.md": "24b96a01cfba174c9f3adde66d417e7282c0cf31789c2719e6bd37b8ad2ecf8c",
+        "references/evals/evals.json": "ee85b927a1bea665b0c080034c76dcc1a81c57be1f4e974a664c7f62c4329dfd",
+        "skill.json": "ae540a62d9e12d50ab6fee6fbcee8c74ce9568faa60f4678ac768282582d0345"
+      }
+    },
+    {
+      "key": "marketing-community-marketing",
+      "name": "社群营销规划",
+      "capability": "marketing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Community Marketing",
+        "## Before You Start",
+        "## Community Strategy Principles",
+        "### Build around a shared identity, not just a product"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "950004ffcb06d6b91931a9f9fa351e88d917f96e9b94863e54f48209a77cf475",
+        "SKILL.md": "2b197394723edbc018d59c22b664b7251f75e3e29ebfbf7bbc95ec23b4662ff7",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "d6c3c938360377adba9825333566555ea7aa7d2c6df311f53790676680fe28c7",
+        "references/community-models.md": "6da82069b761bc557803d497b091c60c0798f921fe9c81c45c45bc4d7d7240cd",
+        "references/evals/evals.json": "fa15fb195c71bd91099919f5a736007362a2b7c0574ffb4692eb300f213bd22f",
+        "skill.json": "bed49bb979f0d0b44c441c3f1a10def471112b506d60f8e5b9b55abae11ff215"
+      }
+    },
+    {
+      "key": "marketing-content-strategy",
+      "name": "内容策略规划",
+      "capability": "marketing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Content Strategy",
+        "## Before Planning",
+        "### 1. Business Context",
+        "### 2. Customer Research"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "149fa498a28b39593deed072128f85012e6d632e29436abf03f5da9facca3178",
+        "SKILL.md": "a574823adb6125fe84a893ad7f68d50252c492c207f7e88081fdbeb30c8a51f9",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "1d8ca6b601b64ccd042adceae26060cd8f010ee08ad2b8b4ac6e9421c9ff4e51",
+        "references/content-distribution.md": "1861a1aab0627ab29c279000879a9889242da1ba85e677acdc759c66a6241778",
+        "references/evals/evals.json": "10167e7125ee77cbabe4f03953750dd99ea147f7461027fdbb0cf8e089e5506d",
+        "references/headless-cms.md": "efc796ae9596d1efcb876683db2d9b7c10c83e76e1cb69e527097907d5b4fc3f",
+        "skill.json": "5b355d423851e2ac4543129ecb0264b5fad0b61abfb71d499de4849327204a1f"
+      }
+    },
+    {
+      "key": "marketing-copywriting",
+      "name": "营销文案写作",
+      "capability": "writing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Copywriting",
+        "## Before Writing",
+        "### 1. Page Purpose",
+        "### 2. Audience"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "21edec0c4dbe560a4989a1496d23c01d9b8d3979780e7f2d55054e54f9dad408",
+        "SKILL.md": "61a792b260dbcde6a4fd731e95a9d07b193606f7d8b14b70057972fc98f3659a",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "a9ffed47513e429a3fff464614d7e3d9255e03e9c3ef5be103c6406ab8f31c6b",
+        "references/ai-tells.md": "b98c3a19b3a75c714d69e80a0076e4c07244b0e833c2ce81ff2631224fb7f7b2",
+        "references/copy-frameworks.md": "4db06c481a904be3e4571ad8f671532c97ec186ddf0fb8aee3e3a56ef8e3d441",
+        "references/evals/evals.json": "ccec86052a0edd8646d0e50e63c08e0e971f443d8f6e9178843a1629f79efdb0",
+        "references/natural-transitions.md": "9bd61b0de5be2c4de4ce130c68236b4f290b12737823827a458bb2b4c8584683",
+        "skill.json": "020cad7077017579b5af5f1c094acbfc906a457410fc6f4d1333f3f9d539cd44"
+      }
+    },
+    {
+      "key": "marketing-customer-research",
+      "name": "客户需求研究",
+      "capability": "research",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Customer Research",
+        "## Before Starting",
+        "## Three Modes of Research",
+        "### Mode 1: Analyze Existing Assets"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "6a220b04b9ef9e3e9543525993e68825192b5264f05746e887074d24a0dbcb92",
+        "SKILL.md": "b1128fed67e6cf947ccb8fed8a41b939cae5d6b7b1475a010108897331a9798b",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "9928139d4999f71ac67ebdb9e9541ce4f4263032750a19f9cae7c3c0da7b03a3",
+        "references/evals/evals.json": "fc8a15d12e582b55fa52ad27925594ab796ebd6a8ea13fed13722f97e4c51f01",
+        "references/interviews-and-surveys.md": "56adecdc40af1242464937100349fc1a161627394909551720494bc5ee537076",
+        "references/source-guides.md": "7490a8d04f209d4c8c987530e79d0883a6b42027b86a920fc751cf8ea9904892",
+        "skill.json": "e57ee8e100088cb304eee64eed4c8b06cb73b18bacfd69d60c338fa3b8828562"
+      }
+    },
+    {
+      "key": "marketing-launch",
+      "name": "产品发布策划",
+      "capability": "marketing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Launch Strategy",
+        "## Before Starting",
+        "## Core Philosophy",
+        "## The ORB Framework"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "f801c8121c97c5bfb83dde4b9bfdc5fd7a5b4a3f8b48e00e2aaf829522f516f0",
+        "SKILL.md": "7ec07986238307c51eed5484bb357a1f1ce3027e5236ca99d81fb757bd5f75d1",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "71bcfcfb323829f8c3c057aeb7d775bfd2fb4cc79fe43971785217b1a977d840",
+        "references/evals/evals.json": "f2ceb01d664e24ea253789a9a686997f5cc33a0fc99f57bf215acdada787322c",
+        "references/shipped-changes.md": "873c79d17d3f428147348a9cc2a5e3d6bb8282cf13fc8a143d539840e8abaa96",
+        "references/site-launch-qa.md": "aac0447d0d518468e86e971f4e781b61ee05e81dada402e2edcef709cc6418ab",
+        "skill.json": "aec590679a223c27b1a9aff5950dfe7a8c48b63635167a1154104523115883be"
+      }
+    },
+    {
+      "key": "marketing-marketing-plan",
+      "name": "营销计划制定",
+      "capability": "marketing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Marketing Plan",
+        "## When to use",
+        "## How this skill is invoked",
+        "## The three phases"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "1fcc3d12e81e222b87930b217fb22c797ec195ca9cd87d6af9a59ef15d1cbcd7",
+        "SKILL.md": "58c89bfebe2bde2af1af2702616b60e7cf82e74d6a61124026321c08a1458fb6",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "91ccb96f246b0be562cccf814ef445ada5db3e7774c3d13def0fa511b3aa0296",
+        "references/aarrr-framework.md": "5c7bf583c2aa62e193789b6b1a88a978bf3ba9dc0c8c6653b53f7f62c0c1a0e3",
+        "references/budget-planning.md": "4351fa1712b66e3e527b71ec9a2e01a68edb43e77b6d310bb424756c6d1a17f7",
+        "references/client-types.md": "06e3d0a6f3e9b7195a8c0b43d5186769d1554d1dfd8b1212aca220f9ce09fc01",
+        "references/current-state-rubric.md": "8ab1d4a4d16ec01c2bf61d83807c0abd857aadd82f3eeaf4e4842b4bbeff1f03",
+        "references/evals/evals.json": "79c3b7680e6ab2f6e4130e7bf13bbfe4011470a7aa44d128344e1505ead4bb57",
+        "references/example-quietude.md": "63c002257ee1f6eaeb7c99c4ab9c650ea8bd8f7586c75e4565c2322faef82a04",
+        "references/funding-stage-unlocks.md": "49f073653ac32dd42b7e5e10c3deabd7adae8120c41baf0cf813ec20164c6488",
+        "references/growth-patterns.md": "fafa84b8c3a62ed9c33c30fc25c7422e0d87b935de990d0acbf91889e1a053de",
+        "references/idea-cross-reference.md": "350fa9c6f4cb4cd8f23698adb8479ae94cd6564a06b2b7cfcdf1430448e68d2f",
+        "references/market-sizing.md": "e991bf2f38948ea4e829c74fea83f367fbcacb4d6c2ca0f4ca89fc8b9fb2bc0e",
+        "references/measurement-framework.md": "93d9bf9d9e624a6031a27ce61cf1617e3aa5a8fff57e1c6f80194f847234b745",
+        "references/methodology.md": "a5ae96ee26c800aa40eafcb525139e3dd49b2c1d24005fdcc038287ad25ede7e",
+        "references/ops-stack-mapping.md": "9a506816d87ed176c0578d13bbf25c5f8398872d9002b3589e2dfa42ad17c907",
+        "references/plan-template.md": "bce84c2c3c31c9163a0849a1371aadb13f6ab8b29402e64b7d5b95c316a79656",
+        "references/team-and-agency-model.md": "0c5e55c0992de4d5d24cd299eb46765a8986cb204ebd7c65bce32c868ae0d5f7",
+        "skill.json": "0b0f82d6c2c45dc4f851977e9ba42e1e592c80826dc280517a0cb166a5ffd0ef"
+      }
+    },
+    {
+      "key": "marketing-marketing-psychology",
+      "name": "营销心理学应用",
+      "capability": "marketing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Marketing Psychology & Mental Models",
+        "## How to Use This Skill",
+        "## Foundational Thinking Models",
+        "### First Principles"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "00ebac5b0b48ab1dd4c7b7782f188258f571369cd6a91a677d50ee154657c79d",
+        "SKILL.md": "ea4775b694de88b63e42aee623181f2c3ff6f89a0603d67c03d3587f28fd6b87",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "26fd249d5dcc7b1dc6a89de1378bd293fbdc11e7627c5794c7572b50ed24ec8b",
+        "references/evals/evals.json": "c3b7d15b3008eeb493796e21affd6a0c6e7ce312f9cfeffcdef467857903c733",
+        "skill.json": "c9ebd019f7593b89d6555c91b49882652da49bd0556d9de19ff4b1e2d9b6cc2a"
+      }
+    },
+    {
+      "key": "marketing-pricing",
+      "name": "定价策略分析",
+      "capability": "marketing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Pricing Strategy",
+        "## Before Starting",
+        "### 1. Business Context",
+        "### 2. Value & Competition"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "76fa376f2eb2d375ba18fc5a0272b56463ae6e2f16625483c335095325bd2a64",
+        "SKILL.md": "d84da71508df24d53865d7c4b3c2e82de292cfee4faa9c28fbaf67e6f12267aa",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "31095b9691603e2428848e1c113704e9e0cc23fd7c145537641b0acdf9c0a9eb",
+        "references/evals/evals.json": "ea2ec5a51826311225c806c9ff3f7fc8c4716b154f7b91aba67ab8639bdb8984",
+        "references/pricing-models.md": "2cdb900b74f56a796c0331725e73eff4ecd84f8021b42efbb0a5b4903d1d9b16",
+        "references/pricing-page-teardown.md": "b58a3bffa58ae7c3a475aba33887daaa98e0dc0de57ea948314256b08aa306ad",
+        "references/research-methods.md": "90337058da40c2fcf858bfee9ee8905ad1dc3a5f90d1878f9a8e9ab79193631b",
+        "references/tier-structure.md": "b59910d37cceb74484f28b065963daa60f5c4fb1ffc36a0584d0f3cad11f3e30",
+        "skill.json": "252950c3911711a570bef033d6c8eef2f367ed8609c1772979685686ab80083f"
+      }
+    },
+    {
+      "key": "marketing-referrals",
+      "name": "推荐增长方案",
+      "capability": "marketing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Referral & Affiliate Programs",
+        "## Before Starting",
+        "### 1. Program Type",
+        "### 2. Current State"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "4b9a9d296361d00a6f00bc4090ec186150bcd3b273164e6271b7fece47394aaf",
+        "SKILL.md": "22f23dc5601a1f41fe6e86be36635daf6ce3a95b9700cfab1cec3618b0eb99d2",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "f962dcdf429a8bfb7555b70727aeb94ef6b0638af2d560061c200fbd304107cd",
+        "references/affiliate-operations.md": "fc045ff9c7eba29b13219d56d28fb15c8240439acf2df7e7a6205836948513a0",
+        "references/affiliate-programs.md": "b6fe63ca69462d28b7be74f4f5f4f237d2c9f72179dc5d3ef80f8fab37fccce7",
+        "references/evals/evals.json": "5148d0e25787ed7b2305b3f356ebf4c329181933696d1085a3f53f3b32b0e766",
+        "references/program-examples.md": "3ba131b1d6f77c115134a6d56bbf10709fe4822f65b6a3446605cadeebc6b107",
+        "references/review-platform-rules.md": "9c537eaf4be1799d58f1c563fc660f1b4303c89feded6b2eda304c4ff2c0cb01",
+        "references/review-program-operations.md": "9ca87ad31a59da14f525c273f2c3df90d47fedec7e38d7689529f6ea8e445192",
+        "references/review-programs.md": "b5e3783f12da945bafd88c135e1ccebbf1cfb578715b02c0cf73b50af00aa645",
+        "references/viral-mechanisms.md": "04224240fae94bcf9bc64c7d8cac507bdd570049144e4df33946ac4ae8a483e4",
+        "skill.json": "3a844b8c56dede9257590265cfedb4f8a01e30a65f87dd7120df244571dd3ab8"
+      }
+    },
+    {
+      "key": "marketing-seo-audit",
+      "name": "SEO 诊断清单",
+      "capability": "marketing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# SEO Audit",
+        "## Initial Assessment",
+        "## Audit Framework",
+        "### Schema Markup Detection Limitation"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "e1566987c6aef2065da342719b452ec34f21318fde9bf10ff96f7edc241720c9",
+        "SKILL.md": "2960ded35b82c451a2d06f1430df255fcda91176226fe44a09d62d29a26f156e",
+        "references/LICENSE.txt": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "references/NOTICE.txt": "7952db81955deb62d5be6cc04ccecfa0add14df52a21e3694e011977e18a6789",
+        "references/ai-writing-detection.md": "f1e273f56ce7e2215ff218bf903680ddcec0fd026ab90c3ebfb3439ed0edfaa4",
+        "references/evals/evals.json": "1524e98916ab53abb894fb80827a8d0e1815041adca2ee2023b89916d68f22b2",
+        "references/international-seo.md": "0603022cca968acf7889fc224221aa0e70955ba64355bc18b06f7e86b32f45e5",
+        "references/local-seo-pages-and-measurement.md": "20607ef91c4b8b37346f42130a6f51ed4ce64dc2731b6e1328b5b14f16917fe3",
+        "references/local-seo-profile-and-citations.md": "83b1b63eb6083e7aab1f56c4928335ea2a235e837861a9e9e8043b6af162a1f3",
+        "references/local-seo.md": "d2666d9c225bc36f9737ce612894abbe7e263b5974e2db7c1efc50f6010bb376",
+        "references/rankings-push.md": "c21d6d4f9faf7ce5b1dc0f8bd508e7513967492fcd8ed9510a175ce243daf8c8",
+        "references/title-tags.md": "c40b3c6af3600ca15670db8eb81000c7ca6fa25265a6550ccc630f53db3fcf51",
+        "skill.json": "ed1e8cd5a17f9cdf24c22c93e3727e5eda16fac659ad19aa2a648d496e9ddaa8"
+      }
+    },
+    {
+      "key": "mcp-builder",
+      "name": "MCP 构建指南",
+      "capability": "code-development",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# MCP Server Development Guide",
+        "## Overview",
+        "# Process",
+        "## 🚀 High-Level Workflow"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "a4ea179a1cebf8abe3a5760feb63aeea64ac25b90d7eebffad154b3b99db33d1",
+        "SKILL.md": "f133344a76f53833195774007ef9c8ca52809f6fe871228f6911217bcfa039fa",
+        "references/LICENSE.txt": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "references/NOTICE.txt": "17aa4328d5946cbfe4b642b233cb9fe6cbf60291742a0323db9d76d95e6c3be1",
+        "skill.json": "ba7ad65359ba977d9473eb653664eb5f6cef478d77bde9ccaa2d88d8d4552d41"
+      }
+    },
+    {
+      "key": "novel-game",
+      "name": "互动小说游戏",
+      "capability": "writing",
+      "industries": [
+        "it",
+        "media"
+      ],
+      "evidenceHeadings": [
+        "## 前置依赖",
+        "## 第一步：需求收集",
+        "### UI 风格自动推断表（`auto` 模式）",
+        "## 第二步：剧情设计"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "12b947757d64457040f34f010492bb242a40c698cf5bca0f0423f8c02c207e7f",
+        "SKILL.md": "bddf2b83fb82a7d5433730552bdd7d0ba793f502043c86c47c914827b7573131",
+        "references/LICENSE.txt": "b1213e16567b96867535f49ab9cd548f25bb7beaa910c26aabceed2dbe5e536c",
+        "references/NOTICE.txt": "a6ac72ce920cffdc9e395c3555e440fbd6528a2f2ecf4e139137f8ac5a197cca",
+        "references/README.md": "45e75f4a142625f678aca4fbff53867901912fd013fda42281a8d1ea0a29247f",
+        "references/README.zh.md": "80639b6b562301e173ba54e987cf31d346066c2a79cfc5883b2ffee6670080a6",
+        "skill.json": "8e3e393b1829f00dfd827d130a92150b96bc44b12b456f2c2c77a76b404e9fb8"
+      }
+    },
+    {
+      "key": "office-docx-zh",
+      "name": "Word 文档处理",
+      "capability": "file-processing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Word documents",
+        "## Create and edit",
+        "## Check and deliver"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "bbe0bd3bf0ce5d8b8c8d0daa625ae421adaaada352aa177dd1258484c763ec61",
+        "SKILL.md": "14669045f8141a73cf8c338059c1fc675314e0774afb5e30d7ff390a25b72b79",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "0d9c62cef6e4853f05a8b041516acc0418abf867fe963238fc72e08424e5fe3c",
+        "skill.json": "a0ad83f9ad9ea7216e14c2c80e0d4bc595f12ec1a37ae8d9bdde53222c2f323e"
+      }
+    },
+    {
+      "key": "office-pptx-zh",
+      "name": "PPT 演示文稿",
+      "capability": "file-processing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# PowerPoint presentations",
+        "## Create and edit",
+        "## Check and deliver"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "63b32541c9e6ce64aa612e853f3b5e6ebba572a1b98ace9dbdf6ec6ce13e086d",
+        "SKILL.md": "68fec7c68a7eecb5c63d1a940c153006138eb5a63677e56dda3b03a27e329730",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "740c786477ce37ae8fd8facc58ad63c8475db526e033da2a5912c1105973170a",
+        "skill.json": "c139e6c43ac706ea20aa0f9f486c009cd31296324bb3f51c273e0ec0f20e5325"
+      }
+    },
+    {
+      "key": "office-router-zh",
+      "name": "办公文档总览",
+      "capability": "file-processing",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Office task routing"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "56756659331adac088a1f123f3f091b9d5faeaddd60aa971fad40f6393429d50",
+        "SKILL.md": "b39fa212fff124f345836f6078c6c7fa46d34fd60de20a0dae40b3828833afb7",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "c1fdb4ba520e584424c9933d64368c1663cc58197ed19e1f96548d8425e1eab0",
+        "skill.json": "865f62c7f5a2e7ac8510060dd9ce206e5ec638b6eaea4eb70bf206ff13e4f9df"
+      }
+    },
+    {
+      "key": "office-xlsx-zh",
+      "name": "Excel 表格处理",
+      "capability": "data-analysis",
+      "industries": [],
+      "evidenceHeadings": [
+        "# Excel workbooks",
+        "## Read and modify",
+        "## Check and deliver"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "db2439844e18abc1afae1518bdec88f15b5fa69415689dabebd0de6a287223a0",
+        "SKILL.md": "f5fe1317c7157ed78a1dcbf21672994957d6412bb612cd460c3a3603368d8fd3",
+        "references/LICENSE.txt": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+        "references/NOTICE.txt": "44856dcaaaae5ab9b9c4b997eff8fa4cd7a4c5b7df02de4d9034169919812ba0",
+        "skill.json": "e1015dbb13891f3811768cabad18453d3c6316a0410a385a773613fc3c56fbc0"
+      }
+    },
+    {
+      "key": "project-governance",
+      "name": "项目治理文档",
+      "capability": "knowledge",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Project Governance",
+        "## 目录",
+        "## 30 秒概览",
+        "## 何时使用 / 何时不用"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "c75a160dbdb02eb617f0cb5741a3c21022b7a664a7c70d280429e5319040457c",
+        "SKILL.md": "79e3c9cf930a86a76e0ea28ee1c49509e37c945d68438fccbba8176abb5bbadf",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "52eb9ad6fa053cebe839aca5e4ddef784f0f2075f6e2678ca4be1c7128915d8e",
+        "references/README.md": "813690d45d6f716ef16ea914fa55faa72a8f1cd6db4f47cdbba5d981005028d1",
+        "references/templates/AGENTS.md": "e0c766a52343476f17837b4d2a29e38f284de624a1040225f5b03a2fc19c82fb",
+        "references/templates/ARCHITECTURE.md": "7c27636bc13c31cd254e70044fca6a04efa52ca5e12647f63c2814b57bcd2647",
+        "references/templates/CHANGELOG.md": "1bbcdfb77e7408bd92d78de3454964507f3940ca3c9ebcc7bca46c2beccf85a9",
+        "references/templates/LESSONS.md": "c713133feeeb0663127ba3b4148d323cbf0178e38f4ff245db7592a7b490e633",
+        "references/templates/PROJECT.md": "0fa4399d46c030ce8688c43684b41030b2aeda9aac84863e8cfa5788b67e4829",
+        "references/templates/VERSIONS.md": "14730d084a156961c44b89949cdbe2f0cef50f46743856138b8984a1dbb03803",
+        "references/templates/blacklist.json": "a4a53215f89c479087a4ce51d213c51d2c83f3b0ebf048be1586517b0b6af9a7",
+        "references/templates/index.md": "4a3f35a77a1cccd4399dfa43c138527e6d3712e1557eb341ab0ffacb01da408a",
+        "references/templates/index_notes.json": "1cfcecfd2c16185cc14df9cdd4a5091ceefc5a1e182fa54a410c6582db0cbad7",
+        "references/templates/session_handoff.md": "dfef81dfef1f922e5982665afa29dc89d5e5b34264a440ecd47e8ad3767b0e52",
+        "references/templates/whitelist.json": "c1538227b28f00565110ab1d903735f6fa3faea5b5f627141550b8c120d43233",
+        "skill.json": "7907ad667abd1796ac5f008709b74eb297ad5244e293bbd6f2647255bb586bad"
+      }
+    },
+    {
+      "key": "skill-creator",
+      "name": "技能编写指南",
+      "capability": "code-development",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Skill Creator",
+        "## Communicating with the user",
+        "## Creating a skill",
+        "### Capture Intent"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "f0799224a1355a6bafffd92c4fda81fcf4fbd4333e5bd5d7d60270155dbc4d1d",
+        "SKILL.md": "0da9f80e15b1e6a1fefa5544f93d2dbdb2f575589c2c2cc620c11ec81d12f198",
+        "references/LICENSE.txt": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "references/NOTICE.txt": "d7c058e49a90a0640cd5879590a7da71d41c139b44d1c27ae20473c8b7e04993",
+        "references/schemas.md": "8e8876180a8989b406a4d3edddf875b04cdfd5805cc8616686d552b11ce4455f",
+        "skill.json": "53af53460ab3539cf80a38c98014110efcb9f7eb48f2ae4ed3bd0e11a8f4845a"
+      }
+    },
+    {
+      "key": "skillhub-trace-evaluator",
+      "name": "技能轨迹评估",
+      "capability": "code-review",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# TRACE 评测师",
+        "## 核心流程",
+        "### Step 1 · 定位目标包",
+        "### Step 2 · 探索"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "8e8ebea20f64912cbeb93af5aee365c78852b3829198518aacd0edbb0760adf8",
+        "SKILL.md": "82e0d676f6ef0f0eaeb0c266b15adc7b9ee54cc94a065610cd349fe6ad17f08c",
+        "references/LICENSE.txt": "6d9e08aac94450e40d7310e36c9beaa41f6c36b069f3b07cc232e9c7ced594c4",
+        "references/NOTICE.txt": "e71b49934b098c90c1c2824ed9752d2608519a3b7d67b140a21886d7ce4c411a",
+        "references/_meta.json": "7ac3fda5a918d0469a9f55247ec31f8e78c017a7bfbadb3822753aaf07c45eb5",
+        "references/adaptability.md": "c79b606bf9c66c8df6621efee63da8b947d43ce05e94922b04b01b51eed81f92",
+        "references/convention.md": "9d13811a110261e21f1ca773f837017d5df90f816b5c69ad7b77c089d4261641",
+        "references/effectiveness.md": "e650c2ad4b864b9e2c0dcf15741125bfe5fb713ec3908fbe5b2f61742800cf7b",
+        "references/examples/sample-report.invalid.json": "13570b9cd00d548febbd63ccba1efdd16f2191e87be4ca9107d0e789e7f08124",
+        "references/examples/sample-report.valid.json": "c2b65efff3322197de455a6fdc4a56f237fa65b2e0c774562b0684980aa1122b",
+        "references/explore.md": "965494d1b948427985c86acfbb21a2251ca05f9e001ee45274e392b8ea4e8890",
+        "references/output-schema.md": "be64e78083cd7be4b1a51ce7c820cba891dddc41733bc0dc7ab5dec3c48903bd",
+        "references/reliability.md": "f87727eb507790f3f639dda5e6281e7123f5972223959047c5954b6477bfbb70",
+        "references/trust.md": "8b1491ba4492f0ab8922b8de833bfa9e848efaef8dfe4beaa47cfc2d0004cb15",
+        "skill.json": "362da1020d5d9148ad4011aa3640f7da4dea9ea53f945f097252ec6b5fa47e5f"
+      }
+    },
+    {
+      "key": "spark-video",
+      "name": "spark-video-episode",
+      "capability": "video-production",
+      "industries": [
+        "media"
+      ],
+      "evidenceHeadings": [
+        "# Self-update",
+        "# Producer Skill — spark-video one-shot production",
+        "# SPARK_VIDEO_PROVIDER defaults to \"bl\"; only set if user opted for wan27",
+        "## Inputs from the user"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "e1125ac9535df25b5ff8a705cdb688a309b2b8ce8f6592a681bc14b4681cb1c8",
+        "SKILL.md": "8535c04fe8c5be5eb58b850cacedd788e91676901ff0b436dbbed1822fd89b82",
+        "references/AGENTS.md": "b803b7fa22c0e2eb1b48312beefcb9b717e0a596953eaac3aafae8d296b2828a",
+        "references/LICENSE.txt": "b1213e16567b96867535f49ab9cd548f25bb7beaa910c26aabceed2dbe5e536c",
+        "references/NOTICE.txt": "660bc5226105007584e24049945cc7d5e851e129affe9f77b6303918b3e6e79e",
+        "references/README.md": "59e93e93d545cad0efa5346b325e80b2cc4fefa90d94e6e7d7ad3d2c281598e1",
+        "references/README.zh.md": "1c3fb1e464ec63588544c7ed7e1029e39551c296dd49aee8411975056a74d943",
+        "references/spark-video-cast/SKILL.md": "3d674fe62bf750feca7fb63a15c9be9665dc48439f2e08871f5363bbcb8dc198",
+        "references/spark-video-clip-review/SKILL.md": "61cfe541ad6d75065e435b775740b4f772ba96b349d5d97ec712acaa5a0999c7",
+        "references/spark-video-clip-review/rewrite-system.md": "caa586ccf882147502ccc5e6baa6e57174a4ee717367fd74ccb75234460f7524",
+        "references/spark-video-clip-review/rubric.md": "483b833bbc7cab5e12332c3fd96144b08a3b94deffabaa785c8858f0a47e7d12",
+        "references/spark-video-director/SKILL.md": "c40107e3eb427bacd651f2a2eb2e3cd12f60b22d80986ac255503c625a26aed9",
+        "references/spark-video-episode/SKILL.md": "c5c9237ad7ef0139c1d1ed84283a706b95204666fb4fe372b1590e5d3944ac84",
+        "references/spark-video-screenwriter/SKILL.md": "9a118486427b099f0536edcbad7412463ea9b8433ba0ee28fbe9016eca9de3a8",
+        "references/spark-video-vfx-review/SKILL.md": "ac7f8918600fac298ebda80760c70cbe7dc71d48a0d68ca729b1d719300f2d49",
+        "skill.json": "ff63cea04f114c1f88a5d1c8445445579ac13d45e11be212eba66a6efb5fa098"
+      }
+    },
+    {
+      "key": "superpowers-brainstorming",
+      "name": "开发方案头脑风暴",
+      "capability": "planning",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Brainstorming Ideas Into Designs",
+        "## Three Paths",
+        "## Anti-Pattern: \"Too Simple To Need Approval\"",
+        "## Red Flags"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "3e0485ad6a91b3003fae4ed6a6f3d30266100f577f45dc53449648b34487be19",
+        "SKILL.md": "33b60c097a7760fd44e95b437140939ae2384c19dc7dd1755274a33b1aa478c7",
+        "references/LICENSE.txt": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "references/NOTICE.txt": "6822a003909c453412d5b9dd1ee80895daf8ae2baa7ce48b153146c4e8ec78a0",
+        "references/spec-document-reviewer-prompt.md": "95a0a195de9d984be2fffa95bab16fc8c563bc296a9cfc5e9c29cb3ece0d7457",
+        "references/visual-companion.md": "77eb44a4ec3408bb3dafb872288ecd94beb8cf21da4f2bafa54fd08255d7808b",
+        "skill.json": "58408299c6e9784fc75d8e8b769df06bcfbb683d3280b3f5e4aea46124e1af2e"
+      }
+    },
+    {
+      "key": "superpowers-executing-plans",
+      "name": "分步实施计划",
+      "capability": "planning",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Executing Plans",
+        "## Overview",
+        "## The Process",
+        "### Step 1: Load and Review Plan"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "6466c2a521dc5fd7a988657fb250d8ce96d12c431d9764f18d8a558214731fae",
+        "SKILL.md": "8697fd552c1fe09f260c98bd6b9903b34394c7b5277a4d173ab9f970c2bf614b",
+        "references/LICENSE.txt": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "references/NOTICE.txt": "c27d994229ed7251e010bdcaccc26a874fa35dfc3d1ab74e5db5ed2239ff2b42",
+        "skill.json": "251c1685d2778c560d5770be6316a69739fea317aad72293691d736ad732b905"
+      }
+    },
+    {
+      "key": "superpowers-receiving-code-review",
+      "name": "代码评审意见处理",
+      "capability": "code-review",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Code Review Reception",
+        "## Overview",
+        "## The Response Pattern",
+        "## Forbidden Responses"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "4e067e2b4f063cfb2a529e7c305d06cc0c5c7f743eaa07b84da12117310d5911",
+        "SKILL.md": "a562847ab48d67d6db03046d05805a66e6d0e073a865c8e0841402a83a30ac11",
+        "references/LICENSE.txt": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "references/NOTICE.txt": "cd0b3b50f90815155f82cd542487a9d44fbefe77658f777190053a895eed1169",
+        "skill.json": "867525a7b4704ee572b1dea4df36c16a37c64337bd8fa98dc3e916fdac50d79e"
+      }
+    },
+    {
+      "key": "superpowers-requesting-code-review",
+      "name": "代码送审准备",
+      "capability": "code-review",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Requesting Code Review",
+        "## When to Request Review",
+        "## How to Request",
+        "## Example"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "235d46b4636ed1813d88b578e9c425ce30fac36fbc22e253b25753455828a793",
+        "SKILL.md": "3b5d36bfb172141226381698fc6347a68d73aa8179f667fb5aae19601ba7e8c4",
+        "references/LICENSE.txt": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "references/NOTICE.txt": "25259d8b32e3070c536ad227831f52bf00197df38619e894354fc7bbf8e56b3b",
+        "references/code-reviewer.md": "5eca5fcfd48a50e0a526ce5ffd64bf625d6b81bb46d11795274dae451fe6ffd4",
+        "skill.json": "7ce6239ca59ced032299ff5cd6091b4a5feec87f46e53577f45600510f77830f"
+      }
+    },
+    {
+      "key": "superpowers-systematic-debugging",
+      "name": "系统化问题排查",
+      "capability": "debugging",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Systematic Debugging",
+        "## Overview",
+        "## The Iron Law",
+        "## When to Use"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "b6820b6bcbf056ad3994411852d9d34abe24276dc22094599268dac8fb214b0c",
+        "SKILL.md": "22ee3ae524f0401b8f0e27bb10649e70c4d0d0c7fe94d7700d885816f906b8c9",
+        "references/CREATION-LOG.md": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+        "references/LICENSE.txt": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "references/NOTICE.txt": "b8d863b592280b2250c28aa7f831adb37030021dd1522eff66ac5faeb674060d",
+        "references/condition-based-waiting.md": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+        "references/defense-in-depth.md": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+        "references/root-cause-tracing.md": "6b0622269e098ca1399e123e553fd385f0b6412d88ef0e9c4f5a8ea9cf1cec7b",
+        "references/test-academic.md": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+        "references/test-pressure-1.md": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+        "references/test-pressure-2.md": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+        "references/test-pressure-3.md": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708",
+        "skill.json": "a25b4dc31b462d813ce891210f44721d0eda9b429b9aa8483137cf5cdd7a8cd5"
+      }
+    },
+    {
+      "key": "superpowers-test-driven-development",
+      "name": "测试驱动开发指南",
+      "capability": "testing",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Test-Driven Development (TDD)",
+        "## Overview",
+        "## When to Use",
+        "## The Iron Law"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "42a8a605010b3e9f9c2e1708bc72942a9aeca00b3615cbe8959e06953a826ec3",
+        "SKILL.md": "f3d29cd8a177b09710acd2a4506f3c3f23652d5492182a3f04cfe4292dfc5f41",
+        "references/LICENSE.txt": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "references/NOTICE.txt": "4d3b0ac8e09d4f9ef4019bc40f5e143da57a04341e8a06812fba4daaf5178726",
+        "references/writing-good-tests.md": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1",
+        "skill.json": "98768610528b04b457880d0d4cbac4b57181aa15db0b8566683e869b7076f756"
+      }
+    },
+    {
+      "key": "superpowers-verification-before-completion",
+      "name": "完成前证据检查",
+      "capability": "testing",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Verification Before Completion",
+        "## Overview",
+        "## The Iron Law",
+        "## The Gate Function"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "c6cf000a635c813d3b08b9bbd79d08f10d2f825b96d02485321356ee1b28c458",
+        "SKILL.md": "5875696ef0a8c00570f400eecff0957e98490db37d82bc10d50cd59a366e3928",
+        "references/LICENSE.txt": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "references/NOTICE.txt": "a755e63987a25468b42920f97718eb4a54dde128b956f6543fa48274db45dcd3",
+        "skill.json": "6fac082a9338bf68b8abf8a76ed02546bb47844512698eb6ccb4e52beaa9b3b2"
+      }
+    },
+    {
+      "key": "superpowers-writing-plans",
+      "name": "实现计划编写",
+      "capability": "planning",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Writing Plans",
+        "## Overview",
+        "## Scope Check",
+        "## File Structure"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "a9750c7942c5d5acfb1379bd4d1ef3bb428847a5f678b17588e4394081d8f169",
+        "SKILL.md": "16a7a6736fbee82b7f07b695b675eef0af8a0b4e7cd686c0075450d97d2e4034",
+        "references/LICENSE.txt": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "references/NOTICE.txt": "e589be1c0a26cf7aa57babb96336f8166c054a1be06d72871d433fdcfd770bfd",
+        "references/plan-document-reviewer-prompt.md": "aa728b96aad603c8be28875a4305637f6c984aa81ffcadcb13e743202fa2a0c7",
+        "skill.json": "78b03340ee0975dbaf413749f7e6deb838b34ee60fd472887e4536955bd9ca03"
+      }
+    },
+    {
+      "key": "superpowers-writing-skills",
+      "name": "技能写作与迭代",
+      "capability": "code-development",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Writing Skills",
+        "## Overview",
+        "## What is a Skill?",
+        "## TDD Mapping for Skills"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "900bc39aef5fb5f8725d725244ad3f7f4cbbbdeb28ddd975098e0ff72f674647",
+        "SKILL.md": "20bd6dcb9ac802aaca27f58e0a22c0bfb4026373e8240da80ddf630716b0300b",
+        "references/LICENSE.txt": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "references/NOTICE.txt": "7d33e4fc51abd66bb5a6c0a4a9f36d8a4abaa9f111619bbd2694b8563d9dc644",
+        "references/anthropic-best-practices.md": "217629b356c09c9bd11017c9788e8fc654ca1b32c92d4a51cd490e16dd65e59a",
+        "references/examples/CLAUDE_MD_TESTING.md": "0b379a3415e185d3c434b3ad283d8aa132f3022c2a4f210f168865b5986bcef0",
+        "references/persuasion-principles.md": "a51bc9bf75189ea73a27b3fb504a2fdfdb966fb1f7f1cdf03203230a216ccc03",
+        "references/testing-skills-with-subagents.md": "c711346852c911b24a84aa161e0cff06a4cd7f4e2fa9e9c0a266cead5afcbade",
+        "skill.json": "90e22c98b9e7b7850f4009b58f3bd7efee4b785da70ae312ab4202be1ac9b94f"
+      }
+    },
+    {
+      "key": "theme-factory",
+      "name": "主题配色工厂",
+      "capability": "visual-design",
+      "industries": [
+        "media"
+      ],
+      "evidenceHeadings": [
+        "# Theme Factory Skill",
+        "## Purpose",
+        "## Usage Instructions",
+        "## Themes Available"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "7dd74aec7a8adeb083fce8617217dc11de5be33a4ca8888dc2276a93cbd09e3b",
+        "SKILL.md": "aa3360ce3fbb3051f45a757cab7f24de5bf38d02f66cdbe07562412fc9f8b943",
+        "references/LICENSE.txt": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "references/NOTICE.txt": "88f0910391c006a6831397044c71c7b2be78af9b6deca59a4d654be530eccedc",
+        "skill.json": "d598f6a8a62cd78fa60bb061cd7311715dcfaaba9d3e71fdd482130da29371d1"
+      }
+    },
+    {
+      "key": "trae-claw-install",
+      "name": "trae-claw-install",
+      "capability": "devops",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# TraeClawInstall",
+        "## Description",
+        "## Usage Scenario",
+        "## Preconditions"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "6c6a11ed3b4994f6421e9d03d65e8e83ddf877f917cf01520b82f1dd521e0a09",
+        "SKILL.md": "4caa0b1b2b106b5fa973c9d3fe2eeaf0183567512ecca79c46fbf90e507f9222",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "717932dfb603b847837e2740078f958a98ff84c1dc314f6e984255962203cda8",
+        "references/examples/input.md": "1752bb71cda675accd4d792f8cda37fdb1cc212a1da6ab5f25284ea0b160674b",
+        "references/examples/output.md": "1c7076c86d876e3f93527a1c1b827e7e7c7bbac1b09034eb09475b78443a03e9",
+        "skill.json": "5774dcc458e31a0069fe54cee5c20d316f44c23883eec9c83a389a8804892aa9"
+      }
+    },
+    {
+      "key": "video-to-keyframes",
+      "name": "video-to-keyframes",
+      "capability": "video-production",
+      "industries": [
+        "media"
+      ],
+      "evidenceHeadings": [
+        "# 视频转关键帧（video-to-keyframes）",
+        "## 何时调用",
+        "## 依赖",
+        "## 输入"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "5e313e8e4862a841a3c544f7ec3f937bd48edc7a890274c0a5d0c154a57ef884",
+        "SKILL.md": "596c5e5c2809d85597d464c246519cd753c893ddd756bf5180bc3ed1c77b0090",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "6e9d7bc7aceec7bffd389850fbc5ddabc7f63810668a70b81cb9a7fe660d0ac3",
+        "references/requirements.txt": "3dce4151fb6e825170459fb0ff5f2bd4db1a33c5f47882befa29ed25cc17c779",
+        "skill.json": "c0323b9007e592cc059b26182d873a498778ad9cfdf8fbaf2c50dd5633ccc26c"
+      }
+    },
+    {
+      "key": "vox-video-director",
+      "name": "vox-video-director",
+      "capability": "video-production",
+      "industries": [
+        "media"
+      ],
+      "evidenceHeadings": [
+        "# Vox Video Director",
+        "## The core idea (read this first)",
+        "## Prerequisites (check, don't skip)",
+        "## Standard workflow (topic → film)"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "e895e2c53dc0f7ae592d1a0876f560bd3d6ce4ea438a8a681fe8c78ecd16a27f",
+        "SKILL.md": "5477bc6f3287c7b1016581607f95595df1c35ab8d64df1709b636dd72a5de653",
+        "references/LICENSE.txt": "b1213e16567b96867535f49ab9cd548f25bb7beaa910c26aabceed2dbe5e536c",
+        "references/NOTICE.txt": "56d7d7b17143d60bcc556ff4d2bf8aff5102f2a8b07c07ffaf527e5494e04c71",
+        "references/beat-layer.md": "03cecf659721166814efbb8a691cdea1f3d5eca6e6c64121f9cf27e28d04f832",
+        "references/examples/content-timing.beats.json": "98f9c8b1e26c1e46bafa326a291837aab1faf42eb9f92754f9b5da79371ee86a",
+        "references/local-engine.md": "9b256bcdaf8cbd58f63b9410cff6ffdf6d0f71cb739edb6fbab4cd18398b94f7",
+        "references/models-and-gotchas.md": "4826286a77db8f28456f03ba758315b8080f160e606ef2aff38686c098eabdc3",
+        "references/prompt-guide.md": "3767a53cf32c7676c5d81a232b971ec9f6495286485eed756f4693c72f5f6186",
+        "references/voices.md": "445ae0291a2cdfd699d34a71c356cf0ae12ab00e3742c9a9c911ed5d254aa0bb",
+        "skill.json": "4e127f3137074445e667d666fe542d36ba53ac26e51e516e6a2995574c3322d7"
+      }
+    },
+    {
+      "key": "web-artifacts-builder",
+      "name": "网页产物构建",
+      "capability": "code-development",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Web Artifacts Builder",
+        "## Design & Style Guidelines",
+        "## Quick Start",
+        "### Step 1: Initialize Project"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "eacb9a94525c3c975b369a874427ea2061ae9fae561e817cf5279cd74cf4e6c7",
+        "SKILL.md": "57b6032a98db10e2336417b4cbcee3f37865f7411c45cdf00c091027dd606c0b",
+        "references/LICENSE.txt": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "references/NOTICE.txt": "54e0fb9b9fcf08e24878325ca84a9d85d6590ee0feef776a87d1729124acbd71",
+        "skill.json": "9e130bf2a3a1a2bce395a38954654ad35dac439d85dee2bbfb412bafe805d447"
+      }
+    },
+    {
+      "key": "web-design-teroop",
+      "name": "网页设计指导",
+      "capability": "interface-design",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# Web Design Teroop",
+        "## Instructions",
+        "## Design Document Structure (Template)",
+        "# Project Design Specification"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "976caa21b20f3420b93a2701f069dcff4e6cdf24a3d4d4b40d8d779f2204dff2",
+        "SKILL.md": "5f8f6ba7c22909fac3df557ee393468c6a2f6faa8d53c1cc6fc6f727d5d6aead",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "375af6c6ddbc22446587f34999149117325f604575a1fece968be99b1c4fde23",
+        "skill.json": "a3058c88a2d642223d0b540c3a4f7495f0727b6bb357bbc841cb8a187270f0b5"
+      }
+    },
+    {
+      "key": "wechat-mini-program-development",
+      "name": "微信小程序开发",
+      "capability": "code-development",
+      "industries": [
+        "it"
+      ],
+      "evidenceHeadings": [
+        "# WeChat Mini-Program Development Skill",
+        "## Description",
+        "## Usage Scenario",
+        "## Instructions"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "f0e3d586a39ad7a1c1c1ce87d8f7587226e452cbdeaa913a89159707a8252365",
+        "SKILL.md": "c4fd42e2f3cf5a2889b82b423ec91b3a55a603e2dc986ce53d52013686b7311f",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "4ff173c97ddd5e37324915a7aa22ebeb0e69ab147e97ca4b005fe9e4d41ee678",
+        "skill.json": "e85745302f91dd47e6c5be203d63afaed686f77e4986c787d92b3c5414245586"
+      }
+    },
+    {
+      "key": "zopia-ai-skills",
+      "name": "zopia-api",
+      "capability": "video-production",
+      "industries": [
+        "media"
+      ],
+      "evidenceHeadings": [
+        "# Zopia External Agent Skill",
+        "## Authentication",
+        "## Recommended Workflow",
+        "## Core API Endpoints"
+      ],
+      "packageFilesSha256": {
+        "ORIGIN.json": "e5a8129fd7d868ba8bf8a3aa5e503160beb0a136fdccb6325218bdccaca3bee7",
+        "SKILL.md": "442ea59532df9a5c2ba73f45654c4e618b6b93ae31c9edea4a2bbe040f42a590",
+        "references/API_REFERENCE.md": "d11ab197582fe004687428c04e3636e14f56fafd29ba5b4ec2aab5b4ae145663",
+        "references/EXAMPLES.md": "82a901da772289cd9242a5a941fd0c5c8ff8ca70e21071b79eaabfb446ab521c",
+        "references/LICENSE.txt": "431f11c463369dbccf93a5b0eb87c85ff3597510401ef0ebfd7e2deec4078d4e",
+        "references/NOTICE.txt": "d0ceb2391a218cb68714a7edcf9bd62c59b42f439e79a0b5cff8d8c79b31a7b1",
+        "references/README.md": "2e926dc4a90ed896e5a81d41311e5f959c82fb3f896d90b56a73da8cb2c21691",
+        "references/README_CN.md": "8d273e9ab8254cb6bafee69ebb84e87901fab71e784591c36837cc067c198088",
+        "references/SETTINGS_REFERENCE.md": "67128ab8c38bc7aaf2c9e67b379ac89a0dfcaea8e17bda5667238a7f601e33d3",
+        "skill.json": "712f288c6f14b5053c749852eb4df122754aa4247c302cb6b87a3f379bd731f5"
+      }
+    }
+  ]
+}

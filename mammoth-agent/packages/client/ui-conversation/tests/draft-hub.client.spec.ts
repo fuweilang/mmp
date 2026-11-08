@@ -202,6 +202,21 @@ it('restores legacy text before a view and reuses the live draft on later shell 
   expect(localStorage.getItem(b.key)).toBe(b.raw)
 })
 
+it('appends a reference chip after typed text and does not send', async () => {
+  const b = await fixture({ text: '条款是什么', references: [] })
+  const applied = b.shell.appendReference({
+    source: 'library', ref: 'node-1@ver-1', label: '制度.md', appearance: 'file', clipboardText: '制度.md',
+  })
+  expect(applied).toBe(true)
+  expect(b.shell.appendReference({
+    source: 'library', ref: 'node-1@ver-2', label: '二.md', appearance: 'file', clipboardText: '二.md',
+  })).toBe(true)
+  const draft = b.shell.draftSnapshot
+  expect(draft.text.startsWith('条款是什么')).toBe(true)
+  expect(draft.references.map(reference => reference.ref)).toEqual(['node-1@ver-1', 'node-1@ver-2'])
+  expect(b.shell.snapshot.phase).toBe('plain')
+})
+
 it('imports reference chips on the first Hub shell and preserves them without an explicit clear', async () => {
   const b = await fixture(saved)
   expect(b.shell.draftSnapshot).toEqual(saved)

@@ -1,0 +1,49 @@
+{
+  "key": "superpowers-test-driven-development",
+  "name": "测试驱动开发指南",
+  "summary": "按红绿重构流程组织开发；测试执行依赖项目环境。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=1",
+  "source": {
+    "owner": "openai",
+    "repo": "plugins",
+    "ref": "main",
+    "path": "plugins/superpowers/skills/test-driven-development",
+    "treeSha": "b767f8fa3be1a22b093127dd59956c91ecffca9d",
+    "skillBlobSha": "4320d8879a639d0536c2239bb80c9d7257ad8947",
+    "immutableRef": "https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/test-driven-development/SKILL.md (git-blob:4320d8879a639d0536c2239bb80c9d7257ad8947)",
+    "licenseEvidence": [
+      {
+        "path": "plugins/superpowers/LICENSE",
+        "blobSha": "abf0390320aa14406af7a520b9b0739fdda9bf08",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/plugins",
+      "html_url": "https://github.com/openai/plugins",
+      "stargazers_count": 7785,
+      "forks_count": 1002,
+      "pushed_at": "2026-11-03T23:23:40Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "OpenAI-distributed curated Superpowers plugin; original author Jesse Vincent."
+    },
+    "includedResources": [
+      {
+        "path": "plugins/superpowers/skills/test-driven-development/writing-good-tests.md",
+        "sha": "d3c4482fd30b4f9084bb61545fe73939a7502c28",
+        "mapped": "references/writing-good-tests.md"
+      }
+    ],
+    "omittedFiles": [
+      "agents/openai.yaml"
+    ],
+    "originalBodySha256": "3314d3f55d4d1ba3fde7283f471826ec9b296dbc5deae0275003af2381c774c7"
+  },
+  "officialVsAdapted": "adapted"
+}

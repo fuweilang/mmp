@@ -1,0 +1,20 @@
+{
+  "key": "happyhorse-prompt-studio",
+  "name": "happyhorse-prompt-studio",
+  "summary": "Interactive prompt studio for HappyHorse 1.0 video generation. Guides users through scenario discovery with vivid examples, then assembles …",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [
+    "references/README.md",
+    "references/README.zh.md"
+  ],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "modelstudioai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/happyhorse-prompt-studio",
+    "immutableRef": "github:modelstudioai/skills@main:skills/happyhorse-prompt-studio#1dae19907446"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

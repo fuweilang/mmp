@@ -1,0 +1,180 @@
+/**
+ * Shared filesystem path helpers for DeepSeek Harness user data.
+ *
+ * @module @mammoth-ai/mmp-home-paths
+ */
+import { opendir, realpath } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { basename, dirname, join, resolve } from 'node:path';
+/** Directory name for the default DeepSeek Harness home under the OS home. */
+export const MMP_HOME_DIR_NAME = '.mmp';
+/** Stable user-facing display form for the default DeepSeek Harness home. */
+export const DEFAULT_MMP_HOME_DISPLAY = `~/${MMP_HOME_DIR_NAME}`;
+/** Environment variable that overrides the default DeepSeek Harness home. */
+export const MMP_HOME_ENV = 'MMP_HOME';
+/** Directory name for the default shared agent configuration root under the OS home. */
+export const AGENTS_HOME_DIR_NAME = '.agents';
+/** Stable user-facing display form for the default shared agent configuration root. */
+export const DEFAULT_AGENTS_HOME_DISPLAY = `~/${AGENTS_HOME_DIR_NAME}`;
+/** Environment variable that overrides the default shared agent configuration root. */
+export const AGENTS_HOME_ENV = 'MMP_AGENTS_HOME';
+/**
+ * Give a native filesystem watcher one canonical spelling of a path, even
+ * when its final components do not exist yet. The deepest existing ancestor
+ * is resolved through {@link realpath}; when a suffix is missing, that
+ * ancestor is also proved to be an enumerable directory before the suffix is
+ * restored. This prevents Windows from treating a regular-file ancestor as
+ * ordinary absence, and prevents short-name aliases from being mixed with
+ * long paths emitted by the native watcher backend.
+ * @param path - Watch target or root, resolved against the current directory.
+ * @returns the target with its existing ancestor canonicalized.
+ * @throws when ancestor traversal encounters an error other than absence, or
+ * the existing ancestor of a missing suffix is not an enumerable directory.
+ */
+export async function canonicalizeWatchPath(path) {
+    let current = resolve(path);
+    const missing = [];
+    while (true) {
+        try {
+            const canonical = await realpath(current);
+            if (missing.length > 0) {
+                // A Windows file-as-parent probe reports ENOENT. Opening the resolved
+                // ancestor preserves the cross-platform directory requirement.
+                const directory = await opendir(canonical);
+                await directory.close();
+            }
+            return join(canonical, ...missing.reverse());
+        }
+        catch (error) {
+            if (error.code !== 'ENOENT')
+                throw error;
+            const parent = dirname(current);
+            /* v8 ignore next -- a filesystem root exists, so traversal resolves before this guard */
+            if (parent === current)
+                throw error;
+            missing.push(basename(current));
+            current = parent;
+        }
+    }
+}
+/**
+ * Resolve the default DeepSeek Harness home using Node's platform path rules.
+ * @returns the absolute default harness home path.
+ */
+export function defaultMmpHome() {
+    return join(homedir(), MMP_HOME_DIR_NAME);
+}
+/**
+ * Resolve the default shared agent configuration root using Node's platform path rules.
+ * @returns the absolute default shared agent configuration root.
+ */
+export function defaultAgentsHome() {
+    return join(homedir(), AGENTS_HOME_DIR_NAME);
+}
+/**
+ * Expand supported tilde prefixes against the operating-system home.
+ * @param path - configured path that may begin with `~`, `~/`, or `~\`.
+ * @returns the expanded path, or the original value when no supported prefix is present.
+ */
+export function expandHomePath(path) {
+    if (path === '~')
+        return homedir();
+    if (path.startsWith('~/') || path.startsWith('~\\'))
+        return join(homedir(), path.slice(2));
+    return path;
+}
+/**
+ * Resolve one user-data root from an explicit path, an environment override, and a default.
+ * @param configured - explicit path, which has highest precedence.
+ * @param env - environment mapping to read.
+ * @param envName - environment variable that overrides the default.
+ * @param fallback - default root, used when neither the explicit path nor the environment provides one.
+ * @returns the normalized absolute root.
+ */
+function resolveRoot(configured, env, envName, fallback) {
+    const fromEnv = env[envName];
+    const selected = configured ?? (fromEnv !== undefined && fromEnv.trim().length > 0 ? fromEnv : fallback());
+    return resolve(expandHomePath(selected));
+}
+/**
+ * Label one resolved user-data root symbolically for user-facing display.
+ * @param resolvedRoot - absolute path returned by the matching resolver.
+ * @param defaultRoot - absolute default root whose symbolic label applies to a match.
+ * @param defaultLabel - symbolic label for the default root.
+ * @param envName - environment variable name that labels any other root.
+ * @returns the symbolic label.
+ */
+function rootDisplay(resolvedRoot, defaultRoot, defaultLabel, envName) {
+    return resolvedRoot === resolve(defaultRoot) ? defaultLabel : `$${envName}`;
+}
+/**
+ * Resolve the single-root DeepSeek Harness home.
+ *
+ * Precedence, highest first: an explicit configured path, `$MMP_HOME`, then
+ * `~/.mmp`. The harness keeps all user data under one root. An empty or
+ * whitespace-only `$MMP_HOME` is treated as unset, so a blank override never
+ * resolves the home to the current working directory.
+ * @param configured - explicit harness-home override, which has highest precedence.
+ * @param env - environment mapping used to read `MMP_HOME`.
+ * @returns the normalized absolute harness home path.
+ */
+export function resolveMmpHome(configured, env = process.env) {
+    return resolveRoot(configured, env, MMP_HOME_ENV, defaultMmpHome);
+}
+/**
+ * Resolve the shared agent configuration root.
+ *
+ * Precedence, highest first: an explicit configured path, `$MMP_AGENTS_HOME`,
+ * then `~/.agents`. The root holds configuration shared with other agent tools,
+ * so it stays independent of the DeepSeek Harness home. An empty or
+ * whitespace-only `$MMP_AGENTS_HOME` is treated as unset, so a blank override
+ * never resolves the root to the current working directory.
+ * @param configured - explicit shared-root override, which has highest precedence.
+ * @param env - environment mapping used to read `MMP_AGENTS_HOME`.
+ * @returns the normalized absolute shared agent configuration root.
+ */
+export function resolveAgentsHome(configured, env = process.env) {
+    return resolveRoot(configured, env, AGENTS_HOME_ENV, defaultAgentsHome);
+}
+/**
+ * Join path segments onto the resolved DeepSeek Harness home.
+ * @param segments - path segments appended to the Harness home; an empty list returns the home itself.
+ * @returns the normalized absolute joined path.
+ */
+export function mmpHomePath(...segments) {
+    return join(resolveMmpHome(), ...segments);
+}
+/**
+ * Join path segments onto the resolved Harness home's `cache` directory without creating it; no arguments returns the directory itself.
+ * @param optionsOrSegment - explicit home override, or the first path segment; omission uses the default home resolution.
+ * @param segments - additional path segments after the first child, if any.
+ * @returns the normalized absolute cache path.
+ */
+export function mmpCachePath(optionsOrSegment = {}, ...segments) {
+    if (typeof optionsOrSegment === 'string')
+        return mmpHomePath('cache', optionsOrSegment, ...segments);
+    return join(resolveMmpHome(optionsOrSegment.mmpHome), 'cache', ...segments);
+}
+/**
+ * Describe a resolved harness home symbolically for user-facing display.
+ *
+ * It never returns an absolute machine path: the default home is labelled
+ * `~/.mmp`, and any configured home is labelled `$MMP_HOME`.
+ * @param resolvedHome - the absolute path returned by {@link resolveMmpHome}.
+ * @returns `~/.mmp` for the default home, otherwise `$MMP_HOME`.
+ */
+export function mmpHomeDisplay(resolvedHome) {
+    return rootDisplay(resolvedHome, defaultMmpHome(), DEFAULT_MMP_HOME_DISPLAY, MMP_HOME_ENV);
+}
+/**
+ * Describe a resolved shared agent configuration root symbolically for user-facing display.
+ *
+ * It never returns an absolute machine path: the default root is labelled
+ * `~/.agents`, and any configured root is labelled `$MMP_AGENTS_HOME`.
+ * @param resolvedHome - the absolute path returned by {@link resolveAgentsHome}.
+ * @returns `~/.agents` for the default root, otherwise `$MMP_AGENTS_HOME`.
+ */
+export function agentsHomeDisplay(resolvedHome) {
+    return rootDisplay(resolvedHome, defaultAgentsHome(), DEFAULT_AGENTS_HOME_DISPLAY, AGENTS_HOME_ENV);
+}
+//# sourceMappingURL=index.js.map

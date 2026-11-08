@@ -1,0 +1,17 @@
+{
+  "key": "cloudbase",
+  "name": "云开发指南",
+  "summary": "Use when building, deploying, or debugging Tencent CloudBase (腾讯云开发 / TCB) apps in Trae — Web, WeChat Mini Program, cloud functions, CloudR…",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/cloudbase",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/cloudbase#649b915c3a61"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

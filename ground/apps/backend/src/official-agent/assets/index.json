@@ -1,0 +1,374 @@
+{
+  "source": "mammoth-platform-latest inventory 2026-11-06",
+  "fieldMap": {
+    "key": "agent.key",
+    "name": "agent.name",
+    "summary": "agent.roleDesc",
+    "systemPrompt": "official-agents/<key>/prompt.md or template one-liner",
+    "openingQuestions": "product-authored (latest had none)",
+    "toolScope": "skills.search → web_search；官方KB → enterprise_knowledge；表格 → tabular_analyze；公开页 → web_fetch；编排 → delegate_official_agent",
+    "kind": "has KB → KNOWLEDGE else GENERAL",
+    "kb": "official-agents/<key>/kb/*.md → Ground official_kb_*（非企业私库）",
+    "category": "parent OfficialAgent.category (presentation-only; no new version)",
+    "capabilities": "parent OfficialAgent.capabilities zh labels; tools derived from online toolScope",
+    "avatar": "optional avatars/<file>.jpg on agents/<key>.json; same-key avatars/<key>.jpg convention; historical remaps from mammoth-platform-latest official-agents.ts (ip→growth, gzh→copy, niche→data, sell→live, method→trans, interview→qc); external URLs not vendored; public card avatarUrl; not user/custom agent thumbs"
+  },
+  "nonGoals": [
+    "知识库页面产品形态（企业私库 UI）",
+    "会员套餐与单个智能体定价（第二阶段）",
+    "boss 多层/递归编排与无限子 agent 互调",
+    "未授权爬虫/登录墙抓取"
+  ],
+  "agents": [
+    {
+      "key": "mammoth",
+      "name": "猛犸 AI",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "A",
+      "note": "批次 A；v2 web_search；华为 ACTIVE cmw4dtv550001fqc678ly67ea",
+      "toolScope": [
+        "web_search"
+      ],
+      "status": "PUBLISHED",
+      "category": "common",
+      "capabilities": [
+        "日常问答"
+      ]
+    },
+    {
+      "key": "c3274112ed041",
+      "name": "商业命名大师",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "A",
+      "note": "优先；Markdown prompt",
+      "category": "content",
+      "capabilities": [
+        "品牌命名",
+        "传播力"
+      ]
+    },
+    {
+      "key": "growth",
+      "name": "增长战略顾问",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "B",
+      "note": "已迁移已发布 v1，华为 ACTIVE；versionId 见 openspec tasks.md §6",
+      "status": "PUBLISHED",
+      "category": "sales",
+      "capabilities": [
+        "增长诊断",
+        "策略落地"
+      ]
+    },
+    {
+      "key": "xhs",
+      "name": "爆款小红书专家",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "B",
+      "note": "已迁移已发布 v1，华为 ACTIVE；versionId 见 openspec tasks.md §6",
+      "status": "PUBLISHED",
+      "category": "content",
+      "capabilities": [
+        "选题策划",
+        "笔记写作",
+        "投放建议"
+      ]
+    },
+    {
+      "key": "copy",
+      "name": "获客文案大师",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "B",
+      "note": "已迁移已发布 v1，华为 ACTIVE；versionId 见 openspec tasks.md §6",
+      "status": "PUBLISHED",
+      "category": "content",
+      "capabilities": [
+        "获客文案",
+        "转化写作"
+      ]
+    },
+    {
+      "key": "pyq",
+      "name": "朋友圈内容大师",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "B",
+      "note": "已迁移已发布 v1，华为 ACTIVE；versionId 见 openspec tasks.md §6",
+      "status": "PUBLISHED",
+      "category": "content",
+      "capabilities": [
+        "人设内容",
+        "朋友圈运营"
+      ]
+    },
+    {
+      "key": "video",
+      "name": "短视频脚本官",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "B",
+      "note": "已迁移已发布 v1，华为 ACTIVE；versionId 见 openspec tasks.md §6",
+      "status": "PUBLISHED",
+      "category": "content",
+      "capabilities": [
+        "脚本分镜",
+        "钩子设计"
+      ]
+    },
+    {
+      "key": "sifu",
+      "name": "私域运营大师",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "B",
+      "note": "已迁移已发布 v1，华为 ACTIVE；versionId 见 openspec tasks.md §6",
+      "status": "PUBLISHED",
+      "category": "sales",
+      "capabilities": [
+        "私域成交",
+        "复购运营"
+      ]
+    },
+    {
+      "key": "live",
+      "name": "直播话术专家",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "B",
+      "note": "已迁移已发布 v1，华为 ACTIVE；versionId 见 openspec tasks.md §6",
+      "status": "PUBLISHED",
+      "category": "content",
+      "capabilities": [
+        "留人话术",
+        "逼单话术"
+      ]
+    },
+    {
+      "key": "trans",
+      "name": "咨询转化教练",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "B",
+      "note": "已迁移已发布 v1，华为 ACTIVE；versionId 见 openspec tasks.md §6",
+      "status": "PUBLISHED",
+      "category": "sales",
+      "capabilities": [
+        "咨询转化",
+        "异议处理"
+      ]
+    },
+    {
+      "key": "qc",
+      "name": "客服质检官",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "B",
+      "note": "已迁移已发布 v1，华为 ACTIVE；versionId 见 openspec tasks.md §6",
+      "status": "PUBLISHED",
+      "category": "productivity",
+      "capabilities": [
+        "会话质检",
+        "话术打分"
+      ]
+    },
+    {
+      "key": "niche",
+      "name": "利基战略顾问",
+      "kind": "KNOWLEDGE",
+      "hasKb": true,
+      "migratable": true,
+      "batch": "C",
+      "note": "已发布 v1；全员可聊+官方KB",
+      "status": "PUBLISHED",
+      "toolScope": [
+        "enterprise_knowledge"
+      ],
+      "category": "expertise",
+      "capabilities": [
+        "利基战略",
+        "差异化"
+      ]
+    },
+    {
+      "key": "gzh",
+      "name": "公众号改写专家",
+      "kind": "KNOWLEDGE",
+      "hasKb": true,
+      "migratable": true,
+      "batch": "C",
+      "note": "已发布 v1；全员可聊+官方KB",
+      "status": "PUBLISHED",
+      "toolScope": [
+        "enterprise_knowledge"
+      ],
+      "category": "content",
+      "capabilities": [
+        "公众号改写",
+        "二次创作"
+      ]
+    },
+    {
+      "key": "method",
+      "name": "方法论大师",
+      "kind": "KNOWLEDGE",
+      "hasKb": true,
+      "migratable": true,
+      "batch": "C",
+      "note": "已发布 v1；全员可聊+官方KB",
+      "status": "PUBLISHED",
+      "toolScope": [
+        "enterprise_knowledge"
+      ],
+      "category": "expertise",
+      "capabilities": [
+        "方法论",
+        "SOP"
+      ]
+    },
+    {
+      "key": "ip",
+      "name": "IP策划大师",
+      "kind": "KNOWLEDGE",
+      "hasKb": true,
+      "migratable": true,
+      "batch": "C",
+      "note": "已发布 v1；全员可聊+官方KB",
+      "status": "PUBLISHED",
+      "toolScope": [
+        "enterprise_knowledge"
+      ],
+      "category": "content",
+      "capabilities": [
+        "IP定位",
+        "人设策划"
+      ]
+    },
+    {
+      "key": "interview",
+      "name": "访谈大师",
+      "kind": "KNOWLEDGE",
+      "hasKb": true,
+      "migratable": true,
+      "batch": "C",
+      "note": "已发布 v1；全员可聊+官方KB",
+      "status": "PUBLISHED",
+      "toolScope": [
+        "enterprise_knowledge"
+      ],
+      "category": "expertise",
+      "capabilities": [
+        "访谈设计",
+        "追问链"
+      ]
+    },
+    {
+      "key": "sell",
+      "name": "卖点大师",
+      "kind": "KNOWLEDGE",
+      "hasKb": true,
+      "migratable": true,
+      "batch": "C",
+      "note": "已发布 v1；全员可聊+官方KB",
+      "status": "PUBLISHED",
+      "toolScope": [
+        "enterprise_knowledge"
+      ],
+      "category": "sales",
+      "capabilities": [
+        "卖点提炼",
+        "营销文案"
+      ]
+    },
+    {
+      "key": "boss",
+      "name": "猛犸大总管",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "D",
+      "status": "PUBLISHED",
+      "toolScope": [
+        "delegate_official_agent"
+      ],
+      "note": "批次 D；单层编排 allowlist；全员可聊",
+      "category": "productivity",
+      "capabilities": [
+        "任务编排"
+      ]
+    },
+    {
+      "key": "data",
+      "name": "数据分析师",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "D",
+      "status": "PUBLISHED",
+      "toolScope": [
+        "tabular_analyze"
+      ],
+      "note": "批次 D；确定性表格分析；全员可聊",
+      "category": "analytics",
+      "capabilities": [
+        "经营洞察"
+      ]
+    },
+    {
+      "key": "spy",
+      "name": "竞品情报官",
+      "kind": "GENERAL",
+      "hasKb": false,
+      "migratable": true,
+      "batch": "D",
+      "status": "PUBLISHED",
+      "toolScope": [
+        "web_search",
+        "web_fetch"
+      ],
+      "note": "批次 D；search+fetch；全员可聊",
+      "category": "sales",
+      "capabilities": [
+        "竞品对比"
+      ]
+    }
+  ],
+  "presentationSeeds": {
+    "copy-polish-master": {
+      "category": "content",
+      "capabilities": [
+        "文案润色",
+        "表达优化"
+      ]
+    },
+    "enterprise-product-answer": {
+      "category": "expertise",
+      "capabilities": [
+        "企业答疑"
+      ]
+    }
+  },
+  "avatarHistoricalRemaps": {
+    "ip": "avatars/growth.jpg",
+    "gzh": "avatars/copy.jpg",
+    "niche": "avatars/data.jpg",
+    "sell": "avatars/live.jpg",
+    "method": "avatars/trans.jpg",
+    "interview": "avatars/qc.jpg"
+  }
+}

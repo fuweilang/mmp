@@ -1,0 +1,47 @@
+{
+  "key": "industry-accounting-audit-support",
+  "name": "审计材料整理",
+  "summary": "按用户提供材料整理审计证据和工作底稿，需审计人员复核。",
+  "category": "legal",
+  "userCategoryLabel": "财税法务",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "finance/skills/audit-support",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "6480bcddb2d01d8c7ed1730a803f0df5065a0f23",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/audit-support/SKILL.md (git-blob:6480bcddb2d01d8c7ed1730a803f0df5065a0f23)",
+    "licenseEvidence": [
+      {
+        "path": "finance/LICENSE",
+        "blobSha": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "0a78f991088f10bc021e70b1ca091b2ff4dc1967cef4dbae77f1c80f2def695d"
+  },
+  "officialVsAdapted": "adapted"
+}

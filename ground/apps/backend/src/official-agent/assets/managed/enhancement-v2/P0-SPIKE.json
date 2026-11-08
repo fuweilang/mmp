@@ -1,0 +1,12 @@
+{
+  "profileSourceSha256": "e09fd6a8d0685f9319923b50c2504e93fb4dbb1f001f734d5a91b1552b0721be",
+  "platform": "darwin",
+  "syntheticFixtureOnly": true,
+  "probe": "Current allow-default/write-fenced Seatbelt shape; no private files or live network",
+  "probeExit": 0,
+  "outsideReadSucceeded": true,
+  "networkIsolationVerified": false,
+  "hostIdentityAndScopedGrantVerified": false,
+  "capabilityDecision": "CLOSED: no verified cross-entry read/network/TOCTOU enforcement; no arbitrary file/shell/MCP/subtask capability",
+  "note": "A denied or unavailable sandbox binary is also CLOSED, not proof of isolation. No full-access fallback."
+}

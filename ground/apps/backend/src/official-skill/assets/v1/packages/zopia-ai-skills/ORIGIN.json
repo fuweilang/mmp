@@ -1,0 +1,23 @@
+{
+  "key": "zopia-ai-skills",
+  "name": "zopia-api",
+  "summary": "Drive AI video production via the Zopia API: create projects, configure styles, chat with the Agent to generate screenplays/characters/stor…",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [
+    "references/API_REFERENCE.md",
+    "references/EXAMPLES.md",
+    "references/README.md",
+    "references/README_CN.md",
+    "references/SETTINGS_REFERENCE.md"
+  ],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/zopia_ai_skills",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/zopia_ai_skills#62220b15da36"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

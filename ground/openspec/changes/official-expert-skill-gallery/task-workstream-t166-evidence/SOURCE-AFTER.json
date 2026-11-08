@@ -1,0 +1,15 @@
+{
+  "at": "2026-11-07T22:12:12.990560+08:00",
+  "files": {
+    "packages/client/ui-conversation/src/client/contract/draft-editor.ts": "55d4c6296b151f64077767fa6ad46491ed023b6fe34d972f4675693945e968a6",
+    "packages/client/ui-conversation/src/client/input/hub.ts": "22f6309c71720a23052537836b681483442ead5e7c1f5c96ceaaef3e3207090e",
+    "packages/client/ui-conversation/src/client/input/facade.ts": "96849a7e3992c1cc64c8da170550ebe6ad9d5f71aee401ed4a7d7f8ef0839bfc",
+    "packages/client/ui-conversation/src/client/skeleton/InputBar.tsx": "e932e4fdc10ec43b0ea395f14989af02fe8b547234f88c90643049b8ac16dbe6",
+    "packages/client/ui-conversation/src/client/apply.ts": "d45786d7323d53cb660efe82260220466882dfd4b3eaccf704fadff8988fbae5",
+    "packages/client/ui-official-agent-gallery/src/client/GalleryPage.tsx": "3e804a0d969f81a5102c3896e8aaed984c19840801c01015900ab24c67f0cfc6",
+    "packages/client/ui-official-agent-gallery/src/client/GalleryPage.module.css": "e06e2c929d06d48e6e0845f59fc8802280304af20b7d98440958c5e710520e86",
+    "packages/preset/official-agent-gallery/src/index.ts": "9753903b7778fb89ec283ae4aa47da3400cc03ee11c2ca1f699631f1c2230c14",
+    "packages/preset/official-agent-gallery/src/managed-runtime.ts": "34af347412833a5660a986f982036b7984073c6bbd1b448ad1c3b188f8257b48",
+    "packages/core/session/src/known-event-types.ts": "07914a0078c1a920eadd971bd282d04e47b6c6d32e328f2f2a8e537df23db926"
+  }
+}

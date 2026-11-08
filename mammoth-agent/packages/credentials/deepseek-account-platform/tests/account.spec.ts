@@ -158,6 +158,8 @@ async function fixture(
   await authorization
   await beforeAccount?.(ctx, origin)
   const provider = ctx.plugin(PlatformAccount, {
+    // DeepSeek wallet/profile protocol coverage; OIDC SSO is covered in dedicated tests below.
+    authMode: 'deepseek',
     platformOrigin: origin, inferenceOrigin, embeddedPageDist, desktopPlatform,
     allowLoopbackHttp: true, requestHeaders, accountRequestHeaders,
     rewriteBrowserOrigin, logoutRetryDelayMs: 1, balanceTimeoutMs,
@@ -1681,4 +1683,43 @@ it('reads credential-free device identity without minting a device', async () =>
   await storeAccount(f)
   await f.account.getProfile(clientMetadata())
   expect(await f.account.getDeviceIdentity()).toEqual({ deviceId, userId: 'test-user', osVersion: expect.any(String) as string })
+})
+
+
+
+it('OIDC SSO returns an empty ready balance without hitting DeepSeek wallet APIs', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'mmp-account-oidc-'))
+  cleanups.push(() => rm(home, { recursive: true, force: true }))
+  const ground = createServer((req, res) => {
+    if (req.url?.startsWith('/api/auth/me')) {
+      res.setHeader('content-type', 'application/json')
+      res.end(JSON.stringify({ user: { id: 'oidc-user', name: 'OIDC User', phone: '13800000000' }, currentTenant: null }))
+      return
+    }
+    res.writeHead(404).end()
+  })
+  await new Promise<void>(resolve => ground.listen(0, '127.0.0.1', resolve))
+  const address = ground.address()
+  if (address === null || typeof address === 'string') throw new Error('expected TCP address')
+  const groundOrigin = `http://127.0.0.1:${address.port}`
+  cleanups.push(() => new Promise<void>((resolve, reject) => ground.close(error => error ? reject(error) : resolve())))
+  const ctx = new Context()
+  const web = ctx.plugin(WebServer, { host: '127.0.0.1', port: 0 })
+  await web
+  const credentials = ctx.plugin(LocalCredentialProvider, { path: join(home, 'credentials.yaml'), watch: false })
+  await credentials
+  const authorization = ctx.plugin(AuthorizationService)
+  await authorization
+  const provider = ctx.plugin(PlatformAccount, {
+    authMode: 'oidc', platformOrigin: groundOrigin, allowLoopbackHttp: true,
+    inferenceOrigin: 'https://api.deepseek.com', logoutRetryDelayMs: 1,
+  })
+  await provider
+  cleanups.push(async () => { await provider.dispose(); await authorization.dispose(); await credentials.dispose(); await web.dispose() })
+  const account = ctx.deepseekAccount as PlatformAccount
+  await ctx.credentials.modifyRecord(credentialKey('deepseek-account-platform', 'default'), () => Promise.resolve({
+    kind: 'grant', payload: { version: 1, issuer: groundOrigin, token: 'oidc-session-token' },
+  }))
+  expect(await account.getBalance(clientMetadata())).toEqual({ status: 'ready', value: [], bonusWallets: [] })
+  expect(await account.getProfile(clientMetadata())).toMatchObject({ status: 'ready', value: { id: 'oidc-user' } })
 })

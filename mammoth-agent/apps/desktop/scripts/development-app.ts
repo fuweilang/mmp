@@ -30,8 +30,14 @@ export function prepareDevelopmentApp(options: DevelopmentAppOptions): string {
   const executable = join(bundle, 'Contents', 'MacOS', 'MMPDev')
   const stamp = join(bundle, 'Contents', 'Resources', 'mmp-development.json')
   const launcher = developmentLauncher(options, bundle)
-  const identity = JSON.stringify({ ...options, launcher, plist: readFileSync(join(source, 'Contents', 'Info.plist'), 'utf8') })
+  const scheme = 'mmp-dev'
+  const launchServices = '/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister'
+  const identity = JSON.stringify({ ...options, launcher, scheme, plist: readFileSync(join(source, 'Contents', 'Info.plist'), 'utf8') })
   if (!existsSync(stamp) || readFileSync(stamp, 'utf8') !== identity) {
+    if (existsSync(stamp)) {
+      // Remove the previous generated registration before replacing its URL types.
+      execFileSync(launchServices, ['-u', bundle], { stdio: 'ignore' })
+    }
     rmSync(bundle, { recursive: true, force: true })
     execFileSync('/usr/bin/ditto', [source, bundle])
     const plist = join(bundle, 'Contents', 'Info.plist')
@@ -40,7 +46,7 @@ export function prepareDevelopmentApp(options: DevelopmentAppOptions): string {
       CFBundleName: 'MMP Dev',
       CFBundleDisplayName: 'MMP Dev',
       CFBundleExecutable: 'MMPDev',
-      CFBundleURLTypes: [{ CFBundleURLName: '猛犸智能体', CFBundleURLSchemes: ['mmp'], CFBundleTypeRole: 'Viewer' }],
+      CFBundleURLTypes: [{ CFBundleURLName: '猛犸智能体', CFBundleURLSchemes: [scheme], CFBundleTypeRole: 'Viewer' }],
     }
     for (const [key, value] of Object.entries(values)) {
       execFileSync('/usr/bin/plutil', ['-replace', key, '-json', JSON.stringify(value), plist])
@@ -49,7 +55,7 @@ export function prepareDevelopmentApp(options: DevelopmentAppOptions): string {
     writeFileSync(stamp, identity, { mode: 0o600 })
     execFileSync('/usr/bin/codesign', ['--force', '--deep', '--sign', '-', bundle], { stdio: 'pipe' })
   }
-  execFileSync('/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister', ['-f', bundle])
+  execFileSync(launchServices, ['-f', bundle])
   return executable
 }
 

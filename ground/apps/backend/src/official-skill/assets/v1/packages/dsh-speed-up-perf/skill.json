@@ -1,0 +1,15 @@
+{
+  "key": "dsh-speed-up-perf",
+  "name": "性能瓶颈优化指导",
+  "description": "按测量与定位流程组织性能优化，不承诺自动运行专用工具。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

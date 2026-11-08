@@ -660,3 +660,20 @@
     transition: none;
   }
 }
+
+/* Compact empty copy under the fixed Archived section (not the list-wide empty glyph). */
+.archivedEmpty {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px var(--mmp-sidebar-row-padding) 10px calc(var(--mmp-sidebar-row-padding) + 16px + var(--mmp-sidebar-label-gap));
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.archivedEmptyHint {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-caption);
+}

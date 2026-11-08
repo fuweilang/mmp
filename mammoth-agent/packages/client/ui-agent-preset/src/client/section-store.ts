@@ -78,6 +78,7 @@ export class AgentPresetSectionController {
     await this.save(() => writeDefaultPreset(this.ctx, id), sync)
   }
 
+
   /** Replace a hidden built-in default after accepted Coding Tools changes.
    * @param shouldReset Rechecked after waiting; false when tools are enabled or this owner is disposed.
    * @returns Once the conditional save settles; errors remain visible in the section.

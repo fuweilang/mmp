@@ -564,7 +564,7 @@ export class SkillRegistry extends Service {
     return { entries: merged, cacheable }
   }
 
-  private async collectLayer(layer: SkillLayer, options: SkillLookupOptions): Promise<LayerCollectResult> {
+  private async collectLayer(layer: SkillLayer, options: SkillViewOptions): Promise<LayerCollectResult> {
     const collected = await this.listLayerCandidates(layer, options)
     collected.entries.sort(compareIndexedCandidates)
     const seen = new Set<string>()
@@ -581,7 +581,7 @@ export class SkillRegistry extends Service {
     return { entries: result, cacheable: collected.cacheable }
   }
 
-  private async listLayerCandidates(layer: SkillLayer, options: SkillLookupOptions): Promise<LayerCollectResult> {
+  private async listLayerCandidates(layer: SkillLayer, options: SkillViewOptions): Promise<LayerCollectResult> {
     throwIfAborted(options.signal)
     const candidates: IndexedCandidate[] = []
     let cacheable = true

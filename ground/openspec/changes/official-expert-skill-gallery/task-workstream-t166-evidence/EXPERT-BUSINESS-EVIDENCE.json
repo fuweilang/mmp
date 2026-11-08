@@ -1,0 +1,10 @@
+{
+  "groundTransport": "mock",
+  "model": "scripted mock, not live cloud",
+  "loop": "real native AgentLoop",
+  "storage": "real native AttachmentLocal",
+  "outputSHA": "18958172c69e4dfdbbe66b8616b5bb8dd9ed61f05810dc1fbd2646a68a623aa9",
+  "methodOnDemand": true,
+  "firstRequestRoleAndStandard": true,
+  "downloadReadback": true
+}

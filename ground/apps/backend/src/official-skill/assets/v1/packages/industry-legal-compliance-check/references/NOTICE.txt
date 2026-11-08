@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/legal/skills/compliance-check/SKILL.md (git-blob:688d8c967870e6036c27e8fa2f1bc34ca5cf0896)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: legal/skills/compliance-check
+No third-party scripts are executed or shipped in this managed package.

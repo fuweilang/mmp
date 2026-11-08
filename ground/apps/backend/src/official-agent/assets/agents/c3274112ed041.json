@@ -1,0 +1,20 @@
+{
+  "key": "c3274112ed041",
+  "kind": "GENERAL",
+  "name": "商业命名大师",
+  "summary": "结合战略思维与市场洞察，为品牌起出好记、有传播力的名字",
+  "openingQuestions": [
+    "给我们的智能客服产品起一批中文品牌名。",
+    "美妆护肤新品牌，面向年轻女性，请直接开干起名。",
+    "跨境电商选品工具，气质偏专业可靠，给我 4 条命名路线。"
+  ],
+  "toolScope": [],
+  "promptFile": "prompts/c3274112ed041.md",
+  "batch": "A",
+  "publish": true,
+  "category": "content",
+  "capabilities": [
+    "品牌命名",
+    "传播力"
+  ]
+}

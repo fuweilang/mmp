@@ -1,0 +1,63 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../vendor/cordis"
+    },
+    {
+      "path": "../../../vendor/schemastery"
+    },
+    {
+      "path": "../../core/agent"
+    },
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../../core/system-prompt"
+    },
+    {
+      "path": "../../core/tools"
+    },
+    {
+      "path": "../../credentials/deepseek-account"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../llm/llm-ground"
+    },
+    {
+      "path": "../persona"
+    },
+    {
+      "path": "../../session/session-projection"
+    },
+    {
+      "path": "../../typert/protocol"
+    },
+    {
+      "path": "../../workspace/workspace"
+    },
+    {
+      "path": "../../skill/skill"
+    },
+    {
+      "path": "../../attachment/attachment"
+    },
+    {
+      "path": "../agent-preset-registry"
+    },
+    {
+      "path": "../../context/agent-instructions"
+    }
+  ]
+}

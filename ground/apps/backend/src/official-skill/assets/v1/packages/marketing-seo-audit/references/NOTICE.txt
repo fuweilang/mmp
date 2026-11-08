@@ -1,0 +1,5 @@
+Source: https://github.com/coreyhaines31/marketingskills/blob/main/skills/seo-audit/SKILL.md (git-blob:e0a41d8c46c06d1e33ce5295c0f303a94d8f6c5b)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: skills/seo-audit
+No third-party scripts are executed or shipped in this managed package.

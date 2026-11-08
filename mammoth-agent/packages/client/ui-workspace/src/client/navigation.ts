@@ -81,6 +81,11 @@ export interface UiWorkspace {
    */
   connectWorkspace(workspaceId: WorkspaceId, options?: Pick<StartSessionOptions, 'agentPreset'>): Promise<SessionId>
   /**
+   * Resolve the Workspace a new conversation action would use without creating a Session.
+   * @returns the current Workspace, otherwise the most recent ready Workspace; undefined when none exists.
+   */
+  workspaceForNewSession(): WorkspaceId | undefined
+  /**
    * Open the Workspace blank `connectWorkspace` resolves, so New Session returns to that blank's
    * unsent draft. A creation the Host refuses is shown through the Workspace notice and leaves the
    * selection as it was.
@@ -334,11 +339,7 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     })
   }
 
-  startSession(workspaceId?: WorkspaceId, options?: StartSessionOptions): void {
-    const { agentPreset, ...draft } = options ?? {}
-    const draftOptions = options === undefined ? undefined : draft
-    const initializeDraft = draftOptions !== undefined && (draftOptions.prompt !== undefined
-      || (draftOptions.whenDraftExists ?? (draftOptions.clearPreviousDraft === true ? 'replace' : 'keep')) === 'replace')
+  workspaceForNewSession(): WorkspaceId | undefined {
     const workspace = this.workspaces.list.getSnapshot()
     const sessions = this.sessions.list.getSnapshot()
     const current = this.mainReference?.sessionId
@@ -348,7 +349,16 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     const recent = workspace.phase === 'ready' && sessions.phase === 'ready'
       ? recentWorkspace(workspace.items, sessions.byId)
       : undefined
-    const target = workspaceId ?? currentWorkspaceId ?? recent
+    return currentWorkspaceId ?? recent
+  }
+
+  startSession(workspaceId?: WorkspaceId, options?: StartSessionOptions): void {
+    const { agentPreset: _requestedPreset, ...draft } = options ?? {}
+    const agentPreset = 'standard'
+    const draftOptions = options === undefined ? undefined : draft
+    const initializeDraft = draftOptions !== undefined && (draftOptions.prompt !== undefined
+      || (draftOptions.whenDraftExists ?? (draftOptions.clearPreviousDraft === true ? 'replace' : 'keep')) === 'replace')
+    const target = workspaceId ?? this.workspaceForNewSession()
     if (target === undefined) {
       if (initializeDraft) {
         this.notify({ kind: 'createFailed', message: this.ctx.locale.bind('workspace')('draft.workspaceRequired') })

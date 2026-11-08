@@ -13,7 +13,7 @@ type WorkspaceFixtureSnapshot = FixtureSnapshot<WorkspaceSnapshot>
 
 /** Callable command names on the production Workspace Controller face. */
 type WorkspaceAction = {
-  [Key in keyof IWorkspaces]: IWorkspaces[Key] extends (...args: never[]) => unknown ? Key : never
+  [Key in keyof IWorkspaces]-?: IWorkspaces[Key] extends (...args: never[]) => unknown ? Key : never
 }[keyof IWorkspaces]
 
 /** Test replacement retaining one Controller command's parameters and result. */

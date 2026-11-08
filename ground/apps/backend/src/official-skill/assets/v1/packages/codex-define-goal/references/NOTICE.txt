@@ -1,0 +1,5 @@
+Source: https://github.com/openai/skills/blob/main/skills/.curated/define-goal/SKILL.md (git-blob:87f111bd700e0d993465f7ac741847b5daee57d6)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=1
+Original path: skills/.curated/define-goal
+No third-party scripts are executed or shipped in this managed package.

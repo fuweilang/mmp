@@ -1,0 +1,15 @@
+{
+  "key": "docx-diff-comment",
+  "name": "文档差异批注",
+  "description": "Compare two Word documents to find new features in V2, add comments to the V2 document for each new feature, and generate a requirements ta…",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

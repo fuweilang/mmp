@@ -1,0 +1,15 @@
+{
+  "groundTransport": "mock",
+  "model": "scripted mock, not live cloud",
+  "loop": "real native AgentLoop",
+  "storage": "real native AttachmentLocal",
+  "inputSHA": "0a1dd104eccf08b80aeba14be525a7bd9e998b6fa9e52487894ad7c6695dd94c",
+  "outputSHA": "e9414568e3eb3167cf973afc16813a177691255cc24c7490a3c119056b9dedef",
+  "outputBytes": 20,
+  "requestCount": 3,
+  "methodInFirstFinalRequest": true,
+  "standardBaseRetained": true,
+  "privateProviderReadCount": 0,
+  "downloadReadback": true,
+  "scope": "synthetic exact session; not a live account authorization test"
+}

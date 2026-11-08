@@ -1,0 +1,17 @@
+{
+  "key": "frontend-design",
+  "name": "前端界面设计",
+  "summary": "Guidance for distinctive, intentional visual design when building new UI or reshaping an existing one. Helps with aesthetic direction, typo…",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/frontend-design",
+    "immutableRef": "github:anthropics/skills@main:skills/frontend-design#bd77d81dd89e"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

@@ -1,0 +1,17 @@
+{
+  "key": "web-design-teroop",
+  "name": "网页设计指导",
+  "summary": "A design-first architect that generates, persists, and maintains a comprehensive design document (Style, Color, Typography, Icons, Logo) to…",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/web-design-teroop",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/web-design-teroop#eadea4215328"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

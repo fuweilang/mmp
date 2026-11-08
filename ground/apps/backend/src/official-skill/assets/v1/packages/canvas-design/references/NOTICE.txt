@@ -1,0 +1,4 @@
+Source: github:anthropics/skills@main:skills/canvas-design#20a0b1b7a7fb
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=0; dropped=81
+No scripts shipped.

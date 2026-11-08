@@ -1,0 +1,15 @@
+{
+  "key": "office-router-zh",
+  "name": "办公文档总览",
+  "description": "按需选择 Word/PPT/Excel/PDF 办公处理流程，适配猛犸本地办公引擎。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

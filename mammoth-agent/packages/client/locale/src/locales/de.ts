@@ -34,7 +34,7 @@ export const de = {
   'collapse': 'Einklappen',
   'expand': 'Ausklappen',
   'back': 'Zurück',
-  'brand.localBuild': '猛犸智能体',
+  'brand.localBuild': '猛犸AI',
   'workspace.defaultName': 'Standardarbeitsbereich',
   'unknown': 'Unbekannt',
   'none': 'Keine',

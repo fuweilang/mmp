@@ -1,0 +1,4 @@
+{
+  "nativeAdmission": "refused",
+  "reason": "session \"011bfe5a-d986-4929-8c83-741b6c12bdcb\" contains event type \"official-gallery/composition\" (seq 0) unknown to this harness and not marked ignorable; refusing to interpret the log — it was likely written by a newer harness"
+}

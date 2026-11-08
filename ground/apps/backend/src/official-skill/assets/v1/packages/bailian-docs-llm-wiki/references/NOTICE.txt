@@ -1,0 +1,4 @@
+Source: github:modelstudioai/skills@main:skills/bailian-docs-llm-wiki#c02033e2c82e
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=0; dropped=2668
+No scripts shipped.

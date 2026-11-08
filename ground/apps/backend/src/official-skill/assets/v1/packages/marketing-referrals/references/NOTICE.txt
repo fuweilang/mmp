@@ -1,0 +1,5 @@
+Source: https://github.com/coreyhaines31/marketingskills/blob/main/skills/referrals/SKILL.md (git-blob:d5fb5946d0a033de986d47205afb3a80bdae9e04)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: skills/referrals
+No third-party scripts are executed or shipped in this managed package.

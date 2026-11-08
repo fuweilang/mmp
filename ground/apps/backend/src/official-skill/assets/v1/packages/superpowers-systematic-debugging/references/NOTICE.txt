@@ -1,0 +1,5 @@
+Source: https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/systematic-debugging/SKILL.md (git-blob:095d194ac041502905f15b01d22d294fb94db8b2)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=3
+Original path: plugins/superpowers/skills/systematic-debugging
+No third-party scripts are executed or shipped in this managed package.

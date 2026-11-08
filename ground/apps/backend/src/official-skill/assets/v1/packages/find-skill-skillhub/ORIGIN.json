@@ -1,0 +1,10 @@
+{
+  "key": "find-skill-skillhub",
+  "name": "SkillHub 技能检索",
+  "summary": "在 SkillHub 平台查找/搜索 Skill 技能。基于 skills 列表接口，支持关键词分词搜索、一级标签（一级分类）筛选、以及二者组合检索。当用户说『找个 xxx 技能』『有没有处理 PDF 的 skill』『SkillHub 上搜一下 xxx』『按分类看技能』『办公…",
+  "license": "MIT",
+  "source": "github:Tencent/skillhub@main:skills/find-skill-skillhub",
+  "adaptation": "strip-scripts=0",
+  "userCategoryLabel": "检索研究",
+  "category": "common"
+}

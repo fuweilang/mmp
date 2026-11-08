@@ -1,0 +1,13 @@
+{
+  "key": "office-xlsx-zh",
+  "name": "Excel 表格处理",
+  "summary": "创建、分析与编辑电子表格，优先使用本地办公引擎能力。",
+  "category": "expertise",
+  "userCategoryLabel": "办公协作",
+  "license": "MIT",
+  "adaptation": "local-dsh-office-chinese-wrapper",
+  "source": {
+    "immutableRef": "local:mammoth-agent/packages/skill/skill-office/assets/office-xlsx"
+  },
+  "officialVsAdapted": "adapted"
+}

@@ -396,12 +396,39 @@ export class WorkspaceRegistry extends Service {
    * @param sessionId - The session to unarchive.
    * @returns resolution after durability.
    */
+  /** Stop work behind the durable archive barrier, then remove owned logs and accounting.
+   * On any failure the archive remains, so a partially completed delete cannot resume work.
+   */
+  deleteSession(sessionId: SessionId, remove: () => Promise<void>): Promise<void> {
+    return this.enqueueOperation(async () => {
+      if (!(await this.sessionKnown(sessionId))) throw new WorkspaceUnknownSessionError(sessionId, 'archive')
+      const state = this.requireState()
+      if (!state.archivedSessionIds.includes(sessionId)) await this.setState({ ...state,
+        archivedSessionIds: [...state.archivedSessionIds, sessionId],
+        pinnedSessionIds: state.pinnedSessionIds.filter(id => id !== sessionId),
+      })
+      await this.stopSessionActivity(sessionId)
+      const activity = await this.ctx.waterfall('workspace/session-activity', { sessionId }, () => Promise.resolve([]))
+      if (activity.length > 0) throw new WorkspaceActiveSessionError(sessionId, activity)
+      await remove()
+      for (const workspace of this.list()) await workspace.detachSession(sessionId)
+      this.headers.delete(sessionId)
+      this.sessionPaths.delete(sessionId)
+      this.missingSessionPaths.delete(sessionId)
+      this.invalidSessionPaths.delete(sessionId)
+      const latest = this.requireState()
+      await this.setState({ ...latest, archivedSessionIds: latest.archivedSessionIds.filter(id => id !== sessionId),
+        pinnedSessionIds: latest.pinnedSessionIds.filter(id => id !== sessionId) })
+    })
+  }
+
   unarchiveSession(sessionId: SessionId): Promise<void> {
     return this.enqueueOperation(async () => {
       // The chain slot serializes against every other registry write, so this
       // check-then-write pair cannot interleave with a concurrent archive.
       const state = this.requireState()
       if (!state.archivedSessionIds.includes(sessionId)) return
+      if (!(await this.sessionKnown(sessionId))) throw new WorkspaceUnknownSessionError(sessionId, 'archive')
       await this.setState({
         ...state,
         archivedSessionIds: state.archivedSessionIds.filter(id => id !== sessionId),

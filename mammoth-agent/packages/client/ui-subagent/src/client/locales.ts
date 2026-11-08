@@ -27,7 +27,7 @@ export const zh = {
   'mode.oneShot': '一次性',
   'mode.continuable': '可继续',
   'mode.unknown': '模式未知',
-  'readonly.unknown.body': '读取子会话后才能确定是否可继续。',
+  'readonly.unknown.body': '读取子任务后才能确定是否可继续。',
   'activity.running': '正在运行',
   'activity.completed': '已完成',
   'activity.inactive': '当前未运行',
@@ -38,7 +38,7 @@ export const zh = {
   'count.running.one': '{count} 个子智能体，正在运行',
   'count.running.other': '{count} 个子智能体，正在运行',
   'switcher.aria': '切换子智能体：{title}',
-  'tree.aria': '子智能体会话',
+  'tree.aria': '子智能体任务',
   'open.sidebar': '在侧边栏打开',
   'open.floatWindow': '在浮窗中打开',
   'open.sidebar.aria': '在侧边栏打开 {label}',
@@ -46,7 +46,7 @@ export const zh = {
   'readonly.oneShot.title': '一次性子智能体记录',
   'readonly.title': '此子智能体暂时只读',
   'readonly.oneShot.body': '一次性任务不支持后续消息，可在这里查看完整执行记录。',
-  'readonly.body': '父会话当前不在线，重新打开父会话后即可继续发送消息。',
+  'readonly.body': '父任务当前不在线，重新打开父任务后即可继续发送消息。',
 } as const
 
 /** English dictionary, key-identical to the Chinese source of truth. */
@@ -73,7 +73,7 @@ export const en: Record<SubagentKey, string> = {
   'mode.oneShot': 'one-shot',
   'mode.continuable': 'continuable',
   'mode.unknown': 'unknown mode',
-  'readonly.unknown.body': 'Read the child session to determine whether it can be continued.',
+  'readonly.unknown.body': 'Read the child task to determine whether it can be continued.',
   'activity.running': 'running',
   'activity.completed': 'completed',
   'activity.inactive': 'not running',
@@ -84,7 +84,7 @@ export const en: Record<SubagentKey, string> = {
   'count.running.one': '{count} subagent running',
   'count.running.other': '{count} subagents running',
   'switcher.aria': 'Switch subagent: {title}',
-  'tree.aria': 'Subagent sessions',
+  'tree.aria': 'Subagent tasks',
   'open.sidebar': 'Open in sidebar',
   'open.floatWindow': 'Open in floating panel',
   'open.sidebar.aria': 'Open {label} in sidebar',
@@ -92,7 +92,7 @@ export const en: Record<SubagentKey, string> = {
   'readonly.oneShot.title': 'One-shot subagent record',
   'readonly.title': 'This subagent is read-only for now',
   'readonly.oneShot.body': 'One-shot tasks do not accept follow-ups; review the full execution record here.',
-  'readonly.body': 'The parent session is offline; reopen it to continue sending messages.',
+  'readonly.body': 'The parent task is offline; reopen it to continue sending messages.',
 }
 
 /** Key domain of the `subagent` namespace (zh is the source of truth). */
@@ -225,7 +225,7 @@ export const fr = {
   'count.running.one': "Sous-agent {count} en cours d'exécution",
   'count.running.other': "Sous-agents {count} en cours d'exécution",
   'switcher.aria': 'Changer de sous-agent : {title}',
-  'tree.aria': 'Sessions de sous-agents',
+  'tree.aria': 'Tasks de sous-agents',
   'open.sidebar': 'Ouvrir dans la barre latérale',
   'open.floatWindow': 'Ouvrir dans un panneau flottant',
   'open.sidebar.aria': 'Ouvrir {label} dans la barre latérale',

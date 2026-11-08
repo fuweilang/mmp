@@ -1,3 +1,4 @@
+import type { CatalogDraftSelection } from './draft-editor.ts'
 /**
  * Frozen input-machine contract. Types
  * only. Three-tier visibility: business packages see InputState via the
@@ -178,10 +179,17 @@ export interface InputTarget {
   beginCommand(claim: CommandClaim, span: TokenSpan): boolean
   /** Replace the trigger span with one reference chip (span-CAS'd). */
   insertReference(ref: ReferenceInsert, span: TokenSpan): boolean
+  /**
+   * Append one reference chip after the current draft. Does not submit.
+   * @param ref - chip the owner's codec serializes when the user sends.
+   * @returns whether the editor accepted the chip.
+   */
+  appendReference(ref: ReferenceInsert): boolean
 }
 
 /** Per-session input facade owned by the conversation wiring layer. */
 export interface SessionInput extends InputTarget {
+  setCatalogSelection?(value: CatalogDraftSelection, initializeOnly?: boolean): boolean
   /** Insert selected transcript text as an atomic quote. @param text - nonblank selection. @returns whether editing accepted it. */
   insertQuote(text: string): boolean
 
@@ -256,6 +264,9 @@ export type DraftInitializationResult = 'applied' | 'preserved' | 'blocked'
  * paste/…) stay InputBar-private and never ride this face.
  */
 export interface InputActions {
+  /** Set an explicit per-message retrieval option without editing text; frozen attempts refuse. */
+  setEnterpriseKnowledge?(enabled: boolean): void
+  setCatalogSelection?(value: CatalogDraftSelection, initializeOnly?: boolean): boolean
   /** Insert one nonblank transcript quote. @param text - selected text. @returns whether editing accepted it. */
   insertQuote(text: string): boolean
   /** @returns a revision-guarded copy of the current editor selection. */
@@ -293,6 +304,9 @@ export type ConsumeTokenGuard = ConsumeTokenRequest['guard']
 
 /** Published input state (the currency; per-session). */
 export interface InputState {
+  /** Per-session unsent message option; absent means off. */
+  readonly catalogSelection?: CatalogDraftSelection
+  readonly enterpriseKnowledge?: boolean
   /** Clipboard-text projection of the editor document (chips expanded to their clipboard form). */
   readonly draft: string
   /** Ordered runtime-only attachment ids; browser objects stay in ConversationController. */
@@ -323,6 +337,10 @@ export interface InputState {
  * every promise bounded.
  */
 export interface SubmitAttempt {
+  /** Immutable retrieval selection and its draft metadata generation captured at Enter. */
+  readonly catalogSelection?: CatalogDraftSelection
+  readonly enterpriseKnowledge?: boolean
+  readonly knowledgeRevision?: number
   readonly seq: number
   readonly signal: AbortSignal
   /** Clipboard-projection draft captured when the user sent. */
@@ -352,6 +370,9 @@ export type InputEvent =
   /** Enter submission with the current clipboard projection, its reference chips, its quotes, and its attachments. */
   | {
     readonly type: 'enter'
+    readonly catalogSelection?: CatalogDraftSelection
+  readonly enterpriseKnowledge?: boolean
+    readonly knowledgeRevision?: number
     readonly mode: InputSubmitMode
     readonly draft: string
     readonly occurrences: readonly Occurrence[]

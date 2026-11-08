@@ -1,0 +1,25 @@
+{
+  "model": "scripted mock, not live cloud",
+  "ground": "synthetic fixture HTTP",
+  "execution": "real native AgentLoop + tool-fs + tool-bash + LocalSubprocessRuntime + FsSandbox",
+  "nativeNames": [
+    "bash",
+    "edit",
+    "read",
+    "read_image",
+    "skill",
+    "write"
+  ],
+  "wireTools": [
+    "bash",
+    "edit",
+    "read",
+    "read_image",
+    "skill",
+    "write"
+  ],
+  "fileSHA": "827eb3f29cb238dd844c7ee40d15e2622fed25fd8a593927577be3004aa690b1",
+  "actualReadWriteDirectoryListAndBash": true,
+  "standardAndAgentInstructionsRetained": true,
+  "profileCompositionWritten": false
+}

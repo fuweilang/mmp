@@ -1,3 +1,4 @@
+import type { TaskCatalogSelection } from '../../types.ts'
 /**
  * The outward session face. Feature packages never see the concrete Session
  * class: components read lifecycle state through `useSession` (the
@@ -100,6 +101,7 @@ export interface ISession {
     mode: 'queue' | 'steer',
     signal?: AbortSignal,
     requestId?: SessionRequestId,
+    catalogSelection?: TaskCatalogSelection,
   ): Promise<RemoteResult<{ accepted: true }>>
   /**
    * Resolve one stored image using this Session's gateway permission scope.

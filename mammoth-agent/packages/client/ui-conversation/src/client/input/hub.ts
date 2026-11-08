@@ -1,3 +1,4 @@
+import type { CatalogDraftSelection } from '../contract/draft-editor.ts'
 /**
  * Session-bound input registry and default-send routing for Conversation.
  * Each retained Session binding owns one shell, its input listeners, and its
@@ -27,6 +28,7 @@ import type { PopupDismissFace } from './facade.ts'
 import { SessionInputShell } from './facade.ts'
 import { reportMessageSubmission } from './submission-analytics.ts'
 import { readConversationDraft } from '../stores.ts'
+import { enterpriseKnowledgePrompt } from './enterprise-knowledge.ts'
 
 /** Structural command face for per-session popup resolution. */
 interface CommandFace {
@@ -49,6 +51,7 @@ interface ConversationAttachmentFace {
     mode: InputSubmitMode,
     signal?: AbortSignal,
     accept?: () => void,
+    catalogSelection?: CatalogDraftSelection,
   ): Promise<SubmitOutcome>
   serializeDraftAttachments(attachmentIds: readonly DraftAttachmentId[]): Promise<DraftAttachmentSerializationResult>
   releaseDraftAttachment(id: DraftAttachmentId): void
@@ -125,7 +128,7 @@ export class InputHub implements SessionInputResolver {
       inputTriggers: () => this.controller(actx),
       popup: () => this.popup(actx),
       inbox: session.projections.faceOf('inbox') as ObservableSnapshot<InboxState | undefined>,
-      defaultSink: (text, attachmentIds, mode, signal, accept) => this.sink(session, text, attachmentIds, mode, signal, accept),
+      defaultSink: (text, attachmentIds, mode, signal, accept, enterpriseKnowledge, catalogSelection) => this.sink(session, text, attachmentIds, mode, signal, accept, enterpriseKnowledge, catalogSelection),
       quoteRemoveLabel: () => this.t('quote.remove'),
       quoteInsertionAllowed: () => {
         const state = session.getSnapshot()
@@ -243,16 +246,28 @@ export class InputHub implements SessionInputResolver {
    * so there is exactly one path; a refused or failed prompt is an ordinary
    * prompt failure (banner via promptError, draft kept in the composer).
    */
-  private sink(
+  private async sink(
     session: SessionFace,
     text: string,
     attachmentIds: readonly DraftAttachmentId[],
     mode: InputSubmitMode,
     signal: AbortSignal,
     accept: () => void,
+    enterpriseKnowledge = false,
+    catalogSelection?: CatalogDraftSelection,
   ): Promise<SubmitOutcome> {
-    if (text === '' && attachmentIds.length === 0) return Promise.resolve({ kind: 'success' })
-    return this.conversation().sendSession(session, text, attachmentIds, mode, signal, accept)
+    if (text === '' && attachmentIds.length === 0) return { kind: 'success' }
+    if (enterpriseKnowledge) {
+      const question = text.trim()
+      if (question === '') return { kind: 'error', text: '请输入要查询企业知识库的问题' }
+      try {
+        text = await enterpriseKnowledgePrompt(question, signal)
+        signal.throwIfAborted()
+      } catch (error) {
+        return { kind: 'error', text: error instanceof Error ? error.message : '企业知识库检索失败' }
+      }
+    }
+    return this.conversation().sendSession(session, text, attachmentIds, mode, signal, accept, catalogSelection)
   }
 
   /**

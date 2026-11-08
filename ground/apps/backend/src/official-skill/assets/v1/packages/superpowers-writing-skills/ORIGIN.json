@@ -1,0 +1,66 @@
+{
+  "key": "superpowers-writing-skills",
+  "name": "技能写作与迭代",
+  "summary": "编写可复用技能说明并评估触发条件和边界。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=3",
+  "source": {
+    "owner": "openai",
+    "repo": "plugins",
+    "ref": "main",
+    "path": "plugins/superpowers/skills/writing-skills",
+    "treeSha": "b767f8fa3be1a22b093127dd59956c91ecffca9d",
+    "skillBlobSha": "f33f39f523c8a3ae2ec0eaf365a524571df8ff3d",
+    "immutableRef": "https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/writing-skills/SKILL.md (git-blob:f33f39f523c8a3ae2ec0eaf365a524571df8ff3d)",
+    "licenseEvidence": [
+      {
+        "path": "plugins/superpowers/LICENSE",
+        "blobSha": "abf0390320aa14406af7a520b9b0739fdda9bf08",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/plugins",
+      "html_url": "https://github.com/openai/plugins",
+      "stargazers_count": 7785,
+      "forks_count": 1002,
+      "pushed_at": "2026-11-03T23:23:40Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "OpenAI-distributed curated Superpowers plugin; original author Jesse Vincent."
+    },
+    "includedResources": [
+      {
+        "path": "plugins/superpowers/skills/writing-skills/anthropic-best-practices.md",
+        "sha": "15ea9eae223d9081b602618849791c07a7758f3d",
+        "mapped": "references/anthropic-best-practices.md"
+      },
+      {
+        "path": "plugins/superpowers/skills/writing-skills/examples/CLAUDE_MD_TESTING.md",
+        "sha": "47881fc85bd6c01b32b84d52ed9a0c73c8d6a089",
+        "mapped": "references/examples/CLAUDE_MD_TESTING.md"
+      },
+      {
+        "path": "plugins/superpowers/skills/writing-skills/persuasion-principles.md",
+        "sha": "9756416a59600b70ecca4044e0919ee7d4a37b21",
+        "mapped": "references/persuasion-principles.md"
+      },
+      {
+        "path": "plugins/superpowers/skills/writing-skills/testing-skills-with-subagents.md",
+        "sha": "a5acfeac86f34c7bc625d064e10c8a2f8180b696",
+        "mapped": "references/testing-skills-with-subagents.md"
+      }
+    ],
+    "omittedFiles": [
+      "agents/openai.yaml",
+      "graphviz-conventions.dot",
+      "render-graphs.js"
+    ],
+    "originalBodySha256": "813824e98b3296b8c383af39cd64807f3599d7cf9f6034243d19ab8fb72ae8a5"
+  },
+  "officialVsAdapted": "adapted"
+}

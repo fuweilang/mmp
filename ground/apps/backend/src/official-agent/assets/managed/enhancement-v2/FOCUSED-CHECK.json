@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "passed": [
+    "create: refuses before Ground bind, workspace resolution or session creation",
+    "createSkill: refuses before Ground bind, workspace resolution or session creation",
+    "public detail exact whitelist omits role/tool/path metadata",
+    "admin rejects private/unknown detail fields",
+    "length/schema validation rejects invalid input",
+    "stale display revision rejected",
+    "display revision increments only on actual metadata change",
+    "legacy public openingQuestions fallback; explicit empty list clears"
+  ],
+  "sourceSha256": {
+    "packages/preset/official-agent-gallery/src/admission.ts": "f2bf30e263a6b04a57b5856540a1e59c6945d4b567f07a1b88dd5b5c1bb24094",
+    "packages/preset/official-agent-gallery/src/index.ts": "d9141700c1a233d25568fc1094116ea02584a69837a601fd635cf2a7af55bd04"
+  },
+  "executionAvailable": false,
+  "scope": "focused unit + built creation-method admission check only",
+  "notVerified": [
+    "actual Host handshake and scope receipts",
+    "cross-entry tools/MCP/subtasks/host helpers integration",
+    "symlink/TOCTOU/subprocess/network redirect enforcement",
+    "final context load barrier and budget after resume/compression/fallback",
+    "cancel/side-effect race and artifact receipt verification",
+    "public HTTP authentication and tenant integration",
+    "browser visual or UI acceptance"
+  ],
+  "decision": "Keep enhanced gallery execution closed. No sandbox/permission guarantee is asserted."
+}

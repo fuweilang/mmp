@@ -1,0 +1,73 @@
+{
+  "key": "marketing-pricing",
+  "name": "定价策略分析",
+  "summary": "组织价值、分层、竞争信息与定价实验方案。",
+  "category": "business",
+  "userCategoryLabel": "运营增长",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "coreyhaines31",
+    "repo": "marketingskills",
+    "ref": "main",
+    "path": "skills/pricing",
+    "treeSha": "88c79f6528a9347420e57ceb1fff9a60de651768",
+    "skillBlobSha": "7497dc500404081ed175c56db26b36de7264c246",
+    "immutableRef": "https://github.com/coreyhaines31/marketingskills/blob/main/skills/pricing/SKILL.md (git-blob:7497dc500404081ed175c56db26b36de7264c246)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "7c48dd638a9ebed49a8ef0c0c4eea90105381cdf",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "coreyhaines31/marketingskills",
+      "html_url": "https://github.com/coreyhaines31/marketingskills",
+      "stargazers_count": 58856,
+      "forks_count": 8611,
+      "pushed_at": "2026-11-04T19:01:33Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Public MIT marketing skills collection; stars are popularity only, not quality tests."
+    },
+    "includedResources": [
+      {
+        "path": "skills/pricing/evals/evals.json",
+        "sha": "7686d800a57bde99344f3470fb2d2c763dd64768",
+        "mapped": "references/evals/evals.json"
+      },
+      {
+        "path": "skills/pricing/references/pricing-models.md",
+        "sha": "807165db008f2ad3bcb1528a27c1e8b748d379f3",
+        "mapped": "references/pricing-models.md"
+      },
+      {
+        "path": "skills/pricing/references/pricing-page-teardown.md",
+        "sha": "0535348f4a94b645e717ede0d3e547bba53a7b75",
+        "mapped": "references/pricing-page-teardown.md"
+      },
+      {
+        "path": "skills/pricing/references/research-methods.md",
+        "sha": "dfcf8ce5c74665383084329aced539d5a1b13211",
+        "mapped": "references/research-methods.md"
+      },
+      {
+        "path": "skills/pricing/references/tier-structure.md",
+        "sha": "35a6d5375b408b8bfe46586380a88dda1c6fdfbf",
+        "mapped": "references/tier-structure.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "27bc035a2a88991f4d5bd94baf0341e9eff330de67e19940b25db09ab56d0540"
+  },
+  "officialVsAdapted": "adapted"
+}

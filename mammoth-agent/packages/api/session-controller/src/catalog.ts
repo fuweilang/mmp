@@ -3,6 +3,7 @@
 import { RemoteError } from '@mammoth-ai/mmp-typert-protocol'
 import { credentialRef } from '@mammoth-ai/mmp-credentials'
 import type {} from '@mammoth-ai/mmp-settings'
+import { ReasoningEffortId } from '@mammoth-ai/mmp-llm'
 import type { LlmModelInfo } from '@mammoth-ai/mmp-llm'
 import type { Context } from '@mammoth-ai/cordis'
 import type {
@@ -91,6 +92,35 @@ const LEGACY_LOCAL_PROVIDERS = new Set([
  * Ground (matching bare ids like `deepseek-flash` → `deepseek/deepseek-flash`).
  */
 export async function ensureRoutableSelection(
+  ctx: Context,
+  selection: ModelSelection,
+): Promise<ModelSelection> {
+  const routable = await selectRoutableSelection(ctx, selection)
+  return await withoutUnsupportedReasoning(ctx, routable)
+}
+
+/**
+ * Drop a persisted effort that the resolved model no longer offers. Ground
+ * `auto` and models without reasoning metadata must not keep a `high` left
+ * behind by an older route, or the next turn fails before provider I/O.
+ */
+async function withoutUnsupportedReasoning(
+  ctx: Context,
+  selection: ModelSelection,
+): Promise<ModelSelection> {
+  if (selection.reasoningEffort === undefined) return selection
+  try {
+    const info = await ctx.llm.resolveModelInfo(selection.provider, selection.model)
+    if (info.reasoning?.efforts.some(effort => effort.id === selection.reasoningEffort)) {
+      return selection
+    }
+  } catch {
+    // Unresolvable routes already follow the selection's own fallback path.
+  }
+  return { provider: selection.provider, model: selection.model }
+}
+
+async function selectRoutableSelection(
   ctx: Context,
   selection: ModelSelection,
 ): Promise<ModelSelection> {
@@ -203,10 +233,14 @@ export async function buildModelCatalog(
   if (
     healed.provider !== defaultSelection.provider
     || healed.model !== defaultSelection.model
+    || healed.reasoningEffort !== defaultSelection.reasoningEffort
   ) {
     void ctx.agentDefaultModel.saveSelection({
       provider: healed.provider,
       model: healed.model,
+      ...healed.reasoningEffort === undefined
+        ? {}
+        : { reasoningEffort: ReasoningEffortId(healed.reasoningEffort) },
     }).catch(() => { /* best-effort heal */ })
   }
 

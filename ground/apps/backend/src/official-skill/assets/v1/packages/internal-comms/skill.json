@@ -1,0 +1,27 @@
+{
+  "key": "internal-comms",
+  "name": "内部沟通文案",
+  "description": "A set of resources to help me write all kinds of internal communications, using the formats that my company likes to use. Claude should use…",
+  "entry": "SKILL.md",
+  "category": "content",
+  "references": [
+    {
+      "path": "references/examples/3p-updates.md"
+    },
+    {
+      "path": "references/examples/company-newsletter.md"
+    },
+    {
+      "path": "references/examples/faq-answers.md"
+    },
+    {
+      "path": "references/examples/general-comms.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

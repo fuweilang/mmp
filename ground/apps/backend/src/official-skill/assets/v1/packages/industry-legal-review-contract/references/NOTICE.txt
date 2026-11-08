@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/legal/skills/review-contract/SKILL.md (git-blob:030204860ec70bf80254f9894721504df7c81bd5)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: legal/skills/review-contract
+No third-party scripts are executed or shipped in this managed package.

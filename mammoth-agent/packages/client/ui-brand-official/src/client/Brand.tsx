@@ -12,7 +12,7 @@ export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
 
 /**
  * Render the official name artwork without its independently slotted mark.
- * @returns the 猛犸智能体 wordmark.
+ * @returns the 猛犸AI wordmark.
  */
 export function OfficialBrandName() {
   return <BrandWordmark includeMark={false} />

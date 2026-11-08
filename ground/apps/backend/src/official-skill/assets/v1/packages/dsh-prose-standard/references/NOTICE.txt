@@ -1,0 +1,5 @@
+Source: https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-prose-standard/SKILL.md (git-blob:338ff29a217a455a2a44270d496abfea30b87ac2)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: .agents/skills/dsh-prose-standard
+No third-party scripts are executed or shipped in this managed package.

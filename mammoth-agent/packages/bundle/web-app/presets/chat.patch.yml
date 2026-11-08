@@ -1,13 +1,11 @@
 # 对话模式：不注册工具，闲聊走模型直出（网关因此不会强制开 thinking）。
-# 干活请切到「标准模式」。
+# 干活请切到「标准模式」。Keep selectable; new-task default stays standard.
 - insert:
     - id: preset-chat
       name: '@mammoth-ai/mmp-agent-preset'
       config:
         id: chat
-        name: 对话模式
-        description: 只聊天，不调用工具，回答更快。改文件、跑命令或做任务时请切到「标准模式」。
-        order: 0
+        order: 1
         plugins:
           - id: persona
             name: '@mammoth-ai/mmp-persona'

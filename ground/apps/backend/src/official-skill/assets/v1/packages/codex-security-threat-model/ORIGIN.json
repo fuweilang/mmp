@@ -1,0 +1,54 @@
+{
+  "key": "codex-security-threat-model",
+  "name": "应用威胁建模",
+  "summary": "梳理资产、信任边界、攻击路径与缓解措施。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=1",
+  "source": {
+    "owner": "openai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/.curated/security-threat-model",
+    "treeSha": "49f948faa9258a0c61caceaf225e179651397431",
+    "skillBlobSha": "abd3c1c95d49c4e0e0664f198f4bf168c6291aec",
+    "immutableRef": "https://github.com/openai/skills/blob/main/skills/.curated/security-threat-model/SKILL.md (git-blob:abd3c1c95d49c4e0e0664f198f4bf168c6291aec)",
+    "licenseEvidence": [
+      {
+        "path": "skills/.curated/security-threat-model/LICENSE.txt",
+        "blobSha": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/skills",
+      "html_url": "https://github.com/openai/skills",
+      "stargazers_count": 28549,
+      "forks_count": 1985,
+      "pushed_at": "2026-10-28T17:31:41Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [
+      {
+        "path": "skills/.curated/security-threat-model/references/prompt-template.md",
+        "sha": "b6affb0d2f873ffe398f7a8df00095dc0ff01f59",
+        "mapped": "references/prompt-template.md"
+      },
+      {
+        "path": "skills/.curated/security-threat-model/references/security-controls-and-assets.md",
+        "sha": "63d1455aeacfc97eaca4e371040dbadfbd791635",
+        "mapped": "references/security-controls-and-assets.md"
+      }
+    ],
+    "omittedFiles": [
+      "agents/openai.yaml"
+    ],
+    "originalBodySha256": "68480d039e8e36e29f14a97c51e230c64958ec2430bf835c69ede51d5ae16b34"
+  },
+  "officialVsAdapted": "adapted"
+}

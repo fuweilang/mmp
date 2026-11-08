@@ -1,0 +1,17 @@
+{
+  "key": "canvas-design",
+  "name": "画布视觉设计",
+  "summary": "Create beautiful visual art in .png and .pdf documents using design philosophy. You should use this skill when the user asks to create a po…",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/canvas-design",
+    "immutableRef": "github:anthropics/skills@main:skills/canvas-design#20a0b1b7a7fb"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=81"
+}

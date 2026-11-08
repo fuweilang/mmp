@@ -1,0 +1,296 @@
+{
+  "_template": [
+    {
+      "path": "skills/_template/SKILL.md",
+      "size": 413
+    }
+  ],
+  "cloudbase": [
+    {
+      "path": "skills/cloudbase/SKILL.md",
+      "size": 4438
+    }
+  ],
+  "cn-punctuation-checker": [
+    {
+      "path": "skills/cn-punctuation-checker/SKILL.md",
+      "size": 4286
+    }
+  ],
+  "cycle-delivery": [
+    {
+      "path": "skills/cycle-delivery/SKILL.md",
+      "size": 9889
+    },
+    {
+      "path": "skills/cycle-delivery/references/evidence-protocol.md",
+      "size": 2529
+    },
+    {
+      "path": "skills/cycle-delivery/references/tools.md",
+      "size": 6245
+    }
+  ],
+  "daily-hot-news": [
+    {
+      "path": "skills/daily-hot-news/SKILL.md",
+      "size": 2459
+    },
+    {
+      "path": "skills/daily-hot-news/resources/references/api_sources.md",
+      "size": 2070
+    },
+    {
+      "path": "skills/daily-hot-news/resources/scripts/fetch_news.py",
+      "size": 16608
+    },
+    {
+      "path": "skills/daily-hot-news/resources/scripts/generate_report.py",
+      "size": 9140
+    }
+  ],
+  "daily-trend-writer": [
+    {
+      "path": "skills/daily-trend-writer/SKILL.md",
+      "size": 7116
+    },
+    {
+      "path": "skills/daily-trend-writer/examples/input.md",
+      "size": 311
+    },
+    {
+      "path": "skills/daily-trend-writer/examples/output.md",
+      "size": 2153
+    },
+    {
+      "path": "skills/daily-trend-writer/resources/trend-sources.md",
+      "size": 2291
+    },
+    {
+      "path": "skills/daily-trend-writer/subskills/doc-coauthoring.md",
+      "size": 15844
+    },
+    {
+      "path": "skills/daily-trend-writer/subskills/mimeng-writing.md",
+      "size": 28192
+    },
+    {
+      "path": "skills/daily-trend-writer/subskills/wechat-article-writer.md",
+      "size": 2045
+    },
+    {
+      "path": "skills/daily-trend-writer/templates/topic-brief.md",
+      "size": 257
+    },
+    {
+      "path": "skills/daily-trend-writer/templates/trend-board.md",
+      "size": 760
+    }
+  ],
+  "docx-diff-comment": [
+    {
+      "path": "skills/docx-diff-comment/SKILL.md",
+      "size": 5875
+    }
+  ],
+  "entropy-box-zh": [
+    {
+      "path": "skills/entropy-box-zh/SKILL.md",
+      "size": 21587
+    },
+    {
+      "path": "skills/entropy-box-zh/references/api.md",
+      "size": 6003
+    },
+    {
+      "path": "skills/entropy-box-zh/references/knowledge-compiler.md",
+      "size": 2497
+    },
+    {
+      "path": "skills/entropy-box-zh/references/panorama.md",
+      "size": 2527
+    }
+  ],
+  "gbr-pair": [
+    {
+      "path": "skills/gbr-pair/SKILL.md",
+      "size": 3816
+    }
+  ],
+  "git-commit-generator": [
+    {
+      "path": "skills/git-commit-generator/SKILL.md",
+      "size": 2775
+    },
+    {
+      "path": "skills/git-commit-generator/examples/input.md",
+      "size": 247
+    },
+    {
+      "path": "skills/git-commit-generator/examples/output.md",
+      "size": 104
+    },
+    {
+      "path": "skills/git-commit-generator/resources/conventional-commits-types.md",
+      "size": 1265
+    },
+    {
+      "path": "skills/git-commit-generator/templates/commit-message.txt",
+      "size": 73
+    }
+  ],
+  "kz-article-deep-analysis": [
+    {
+      "path": "skills/kz-article-deep-analysis/SKILL.md",
+      "size": 4106
+    },
+    {
+      "path": "skills/kz-article-deep-analysis/assets/template.md",
+      "size": 1123
+    },
+    {
+      "path": "skills/kz-article-deep-analysis/references/methodology.md",
+      "size": 1742
+    },
+    {
+      "path": "skills/kz-article-deep-analysis/scripts/verify.py",
+      "size": 2369
+    }
+  ],
+  "project-governance": [
+    {
+      "path": "skills/project-governance/README.md",
+      "size": 7713
+    },
+    {
+      "path": "skills/project-governance/SKILL.md",
+      "size": 9185
+    },
+    {
+      "path": "skills/project-governance/scripts/governance.py",
+      "size": 30417
+    },
+    {
+      "path": "skills/project-governance/templates/AGENTS.md",
+      "size": 10932
+    },
+    {
+      "path": "skills/project-governance/templates/ARCHITECTURE.md",
+      "size": 1265
+    },
+    {
+      "path": "skills/project-governance/templates/CHANGELOG.md",
+      "size": 682
+    },
+    {
+      "path": "skills/project-governance/templates/LESSONS.md",
+      "size": 871
+    },
+    {
+      "path": "skills/project-governance/templates/PROJECT.md",
+      "size": 689
+    },
+    {
+      "path": "skills/project-governance/templates/VERSIONS.md",
+      "size": 1013
+    },
+    {
+      "path": "skills/project-governance/templates/blacklist.json",
+      "size": 582
+    },
+    {
+      "path": "skills/project-governance/templates/index.md",
+      "size": 1500
+    },
+    {
+      "path": "skills/project-governance/templates/index_notes.json",
+      "size": 627
+    },
+    {
+      "path": "skills/project-governance/templates/session_handoff.md",
+      "size": 714
+    },
+    {
+      "path": "skills/project-governance/templates/whitelist.json",
+      "size": 477
+    }
+  ],
+  "trae-claw-install": [
+    {
+      "path": "skills/trae-claw-install/SKILL.md",
+      "size": 1932
+    },
+    {
+      "path": "skills/trae-claw-install/examples/input.md",
+      "size": 202
+    },
+    {
+      "path": "skills/trae-claw-install/examples/output.md",
+      "size": 432
+    }
+  ],
+  "video-to-keyframes": [
+    {
+      "path": "skills/video-to-keyframes/SKILL.md",
+      "size": 2500
+    },
+    {
+      "path": "skills/video-to-keyframes/resources/requirements.txt",
+      "size": 20
+    },
+    {
+      "path": "skills/video-to-keyframes/resources/scripts/extract_frames_and_describe.py",
+      "size": 8231
+    },
+    {
+      "path": "skills/video-to-keyframes/resources/scripts/generate_daily_folder.py",
+      "size": 550
+    },
+    {
+      "path": "skills/video-to-keyframes/resources/scripts/run_video_workflow.py",
+      "size": 5287
+    },
+    {
+      "path": "skills/video-to-keyframes/resources/scripts/select_keyframes.py",
+      "size": 26097
+    }
+  ],
+  "web-design-teroop": [
+    {
+      "path": "skills/web-design-teroop/SKILL.md",
+      "size": 3270
+    }
+  ],
+  "wechat-mini-program-development": [
+    {
+      "path": "skills/wechat-mini-program-development/SKILL.md",
+      "size": 9458
+    }
+  ],
+  "zopia_ai_skills": [
+    {
+      "path": "skills/zopia_ai_skills/API_REFERENCE.md",
+      "size": 4879
+    },
+    {
+      "path": "skills/zopia_ai_skills/EXAMPLES.md",
+      "size": 3493
+    },
+    {
+      "path": "skills/zopia_ai_skills/README.md",
+      "size": 10952
+    },
+    {
+      "path": "skills/zopia_ai_skills/README_CN.md",
+      "size": 10604
+    },
+    {
+      "path": "skills/zopia_ai_skills/SETTINGS_REFERENCE.md",
+      "size": 2801
+    },
+    {
+      "path": "skills/zopia_ai_skills/SKILL.md",
+      "size": 4855
+    }
+  ]
+}

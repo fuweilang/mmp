@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/small-business/skills/tax-prep/SKILL.md (git-blob:9d21a2cdbbdb2752f5dd731c2bb8c1164d4eca0e)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: small-business/skills/tax-prep
+No third-party scripts are executed or shipped in this managed package.

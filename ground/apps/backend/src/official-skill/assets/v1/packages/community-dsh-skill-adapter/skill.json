@@ -1,0 +1,15 @@
+{
+  "key": "community-dsh-skill-adapter",
+  "name": "DSH 技能适配",
+  "description": "检查技能指令与当前 Host 的工具、目录和权限契约。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

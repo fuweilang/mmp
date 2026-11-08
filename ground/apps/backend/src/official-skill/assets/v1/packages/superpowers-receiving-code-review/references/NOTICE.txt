@@ -1,0 +1,5 @@
+Source: https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/receiving-code-review/SKILL.md (git-blob:950da7b74bf6dbed6b8726d12ddadd65a9f5fda7)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=1
+Original path: plugins/superpowers/skills/receiving-code-review
+No third-party scripts are executed or shipped in this managed package.

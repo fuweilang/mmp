@@ -1,0 +1,21 @@
+{
+  "key": "happyhorse-prompt-studio",
+  "name": "happyhorse-prompt-studio",
+  "description": "Interactive prompt studio for HappyHorse 1.0 video generation. Guides users through scenario discovery with vivid examples, then assembles …",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/README.md"
+    },
+    {
+      "path": "references/README.zh.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

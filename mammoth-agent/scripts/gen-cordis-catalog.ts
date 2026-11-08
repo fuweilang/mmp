@@ -987,6 +987,8 @@ export const FOUNDATION_TYPE_NAMES: ReadonlySet<string> = new Set([
 
 /** Project types deliberately documented outside the subsystems catalog. */
 export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
+  OfficialAgentCard: 'packages/preset/official-agent-gallery/README.md',
+  OfficialAgentSessionRequest: 'packages/preset/official-agent-gallery/README.md',
   ActionCardDecision: 'packages/experimental/action-cards/README.md',
   ActionCardKind: 'packages/experimental/action-cards/README.md',
   ActionCardResult: 'packages/experimental/action-cards/README.md',

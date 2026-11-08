@@ -1,0 +1,15 @@
+{
+  "key": "community-dsh-plugin-dev",
+  "name": "DSH 社区插件开发",
+  "description": "梳理插件结构、服务与事件契约；依赖目标项目已有 DSH 工具链。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

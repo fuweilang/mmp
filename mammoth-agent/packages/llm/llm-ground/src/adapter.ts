@@ -8,6 +8,8 @@ import type {
   StreamChunk,
 } from '@mammoth-ai/mmp-llm'
 import type { DeepSeekAccount } from '@mammoth-ai/mmp-deepseek-account'
+import type { SessionId } from '@mammoth-ai/mmp-session'
+import type { GroundOfficialAttribution } from './attribution.ts'
 import { chatCompletionsUrl, modelsUrl } from './config.ts'
 import { OpenAiSseTranslator, toOpenAiMessages, toOpenAiTools } from './openai-map.ts'
 import { loggedFetch } from './http-log.ts'
@@ -26,6 +28,8 @@ export interface GroundAdapterOptions {
   displayName: string
   origin: string
   account: () => DeepSeekAccount | undefined
+  /** Official version bound to the requesting Session, when this is an official Agent run. */
+  officialFor?: (sessionId: SessionId) => GroundOfficialAttribution | undefined
 }
 
 async function readSseOrJsonError(response: Response): Promise<string> {
@@ -100,6 +104,7 @@ export class GroundLlmAdapter extends LlmAdapter {
       })
     }
     const concrete = rows.filter(row => row.id !== 'auto')
+    if(concrete.length===0)throw new LlmError('Admin cloud model catalog is not ready; no local fallback is allowed.','UNKNOWN_MODEL')
     rows.splice(0, rows.length, { id: 'auto', name: 'Automatic', preferred: true,
       contextWindow: Math.min(128_000, ...concrete.map(row => row.contextWindow ?? 128_000)), vision: concrete.some(row => row.vision) }, ...concrete)
     this.catalog = rows
@@ -175,12 +180,10 @@ export class GroundLlmAdapter extends LlmAdapter {
       hit = rows.find(row =>
         row.id.endsWith(`/${id}`) || row.name === id || row.name === model)
     }
-    if (hit === undefined) {
-      throw new LlmError(
-        `Ground model "${model}" is temporarily unavailable. Choose Automatic or another available model.`,
-        'UNKNOWN_MODEL',
-      )
-    }
+    // Sticky/default refs removed from the Admin pool must never hit the old ID.
+    if(hit===undefined)hit=rows.find(row=>row.id!=='auto'&&row.preferred)??rows.find(row=>row.id==='auto')
+    if(hit===undefined)throw new LlmError('Admin cloud model catalog unavailable.','UNKNOWN_MODEL')
+
     return {
       provider,
       id: hit.id,
@@ -225,12 +228,22 @@ export class GroundLlmAdapter extends LlmAdapter {
       Accept: 'text/event-stream',
       ...attributionHeaders(),
     }
+    if (options.purpose === undefined && options.sessionId !== undefined) {
+      headers['x-mmp-session-id'] = options.sessionId
+      const official = this.options.officialFor?.(options.sessionId)
+      if (official !== undefined) {
+        headers['x-mmp-official-agent-id'] = official.agentId
+        headers['x-mmp-official-agent-version-id'] = official.versionId
+      }
+    }
+    const serializedBody=JSON.stringify(body)
+    options.signal?.throwIfAborted()
     let response: Response
     try {
       response = await loggedFetch(chatCompletionsUrl(this.options.origin), {
         method: 'POST',
         headers,
-        body: JSON.stringify(body),
+        body: serializedBody,
         ...(options.signal ? { signal: options.signal } : {}),
       })
     } catch (error) {

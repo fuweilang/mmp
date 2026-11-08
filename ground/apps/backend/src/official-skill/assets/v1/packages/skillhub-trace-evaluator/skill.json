@@ -1,0 +1,45 @@
+{
+  "key": "skillhub-trace-evaluator",
+  "name": "技能轨迹评估",
+  "description": "按 TRACE 框架（Trust / Reliability / Adaptability / Convention / Effectiveness，5 维 15 子项）评测 Skill 包质量。当用户说『用 TRACE 评测』『评一下这个 skill』『skill 质量打分』…",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/_meta.json"
+    },
+    {
+      "path": "references/examples/sample-report.invalid.json"
+    },
+    {
+      "path": "references/examples/sample-report.valid.json"
+    },
+    {
+      "path": "references/adaptability.md"
+    },
+    {
+      "path": "references/convention.md"
+    },
+    {
+      "path": "references/effectiveness.md"
+    },
+    {
+      "path": "references/explore.md"
+    },
+    {
+      "path": "references/output-schema.md"
+    },
+    {
+      "path": "references/reliability.md"
+    },
+    {
+      "path": "references/trust.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

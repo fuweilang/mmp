@@ -1,0 +1,457 @@
+{
+  "experts": {
+    "agency-project-planner": {
+      "capability": "product-project",
+      "industries": []
+    },
+    "agency-backend-architect": {
+      "capability": "development",
+      "industries": [
+        "it"
+      ]
+    },
+    "agency-frontend-advisor": {
+      "capability": "development",
+      "industries": [
+        "it"
+      ]
+    },
+    "volt-api-designer": {
+      "capability": "development",
+      "industries": [
+        "it"
+      ]
+    },
+    "volt-code-reviewer": {
+      "capability": "development",
+      "industries": [
+        "it"
+      ]
+    },
+    "volt-database-optimizer": {
+      "capability": "development",
+      "industries": [
+        "it"
+      ]
+    },
+    "volt-debugger": {
+      "capability": "development",
+      "industries": [
+        "it"
+      ]
+    },
+    "volt-devops-advisor": {
+      "capability": "development",
+      "industries": [
+        "it"
+      ]
+    },
+    "volt-security-auditor": {
+      "capability": "development",
+      "industries": [
+        "it"
+      ]
+    },
+    "agency-ui-system": {
+      "capability": "design",
+      "industries": [
+        "it"
+      ]
+    },
+    "c3274112ed041": {
+      "capability": "design",
+      "industries": []
+    },
+    "copy-polish-master": {
+      "capability": "marketing",
+      "industries": [
+        "media"
+      ]
+    },
+    "pyq": {
+      "capability": "marketing",
+      "industries": [
+        "media"
+      ]
+    },
+    "xhs": {
+      "capability": "marketing",
+      "industries": [
+        "media"
+      ]
+    },
+    "live": {
+      "capability": "marketing",
+      "industries": [
+        "media"
+      ]
+    },
+    "ip": {
+      "capability": "marketing",
+      "industries": [
+        "media"
+      ]
+    },
+    "copy": {
+      "capability": "marketing",
+      "industries": [
+        "media"
+      ]
+    },
+    "video": {
+      "capability": "marketing",
+      "industries": [
+        "media"
+      ]
+    },
+    "gzh": {
+      "capability": "marketing",
+      "industries": [
+        "media"
+      ]
+    },
+    "sell": {
+      "capability": "marketing",
+      "industries": [
+        "media"
+      ]
+    },
+    "qc": {
+      "capability": "sales-customer",
+      "industries": []
+    },
+    "trans": {
+      "capability": "sales-customer",
+      "industries": []
+    },
+    "sifu": {
+      "capability": "sales-customer",
+      "industries": []
+    },
+    "agency-customer-success": {
+      "capability": "sales-customer",
+      "industries": []
+    },
+    "kw-account-strategy": {
+      "capability": "sales-customer",
+      "industries": []
+    },
+    "boss": {
+      "capability": "business",
+      "industries": []
+    },
+    "method": {
+      "capability": "business",
+      "industries": []
+    },
+    "mammoth": {
+      "capability": "business",
+      "industries": []
+    },
+    "growth": {
+      "capability": "business",
+      "industries": []
+    },
+    "niche": {
+      "capability": "business",
+      "industries": []
+    },
+    "agency-operations-manager": {
+      "capability": "business",
+      "industries": []
+    },
+    "agency-supply-chain": {
+      "capability": "business",
+      "industries": [
+        "ecommerce"
+      ]
+    },
+    "agency-business-strategy": {
+      "capability": "business",
+      "industries": []
+    },
+    "spy": {
+      "capability": "research-data",
+      "industries": []
+    },
+    "data": {
+      "capability": "research-data",
+      "industries": []
+    },
+    "interview": {
+      "capability": "research-data",
+      "industries": []
+    },
+    "enterprise-product-answer": {
+      "capability": "research-data",
+      "industries": []
+    },
+    "agency-ux-research": {
+      "capability": "research-data",
+      "industries": [
+        "it"
+      ]
+    },
+    "kw-data-quality-lead": {
+      "capability": "research-data",
+      "industries": []
+    },
+    "volt-literature-evidence": {
+      "capability": "research-data",
+      "industries": []
+    },
+    "volt-market-sizing": {
+      "capability": "research-data",
+      "industries": []
+    },
+    "volt-statistical-modeling": {
+      "capability": "research-data",
+      "industries": []
+    },
+    "kw-financial-controller": {
+      "capability": "finance-legal",
+      "industries": [
+        "finance-tax"
+      ]
+    },
+    "kw-legal-review-lead": {
+      "capability": "finance-legal",
+      "industries": [
+        "legal-services"
+      ]
+    },
+    "agency-hr-onboarding": {
+      "capability": "people-learning",
+      "industries": [
+        "hr"
+      ]
+    },
+    "agency-training-designer": {
+      "capability": "people-learning",
+      "industries": [
+        "education"
+      ]
+    }
+  },
+  "descriptions": [
+    {
+      "kind": "skill",
+      "key": "academy-guide",
+      "expectedOriginal": ">",
+      "summary": "根据学习目标筛选Claude Academy课程与教程，提供匹配资源及学习建议；不代替完成课程。",
+      "evidence": "src/official-skill/assets/v1/packages/academy-guide/SKILL.md",
+      "evidenceSha256": "213c413ad106fbde9470a8756ba00fa8f7b37a2d30e6a9c90309f969d829b6e3"
+    },
+    {
+      "kind": "skill",
+      "key": "bailian-docs-llm-wiki",
+      "expectedOriginal": ">-",
+      "summary": "依据包内可用百炼文档梳理API、模型规格和应用开发问题，整理参数解释与参考线索；缺资料时明确说明。",
+      "evidence": "src/official-skill/assets/v1/packages/bailian-docs-llm-wiki/SKILL.md",
+      "evidenceSha256": "5003b9a2ff54c1be09a5394642209ea88e5770491ebc6b5f130f0fc6df18766e"
+    },
+    {
+      "kind": "skill",
+      "key": "bailian-model-recommend",
+      "expectedOriginal": ">-",
+      "summary": "依据可用资料比较百炼模型的场景、规格和限制，整理选型理由；不安装缺失脚本或切换猛犸云端模型池。",
+      "evidence": "src/official-skill/assets/v1/packages/bailian-model-recommend/SKILL.md",
+      "evidenceSha256": "41a20d74f9d48459f0c55b79a5036b6a6906274101a93adc55e9fe454578e4e7"
+    },
+    {
+      "kind": "skill",
+      "key": "daily-hot-news",
+      "expectedOriginal": ">",
+      "summary": "将可获得的多平台热点整理为带来源、时间和不可用说明的资讯表；包内抓取脚本已移除，不承诺实时抓取。",
+      "evidence": "src/official-skill/assets/v1/packages/daily-hot-news/SKILL.md",
+      "evidenceSha256": "2f399860756b0517bde7c7f290e4185fbc0e81eb945a7f8954b23f0bddf53e85"
+    },
+    {
+      "kind": "skill",
+      "key": "discernment-nudge",
+      "expectedOriginal": ">",
+      "summary": "检查建议中的事实、推理与缺失背景，补充行动前应核实的要点和不确定性提醒。",
+      "evidence": "src/official-skill/assets/v1/packages/discernment-nudge/SKILL.md",
+      "evidenceSha256": "5a7137de01c0ab27c684c8f286bc04cc719f1751262e405755c64e9369bc3b28"
+    },
+    {
+      "kind": "skill",
+      "key": "novel-game",
+      "expectedOriginal": ">-",
+      "summary": "将故事梳理为互动小说的剧情分支、人物和场景方案，产出游戏结构与代码稿；素材生成需另备工具。",
+      "evidence": "src/official-skill/assets/v1/packages/novel-game/SKILL.md",
+      "evidenceSha256": "bddf2b83fb82a7d5433730552bdd7d0ba793f502043c86c47c914827b7573131"
+    },
+    {
+      "kind": "skill",
+      "key": "vox-video-director",
+      "expectedOriginal": ">",
+      "summary": "把主题拆成纸艺拼贴风的旁白、镜头与视觉提示词方案；实际生成和合成视频需额外已授权工具。",
+      "evidence": "src/official-skill/assets/v1/packages/vox-video-director/SKILL.md",
+      "evidenceSha256": "5477bc6f3287c7b1016581607f95595df1c35ab8d64df1709b636dd72a5de653"
+    },
+    {
+      "kind": "expert",
+      "key": "boss",
+      "expectedOriginal": "总控编排 · 单层委派专科智能体",
+      "summary": "拆解复杂任务并在已授权专科专家间进行单层委派，汇总各子任务结果与待办。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "be2a385a4c0df0a53cbd48dbe21b6213f8b7c78430c00200a76a0867e753b4f4"
+    },
+    {
+      "kind": "expert",
+      "key": "spy",
+      "expectedOriginal": "公开信息竞品对比 · 带来源与访问时间",
+      "summary": "比较可获取的公开竞品信息，输出带来源和访问时间的差异与情报摘要。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "cf78f61e9c017ae5a092d3bff794a17b83b78ad309fd0e92df9024cc262f263d"
+    },
+    {
+      "kind": "expert",
+      "key": "growth",
+      "expectedOriginal": "诊断增长瓶颈 · 给可落地策略",
+      "summary": "梳理增长瓶颈与关键假设，输出优先级策略和可执行的验证计划。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "a7af436ee02a1f819a83a9fb23f1853c71b45e782f9556bc21ae52b3465b4e81"
+    },
+    {
+      "kind": "expert",
+      "key": "pyq",
+      "expectedOriginal": "人设化朋友圈内容",
+      "summary": "按人设和沟通目标设计朋友圈选题与文案，产出可修改的发布草稿。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "c4da66e6ea2d9f1eb2338b4335c07ee478498358fc6dd31ea903d1f97f7d9f2d"
+    },
+    {
+      "kind": "expert",
+      "key": "qc",
+      "expectedOriginal": "会话质检与话术打分",
+      "summary": "根据提供的客服会话检查服务问题与话术，输出质检意见和改进建议。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "6964732900a80887165d82aef30674713c2acc436d113638742560b3dad2c0e4"
+    },
+    {
+      "kind": "expert",
+      "key": "method",
+      "expectedOriginal": "沉淀可复用方法论与 SOP",
+      "summary": "把经验和任务流程整理成可复用的方法论、步骤清单与SOP。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "5621e058a7ae528e57bbce4d196c50f860b37a45f1245ee0bd6077d05848d760"
+    },
+    {
+      "kind": "expert",
+      "key": "data",
+      "expectedOriginal": "经营表格洞察 · 确定性汇总与异常",
+      "summary": "分析提供的经营表格，输出确定性汇总、异常线索和解释。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "8c5017a6161cc87c78b91ce2c3e49c4e13b057505c9e136154fcdb674243eab5"
+    },
+    {
+      "kind": "expert",
+      "key": "trans",
+      "expectedOriginal": "咨询逼单与异议处理",
+      "summary": "梳理咨询场景的需求与异议，提供沟通建议和待使用的话术稿。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "d729e92277680ac5a1f0b7b25e23d720ba57335f6e534f702ace292ac79af638"
+    },
+    {
+      "kind": "expert",
+      "key": "xhs",
+      "expectedOriginal": "选题 · 笔记 · 投放全链路",
+      "summary": "围绕小红书内容目标规划选题、笔记和投放思路，输出内容方案与草稿。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "31491b677536eb0724b1567122d0fa16939279f12a7e51b4843bb916750ac3d7"
+    },
+    {
+      "kind": "expert",
+      "key": "mammoth",
+      "expectedOriginal": "通用助手 · 有问必答",
+      "summary": "帮助梳理日常问题与任务，提供解释、方案或可继续完善的文字草稿。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "4f93a88eaae71b532ed767183593445c85dad8facca9665697571023161cf3dd"
+    },
+    {
+      "kind": "expert",
+      "key": "live",
+      "expectedOriginal": "留人 · 逼单 · 憋单话术",
+      "summary": "按直播阶段设计留人、互动和产品表达，输出分段话术与流程建议。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "6b5c747664b6ef4ba3013003f6723e2a4343f2cd6af82f993e74b2a7800e7d64"
+    },
+    {
+      "kind": "expert",
+      "key": "sifu",
+      "expectedOriginal": "私域成交与复购全流程",
+      "summary": "梳理私域客户沟通、成交与复购流程，输出运营步骤和话术建议。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "39476525d21078d645e5f62a617cb70478c67a4289830e3913f0a3d555b44ef2"
+    },
+    {
+      "kind": "expert",
+      "key": "ip",
+      "expectedOriginal": "个人/企业 IP 定位与人设策划",
+      "summary": "分析个人或企业IP定位与表达方式，输出人设、内容方向和策划方案。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "80225d2e5331d3b641c8ae12a1e120741439846ad4864d5ef741df6f40f95479"
+    },
+    {
+      "kind": "expert",
+      "key": "copy",
+      "expectedOriginal": "高转化获客文案",
+      "summary": "根据产品与获客目标撰写营销文案，提供可比较的表达方案与草稿。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "40c6bce1db945acee55d3ef6ec265b4b32859b07816555d704cea7850bb25ddc"
+    },
+    {
+      "kind": "expert",
+      "key": "video",
+      "expectedOriginal": "钩子 · 脚本 · 分镜",
+      "summary": "将主题整理为短视频钩子、脚本和分镜，输出拍摄与剪辑参考稿。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "7ddff2d2c505a896467c13fa591656dd1230cf9518aa90196709f06ca070c819"
+    },
+    {
+      "kind": "expert",
+      "key": "interview",
+      "expectedOriginal": "深度访谈问题与追问链设计",
+      "summary": "根据访谈目标设计问题层次与追问链，输出访谈提纲。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "aa6620ce6e3e739cb80f265962f5fe5a609d3c80607e656e16a84d703f6f495a"
+    },
+    {
+      "kind": "expert",
+      "key": "gzh",
+      "expectedOriginal": "公众号爆文改写与二次创作",
+      "summary": "在尊重原文事实的基础上改写公众号内容，输出结构和表达更清楚的文章草稿。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "fa253d1631cc27efc5425d1ee65a836222c0540af48e5865347404d1b7b10d96"
+    },
+    {
+      "kind": "expert",
+      "key": "niche",
+      "expectedOriginal": "利基市场切入与差异化战略",
+      "summary": "分析利基市场的客户、切入点与差异化，输出战略选择与行动建议。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "00961bbdf8b62ca6b95f36def667cc2b053c102bf9d558ab118b6fbc34a159ff"
+    },
+    {
+      "kind": "expert",
+      "key": "sell",
+      "expectedOriginal": "提炼产品卖点与高转化营销文案",
+      "summary": "从产品资料中提炼用户价值与卖点，输出营销表达和可复用文案。",
+      "evidence": "existing official_agent.system_prompt (baseline only)",
+      "evidenceSha256": "a38597fa3d6d3d77bb0e1d58b30a21dc99dbb1e89bf23eaa3dfb5f3f0107b8c5"
+    }
+  ],
+  "counts": {
+    "product-project": 1,
+    "development": 8,
+    "design": 2,
+    "marketing": 9,
+    "sales-customer": 5,
+    "business": 8,
+    "research-data": 9,
+    "finance-legal": 2,
+    "people-learning": 2
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "platform": {
+    "hasPlatformWorkspace": false,
+    "hasRoleChip": false,
+    "footerText": "超级管理员",
+    "identityText": "超级管理员 | 13800000001",
+    "triggerHeight": 44,
+    "panelHeight": 185
+  },
+  "huawei": {
+    "hasPlatformWorkspace": false,
+    "hasHuawei": true,
+    "hasRoleChip": false,
+    "footerText": "华为试点员工 华为",
+    "identityText": "华为试点员工 | 13900001002 | 华为",
+    "triggerHeight": 60,
+    "panelHeight": 201
+  },
+  "shots": {
+    "platformPopup": "/tmp/mmp-account-simplified/after-platform-popup.png",
+    "platformFooter": "/tmp/mmp-account-simplified/after-platform-footer.png",
+    "huaweiPopup": "/tmp/mmp-account-simplified/after-huawei-popup.png",
+    "huaweiFooter": "/tmp/mmp-account-simplified/after-huawei-footer.png"
+  }
+}

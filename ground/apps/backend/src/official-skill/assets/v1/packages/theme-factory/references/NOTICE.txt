@@ -1,0 +1,4 @@
+Source: github:anthropics/skills@main:skills/theme-factory#c55e7e510c4f
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=0; dropped=11
+No scripts shipped.

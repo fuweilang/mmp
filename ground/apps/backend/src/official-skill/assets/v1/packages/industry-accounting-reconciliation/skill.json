@@ -1,0 +1,15 @@
+{
+  "key": "industry-accounting-reconciliation",
+  "name": "财务对账辅助",
+  "description": "比对用户提供的账表、识别差异并组织对账说明。",
+  "entry": "SKILL.md",
+  "category": "legal",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

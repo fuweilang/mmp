@@ -1,0 +1,17 @@
+{
+  "key": "docx-diff-comment",
+  "name": "文档差异批注",
+  "summary": "Compare two Word documents to find new features in V2, add comments to the V2 document for each new feature, and generate a requirements ta…",
+  "category": "expertise",
+  "userCategoryLabel": "办公协作",
+  "references": [],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/docx-diff-comment",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/docx-diff-comment#2769eb5fbbd0"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/small-business/skills/restock/SKILL.md (git-blob:24b86118fa0f7158a0077132e29af8406871c998)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: small-business/skills/restock
+No third-party scripts are executed or shipped in this managed package.

@@ -1,0 +1,4 @@
+Source: github:trae-community/trae-skills@main:skills/git-commit-generator#d1b72c5ca283
+License: MIT
+Adaptation: strip-scripts; stripped=0; dropped=0
+No scripts shipped.

@@ -1,0 +1,23 @@
+{
+  "key": "spy",
+  "kind": "GENERAL",
+  "name": "竞品情报官",
+  "summary": "公开信息竞品对比 · 带来源与访问时间",
+  "openingQuestions": [
+    "对比 Notion 和飞书文档的公开定位与定价信息。",
+    "根据这个官网链接，提炼产品卖点与近期动态。",
+    "没有公开数据时你会怎么处理？"
+  ],
+  "toolScope": [
+    "web_search",
+    "web_fetch"
+  ],
+  "toolScopeNotes": "复用 Ground web_search + 受控 web_fetch；无未授权爬虫",
+  "promptFile": "prompts/spy.md",
+  "batch": "D",
+  "publish": true,
+  "category": "sales",
+  "capabilities": [
+    "竞品对比"
+  ]
+}

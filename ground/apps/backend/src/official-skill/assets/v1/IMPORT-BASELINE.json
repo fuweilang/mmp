@@ -1,0 +1,392 @@
+[
+  {
+    "key": "academy-guide",
+    "id": "cmw5636t400005lysmqlujepm",
+    "name": "学院学习指南",
+    "summary": ">",
+    "category": "common",
+    "enabledAt": "2026-11-06T16:06:42.412Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636t800025lysi78r7cql"
+  },
+  {
+    "key": "algorithmic-art",
+    "id": "cmw5636th00045lys8qbjv3sj",
+    "name": "算法艺术创作",
+    "summary": "Creating algorithmic art using p5.js with seeded randomness and interactive parameter exploration. Use this when users request creating art…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.416Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636tk00065lyss2vjyg6q"
+  },
+  {
+    "key": "bailian-docs-llm-wiki",
+    "id": "cmw5636tn00085lysqn2zfvho",
+    "name": "百炼文档百科",
+    "summary": ">-",
+    "category": "common",
+    "enabledAt": "2026-11-06T16:06:42.417Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636tq000a5lys7uqxmz5y"
+  },
+  {
+    "key": "bailian-model-recommend",
+    "id": "cmw5636ts000c5lyswh7t5ihn",
+    "name": "bailian-model-recommend",
+    "summary": ">-",
+    "category": "common",
+    "enabledAt": "2026-11-06T16:06:42.419Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636tv000e5lysin4oyk7g"
+  },
+  {
+    "key": "brand-guidelines",
+    "id": "cmw5636ty000g5lys5ciwnek5",
+    "name": "品牌视觉规范",
+    "summary": "Applies Anthropic's official brand colors and typography to any sort of artifact that may benefit from having Anthropic's look-and-feel. Us…",
+    "category": "content",
+    "enabledAt": "2026-11-06T16:06:42.420Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636u0000i5lysbkdyxfyp"
+  },
+  {
+    "key": "canvas-design",
+    "id": "cmw5636u2000k5lysvtk31fhi",
+    "name": "画布视觉设计",
+    "summary": "Create beautiful visual art in .png and .pdf documents using design philosophy. You should use this skill when the user asks to create a po…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.422Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636u4000m5lysv75nlf55"
+  },
+  {
+    "key": "cloudbase",
+    "id": "cmw5636u6000o5lyst0jbb4j8",
+    "name": "云开发指南",
+    "summary": "Use when building, deploying, or debugging Tencent CloudBase (腾讯云开发 / TCB) apps in Trae — Web, WeChat Mini Program, cloud functions, CloudR…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.424Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636u8000q5lysg45bv0lu"
+  },
+  {
+    "key": "cn-punctuation-checker",
+    "id": "cmw5636ua000s5lysy7vv7us7",
+    "name": "中文标点校对",
+    "summary": "Checks Chinese text for incorrect English punctuation marks. Invoke when user wants to find and fix wrong punctuation in Chinese copy.",
+    "category": "content",
+    "enabledAt": "2026-11-06T16:06:42.425Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636uc000u5lysxxcfk2hr"
+  },
+  {
+    "key": "cycle-delivery",
+    "id": "cmw5636ue000w5lys2vxplame",
+    "name": "周期交付协作",
+    "summary": "Governs evidence-gated software delivery through the local Cycle control plane. Use when the user wants a change shipped as complete, teste…",
+    "category": "business",
+    "enabledAt": "2026-11-06T16:06:42.427Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636uf000y5lysfwec6z1v"
+  },
+  {
+    "key": "daily-hot-news",
+    "id": "cmw5636ui00105lyskaeetoz7",
+    "name": "热点资讯整理",
+    "summary": ">",
+    "category": "content",
+    "enabledAt": "2026-11-06T16:06:42.429Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636uk00125lysyvdsmpui"
+  },
+  {
+    "key": "daily-trend-writer",
+    "id": "cmw5636um00145lys9njuuur5",
+    "name": "热点内容写作",
+    "summary": "全自动化的公众号内容生产流水线。每日发现实用工具、社区热点、教程经验等\"小而美\"选题，深挖后输出\"咪蒙风格\"与\"技术干货\"两篇高质量公众号文章。",
+    "category": "content",
+    "enabledAt": "2026-11-06T16:06:42.432Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636up00165lysa743dwyd"
+  },
+  {
+    "key": "discernment-nudge",
+    "id": "cmw5636ur00185lysxjgbudvm",
+    "name": "审慎判断提醒",
+    "summary": ">",
+    "category": "common",
+    "enabledAt": "2026-11-06T16:06:42.433Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636ut001a5lysyp2oekch"
+  },
+  {
+    "key": "docx-diff-comment",
+    "id": "cmw5636uv001c5lysdust8xo8",
+    "name": "文档差异批注",
+    "summary": "Compare two Word documents to find new features in V2, add comments to the V2 document for each new feature, and generate a requirements ta…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.435Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636uw001e5lys1hldzld1"
+  },
+  {
+    "key": "entropy-box-zh",
+    "id": "cmw5636uz001g5lysk0y5dabx",
+    "name": "熵盒知识整理",
+    "summary": "以箱熵（Entropy Box）的方案咨询 Consult 为核心，把边界明确的具身智能技术需求转化为候选实现方法和有依据的工程工作流。先由当前大模型澄清并拆分宽泛需求，分别咨询具体子问题，再用 Search 深入了解已选技术、用 Lookup 锚定实体、用 Evidence …",
+    "category": "common",
+    "enabledAt": "2026-11-06T16:06:42.436Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636v1001i5lysfe4ao5rm"
+  },
+  {
+    "key": "find-skill-skillhub",
+    "id": "cmw5636v3001k5lys32aokgcr",
+    "name": "SkillHub 技能检索",
+    "summary": "在 SkillHub 平台查找/搜索 Skill 技能。基于 skills 列表接口，支持关键词分词搜索、一级标签（一级分类）筛选、以及二者组合检索。当用户说『找个 xxx 技能』『有没有处理 PDF 的 skill』『SkillHub 上搜一下 xxx』『按分类看技能』『办公…",
+    "category": "common",
+    "enabledAt": "2026-11-06T16:06:42.438Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636v7001m5lys975a3g3d"
+  },
+  {
+    "key": "frontend-design",
+    "id": "cmw5636va001o5lysc4h8wb6h",
+    "name": "前端界面设计",
+    "summary": "Guidance for distinctive, intentional visual design when building new UI or reshaping an existing one. Helps with aesthetic direction, typo…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.439Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636vb001q5lyst4wlhyxf"
+  },
+  {
+    "key": "gbr-pair",
+    "id": "cmw5636ve001s5lys0iohtfxx",
+    "name": "结对协作规范",
+    "summary": "Pair a phone running Build Remote Agent to this Trae desktop session via gbr/1. Use when the user wants a mobile spectator. Attach only Bot…",
+    "category": "common",
+    "enabledAt": "2026-11-06T16:06:42.441Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636vf001u5lysdi1auq83"
+  },
+  {
+    "key": "git-commit-generator",
+    "id": "cmw5636vh001w5lys4wscivtz",
+    "name": "提交信息生成",
+    "summary": "Generate clear, standardized git commit messages based on code changes (diffs), following Conventional Commits specification.",
+    "category": "common",
+    "enabledAt": "2026-11-06T16:06:42.442Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636vj001y5lysufn103ff"
+  },
+  {
+    "key": "happyhorse-prompt-studio",
+    "id": "cmw5636vm00205lysaeyls72a",
+    "name": "happyhorse-prompt-studio",
+    "summary": "Interactive prompt studio for HappyHorse 1.0 video generation. Guides users through scenario discovery with vivid examples, then assembles …",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.444Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636vn00225lys0y66a0ol"
+  },
+  {
+    "key": "internal-comms",
+    "id": "cmw5636vp00245lyscplbnvqs",
+    "name": "内部沟通文案",
+    "summary": "A set of resources to help me write all kinds of internal communications, using the formats that my company likes to use. Claude should use…",
+    "category": "content",
+    "enabledAt": "2026-11-06T16:06:42.445Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636vs00265lysn12blmo6"
+  },
+  {
+    "key": "kz-article-deep-analysis",
+    "id": "cmw5636vv00285lysamfzd1xf",
+    "name": "文章深度解读",
+    "summary": "深度解读非学术类文章（博客、随笔、评论），抽取核心议题与核心主张，评估其对读者认知的增量与张力，输出结构化分析报告。",
+    "category": "content",
+    "enabledAt": "2026-11-06T16:06:42.446Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636vw002a5lysrscu4bve"
+  },
+  {
+    "key": "mcp-builder",
+    "id": "cmw5636vz002c5lys1zdbodve",
+    "name": "MCP 构建指南",
+    "summary": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-desig…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.448Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636w0002e5lysssq8p3k9"
+  },
+  {
+    "key": "novel-game",
+    "id": "cmw5636w3002g5lysnj8kbzbf",
+    "name": "互动小说游戏",
+    "summary": ">-",
+    "category": "content",
+    "enabledAt": "2026-11-06T16:06:42.449Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636w5002i5lysg2aab97v"
+  },
+  {
+    "key": "office-docx-zh",
+    "id": "cmw5636w7002k5lyso3q70xwp",
+    "name": "Word 文档处理",
+    "summary": "创建、阅读、编辑与校验 Word 文档，优先使用本地办公引擎能力。",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.451Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636w9002m5lystrfjp028"
+  },
+  {
+    "key": "office-pptx-zh",
+    "id": "cmw5636wb002o5lysgy3lhug0",
+    "name": "PPT 演示文稿",
+    "summary": "创建与编辑演示文稿，保持版式清晰，优先使用本地办公引擎。",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.452Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636wc002q5lysu7bklzn9"
+  },
+  {
+    "key": "office-router-zh",
+    "id": "cmw5636wf002s5lysgio9go71",
+    "name": "办公文档总览",
+    "summary": "按需选择 Word/PPT/Excel/PDF 办公处理流程，适配猛犸本地办公引擎。",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.454Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636wg002u5lysg15usvoq"
+  },
+  {
+    "key": "office-xlsx-zh",
+    "id": "cmw5636wi002w5lys4f3w5o8i",
+    "name": "Excel 表格处理",
+    "summary": "创建、分析与编辑电子表格，优先使用本地办公引擎能力。",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.455Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636wk002y5lystcp9lrfh"
+  },
+  {
+    "key": "project-governance",
+    "id": "cmw5636wm00305lysyz3pm023",
+    "name": "项目治理文档",
+    "summary": "为 AI 长期项目建立「项目记忆 + 文件索引 + 工作规则 + 版本记录」的治理系统，让 AI 在长期项目里「不忘事、不乱改、不重复犯错」，换会话后仍能接着做。Set up and maintain a project governance workspace for AI-…",
+    "category": "business",
+    "enabledAt": "2026-11-06T16:06:42.456Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636wp00325lysndmqgdo2"
+  },
+  {
+    "key": "skill-creator",
+    "id": "cmw5636ws00345lysgyypodar",
+    "name": "技能编写指南",
+    "summary": "Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, e…",
+    "category": "common",
+    "enabledAt": "2026-11-06T16:06:42.458Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636wt00365lys8z64tnmk"
+  },
+  {
+    "key": "skillhub-trace-evaluator",
+    "id": "cmw5636ww00385lys12c9sy0a",
+    "name": "技能轨迹评估",
+    "summary": "按 TRACE 框架（Trust / Reliability / Adaptability / Convention / Effectiveness，5 维 15 子项）评测 Skill 包质量。当用户说『用 TRACE 评测』『评一下这个 skill』『skill 质量打分』…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.460Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636wy003a5lyshntoc6v6"
+  },
+  {
+    "key": "spark-video",
+    "id": "cmw5636x1003c5lysjn365gft",
+    "name": "spark-video-episode",
+    "summary": "One-shot autopilot orchestrator — runs the full spark-video pipeline (screenwriter ↔ director per-scene parallel → render chain-DAG paralle…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.461Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636x5003e5lysxohwkghf"
+  },
+  {
+    "key": "theme-factory",
+    "id": "cmw5636x7003g5lyschvxa7cc",
+    "name": "主题配色工厂",
+    "summary": "Toolkit for styling artifacts with a theme. These artifacts can be slides, docs, reportings, HTML landing pages, etc. There are 10 pre-set …",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.463Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636x8003i5lysnj6y5jus"
+  },
+  {
+    "key": "trae-claw-install",
+    "id": "cmw5636xb003k5lysc99t4clf",
+    "name": "trae-claw-install",
+    "summary": "Run a repository-driven OpenClaw deployment workflow with platform routing, setup/start/check, acceptance checks, and unified troubleshooti…",
+    "category": "common",
+    "enabledAt": "2026-11-06T16:06:42.464Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636xc003m5lysiuiucond"
+  },
+  {
+    "key": "video-to-keyframes",
+    "id": "cmw5636xe003o5lys0guqg1ek",
+    "name": "video-to-keyframes",
+    "summary": "Extracts video frames, detects cuts/segments, selects candidate keyframes, and generates review HTML galleries. Invoke when users ask for k…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.466Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636xg003q5lysg0j0yc6i"
+  },
+  {
+    "key": "vox-video-director",
+    "id": "cmw5636xi003s5lyscrm3xxz3",
+    "name": "vox-video-director",
+    "summary": ">",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.467Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636xl003u5lys1xdlp4ec"
+  },
+  {
+    "key": "web-artifacts-builder",
+    "id": "cmw5636xn003w5lys1vjmhheo",
+    "name": "网页产物构建",
+    "summary": "Suite of tools for creating elaborate, multi-component claude.ai HTML artifacts using modern frontend web technologies (React, Tailwind CSS…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.468Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636xp003y5lysr4ac5k01"
+  },
+  {
+    "key": "web-design-teroop",
+    "id": "cmw5636xr00405lys49ns6hvu",
+    "name": "网页设计指导",
+    "summary": "A design-first architect that generates, persists, and maintains a comprehensive design document (Style, Color, Typography, Icons, Logo) to…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.470Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636xt00425lys5ig9wu12"
+  },
+  {
+    "key": "wechat-mini-program-development",
+    "id": "cmw5636xw00445lysidw1jscs",
+    "name": "微信小程序开发",
+    "summary": "WeChat mini-program development skill with standard project structure, request wrapper, and API management. Invoke when developing WeChat m…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.471Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636xx00465lysatprcjl1"
+  },
+  {
+    "key": "zopia-ai-skills",
+    "id": "cmw5636xz00485lysb5trbom1",
+    "name": "zopia-api",
+    "summary": "Drive AI video production via the Zopia API: create projects, configure styles, chat with the Agent to generate screenplays/characters/stor…",
+    "category": "expertise",
+    "enabledAt": "2026-11-06T16:06:42.473Z",
+    "currentRevision": 1,
+    "currentPackageId": "cmw5636y2004a5lysny4rfy5h"
+  }
+]

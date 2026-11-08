@@ -1,0 +1,63 @@
+{
+  "key": "marketing-launch",
+  "name": "产品发布策划",
+  "summary": "规划发布定位、渠道、节奏和执行清单，不自动发布。",
+  "category": "business",
+  "userCategoryLabel": "运营增长",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "coreyhaines31",
+    "repo": "marketingskills",
+    "ref": "main",
+    "path": "skills/launch",
+    "treeSha": "88c79f6528a9347420e57ceb1fff9a60de651768",
+    "skillBlobSha": "b7783f50953c77cfc1d21fab4425549c2cd3ac33",
+    "immutableRef": "https://github.com/coreyhaines31/marketingskills/blob/main/skills/launch/SKILL.md (git-blob:b7783f50953c77cfc1d21fab4425549c2cd3ac33)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "7c48dd638a9ebed49a8ef0c0c4eea90105381cdf",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "coreyhaines31/marketingskills",
+      "html_url": "https://github.com/coreyhaines31/marketingskills",
+      "stargazers_count": 58856,
+      "forks_count": 8611,
+      "pushed_at": "2026-11-04T19:01:33Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Public MIT marketing skills collection; stars are popularity only, not quality tests."
+    },
+    "includedResources": [
+      {
+        "path": "skills/launch/evals/evals.json",
+        "sha": "71547a21c972e52d2f26badca45931d54f8a5142",
+        "mapped": "references/evals/evals.json"
+      },
+      {
+        "path": "skills/launch/references/shipped-changes.md",
+        "sha": "321e5715b16c48194e05991cbf4e35833756e0fa",
+        "mapped": "references/shipped-changes.md"
+      },
+      {
+        "path": "skills/launch/references/site-launch-qa.md",
+        "sha": "07e7f3e28ba3afa2fa96976db8568190090be3da",
+        "mapped": "references/site-launch-qa.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "69f9aa17561757afd840b907dc0d44be20b0c2cd435e6db1662ea06a3bc0a18e"
+  },
+  "officialVsAdapted": "adapted"
+}

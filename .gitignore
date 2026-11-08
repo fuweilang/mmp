@@ -46,3 +46,6 @@ id_ed25519
 ._*
 Thumbs.db
 *.log
+
+# Enterprise library originals belong in persistent storage, never Git.
+/ground/apps/backend/library-data/

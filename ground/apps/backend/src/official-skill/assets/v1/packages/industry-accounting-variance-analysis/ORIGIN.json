@@ -1,0 +1,47 @@
+{
+  "key": "industry-accounting-variance-analysis",
+  "name": "财务差异分析",
+  "summary": "梳理实际与预算差异及可能原因，不作投资结论。",
+  "category": "legal",
+  "userCategoryLabel": "财税法务",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "finance/skills/variance-analysis",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "4a430511eac2af771e55caf965bf713fff88d649",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/variance-analysis/SKILL.md (git-blob:4a430511eac2af771e55caf965bf713fff88d649)",
+    "licenseEvidence": [
+      {
+        "path": "finance/LICENSE",
+        "blobSha": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "0b39f36f2543fbe324971589846d066ba711c9e322e4b4313294942f82d20b3c"
+  },
+  "officialVsAdapted": "adapted"
+}

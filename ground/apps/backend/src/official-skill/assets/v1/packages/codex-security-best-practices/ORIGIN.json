@@ -1,0 +1,94 @@
+{
+  "key": "codex-security-best-practices",
+  "name": "安全编码实践",
+  "summary": "按语言和框架检查代码安全风险与修复建议。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=1",
+  "source": {
+    "owner": "openai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/.curated/security-best-practices",
+    "treeSha": "49f948faa9258a0c61caceaf225e179651397431",
+    "skillBlobSha": "45ccbd8d671c4c4cc3e7e0645a16a3f80ec50de7",
+    "immutableRef": "https://github.com/openai/skills/blob/main/skills/.curated/security-best-practices/SKILL.md (git-blob:45ccbd8d671c4c4cc3e7e0645a16a3f80ec50de7)",
+    "licenseEvidence": [
+      {
+        "path": "skills/.curated/security-best-practices/LICENSE.txt",
+        "blobSha": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/skills",
+      "html_url": "https://github.com/openai/skills",
+      "stargazers_count": 28549,
+      "forks_count": 1985,
+      "pushed_at": "2026-10-28T17:31:41Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [
+      {
+        "path": "skills/.curated/security-best-practices/references/golang-general-backend-security.md",
+        "sha": "85e9c6a1669e0d04af56c9a0bce113dd35e0248d",
+        "mapped": "references/golang-general-backend-security.md"
+      },
+      {
+        "path": "skills/.curated/security-best-practices/references/javascript-express-web-server-security.md",
+        "sha": "98d79067ffb784ce426394193e744ddc7f3c93be",
+        "mapped": "references/javascript-express-web-server-security.md"
+      },
+      {
+        "path": "skills/.curated/security-best-practices/references/javascript-general-web-frontend-security.md",
+        "sha": "d8b696f363ea54661791c048ba19a57933d20825",
+        "mapped": "references/javascript-general-web-frontend-security.md"
+      },
+      {
+        "path": "skills/.curated/security-best-practices/references/javascript-jquery-web-frontend-security.md",
+        "sha": "3fd00db430ed55fafe50112b8d8b751fe82deec1",
+        "mapped": "references/javascript-jquery-web-frontend-security.md"
+      },
+      {
+        "path": "skills/.curated/security-best-practices/references/javascript-typescript-nextjs-web-server-security.md",
+        "sha": "44cc8213b11feda2eac8283dfd6a11fe93a68965",
+        "mapped": "references/javascript-typescript-nextjs-web-server-security.md"
+      },
+      {
+        "path": "skills/.curated/security-best-practices/references/javascript-typescript-react-web-frontend-security.md",
+        "sha": "33fb693282a40754a081a499cda3d471aa23da28",
+        "mapped": "references/javascript-typescript-react-web-frontend-security.md"
+      },
+      {
+        "path": "skills/.curated/security-best-practices/references/javascript-typescript-vue-web-frontend-security.md",
+        "sha": "be326548bf953b6d1918727d228449ab4cb5110d",
+        "mapped": "references/javascript-typescript-vue-web-frontend-security.md"
+      },
+      {
+        "path": "skills/.curated/security-best-practices/references/python-django-web-server-security.md",
+        "sha": "0b9a89a73e0ff3a88ccb7837b56ad1a5f15259e0",
+        "mapped": "references/python-django-web-server-security.md"
+      },
+      {
+        "path": "skills/.curated/security-best-practices/references/python-fastapi-web-server-security.md",
+        "sha": "d394a55bb86b3b2e5c2b73e65cb115a2a0ce1c05",
+        "mapped": "references/python-fastapi-web-server-security.md"
+      },
+      {
+        "path": "skills/.curated/security-best-practices/references/python-flask-web-server-security.md",
+        "sha": "adbc599aad8688a3446f5b595a1f4f0c1eac942f",
+        "mapped": "references/python-flask-web-server-security.md"
+      }
+    ],
+    "omittedFiles": [
+      "agents/openai.yaml"
+    ],
+    "originalBodySha256": "44995625aadfd26b333eb129483cef4d639b0eef366081a69cd1220dd12ed843"
+  },
+  "officialVsAdapted": "adapted"
+}

@@ -1,0 +1,15 @@
+-- Additive one-level skill taxonomy. Existing values/rows are unchanged.
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'analytics';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'office';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'education';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'ecommerce';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'sales';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'hr';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'legal';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'finance';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'consulting';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'research';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'files';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'search';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'writing';
+ALTER TYPE "OfficialSkillCategory" ADD VALUE IF NOT EXISTS 'lifestyle';

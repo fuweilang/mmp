@@ -1,0 +1,19 @@
+{
+  "key": "daily-hot-news",
+  "name": "热点资讯整理",
+  "summary": ">",
+  "category": "content",
+  "userCategoryLabel": "运营增长",
+  "references": [
+    "references/references/api_sources.md"
+  ],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/daily-hot-news",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/daily-hot-news#d15b818ef58a"
+  },
+  "adaptation": "strip-scripts; stripped=2; dropped=0"
+}

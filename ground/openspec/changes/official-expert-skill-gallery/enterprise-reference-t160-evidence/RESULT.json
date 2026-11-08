@@ -1,0 +1,29 @@
+{
+  "implementation": "t160 supersedes t159 appearance: existing + menu checkable company-materials action and selected-only removable tag. No permanent checkbox/button.",
+  "t155CodeWritten": false,
+  "focused": {
+    "success": true,
+    "numPassedTests": 11,
+    "numFailedTests": 0,
+    "numPendingTests": 207
+  },
+  "mockBoundary": "Real Cordis InputHub, SessionInputShell, draft codec, existing CommandUiRuntime and jsdom InputBar. Retrieval HTTP/identity and final Session prompt are mocked; no live cloud or visual browser verification.",
+  "typecheckExitCodes": {
+    "ui-conversation": 0,
+    "ui-input-trigger": 0,
+    "ui-commands": 0
+  },
+  "clientBundleExitCodes": {
+    "ui-conversation": 0,
+    "ui-input-trigger": 0,
+    "ui-commands": 0
+  },
+  "backendOrDBAccess": false,
+  "remoteProtocolChanged": false,
+  "permissionsChanged": false,
+  "knownLimitations": [
+    "No real browser/desktop visual QA, authenticated live retrieval or model citation verification.",
+    "Existing unprovenanced textual prefix in old drafts is retained as ordinary user text; not stripped or auto-converted into opt-in.",
+    "Retrieved evidence still follows the existing augmented model-message path; no new hidden-context protocol or conversation-history rewrite."
+  ]
+}

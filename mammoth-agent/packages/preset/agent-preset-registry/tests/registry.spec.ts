@@ -229,6 +229,7 @@ it('resolves the saved default over the deployment default, and drops a removed 
   expect(ctx.agentPresets.defaultId).toBe('standard')
 })
 
+
 it('ignores a retired modeSelectionEnabled field in the user patch', async () => {
   const ctx = await harness({ live: true })
   contexts.push(ctx)

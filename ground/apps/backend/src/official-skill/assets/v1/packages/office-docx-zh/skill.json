@@ -1,0 +1,15 @@
+{
+  "key": "office-docx-zh",
+  "name": "Word 文档处理",
+  "description": "创建、阅读、编辑与校验 Word 文档，优先使用本地办公引擎能力。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

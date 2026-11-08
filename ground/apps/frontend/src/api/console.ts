@@ -34,6 +34,7 @@ export type KbDocumentRow = {
   mimeType: string;
   sizeBytes: number;
   status: KbStatus;
+  indexError?: string | null;
   visibility: AccessScope;
   userIds: string[];
   createdAt: string;
@@ -140,6 +141,27 @@ export type KbHit = {
   folderName: string | null;
   snippet: string;
   score: number;
+};
+
+export type OfficialAgentScopeRow = {
+  id: string;
+  key: string;
+  kind: 'KNOWLEDGE';
+  versionId: string;
+  version: number;
+  name: string;
+  summary: string;
+  openingQuestions: string[];
+  kbFolderIds: string[];
+};
+
+export const officialAgentApi = {
+  scopes: () => http<OfficialAgentScopeRow[]>('/api/official-agents/console/scopes'),
+  updateScope: (id: string, kbFolderIds: string[]) =>
+    http<OfficialAgentScopeRow>(`/api/official-agents/${id}/scope`, {
+      method: 'PUT',
+      body: JSON.stringify({ kbFolderIds }),
+    }),
 };
 
 export type QuotaSnapshot = {

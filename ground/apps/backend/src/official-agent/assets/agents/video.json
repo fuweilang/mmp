@@ -1,0 +1,21 @@
+{
+  "key": "video",
+  "kind": "GENERAL",
+  "name": "短视频脚本官",
+  "summary": "钩子 · 脚本 · 分镜",
+  "openingQuestions": [
+    "帮我写一个 30 秒的咖啡店探店短视频脚本，附分镜。",
+    "给我 5 个知识口播类视频的开头钩子。",
+    "把这段产品介绍改成 60 秒抖音口播脚本。"
+  ],
+  "toolScope": [],
+  "toolScopeNotes": "latest 无工具依赖；不虚构 search",
+  "promptFile": "prompts/video.md",
+  "batch": "B",
+  "publish": true,
+  "category": "content",
+  "capabilities": [
+    "脚本分镜",
+    "钩子设计"
+  ]
+}

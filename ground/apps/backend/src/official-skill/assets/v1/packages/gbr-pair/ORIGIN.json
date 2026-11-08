@@ -1,0 +1,17 @@
+{
+  "key": "gbr-pair",
+  "name": "结对协作规范",
+  "summary": "Pair a phone running Build Remote Agent to this Trae desktop session via gbr/1. Use when the user wants a mobile spectator. Attach only Bot…",
+  "category": "common",
+  "userCategoryLabel": "通用协作",
+  "references": [],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/gbr-pair",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/gbr-pair#5d8a2f335a02"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

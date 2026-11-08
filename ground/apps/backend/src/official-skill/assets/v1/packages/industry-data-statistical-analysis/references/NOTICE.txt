@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/statistical-analysis/SKILL.md (git-blob:59cc87de24a0c1b2b5b1d7ba2d8d10eb314a6557)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: data/skills/statistical-analysis
+No third-party scripts are executed or shipped in this managed package.

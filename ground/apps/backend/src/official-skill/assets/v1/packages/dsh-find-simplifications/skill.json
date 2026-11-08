@@ -1,0 +1,18 @@
+{
+  "key": "dsh-find-simplifications",
+  "name": "代码简化分析",
+  "description": "定位重复结构与不必要复杂度，提出可审查的简化方案。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/historical-patterns.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

@@ -6,11 +6,12 @@
       name: '@mammoth-ai/mmp-agent-preset'
       config:
         id: standard
-        order: 1
+        order: 0
         plugins:
           - id: persona
             name: '@mammoth-ai/mmp-persona'
             config:
+              # Native DSH baseline — coding agent with tools (not Auto/router copy).
               prefix: You are a coding agent powered by the {{model}} model.
           - id: agent-instructions
             name: '@mammoth-ai/mmp-agent-instructions'

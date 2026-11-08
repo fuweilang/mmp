@@ -25,6 +25,7 @@
       <el-button class="toolbar-button" @click="onSearchNow">搜索</el-button>
       <el-button class="toolbar-button" @click="onReset">重置</el-button>
       <div class="knowledge-actions">
+        <el-button v-if="isScopeAdmin" :disabled="!hasTenant" @click="openScopes">专家范围</el-button>
         <el-button :disabled="!hasTenant" @click="folderOpen = true">新建目录</el-button>
         <el-button type="primary" :disabled="!hasTenant" @click="openUpload">上传材料</el-button>
       </div>
@@ -48,11 +49,12 @@
           {{ formatBytes(row.sizeBytes) }}
         </template>
       </el-table-column>
-      <el-table-column label="状态" width="100">
+      <el-table-column label="状态" min-width="170">
         <template #default="{ row }">
           <el-tag size="small" :type="statusType(row.status)">
             {{ statusLabel(row.status) }}
           </el-tag>
+          <div v-if="row.indexError">{{ row.indexError }}</div>
         </template>
       </el-table-column>
       <el-table-column label="可见范围" width="110">
@@ -64,7 +66,7 @@
         <template #default="{ row }">
           <div class="operation-buttons">
             <el-button text type="primary" @click="onStatus(row)">
-              {{ row.status === 'READY' ? '停用' : '生效' }}
+              {{ row.status === 'READY' ? '停用' : row.status === 'FAILED' ? '重试解析' : '生效' }}
             </el-button>
             <el-button text type="primary" @click="openAccess(row)">授权</el-button>
             <el-button text type="primary" @click="onDownload(row)">下载</el-button>
@@ -118,13 +120,13 @@
             :auto-upload="false"
             :limit="1"
             :file-list="uploadList"
-            accept=".pdf,.txt,.md,.doc,.docx"
+            accept=".pdf,.txt,.md,.docx,.pptx"
             :on-change="onFileChange"
             :on-remove="onFileRemove"
           >
             <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
             <template #tip>
-              <div class="el-upload__tip">支持 pdf / txt / md / doc / docx</div>
+              <div class="el-upload__tip">支持 Word（.docx）、PPT（.pptx）、文本型 PDF、TXT 和 Markdown</div>
             </template>
           </el-upload>
         </el-form-item>
@@ -170,6 +172,36 @@
         <el-button type="primary" :loading="accessSaving" @click="onSaveAccess">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="scopeOpen" title="资料专家范围" width="600px">
+      <div v-loading="scopeLoading" class="agent-scopes">
+        <p class="agent-scope-hint">未选择目录时，专家不会检索任何企业资料。检索结果还会继续受成员文档权限限制。</p>
+        <div v-for="agent in scopeRows" :key="agent.id" class="agent-scope-row">
+          <div class="agent-scope-heading">
+            <strong>{{ agent.name }}</strong>
+            <span>固定版本 v{{ agent.version }}</span>
+          </div>
+          <p>{{ agent.summary }}</p>
+          <el-select
+            v-model="agent.kbFolderIds"
+            multiple
+            filterable
+            style="width: 100%"
+            placeholder="选择允许检索的目录"
+          >
+            <el-option v-for="folder in folders" :key="folder.id" :label="folder.name" :value="folder.id" />
+          </el-select>
+          <div class="agent-scope-actions">
+            <el-button
+              type="primary"
+              :loading="scopeSavingId === agent.id"
+              @click="onSaveScope(agent)"
+            >保存范围</el-button>
+          </div>
+        </div>
+        <el-empty v-if="!scopeLoading && scopeRows.length === 0" description="当前企业还没有已开通的资料型专家" />
+      </div>
+    </el-dialog>
   </section>
 </template>
 
@@ -178,13 +210,27 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadUserFile } from 'element-plus';
 import { Search } from 'lucide-vue-next';
 import { AccessScopeLabel, KbStatusLabel, type AccessScope, type KbStatus } from '@mammoth/shared';
-import { knowledgeApi, kbDownloadUrl, type KbDocumentRow, type KbFolderRow } from '../api/console';
+import {
+  knowledgeApi,
+  kbDownloadUrl,
+  officialAgentApi,
+  type KbDocumentRow,
+  type KbFolderRow,
+  type OfficialAgentScopeRow,
+} from '../api/console';
 import { tenantApi, type SimpleMember } from '../api/tenants';
 import { useAuthStore } from '../stores/auth';
 import { formatBytes } from '../utils/format';
 
 const auth = useAuthStore();
 const hasTenant = computed(() => Boolean(auth.session?.currentTenant));
+const isScopeAdmin = computed(() => Boolean(
+  auth.session?.user.isPlatformAdmin || ['ADMIN', 'OWNER'].includes(auth.session?.currentRole ?? ''),
+));
+const scopeOpen = ref(false);
+const scopeLoading = ref(false);
+const scopeSavingId = ref('');
+const scopeRows = ref<OfficialAgentScopeRow[]>([]);
 const folders = ref<KbFolderRow[]>([]);
 const rows = ref<KbDocumentRow[]>([]);
 const members = ref<SimpleMember[]>([]);
@@ -416,8 +462,9 @@ async function onUpload() {
     if (upload.folderId) form.append('folderId', upload.folderId);
     form.append('visibility', upload.visibility);
     form.append('userIds', JSON.stringify(upload.visibility === 'SELECTED' ? upload.userIds : []));
-    await knowledgeApi.upload(form);
-    ElMessage.success('已上传，请点生效');
+    const next = await knowledgeApi.upload(form);
+    if (next.status === 'READY') ElMessage.success('已上传，可检索');
+    else ElMessage.warning(next.indexError || '文件已上传，尚未完成解析');
     uploadOpen.value = false;
     await loadDocuments();
   } catch (e) {
@@ -432,7 +479,8 @@ async function onStatus(row: KbDocumentRow) {
   try {
     const next = await knowledgeApi.patch(row.id, { status });
     rows.value = rows.value.map((item) => (item.id === row.id ? next : item));
-    ElMessage.success(status === 'READY' ? '已生效' : '已停用');
+    if (next.status === 'FAILED') ElMessage.warning(next.indexError || '解析失败');
+    else ElMessage.success(next.status === 'READY' ? '已生效' : '已停用');
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '更新失败');
   }
@@ -456,6 +504,34 @@ async function onSaveAccess() {
     ElMessage.error(e instanceof Error ? e.message : '失败');
   } finally {
     accessSaving.value = false;
+  }
+}
+
+async function openScopes() {
+  scopeOpen.value = true;
+  scopeLoading.value = true;
+  try {
+    const [agents] = await Promise.all([officialAgentApi.scopes(), loadFoldersAndMembers()]);
+    scopeRows.value = agents.map((agent) => ({ ...agent, kbFolderIds: [...agent.kbFolderIds] }));
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '加载专家范围失败');
+  } finally {
+    scopeLoading.value = false;
+  }
+}
+
+async function onSaveScope(agent: OfficialAgentScopeRow) {
+  scopeSavingId.value = agent.id;
+  try {
+    const next = await officialAgentApi.updateScope(agent.id, agent.kbFolderIds);
+    scopeRows.value = scopeRows.value.map((row) => row.id === agent.id
+      ? { ...next, kbFolderIds: [...next.kbFolderIds] }
+      : row);
+    ElMessage.success(agent.kbFolderIds.length === 0 ? '已保存，该专家不会检索企业资料' : '专家检索范围已保存');
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '保存专家范围失败');
+  } finally {
+    scopeSavingId.value = '';
   }
 }
 
@@ -581,5 +657,41 @@ onBeforeUnmount(() => {
 :deep(.el-table__body .cell),
 :deep(.el-table__body .el-button.is-text) {
   font-size: 13px;
+}
+
+.agent-scope-hint {
+  color: #667085;
+  line-height: 1.6;
+  margin: 0 0 18px;
+}
+
+.agent-scope-row {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  padding: 16px;
+}
+
+.agent-scope-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.agent-scope-heading span,
+.agent-scope-row p {
+  color: #667085;
+  font-size: 13px;
+}
+
+.agent-scope-row p {
+  line-height: 1.5;
+  margin: 8px 0 14px;
+}
+
+.agent-scope-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
 }
 </style>

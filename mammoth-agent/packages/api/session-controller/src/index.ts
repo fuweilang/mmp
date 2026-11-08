@@ -434,6 +434,14 @@ export class SessionController extends TypertRemoteService {
    * @param request - Session identity and proposed title.
    * @returns the accepted title and durable event sequence.
    */
+  /** Permanently remove owned task logs after the canonical archive/stop barrier.
+   * Shared attachment objects and workspace source files are intentionally retained.
+   */
+  @Remote('deleteTask')
+  deleteTask(request: { readonly sessionId: SessionId; readonly confirmation: 'permanent-delete' }): Promise<{ readonly deleted: true; readonly retainedSharedObjects: true }> {
+    return this.commands.deleteTask(request)
+  }
+
   @Remote('rename')
   rename(request: SessionRenameRequest): Promise<SessionRenameValue> {
     return this.commands.rename(request)
@@ -483,6 +491,7 @@ export class SessionController extends TypertRemoteService {
     }
     // The caller is recorded only when it is not the owner, so owner messages keep their exact source.
     const principal = principalOf(this.ctx.invocation)
+    if(principal!==undefined&&request.catalogSelection!==undefined)throw new RemoteError('gateway/bad-request','Expert/skill selection requires the owning account',{})
     const source: MessageSource = {
       kind: 'user',
       rpcId: request.requestId,

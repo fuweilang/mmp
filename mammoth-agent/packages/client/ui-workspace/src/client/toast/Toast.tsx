@@ -2,6 +2,7 @@
 import { IconWarningOutlineRegular, Toast } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import type { ArchiveToastEntryProps, ToastEntryProps, WorkspaceToastProps } from '../contract/toast.ts'
+import { ARCHIVED_SECTION_KEY } from '../tree.ts'
 
 /**
  * Render one notice using the shared Factory.
@@ -20,7 +21,10 @@ export function ToastEntry<P extends PropsRuntime<'workspace.toast'>>(props: Toa
  */
 export function ArchiveToastEntry(props: ArchiveToastEntryProps) {
   const { dismissToast, display, filterAction, useStore, t, renderFactorySlot, seq } = props
-  const archivedVisible = useStore(state => (state.archivedFilter ?? 'default') !== 'default')
+  const archivedVisible = useStore(state => {
+    if ((state.archivedFilter ?? 'default') !== 'default') return true
+    return state.groupExpansion[ARCHIVED_SECTION_KEY] === true
+  })
   const fields = display(props, t, dismissToast)
   return renderFactorySlot('workspace.toast.content', {
     ...fields,

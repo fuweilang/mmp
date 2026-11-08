@@ -1,0 +1,15 @@
+{
+  "key": "office-xlsx-zh",
+  "name": "Excel 表格处理",
+  "description": "创建、分析与编辑电子表格，优先使用本地办公引擎能力。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "key": "cn-punctuation-checker",
+  "name": "中文标点校对",
+  "summary": "Checks Chinese text for incorrect English punctuation marks. Invoke when user wants to find and fix wrong punctuation in Chinese copy.",
+  "category": "content",
+  "userCategoryLabel": "中文写作/内容",
+  "references": [],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/cn-punctuation-checker",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/cn-punctuation-checker#dd16200086ef"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

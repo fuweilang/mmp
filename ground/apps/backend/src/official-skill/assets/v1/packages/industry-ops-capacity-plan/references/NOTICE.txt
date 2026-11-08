@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/operations/skills/capacity-plan/SKILL.md (git-blob:34c8cfc668c2f0389ac86d8034017f3fc321f6e8)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: operations/skills/capacity-plan
+No third-party scripts are executed or shipped in this managed package.

@@ -47,10 +47,17 @@ export type ResolvedUpstreamModel = {
   thinkingEnabled: boolean;
 };
 
-type ChatBody = Record<string, unknown> & {
+export type ChatBody = Record<string, unknown> & {
   model?: unknown;
   messages?: unknown;
   stream?: unknown;
+};
+
+/** 已由 Controller 重新核验的官方智能体版本，仅用于用量归因，不进入上游模型请求。 */
+export type ModelRequestAttribution = {
+  agentId?: string;
+  versionId?: string;
+  sessionId?: string;
 };
 
 /**
@@ -265,6 +272,7 @@ export class LlmChatGatewayService {
     tenantId: string | null,
     body: ChatBody,
     res: Response,
+    attribution?: ModelRequestAttribution,
   ): Promise<void> {
     let releaseConcurrency: (() => void) | undefined;
     try {
@@ -338,11 +346,11 @@ export class LlmChatGatewayService {
         res.setHeader('X-MMP-Model',resolved.modelRef);
         this.operationLog.event('info','model.selected',{userId:user.id,tenantId,model:resolved.modelRef,automatic,attempt:attempt+1,headersMs:Date.now()-started});
         try{
-          if(stream){await this.pipeStreamAndSettle(user,tenantId,resolved,upstream,res,pricing,keys);}
+          if(stream){await this.pipeStreamAndSettle(user,tenantId,resolved,upstream,res,pricing,keys,attribution);}
           else{
             await this.health.success({id:resolved.modelRowId,providerId:resolved.providerId},Date.now()-started);
             res.status(upstream.status).json(upstream.data);
-            await this.settleUsage(user,tenantId,resolved,withCacheWriteUsage(extractUsage(upstream.data),upstream.headers),'json',pricing,keys);
+            await this.settleUsage(user,tenantId,resolved,withCacheWriteUsage(extractUsage(upstream.data),upstream.headers),'json',pricing,keys,attribution);
           }
         }finally{res.removeListener('close',cancel);}
         return;
@@ -356,6 +364,162 @@ export class LlmChatGatewayService {
     }
   }
 
+
+  /**
+   * 非流式一次性补全（供官方智能体编排等服务端可信路径复用）。
+   * 走与 chat/completions 相同的选模/冻结/结算；不经 Express Response。
+   */
+  async completeOnce(
+    user: User,
+    tenantId: string | null,
+    body: ChatBody,
+    attribution?: ModelRequestAttribution,
+  ): Promise<{ modelRef: string; content: string; raw: unknown }> {
+    let releaseConcurrency: (() => void) | undefined;
+    try {
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        throw new BadRequestException('请求体无效');
+      }
+      if (!Array.isArray(body.messages)) {
+        throw new BadRequestException('messages 必须是数组');
+      }
+      releaseConcurrency = this.concurrency.acquire(user.id, tenantId);
+      const requested = String(body.model ?? 'auto').trim() || 'auto';
+      const automatic = requested === 'auto' || requested === '*';
+      await this.billing.precheck(user, tenantId);
+      const rows = await this.candidates(user, tenantId, body);
+      const routes = automatic
+        ? rows.map((m) => this.toResolved(m.provider, m))
+        : [await this.resolveModel(user, tenantId, requested)];
+      if (!routes.length) {
+        throw new ServiceUnavailableException({
+          code: 'MODELS_UNAVAILABLE',
+          message: '暂无可用模型，请稍后重试或联系管理员',
+        });
+      }
+      for (let attempt = 0; attempt < routes.length; attempt++) {
+        const resolved = routes[attempt];
+        const states = await this.health.states();
+        if (!this.health.available({ id: resolved.modelRowId, providerId: resolved.providerId }, states)) continue;
+        let pricing: ModelPricingSnapshot;
+        try {
+          pricing = await this.billing.quoteModel(resolved.providerName, resolved.modelId);
+        } catch (error) {
+          this.operationLog.event('error', 'model.price.failed', { model: resolved.modelRef, error });
+          if (automatic) continue;
+          throw error;
+        }
+        const baseKey = createHash('sha256')
+          .update(`${user.id}|${tenantId || ''}|${resolved.modelRef}|${Date.now()}|${attempt}|${randomUUID()}|once`)
+          .digest('hex')
+          .slice(0, 40);
+        const keys = billingKeys(baseKey);
+        if (!user.isPlatformAdmin) {
+          const est = estimateRequestTokens(body);
+          const freezeCoins = Math.max(1, settleModelPrice(pricing, est.input, est.output, 0, 0, 0).chargedCoins);
+          await this.billing.freeze(user, tenantId, {
+            idempotencyKey: keys.freezeKey,
+            coins: freezeCoins,
+            provider: resolved.providerName,
+            model: resolved.modelId,
+            inputEstimate: est.input,
+            outputEstimate: est.output,
+          });
+        }
+        const releaseFrozen = async (reason: string) => {
+          try {
+            await this.billing.releaseFrozen(user, tenantId, {
+              freezeKey: keys.freezeKey,
+              unfreezeKey: keys.unfreezeKey,
+              reason,
+            });
+          } catch (error) {
+            this.operationLog.event('error', 'billing.unfreeze_failed', {
+              userId: user.id,
+              tenantId,
+              model: resolved.modelRef,
+              reason,
+              error,
+            });
+          }
+        };
+        const upstreamBody: Record<string, unknown> = {
+          ...body,
+          model: resolved.modelId,
+          stream: false,
+          thinking: { type: resolved.thinkingEnabled || requestHasTools(body) ? 'enabled' : 'disabled' },
+        };
+        const started = Date.now();
+        let upstream: AxiosResponse;
+        try {
+          upstream = await axios.post(this.buildUpstreamUrl(resolved.baseUrl), upstreamBody, {
+            headers: {
+              Authorization: `Bearer ${resolved.apiKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            responseType: 'json',
+            timeout: 180000,
+            validateStatus: () => true,
+            maxRedirects: 0,
+          });
+        } catch (error) {
+          await releaseFrozen('transport-error');
+          await this.health.failure({ id: resolved.modelRowId, providerId: resolved.providerId }, 0);
+          this.operationLog.event('error', 'model.transport_error', {
+            userId: user.id,
+            tenantId,
+            model: resolved.modelRef,
+            durationMs: Date.now() - started,
+            error,
+          });
+          if (automatic) continue;
+          throw new ServiceUnavailableException({
+            code: 'MODEL_UNAVAILABLE',
+            message: '所选模型连接失败，请选择“自动”或其他模型',
+          });
+        }
+        if (upstream.status >= 400) {
+          await releaseFrozen(`upstream-${upstream.status}`);
+          const reroutable = await this.health.failure(
+            { id: resolved.modelRowId, providerId: resolved.providerId },
+            upstream.status,
+          );
+          if (automatic && reroutable) continue;
+          if (reroutable) {
+            throw new ServiceUnavailableException({
+              code: 'MODEL_UNAVAILABLE',
+              message: '所选模型暂不可用，请选择“自动”或其他模型',
+            });
+          }
+          throw new BadRequestException({
+            code: 'MODEL_REQUEST_REJECTED',
+            message: '模型不接受当前请求，请缩短上下文或调整输入后重试',
+          });
+        }
+        await this.health.success({ id: resolved.modelRowId, providerId: resolved.providerId }, Date.now() - started);
+        await this.settleUsage(
+          user,
+          tenantId,
+          resolved,
+          withCacheWriteUsage(extractUsage(upstream.data), upstream.headers),
+          'json',
+          pricing,
+          keys,
+          attribution,
+        );
+        const content = extractAssistantText(upstream.data);
+        return { modelRef: resolved.modelRef, content, raw: upstream.data };
+      }
+      throw new ServiceUnavailableException({
+        code: 'MODELS_UNAVAILABLE',
+        message: '当前可用模型暂时繁忙，请稍后重试',
+      });
+    } finally {
+      releaseConcurrency?.();
+    }
+  }
+
   private async pipeStreamAndSettle(
     user: User,
     tenantId: string | null,
@@ -364,6 +528,7 @@ export class LlmChatGatewayService {
     res: Response,
     pricing: ModelPricingSnapshot,
     keys: ReturnType<typeof billingKeys>,
+    attribution?: ModelRequestAttribution,
   ): Promise<void> {
     const contentType =
       String(upstream.headers['content-type'] || '') || 'text/event-stream; charset=utf-8';
@@ -416,7 +581,7 @@ export class LlmChatGatewayService {
       if(!res.writableEnded)res.write(`data: ${JSON.stringify({error:{code:'MODEL_STREAM_INTERRUPTED',message:'模型输出中断，请重试；本次未自动切换模型',requestId:this.operationLog.requestId()}})}\n\n`);
     }else if(!clientCancelled){await this.health.success({id:resolved.modelRowId,providerId:resolved.providerId});}
     if (!res.writableEnded) res.end();
-    await this.settleUsage(user, tenantId, resolved, withCacheWriteUsage(usage, upstream.headers), 'stream', pricing, keys);
+    await this.settleUsage(user, tenantId, resolved, withCacheWriteUsage(usage, upstream.headers), 'stream', pricing, keys, attribution);
   }
 
   /**
@@ -431,6 +596,7 @@ export class LlmChatGatewayService {
     mode: 'json' | 'stream',
     pricing: ModelPricingSnapshot,
     keys: ReturnType<typeof billingKeys>,
+    attribution?: ModelRequestAttribution,
   ): Promise<void> {
     const input = Math.max(0, Math.floor(Number(usage?.prompt_tokens ?? 0) || 0));
     const output = Math.max(0, Math.floor(Number(usage?.completion_tokens ?? 0) || 0));
@@ -440,8 +606,15 @@ export class LlmChatGatewayService {
     const usageKey = `gw-usage-${keys.chargeKey.slice('gw-charge-'.length)}`;
 
     const cached = Math.max(0, Math.floor(Number(usage?.prompt_tokens_details?.cached_tokens ?? usage?.prompt_cache_hit_tokens ?? 0)));
-    this.operationLog.event('info','model.usage',{userId:user.id,tenantId,model:resolved.modelRef,inputTokens:input,outputTokens:output,cachedTokens:cached,hasUsage:!!usage});
+    this.operationLog.event('info','model.usage',{userId:user.id,tenantId,model:resolved.modelRef,inputTokens:input,outputTokens:output,cachedTokens:cached,hasUsage:!!usage,officialAgentId:attribution?.agentId,officialAgentVersionId:attribution?.versionId});
     let usageMeta: Prisma.InputJsonObject = { requestId:this.operationLog.requestId()??null, exempt: user.isPlatformAdmin, billingStatus: usage && input + output > 0 ? 'usage-recorded' : 'usage-missing' };
+    if (attribution?.agentId) {
+      usageMeta = {
+        ...usageMeta,
+        officialAgentId: attribution.agentId,
+        officialAgentVersionId: attribution.versionId,
+      };
+    }
     if (usage && input + output > 0) {
       try { usageMeta = { ...usageMeta, ...settleModelPrice(pricing, input, output, cached, usage.cacheWrite5mTokens ?? 0, usage.cacheWrite1hTokens ?? 0), billingStatus: 'pending-settlement' }; }
       catch { usageMeta = { ...usageMeta, billingStatus: 'usage-invalid' }; }
@@ -454,6 +627,8 @@ export class LlmChatGatewayService {
         outputTokens: output,
         totalTokens: total,
         modelCalls: 1,
+        threadId: attribution?.sessionId ?? '',
+        agentId: attribution?.agentId ?? '',
         clientKind: 'gateway',
         source: 'ground_chat_gateway',
       }, usageMeta);
@@ -532,6 +707,24 @@ function estimateRequestTokens(body: ChatBody): { input: number; output: number 
   const rawOut = Number(body.max_tokens ?? 8192);
   const output = Number.isFinite(rawOut) && rawOut > 0 ? Math.floor(rawOut) : 8192;
   return { input, output };
+}
+
+
+function extractAssistantText(payload: unknown): string {
+  if (!payload || typeof payload !== 'object') return '';
+  const choices = (payload as { choices?: unknown }).choices;
+  if (!Array.isArray(choices) || !choices[0] || typeof choices[0] !== 'object') return '';
+  const message = (choices[0] as { message?: { content?: unknown } }).message;
+  const content = message?.content;
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => (part && typeof part === 'object' && typeof (part as { text?: unknown }).text === 'string'
+        ? (part as { text: string }).text
+        : ''))
+      .join('');
+  }
+  return '';
 }
 
 function extractUsage(data: unknown): UpstreamUsage | null {

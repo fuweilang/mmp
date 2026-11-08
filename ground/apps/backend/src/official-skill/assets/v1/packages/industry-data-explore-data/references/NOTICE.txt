@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/explore-data/SKILL.md (git-blob:f1e7032d0abee77903fc3abbfdc7646e383d4993)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: data/skills/explore-data
+No third-party scripts are executed or shipped in this managed package.

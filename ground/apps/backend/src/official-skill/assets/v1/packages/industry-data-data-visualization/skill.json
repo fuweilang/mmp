@@ -1,0 +1,15 @@
+{
+  "key": "industry-data-data-visualization",
+  "name": "数据图表设计",
+  "description": "根据数据类型选择图表并检查可读性与误导风险。",
+  "entry": "SKILL.md",
+  "category": "analytics",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

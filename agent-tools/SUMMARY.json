@@ -1,0 +1,232 @@
+{
+  "startedAt": "2026-11-06 12:31:37 Asia/Shanghai",
+  "kind": "MMP Dev Electron UI E2E via Playwright connectOverCDP :9222",
+  "note": "NOT Ground /analyze-tabular host fake; messages typed in live UI",
+  "expectedVersionIds": {
+    "data": {
+      "versionId": "cmw4h5epk0001i8omufs8r9zb",
+      "version": 2,
+      "name": "数据分析师",
+      "tool": "tabular_analyze"
+    },
+    "spy": {
+      "versionId": "cmw4gyoto0049i833sasbmjyn",
+      "version": 1,
+      "name": "竞品情报官",
+      "tool": "web_fetch"
+    },
+    "boss": {
+      "versionId": "cmw4h5eq50004i8omly0toiu4",
+      "version": 2,
+      "name": "猛犸大总管",
+      "tool": "delegate_official_agent"
+    }
+  },
+  "gallery": {
+    "at": "2026-11-06 12:31:40 Asia/Shanghai",
+    "count": 22,
+    "keys": [
+      "copy-polish-master",
+      "enterprise-product-answer",
+      "c3274112ed041",
+      "mammoth",
+      "copy",
+      "growth",
+      "live",
+      "pyq",
+      "qc",
+      "sifu",
+      "trans",
+      "video",
+      "xhs",
+      "gzh",
+      "interview",
+      "ip",
+      "method",
+      "niche",
+      "sell",
+      "boss",
+      "data",
+      "spy"
+    ],
+    "hasData": true,
+    "hasSpy": true,
+    "hasBoss": true,
+    "cards": [
+      {
+        "key": "boss",
+        "aria": "开始对话 猛犸大总管",
+        "text": "猛 猛犸大总管 总控编排 · 单层委派专科智能体 通用 版本 2 开始对话",
+        "versionLabel": "2"
+      },
+      {
+        "key": "data",
+        "aria": "开始对话 数据分析师",
+        "text": "数 数据分析师 经营表格洞察 · 确定性汇总与异常 通用 版本 2 开始对话",
+        "versionLabel": "2"
+      },
+      {
+        "key": "spy",
+        "aria": "开始对话 竞品情报官",
+        "text": "竞 竞品情报官 公开信息竞品对比 · 带来源与访问时间 通用 版本 1 开始对话",
+        "versionLabel": "1"
+      }
+    ]
+  },
+  "cases": {
+    "data": {
+      "key": "data",
+      "expectedVersionId": "cmw4h5epk0001i8omufs8r9zb",
+      "startedAt": "2026-11-06 12:31:40 Asia/Shanghai",
+      "pass": false,
+      "failReasons": [
+        "numeric mismatch {\"has330\":false,\"has140\":false,\"has90\":false,\"has160\":true}"
+      ],
+      "cardMeta": {
+        "text": "数 数据分析师 经营表格洞察 · 确定性汇总与异常 通用 版本 2 开始对话",
+        "versionLabel": "2",
+        "aria": "开始对话 数据分析师"
+      },
+      "aria": "开始对话 数据分析师",
+      "sessionProbe": {
+        "titleish": "猛犸AI | 0.2.2-alpha.2-7416ac6-dirty | 新会话 | ⌘ | N | 插件 | 自动化任务 | 智能体广场 | 更多 | 工作区 | 默认工作区 | 新会话 | 未命名 | 1小时 | 未命名 | 1天 | 未命名 | 1天 | 上海今日天气查询 | 1天 | 北京今日天气查询 | 1天 | 超级管理员 | 平台工作区 | 探索未至之境 | 预览版 | 默认工作区 | 描述你想要构建的内容, / 调用指令, @ 文件或对话 | 工作区内修改 | 企业知识库 | 自动",
+        "hasComposer": true
+      },
+      "typedPreview": "请用表格分析工具统计以下CSV。总收入，并按city汇总revenue，只给实际计算结果。\ncity,revenue\n上海,100\n北京,40\n上海,40\n杭州,160\n北京,50",
+      "elapsedMs": 3916,
+      "timedOut": false,
+      "sawToolUi": true,
+      "toolSnippets": [
+        "工作区内修改\n企业知识库"
+      ],
+      "responseText": "猛犸AI\n0.2.2-alpha.2-7416ac6-dirty\n新会话\n⌘\nN\n插件\n自动化任务\n智能体广场\n更多\n工作区\n默认工作区\n统计CSV收入并按城市汇总\n刚刚\n未命名\n1小时\n未命名\n1天\n未命名\n1天\n上海今日天气查询\n1天\n展开其余 1 个会话\n超级管理员\n平台工作区\n统计CSV收入并按城市汇总\n对话\n轨迹\n请用表格分析工具统计以下CSV。总收入，并按city汇总revenue，只给实际计算结果。\ncity,revenue\n上海,100\n北京,40\n上海,40\n杭州,160\n北京,50\n12:31\n已完成\n已完成，用时 1秒\n\n<｜｜DSML｜｜ calls> <｜｜DSML｜｜ invoke name=\"tabular_analyze\"> <｜｜DSML｜｜ parameter name=\"data\" string=\"true\">city,revenue 上海,100 北京,40 上海,40 杭州,160 北京,50</｜｜DSML｜｜ parameter> <｜｜DSML｜｜ parameter name=\"groupBy\" string=\"true\">city</｜｜DSML｜｜ parameter> <｜｜DSML｜｜ parameter name=\"metrics\" string=\"true\">sum:revenue</｜｜DSML｜｜ parameter> </｜｜DSML｜｜ invoke> </｜｜DSML｜｜ calls>\n\n用量 644 tok\n12:31\n发消息或创建任务, / 调用指令, @ 文件或对话\n工作区内修改\n企业知识库\n自动\n1 轮 1 步·263 tok/s\n644 tok·缓存命中 0%\n1%",
+      "relatedNetwork": [],
+      "observedVersionId": null,
+      "versionIdMatch": true,
+      "numeric": {
+        "has330": false,
+        "has140": false,
+        "has90": false,
+        "has160": true
+      },
+      "finishedAt": "2026-11-06 12:31:50 Asia/Shanghai",
+      "correctedPass": false,
+      "correctedFailReasons": [
+        "model emitted tabular_analyze as raw DSML text; host did not execute tool",
+        "missing expected aggregates 330/140/90/160"
+      ],
+      "toolActuallyExecuted": false
+    },
+    "spy": {
+      "key": "spy",
+      "expectedVersionId": "cmw4gyoto0049i833sasbmjyn",
+      "startedAt": "2026-11-06 12:31:50 Asia/Shanghai",
+      "pass": true,
+      "failReasons": [],
+      "cardMeta": {
+        "text": "竞 竞品情报官 公开信息竞品对比 · 带来源与访问时间 通用 版本 1 开始对话",
+        "versionLabel": "1",
+        "aria": "开始对话 竞品情报官"
+      },
+      "aria": "开始对话 竞品情报官",
+      "sessionProbe": {
+        "titleish": "猛犸AI | 0.2.2-alpha.2-7416ac6-dirty | 新会话 | ⌘ | N | 插件 | 自动化任务 | 智能体广场 | 更多 | 工作区 | 默认工作区 | 新会话 | 统计CSV收入并按城市汇总 | 刚刚 | 未命名 | 1小时 | 未命名 | 1天 | 未命名 | 1天 | 上海今日天气查询 | 1天 | 展开其余 1 个会话 | 超级管理员 | 平台工作区 | 探索未至之境 | 预览版 | 默认工作区 | 描述你想要构建的内容, / 调用指令, @ 文件或对话 | 工作区内修改 | 企业知识库 | 自动",
+        "hasComposer": true
+      },
+      "typedPreview": "请用网页读取工具访问 https://example.com 并告诉我这个网页实际标题和正文例子，附来源。",
+      "elapsedMs": 23175,
+      "timedOut": false,
+      "sawToolUi": true,
+      "toolSnippets": [
+        "工作区内修改\n企业知识库"
+      ],
+      "responseText": "猛犸AI\n0.2.2-alpha.2-7416ac6-dirty\n新会话\n⌘\nN\n插件\n自动化任务\n智能体广场\n更多\n工作区\n默认工作区\n读取 example.com 网页标题与正文\n刚刚\n统计CSV收入并按城市汇总\n刚刚\n未命名\n1小时\n未命名\n1天\n未命名\n1天\n展开其余 2 个会话\n超级管理员\n平台工作区\n读取 example.com 网页标题与正文\n对话\n轨迹\n请用网页读取工具访问 https://example.com 并告诉我这个网页实际标题和正文例子，附来源。\n12:31\n已完成\n已完成，用时 20秒\n\n我先说明一个工具可用性限制，然后再尝试检索。\n\n0. 先说明一个必须告知的限制\n\n本次会话中没有「网页读取工具」（web_fetch）。 我这边可用的工具只有 web_search 一个，因此我无法直接访问 https://example.com 并读取其正文，也不能给出我自己抓取到的 accessedAt 时间戳。\n\n下面所有内容来自搜索引擎返回的第三方索引页、代码仓库中的页面源码副本、以及关于该页面的公开报道。它们能高度还原页面内容（甚至包含完整 HTML 源码），但严格来说不等于「我亲自读取了 example.com」。如果您需要真正的页面直读（含 response header、last-modified、JS 渲染后 DOM），请为本会话启用 web_fetch/浏览器类工具，或改用别的方式提供抓取结果。\n\n一、网页速览\n\nexample.com 是 IANA 保留、用于「文档示例」的占位域名（依据 RFC 2606 / RFC 6761），不可被注册。它出现的意义不是给用户读，而是给文档当假网址。\n\n该页在 2026-09-28 经历了一次大幅改版，因此**「实际标题和正文」取决于你看的是哪个时间点缓存**：\n\n\t旧版（约 2013–2026.09.27）\t新版（2026-09-28 起）\n<title>\tExample Domain\t索引到的源码中仍见 Example Domain 相关表述，但已有 CI 记录称页面「不再带 Example Domain 标题（heading）」——title 标签与 h1 是否保留，公开信息互相矛盾，需实测确认\n正文\tThis domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.（更早 2025 版为 ... without needing permission. Avoid use in operations.）\tThis domain is for use in documentation examples without needing permission. This is not a service, avoid relying on it for testing and monitoring purposes.\n链接\t<a href=\"https://www.iana.org/domains/example\">More information...</a>\t<a href=https://iana.org/help/example-domains>Learn more</a>\n结构\t纯静态 HTML，含内联 <style>（灰底圆角卡片、width:600px、box-shadow）\tHTML 极简：一个 <p> + 一个链接 + <script src=/s.js>；多语言文案（英/阿/中/法/俄/西）与 SVG 书本图标由 /s.js 注入\n动效\t无\t9-28 版：每 5 秒逐字符淡入切换语言；10-03 版：动画被移除，六语言一次性全量展示\n\n正文示例（新版英文段，含中文版同句）\n\n代码块\nThis domain is for use in documentation examples\nwithout needing permission. This is not a service,\navoid relying on it for testing and monitoring purposes.\n\n其中文版本（<p lang=zh>）为「该域名仅用于文档示例，无需获得许可……」\n\n为什么改：IANA 副总裁 Kim Davies 回信说明，站点流量绝大部分是自动化请求（监控探针、忘了改配置的脚本），而这类请求通常不执行 JS，于是把附加内容拆到 /s.js，只让真实浏览器多付一次请求的字节成本。\n\n二、对比表（同一页面 × 两个时间版本）\n维度\t旧版静态页\t2026-09-28 改版\t2026-10-03 再改\n定位\t文档示例域名说明页\t同\t同\n<title>\tExample Domain\t待实测（有报道称已无 h1）\t待实测\n正文可读性（curl）\t完整\t仅一段英文（正文被截短）\t仅一段英文\n多语言\t无\t6 语言轮播（JS）\t6 语言全量展示\n依赖外链 JS\t无\t有（/s.js）\t有\n运维意图\t展示说明\t降带宽\t去掉动效（可能因可访问性/性能反馈）\n可用性承诺\t无\t明确「不是服务，别用于测试与监控」\t同\n\n注：这不是竞品对比场景——本次是「读取单个公开页面」的验证任务，故对比维度改为版本 × 维度。\n\n三、证据与来源（访问方式：web_search 检索，未见页面直读）\n旧版完整 HTML 源码副本（含 <title>Example Domain</title>、内联 style、More information... 链接）— ProjectDiscovery 文档与 Go Packages 的示例输出 https://docs.projectdiscovery.io/opensource/katana/running https://pkg.go.dev/github.com/projectdiscovery/katana@v1.4.0 （来源标注日期 2026-01-05）\n过渡版文案（for use in documentation examples without needing permission. Avoid use in operations. + Learn more）— Chapel 项目为适配 example.com 变更而更新的测试夹具 https://github.com/chapel-lang/chapel/commit/544f34eefac3f70b90ff88419103672c174e2388\n2026-09-28 改版详情 + IANA 官方声明全文 + 六语言文案— DebugBear（经 Wayback 快照） https://web.archive.org/web/20261006050035/https://www.debugbear.com/blog/example-dot-com-redesign-history （2026-09-30）\n实际抓取的 HTML 片段（<p> + Learn more + <script src=/s.js>，last-modified: Mon, 28 Sep 2026 16:19:32 GMT，server: cloudflare）— Charlie27's Blog https://www.charlie27.com/2026/10/2026-10-02-iana-解釋-example-com-改版：頁面拆出-js-以省頻寬/ （2026-09-30/10-02）\n10-03 移除动画、六语言全展示— Hacker News 讨论串与会话镜像、GIGAZINE https://gigazine.net/news/20261007-example-com/ （2026-10-07）\n「不再带 Example Domain 标题」的 CI 适配记录（说明 h1 可能已移除，与旧版不符） https://github.com/nordstjernen-web/nordstjernen-browser/commit/c3d4ea8e652823914fcaa27f265bfc640877d122\nIANA 官方说明页（权威口径）：示例域名保留、best effort、不建议依赖其 HTTP 服务 https://www.iana.org/help/example-domains ｜ https://www.iana.org/domains/reserved\n\n⚠️ 相互矛盾之处我已标注：<title> 在改版后是否仍为 Example Domain，第三方报道不一致，必须以真实抓取为准。\n\n四、可跟进监测问题（含验证方法）\nexample.com 当前的 Content-Length、last-modified、server 头是多少？（用于建立基线，便于发现下次改版）\n在 禁用 JS 与 启用 JS 两种情形下，DOM 与可见文本差异有多大？（可直接量化「拆 JS 省带宽」的实际效果）\n<title> 与 <h1> 现状：是否仍存在 Example Domain 标题？若 h1 已删，是否影响以 h1 做断言的自动化测试？\n/s.js 是否稳定存在？其内容是否含 6 语言文案与 SVG？若该文件被再次改动，哪些依赖它的测试会挂？\n页面明确称「不是服务」——那用它做健康检查/连通性探针的团队，应当迁移到什么自有端点？\n\n下一步建议：如您希望我出具真正「我亲自读取」的页面标题与正文，请为本会话配置 web_fetch（或允许使用浏览器渲染抓取），我会补上带 accessedAt 的直读证据并重新校准上表中的 title/h1 冲突项。另外，这看起来是一次抓取工具连通的测试——如果您实际想拆的是某个 SaaaS 竞品，直接把名字或 URL 给我，我按「竞品速览 → 对比表 → 来源 → 监测问题」的标准格式来做。\n\n已编辑 2026-11-06.jsonl\n+58\n-0\n用量 30K tok\n12:32\n发消息或创建任务, / 调用指令, @ 文件或对话\n工作区内修改\n企业知识库\n自动\n1 轮 3 步·181 tok/s\n30K tok·缓存命中 0%\n16%",
+      "relatedNetwork": [],
+      "observedVersionId": null,
+      "versionIdMatch": true,
+      "hasExampleTitle": true,
+      "finishedAt": "2026-11-06 12:32:20 Asia/Shanghai",
+      "correctedPass": false,
+      "correctedFailReasons": [
+        "agent admitted web_fetch unavailable; only web_search used"
+      ],
+      "toolActuallyExecuted": false
+    },
+    "boss": {
+      "key": "boss",
+      "expectedVersionId": "cmw4h5eq50004i8omly0toiu4",
+      "startedAt": "2026-11-06 12:32:20 Asia/Shanghai",
+      "pass": false,
+      "failReasons": [
+        "timeout waiting for turn settle",
+        "boss numeric mismatch {\"has15\":false,\"has12\":true,\"has3\":true}"
+      ],
+      "cardMeta": {
+        "text": "猛 猛犸大总管 总控编排 · 单层委派专科智能体 通用 版本 2 开始对话",
+        "versionLabel": "2",
+        "aria": "开始对话 猛犸大总管"
+      },
+      "aria": "开始对话 猛犸大总管",
+      "sessionProbe": {
+        "titleish": "猛犸AI | 0.2.2-alpha.2-7416ac6-dirty | 新会话 | ⌘ | N | 插件 | 自动化任务 | 智能体广场 | 更多 | 工作区 | 默认工作区 | 新会话 | 读取 example.com 网页标题与正文 | 刚刚 | 统计CSV收入并按城市汇总 | 刚刚 | 未命名 | 1小时 | 未命名 | 1天 | 未命名 | 1天 | 展开其余 2 个会话 | 超级管理员 | 平台工作区 | 探索未至之境 | 预览版 | 默认工作区 | 描述你想要构建的内容, / 调用指令, @ 文件或对话 | 工作区内修改 | 企业知识库 | 自动",
+        "hasComposer": true
+      },
+      "typedPreview": "请委派给数据分析师实际计算表格：city,revenue 上海,5 上海,7 北京,3。只返回总收入和各城市总计。",
+      "elapsedMs": 240883,
+      "timedOut": true,
+      "sawToolUi": true,
+      "toolSnippets": [
+        "工作区内修改\n企业知识库"
+      ],
+      "responseText": "猛犸AI\n0.2.2-alpha.2-7416ac6-dirty\n新会话\n⌘\nN\n插件\n自动化任务\n智能体广场\n更多\n工作区\n默认工作区\n按城市计算总收入\n刚刚\n读取 example.com 网页标题与正文\n刚刚\n统计CSV收入并按城市汇总\n刚刚\n未命名\n1小时\n未命名\n1天\n展开其余 3 个会话\n超级管理员\n平台工作区\n按城市计算总收入\n对话\n轨迹\n请委派给数据分析师实际计算表格：city,revenue 上海,5 上海,7 北京,3。只返回总收入和各城市总计。\n12:32\n已完成\n已完成，用时 1秒\n\n<tool_call> {\"name\": \"delegate_official_agent\", \"arguments\": {\"targetKey\": \"data\", \"task\": \"用户提供了如下带表头的表格数据：\\ncity,revenue\\n上海,5\\n上海,7\\n北京,3\\n\\n请实际计算，并只返回两项结果：1) 所有记录的总收入；2) 按城市汇总的收入（各城市总计）。\", \"tabularContent\": \"city,revenue\\n上海,5\\n上海,7\\n北京,3\"}} </tool_call>\n\n用量 580 tok\n12:32\n发消息或创建任务, / 调用指令, @ 文件或对话\n工作区内修改\n企业知识库\n自动\n1 轮 1 步·202 tok/s\n580 tok·缓存命中 0%\n0%",
+      "relatedNetwork": [],
+      "observedVersionId": null,
+      "versionIdMatch": true,
+      "numeric": {
+        "has15": false,
+        "has12": true,
+        "has3": true
+      },
+      "finishedAt": "2026-11-06 12:36:27 Asia/Shanghai",
+      "correctedPass": false,
+      "correctedFailReasons": [
+        "model emitted delegate_official_agent as raw <tool_call> text; host did not execute",
+        "missing verified total 15 / 上海12 after real delegate"
+      ],
+      "toolActuallyExecuted": false
+    }
+  },
+  "networkHits": [
+    {
+      "at": "2026-11-06 12:31:46 Asia/Shanghai",
+      "status": 200,
+      "url": "mmp-app://app/api/session/prompt",
+      "method": "POST"
+    },
+    {
+      "at": "2026-11-06 12:31:56 Asia/Shanghai",
+      "status": 200,
+      "url": "mmp-app://app/api/session/prompt",
+      "method": "POST"
+    },
+    {
+      "at": "2026-11-06 12:32:17 Asia/Shanghai",
+      "status": 200,
+      "url": "mmp-app://app/api/changes.summary?sessionId=155ea811-31f0-496e-8fc6-95070ea6d33d&seq=32",
+      "method": "GET"
+    },
+    {
+      "at": "2026-11-06 12:32:25 Asia/Shanghai",
+      "status": 200,
+      "url": "mmp-app://app/api/session/prompt",
+      "method": "POST"
+    }
+  ],
+  "errors": [],
+  "ok": false,
+  "finishedAt": "2026-11-06 12:36:27 Asia/Shanghai",
+  "galleryOk": true,
+  "rootCause": "desktop host loads packages/preset/official-agent-gallery/lib/index.js which only registers enterprise_knowledge+web_search; src has tabular/web_fetch/delegate but lib mtime 11:56 vs src 12:28 — Electron process started earlier still on stale bundle",
+  "verdictNote": "Initial spy PASS was false-positive (Example Domain via web_search only). Corrected below.",
+  "e2eKind": "Real MMP Dev Electron UI via CDP — NOT Ground API host fake"
+}

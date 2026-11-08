@@ -1,0 +1,18 @@
+{
+  "key": "dsh-prose-standard",
+  "name": "技术文档表达规范",
+  "description": "依据 DSH 文档风格改进技术表述与结构。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/examples.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

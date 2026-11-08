@@ -1,0 +1,3 @@
+Source: local:mammoth-agent/packages/skill/skill-office/assets/office-docx
+License: MIT
+Adaptation: local-dsh-office-chinese-wrapper

@@ -1,0 +1,4 @@
+Source: github:trae-community/trae-skills@main:skills/daily-hot-news#d15b818ef58a
+License: MIT
+Adaptation: strip-scripts; stripped=2; dropped=0
+No scripts shipped.

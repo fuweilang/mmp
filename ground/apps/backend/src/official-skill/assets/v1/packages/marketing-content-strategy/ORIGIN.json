@@ -1,0 +1,63 @@
+{
+  "key": "marketing-content-strategy",
+  "name": "内容策略规划",
+  "summary": "组织目标受众、内容主题、分发渠道和衡量方式。",
+  "category": "business",
+  "userCategoryLabel": "运营增长",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "coreyhaines31",
+    "repo": "marketingskills",
+    "ref": "main",
+    "path": "skills/content-strategy",
+    "treeSha": "88c79f6528a9347420e57ceb1fff9a60de651768",
+    "skillBlobSha": "0efc441269144abe5af37603291d860f47a52430",
+    "immutableRef": "https://github.com/coreyhaines31/marketingskills/blob/main/skills/content-strategy/SKILL.md (git-blob:0efc441269144abe5af37603291d860f47a52430)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "7c48dd638a9ebed49a8ef0c0c4eea90105381cdf",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "coreyhaines31/marketingskills",
+      "html_url": "https://github.com/coreyhaines31/marketingskills",
+      "stargazers_count": 58856,
+      "forks_count": 8611,
+      "pushed_at": "2026-11-04T19:01:33Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Public MIT marketing skills collection; stars are popularity only, not quality tests."
+    },
+    "includedResources": [
+      {
+        "path": "skills/content-strategy/evals/evals.json",
+        "sha": "23310228166d5b0bf579299c40e9a5e4b33d5779",
+        "mapped": "references/evals/evals.json"
+      },
+      {
+        "path": "skills/content-strategy/references/content-distribution.md",
+        "sha": "6f4a3c38a15e9949727ebcf621f0054710a02a83",
+        "mapped": "references/content-distribution.md"
+      },
+      {
+        "path": "skills/content-strategy/references/headless-cms.md",
+        "sha": "fa01433bf3b29a33fef40c3a580a6087495d3fcc",
+        "mapped": "references/headless-cms.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "3d2398ec9fa58c6edc78effaa3083a23391a0085ed8aa623bea2a3dcf4e0062e"
+  },
+  "officialVsAdapted": "adapted"
+}

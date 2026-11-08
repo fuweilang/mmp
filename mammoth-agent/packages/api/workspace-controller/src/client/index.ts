@@ -46,15 +46,25 @@ export const inject = ['remote', 'remote.workspace']
  */
 export function apply(ctx: Context): void {
   const model = new ClientWorkspaceModel(ctx.remote.workspace)
-  new WorkspaceController(ctx, model)
-  const control = createWorkspaceStateStream(ctx.remote, {
+  let disposed = false
+  let retryGeneration = 0
+  const createControl = () => createWorkspaceStateStream(ctx.remote, {
     accept: model,
     carrierFailed: () => { model.handleCarrierFailure() },
     failed: (error) => { model.handleStreamFailure(error) },
   })
+  let control = createControl()
+  new WorkspaceController(ctx, model, async () => {
+    const generation = ++retryGeneration
+    await control.dispose()
+    if (disposed || generation !== retryGeneration) return
+    model.handleCarrierFailure()
+    control = createControl()
+    control.start()
+  })
   control.start()
   ctx.effect(
-    () => async () => { await control.dispose() },
+    () => async () => { disposed = true; retryGeneration++; await control.dispose() },
     'workspace-controller.client.control',
   )
 }

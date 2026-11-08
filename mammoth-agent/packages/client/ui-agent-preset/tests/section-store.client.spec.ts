@@ -207,3 +207,4 @@ describe('Coding Tools default reconciliation', () => {
     expect(f.state().rows.find(row => row.isDefault)?.id).toBe('minimal')
   })
 })
+

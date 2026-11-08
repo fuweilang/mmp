@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/validate-data/SKILL.md (git-blob:30a1bac41bf9679dc7d96b7ec59a116f03ec0575)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: data/skills/validate-data
+No third-party scripts are executed or shipped in this managed package.

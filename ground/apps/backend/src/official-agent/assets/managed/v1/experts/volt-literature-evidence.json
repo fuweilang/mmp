@@ -1,0 +1,113 @@
+{
+  "key": "volt-literature-evidence",
+  "name": "科研文献证据专家",
+  "kind": "GENERAL",
+  "summary": "从可访问文献提取方法、样本和结果，形成有局限说明的证据表。",
+  "category": "analytics",
+  "capabilities": [
+    "证据分析"
+  ],
+  "openingQuestions": [
+    "请帮我明确科研文献证据的目标、资料和约束。"
+  ],
+  "toolScope": [
+    "web_search",
+    "web_fetch"
+  ],
+  "promptFile": "instructions/volt-literature-evidence.md",
+  "linkedSkillKeys": [],
+  "expertDefinition": {
+    "schemaVersion": 1,
+    "profile": {
+      "role": "科研文献证据专家",
+      "mission": "从可访问文献提取方法、样本和结果，形成有局限说明的证据表。"
+    },
+    "workflow": [
+      "定义研究问题、纳排标准、关键词与可访问范围",
+      "制定可复查检索式，记录搜索时间、数据库/网页来源与缺失范围",
+      "逐文提取研究设计、样本、干预/对照、结局、数值和局限；缺项标未报告",
+      "区分原始研究、综述和预印本，检查偏倚、重复样本和利益冲突",
+      "按证据强弱综合一致性与冲突，引用DOI/URL及具体位置，不拼接未经证明的因果结论"
+    ],
+    "deliverables": [
+      "检索过程和纳排记录",
+      "含方法/样本/结果/证据层级的文献提取表",
+      "可追溯综合结论、冲突和研究空白"
+    ],
+    "source": {
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "paths": [
+        "categories/10-research-analysis/scientific-literature-researcher.md"
+      ],
+      "files": [
+        {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "categories/10-research-analysis/scientific-literature-researcher.md",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/10-research-analysis/scientific-literature-researcher.md",
+          "localPath": "upstream/awesome-claude-code-subagents/categories/10-research-analysis/scientific-literature-researcher.md",
+          "sha256": "84c2657b9715a207494fd084e80fb80fc4c066e64b0c856fd95bfbb93a7295d7",
+          "bytes": 5250
+        }
+      ],
+      "assetPath": "managed/v1/experts/volt-literature-evidence.json",
+      "communityEvidence": {
+        "stars": 26382,
+        "observedAt": "2026-11-07T00:02:51.656960+00:00",
+        "selection": "社区独立角色定义",
+        "notExecutionRating": true
+      }
+    },
+    "license": {
+      "spdx": "MIT",
+      "upstreamPath": "LICENSE",
+      "path": "managed/v1/provenance/volt-literature-evidence/LICENSE",
+      "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+      "evidence": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "path": "LICENSE",
+        "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+        "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "bytes": 1065
+      },
+      "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+    },
+    "dependencies": [
+      {
+        "capability": "files/terminal/foreign SaaS/MCP",
+        "status": "not_granted",
+        "fallback": "用户提供文本，输出方案或草稿；只使用本会话实际暴露工具"
+      },
+      {
+        "capability": "model",
+        "status": "cloud-admin-pool-only"
+      },
+      {
+        "capability": "web_search,web_fetch",
+        "status": "existing-host-scope-only"
+      }
+    ],
+    "adaptation": {
+      "language": "zh-CN",
+      "mode": "role-adaptation",
+      "notes": [
+        "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+        "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+        "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+        "未连接BGPT MCP：仅公共检索、可读网页/论文输入；全文不可读时只提供摘要级证据。"
+      ],
+      "executionValidation": "not-run"
+    },
+    "extensions": {
+      "upstreamFrontmatter": {
+        "categories/10-research-analysis/scientific-literature-researcher.md": "name: scientific-literature-researcher\ndescription: \"Use when you need to search scientific literature and retrieve structured experimental data from published studies. Invoke this agent when the task requires evidence-grounded answers from full-text research papers, including methods, results, sample sizes, and quality scores.\"\ntools: Read, WebFetch, WebSearch, mcp__bgpt__search_papers\nmodel: sonnet"
+      },
+      "selectionGroup": "research"
+    }
+  },
+  "batch": "external-v1",
+  "publish": false
+}

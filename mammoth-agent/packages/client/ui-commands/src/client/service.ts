@@ -240,6 +240,7 @@ export class CommandUiRuntime extends Service implements CommandUiContract {
       }
       rows.push({
         name: contribution.name,
+        ...(contribution.checked === undefined ? {} : { checked: contribution.checked(session) }),
         ...(contribution.label === undefined ? {} : { label: contribution.label() }),
         ...(contribution.description === undefined ? {} : { description: contribution.description() }),
         ...(contribution.icon === undefined ? {} : { icon: contribution.icon }),
@@ -376,7 +377,7 @@ export class CommandUiRuntime extends Service implements CommandUiContract {
     segment: TokenSegment,
   ): void {
     if (ui.kind === 'action') {
-      this.consumeVia(session.sessionId, segment)
+      if (segment.via !== 'menu' || ui.preserveDraftOnMenu !== true) this.consumeVia(session.sessionId, segment)
       ui.run(session)
       return
     }

@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/customer-support/skills/kb-article/SKILL.md (git-blob:d9f3274c1954099a7a4ff0c9fabd0d2e9d5235c0)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: customer-support/skills/kb-article
+No third-party scripts are executed or shipped in this managed package.

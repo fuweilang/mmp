@@ -1,0 +1,15 @@
+{
+  "key": "industry-accounting-variance-analysis",
+  "name": "财务差异分析",
+  "description": "梳理实际与预算差异及可能原因，不作投资结论。",
+  "entry": "SKILL.md",
+  "category": "legal",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

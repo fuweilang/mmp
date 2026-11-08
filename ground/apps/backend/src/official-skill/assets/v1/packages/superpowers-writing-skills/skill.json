@@ -1,0 +1,27 @@
+{
+  "key": "superpowers-writing-skills",
+  "name": "技能写作与迭代",
+  "description": "编写可复用技能说明并评估触发条件和边界。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/anthropic-best-practices.md"
+    },
+    {
+      "path": "references/examples/CLAUDE_MD_TESTING.md"
+    },
+    {
+      "path": "references/persuasion-principles.md"
+    },
+    {
+      "path": "references/testing-skills-with-subagents.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

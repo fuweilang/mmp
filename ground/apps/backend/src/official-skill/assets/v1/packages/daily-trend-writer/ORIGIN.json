@@ -1,0 +1,26 @@
+{
+  "key": "daily-trend-writer",
+  "name": "热点内容写作",
+  "summary": "全自动化的公众号内容生产流水线。每日发现实用工具、社区热点、教程经验等\"小而美\"选题，深挖后输出\"咪蒙风格\"与\"技术干货\"两篇高质量公众号文章。",
+  "category": "content",
+  "userCategoryLabel": "运营增长",
+  "references": [
+    "references/examples/input.md",
+    "references/examples/output.md",
+    "references/trend-sources.md",
+    "references/subskills/doc-coauthoring.md",
+    "references/subskills/mimeng-writing.md",
+    "references/subskills/wechat-article-writer.md",
+    "references/templates/topic-brief.md",
+    "references/templates/trend-board.md"
+  ],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/daily-trend-writer",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/daily-trend-writer#4d5c2290ef22"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

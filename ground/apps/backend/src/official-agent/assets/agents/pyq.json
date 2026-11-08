@@ -1,0 +1,21 @@
+{
+  "key": "pyq",
+  "kind": "GENERAL",
+  "name": "朋友圈内容大师",
+  "summary": "人设化朋友圈内容",
+  "openingQuestions": [
+    "我是保险顾问，帮我规划一周的朋友圈内容。",
+    "帮我写 3 条不像硬广的产品朋友圈。",
+    "怎么在朋友圈打造专业又有温度的人设？"
+  ],
+  "toolScope": [],
+  "toolScopeNotes": "latest 无工具依赖；不虚构 search",
+  "promptFile": "prompts/pyq.md",
+  "batch": "B",
+  "publish": true,
+  "category": "content",
+  "capabilities": [
+    "人设内容",
+    "朋友圈运营"
+  ]
+}

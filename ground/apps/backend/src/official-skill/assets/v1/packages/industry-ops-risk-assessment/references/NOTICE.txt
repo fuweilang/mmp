@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/operations/skills/risk-assessment/SKILL.md (git-blob:80518b6ce0c094debb53226df6188443ee61de0f)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: operations/skills/risk-assessment
+No third-party scripts are executed or shipped in this managed package.

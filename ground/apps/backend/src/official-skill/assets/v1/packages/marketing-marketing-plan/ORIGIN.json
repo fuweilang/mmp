@@ -1,0 +1,123 @@
+{
+  "key": "marketing-marketing-plan",
+  "name": "营销计划制定",
+  "summary": "梳理目标人群、定位、渠道与阶段行动计划。",
+  "category": "business",
+  "userCategoryLabel": "运营增长",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "coreyhaines31",
+    "repo": "marketingskills",
+    "ref": "main",
+    "path": "skills/marketing-plan",
+    "treeSha": "88c79f6528a9347420e57ceb1fff9a60de651768",
+    "skillBlobSha": "aac98990a566ed27964d9e7e56e9c67a6ae3f740",
+    "immutableRef": "https://github.com/coreyhaines31/marketingskills/blob/main/skills/marketing-plan/SKILL.md (git-blob:aac98990a566ed27964d9e7e56e9c67a6ae3f740)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "7c48dd638a9ebed49a8ef0c0c4eea90105381cdf",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "coreyhaines31/marketingskills",
+      "html_url": "https://github.com/coreyhaines31/marketingskills",
+      "stargazers_count": 58856,
+      "forks_count": 8611,
+      "pushed_at": "2026-11-04T19:01:33Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Public MIT marketing skills collection; stars are popularity only, not quality tests."
+    },
+    "includedResources": [
+      {
+        "path": "skills/marketing-plan/evals/evals.json",
+        "sha": "d80302fb92ee001ead6467fa1426f3268acf7149",
+        "mapped": "references/evals/evals.json"
+      },
+      {
+        "path": "skills/marketing-plan/references/aarrr-framework.md",
+        "sha": "4f9f5e94d6cbdf1f039f7540a60a3b0dcf11a8b4",
+        "mapped": "references/aarrr-framework.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/budget-planning.md",
+        "sha": "0ffae8306870442dc1ea963635df92749818f031",
+        "mapped": "references/budget-planning.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/client-types.md",
+        "sha": "e00d631614aeb675f1f7693aaa143acd14038215",
+        "mapped": "references/client-types.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/current-state-rubric.md",
+        "sha": "a8dc4aa5b20c17e60f54ce9f130282b9e1d243e7",
+        "mapped": "references/current-state-rubric.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/example-quietude.md",
+        "sha": "b42b09bc4b528a9e00910ee8d5bdf5f25e9e4174",
+        "mapped": "references/example-quietude.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/funding-stage-unlocks.md",
+        "sha": "18a591e24629cff2faf23483dc38cde63d4a4713",
+        "mapped": "references/funding-stage-unlocks.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/growth-patterns.md",
+        "sha": "b4fd0288be857b6cba93c844816bd34630ac2d06",
+        "mapped": "references/growth-patterns.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/idea-cross-reference.md",
+        "sha": "640b32327d92f738a061e786ba3b92fcd8176325",
+        "mapped": "references/idea-cross-reference.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/market-sizing.md",
+        "sha": "bdcecd0bb37705cb70dc64c9abff6dabc6dd307d",
+        "mapped": "references/market-sizing.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/measurement-framework.md",
+        "sha": "a0fe2c947a0467da537960faca694dc1a45c7270",
+        "mapped": "references/measurement-framework.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/methodology.md",
+        "sha": "ce85e6ef823dfb3a427b99cd168234b905ac887d",
+        "mapped": "references/methodology.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/ops-stack-mapping.md",
+        "sha": "82172ff4ff321015b7c36742d5eb55c21f490949",
+        "mapped": "references/ops-stack-mapping.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/plan-template.md",
+        "sha": "c38510a80558fee730d41c6e27381eaa2550219f",
+        "mapped": "references/plan-template.md"
+      },
+      {
+        "path": "skills/marketing-plan/references/team-and-agency-model.md",
+        "sha": "9db127d6c54fedeb4433cbc719549e5310784195",
+        "mapped": "references/team-and-agency-model.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "df8eb583994215f998ba0ee809812aa986f550ee9695a2a9486e9f025d1593ad"
+  },
+  "officialVsAdapted": "adapted"
+}

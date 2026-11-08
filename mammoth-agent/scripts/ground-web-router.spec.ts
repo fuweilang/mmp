@@ -78,7 +78,37 @@ it('isolates three browsers, preserves same-user sessions and proxies upgrades o
   expect((await fetch(`${router.origin}/api/identity`, { headers: headers(rotated) })).status).toBe(401)
   const extra = { userId: 'fifth', tenantId: 'other' }
   sessions.set(token(extra), extra)
-  expect((await fetch(router.origin, { headers: headers(token(extra)) })).status).toBe(503)
+  const atCapacity = await fetch(router.origin, { headers: { ...headers(token(extra)), accept: 'text/html' } })
+  expect(atCapacity.status).toBe(503)
+  expect(await atCapacity.text()).toContain('已达到同时运行的账号环境上限')
+})
+
+it('paints a progress page while a cold identity Host starts, then proxies once ready', async () => {
+  const identity = { userId: 'cold-user', tenantId: 'cold-enterprise' }
+  const jwt = token(identity)
+  const ground = createServer((_req, res) => {
+    res.setHeader('content-type', 'application/json')
+    res.end(JSON.stringify({ user: { id: identity.userId }, currentTenant: { id: identity.tenantId, status: 'active' } }))
+  })
+  const groundOrigin = await listen(ground)
+  cleanup.push(() => close(ground))
+  const worker = createServer((_req, res) => res.end('warm-worker'))
+  const workerOrigin = await listen(worker)
+  cleanup.push(() => close(worker))
+  const router = await startGroundWebRouter({ host: '127.0.0.1', port: 0, groundOrigin,
+    cookieName: 'mammothai_access_token', maxWorkers: 1, requestTimeoutMs: 1000,
+    async startWorker() {
+      await new Promise(resolve => setTimeout(resolve, 800))
+      return { origin: workerOrigin, close: async () => {} }
+    } })
+  cleanup.push(router.close)
+  const headers = { cookie: `mammothai_access_token=${jwt}`, accept: 'text/html' }
+  const started = Date.now()
+  const splash = await fetch(router.origin, { headers })
+  expect(Date.now() - started).toBeLessThan(700)
+  expect(await splash.text()).toContain('正在启动你的智能体')
+  expect((await fetch(`${router.origin}/.mmp/ready`, { headers })).status).toBe(204)
+  expect(await (await fetch(router.origin, { headers })).text()).toBe('warm-worker')
 })
 
 it('keeps serving when a browser resets its connection mid-response', async () => {
@@ -141,4 +171,25 @@ it('accepts only the configured HTTPS public authority behind a loopback proxy',
   expect(new URL(anonymous.location!).searchParams.get('next')).toBe('https://www.mmai.vip/')
   await expect(startGroundWebRouter({ host: '127.0.0.1', port: 0, groundOrigin: 'https://www.mmai.vip', publicOrigin: 'https://attacker.invalid',
     cookieName: 'mammothai_access_token', maxWorkers: 1, requestTimeoutMs: 1000, startWorker: async () => { throw new Error('must not start') } })).rejects.toThrow('canonical HTTPS origin')
+})
+
+
+it('serves PWA manifest without login while keeping API routes protected', async () => {
+  const ground = createServer((_req, res) => { res.writeHead(401).end() })
+  const groundOrigin = await listen(ground)
+  cleanup.push(() => close(ground))
+  const router = await startGroundWebRouter({ host: '127.0.0.1', port: 0, groundOrigin,
+    cookieName: 'mammothai_access_token', maxWorkers: 1, requestTimeoutMs: 1000,
+    async startWorker() { throw new Error('worker must not start for anonymous PWA assets') },
+  })
+  cleanup.push(router.close)
+  const manifest = await fetch(`${router.origin}/manifest.webmanifest`)
+  expect(manifest.status).toBe(200)
+  expect(manifest.headers.get('content-type') ?? '').toContain('application/manifest+json')
+  const body = await manifest.json() as { name?: string; icons?: unknown[] }
+  expect(body.name).toBe('猛犸AI')
+  expect(Array.isArray(body.icons)).toBe(true)
+  expect((await fetch(`${router.origin}/icon-192.png`)).status).toBe(200)
+  expect((await fetch(`${router.origin}/api/identity`)).status).toBe(401)
+  expect((await fetch(router.origin, { redirect: 'manual' })).status).toBe(303)
 })

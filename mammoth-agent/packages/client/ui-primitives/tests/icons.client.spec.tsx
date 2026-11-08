@@ -203,11 +203,11 @@ describe('FishLogo', () => {
 describe('BrandWordmark', () => {
   it('can render the name artwork with or without its leading mark', () => {
     const view = render(<primitives.BrandWordmark />)
-    expect(view.container.textContent).toContain('猛犸智能体')
+    expect(view.container.textContent).toContain('猛犸AI')
     expect(view.container.querySelectorAll('img')).toHaveLength(1)
 
     view.rerender(<primitives.BrandWordmark includeMark={false} />)
-    expect(view.container.textContent).toContain('猛犸智能体')
+    expect(view.container.textContent).toContain('猛犸AI')
     expect(view.container.querySelectorAll('img')).toHaveLength(0)
   })
 })

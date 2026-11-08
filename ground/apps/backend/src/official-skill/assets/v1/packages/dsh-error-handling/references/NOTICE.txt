@@ -1,0 +1,5 @@
+Source: https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-error-handling/SKILL.md (git-blob:f9dd7fd80999c7c5f4cf03096d6a42649b15e40e)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: .agents/skills/dsh-error-handling
+No third-party scripts are executed or shipped in this managed package.

@@ -1,0 +1,18 @@
+[
+  "packages/client/ui-sidebar-terminal",
+  "packages/client/ui-settings-account",
+  "packages/client/ui-theme",
+  "packages/client/ui-reference",
+  "packages/client/ui-model-selection",
+  "packages/client/ui-sidebar-files",
+  "packages/client/ui-trajectory",
+  "packages/client/ui-subagent",
+  "packages/client/ui-settings-subagent",
+  "packages/client/ui-settings-plugin-inventory",
+  "packages/client/ui-commands",
+  "packages/client/ui-permission-presets",
+  "packages/client/ui-entry-customization",
+  "packages/client/ui-agent-preset",
+  "packages/client/ui-sidebar-right",
+  "packages/client/ui-sidebar-browser"
+]

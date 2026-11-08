@@ -1,0 +1,18 @@
+{
+  "key": "marketing-marketing-psychology",
+  "name": "营销心理学应用",
+  "description": "用行为原理审视营销内容与用户决策，不作效果保证。",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evals/evals.json"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

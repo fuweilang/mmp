@@ -126,6 +126,7 @@ export interface WorkspaceArchiveSessionRequest {
 
 /** Session requested for restoration from the archived Session list. */
 export interface WorkspaceUnarchiveSessionRequest {
+  readonly workspaceId?: WorkspaceId
   readonly sessionId: SessionId
 }
 

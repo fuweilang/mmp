@@ -71,15 +71,15 @@ export PATH="$HOME/.nvm/versions/node/v24.22.2/bin:$PATH"
 pnpm install --frozen-lockfile
 # macOS Apple 芯片（本机编译原生模块）
 pnpm --dir apps/desktop run package:mac:arm64:unsigned
-# macOS Intel（跨架构，脚本会自动从 npm 拉 darwin-x64 原生包，需 npm 可用、能访问 registry）
+# macOS Intel（跨架构，优先用本地 cross-compiled darwin-x64 原生包，缺失才回退 registry）
 pnpm --dir apps/desktop run package:mac:x64:unsigned
-# Windows
-pnpm --dir apps/desktop run package:win:x64:unsigned
+# Windows 不能在 macOS 上打：走 .github/workflows/windows-package.yml / Windows x64 构建机
+# 本轮不打 Windows 就只发布两个 mac 包，下载页显示“暂未提供”
 ```
 
 打出来的包按 SKILL.md 的 downloads 约定上传到服务器 `/www/mmp-prod/downloads/`：
-- `mammoth-agent-mac-arm64.dmg`、`mammoth-agent-mac-x64.dmg`、`mammoth-agent-win.exe`
-- 并更新 `mammoth-latest.json`（版本号、sha256、size），先传产物再传 latest.json，上传前备份旧 latest.json。
+- `mammoth-agent-mac-arm64.dmg`、`mammoth-agent-mac-x64.dmg`；Windows 有包时再加 `mammoth-agent-win.exe`
+- 并更新 `mammoth-latest.json`（版本号、sha256；size 用本地/服务器 `stat` 核对），先传产物再传 latest.json，上传前备份旧 latest.json；未构建的平台不要写进 manifest。
 
 打包验证要点（新守卫）：如果平台原生包缺失，`prepare:packages` 会直接报错，不会再静默出坏包。
 
@@ -105,3 +105,32 @@ pnpm --dir apps/desktop run package:win:x64:unsigned
 ## 4. 后续待办（不在本次范围）
 
 - 客户端/Web 全链路 HTTP 请求埋点与日志上报（落到 Ground 存储，dev/生产同构），用于线上问题快速定位。方案待出。
+
+---
+
+# 附：发版执行优化要求（配合 baota-release Skill 第 4A 节）
+
+先读 `.opencode/skills/baota-release/SKILL.md` 全文，重点看新增的「4A. 提速与并行」。本次发布按下面的并行打法执行：
+
+## 两条流水线并行
+
+- **流水线 B（客户端打包）先开跑**：它是本次最慢环节（30–60 分钟），不占用发布锁、不依赖中台发版。第一时间在后台启动：
+
+  ```bash
+  cd /Users/fuweilang/Documents/code/mmp/mammoth-agent
+  export PATH="$HOME/.nvm/versions/node/v24.22.2/bin:$PATH"
+  pnpm --dir apps/desktop run package:mac:arm64:unsigned
+  # 完成后串行打 mac-x64，出一个校验一个；win-x64 不能在 macOS 上打，需 Windows 构建机/CI
+  # 产物只从 apps/desktop/.desktop-build/targets/<target>/unsigned-artifacts/ 取
+  ```
+
+- **流水线 A（中台 + web）同时走**：`./ground/infra/production/release.sh --yes`，照常拿锁、跑完 smoke。
+
+两条线互不阻塞；任何一条失败各自独立处理和回滚。
+
+## 注意
+
+1. 不要清 `.desktop-build/`（Electron/pnpm 缓存都在里面，清了打包慢一倍）。
+2. `mammoth-latest.json` 永远最后传：先把本轮实际构建的安装包都传完并核对 sha256/size，备份旧 json，再上传新 json；未构建的平台不要写进 manifest。
+3. 客户端打包如果报 `@mammoth-ai/node-addon-system-*` 缺失，说明新守卫拦住了问题包，停下来报告，不要绕过。
+4. 总时长预期 1–1.5 小时（并行后）；超过 2 小时就把当前各阶段进度报给用户。

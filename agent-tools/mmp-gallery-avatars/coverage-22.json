@@ -1,0 +1,211 @@
+{
+  "publishedCount": 22,
+  "assetCount": 20,
+  "withPortrait": 18,
+  "glyphFallback": [
+    "c3274112ed041",
+    "copy-polish-master",
+    "enterprise-product-answer",
+    "mammoth"
+  ],
+  "rows": [
+    {
+      "key": "boss",
+      "name": "猛犸大总管",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/boss.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/boss.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "c3274112ed041",
+      "name": "商业命名大师",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": null,
+      "avatarUrl": null,
+      "source": "glyph-fallback"
+    },
+    {
+      "key": "copy",
+      "name": "获客文案大师",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/copy.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/copy.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "copy-polish-master",
+      "name": "文案润色大师",
+      "inAssets": false,
+      "avatarField": null,
+      "resolved": null,
+      "avatarUrl": null,
+      "source": "glyph-fallback"
+    },
+    {
+      "key": "data",
+      "name": "数据分析师",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/data.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/data.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "enterprise-product-answer",
+      "name": "企业资料答疑助手",
+      "inAssets": false,
+      "avatarField": null,
+      "resolved": null,
+      "avatarUrl": null,
+      "source": "glyph-fallback"
+    },
+    {
+      "key": "growth",
+      "name": "增长战略顾问",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/growth.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/growth.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "gzh",
+      "name": "公众号改写专家",
+      "inAssets": true,
+      "avatarField": "avatars/copy.jpg",
+      "resolved": "avatars/copy.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/copy.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "interview",
+      "name": "访谈大师",
+      "inAssets": true,
+      "avatarField": "avatars/qc.jpg",
+      "resolved": "avatars/qc.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/qc.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "ip",
+      "name": "IP策划大师",
+      "inAssets": true,
+      "avatarField": "avatars/growth.jpg",
+      "resolved": "avatars/growth.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/growth.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "live",
+      "name": "直播话术专家",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/live.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/live.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "mammoth",
+      "name": "猛犸 AI",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": null,
+      "avatarUrl": null,
+      "source": "glyph-fallback"
+    },
+    {
+      "key": "method",
+      "name": "方法论大师",
+      "inAssets": true,
+      "avatarField": "avatars/trans.jpg",
+      "resolved": "avatars/trans.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/trans.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "niche",
+      "name": "利基战略顾问",
+      "inAssets": true,
+      "avatarField": "avatars/data.jpg",
+      "resolved": "avatars/data.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/data.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "pyq",
+      "name": "朋友圈内容大师",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/pyq.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/pyq.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "qc",
+      "name": "客服质检官",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/qc.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/qc.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "sell",
+      "name": "卖点大师",
+      "inAssets": true,
+      "avatarField": "avatars/live.jpg",
+      "resolved": "avatars/live.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/live.jpg",
+      "source": "explicit"
+    },
+    {
+      "key": "sifu",
+      "name": "私域运营大师",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/sifu.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/sifu.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "spy",
+      "name": "竞品情报官",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/spy.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/spy.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "trans",
+      "name": "咨询转化教练",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/trans.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/trans.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "video",
+      "name": "短视频脚本官",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/video.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/video.jpg",
+      "source": "same-key"
+    },
+    {
+      "key": "xhs",
+      "name": "爆款小红书专家",
+      "inAssets": true,
+      "avatarField": null,
+      "resolved": "avatars/xhs.jpg",
+      "avatarUrl": "http://127.0.0.1:5201/api/official-agents/avatars/xhs.jpg",
+      "source": "same-key"
+    }
+  ]
+}

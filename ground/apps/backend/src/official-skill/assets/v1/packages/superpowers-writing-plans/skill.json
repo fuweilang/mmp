@@ -1,0 +1,18 @@
+{
+  "key": "superpowers-writing-plans",
+  "name": "实现计划编写",
+  "description": "将设计转为可追踪的实施步骤和验收条件。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/plan-document-reviewer-prompt.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

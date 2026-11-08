@@ -1,0 +1,5 @@
+Source: https://github.com/hackerFish/awesome-dsh-skills/blob/main/skills/dsh-skill-adapter/SKILL.md (git-blob:5fe6e401e2c327f9f7d6e373df582f27d87849e0)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: skills/dsh-skill-adapter
+No third-party scripts are executed or shipped in this managed package.

@@ -1,0 +1,29 @@
+{
+  "key": "method",
+  "kind": "KNOWLEDGE",
+  "name": "方法论大师",
+  "summary": "沉淀可复用方法论与 SOP",
+  "openingQuestions": [
+    "我想把团队经验沉淀成方法论，该从哪一步开始？",
+    "按推荐→适配→教学转化，帮我走一遍。",
+    "知识库里有哪些适合做培训的经典方法论？"
+  ],
+  "toolScope": [
+    "enterprise_knowledge"
+  ],
+  "promptFile": "prompts/method.md",
+  "batch": "C",
+  "publish": true,
+  "kb": [
+    {
+      "file": "1.md",
+      "name": "方法论·智囊 v1.0"
+    }
+  ],
+  "category": "expertise",
+  "capabilities": [
+    "方法论",
+    "SOP"
+  ],
+  "avatar": "avatars/trans.jpg"
+}

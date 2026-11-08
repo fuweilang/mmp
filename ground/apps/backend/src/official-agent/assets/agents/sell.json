@@ -1,0 +1,37 @@
+{
+  "key": "sell",
+  "kind": "KNOWLEDGE",
+  "name": "卖点大师",
+  "summary": "提炼产品卖点与高转化营销文案",
+  "openingQuestions": [
+    "根据我的产品资料，帮我提炼 5 个主卖点。",
+    "怎么把产品参数翻译成用户愿意买单的利益点？",
+    "对照消费心理学知识库，这个卖点该如何增强说服力？"
+  ],
+  "toolScope": [
+    "enterprise_knowledge"
+  ],
+  "promptFile": "prompts/sell.md",
+  "batch": "C",
+  "publish": true,
+  "kb": [
+    {
+      "file": "1.md",
+      "name": "《文案创作知识库》"
+    },
+    {
+      "file": "2.md",
+      "name": "《消费心理学知识库》"
+    },
+    {
+      "file": "3.md",
+      "name": "《营销战略知识库》"
+    }
+  ],
+  "category": "sales",
+  "capabilities": [
+    "卖点提炼",
+    "营销文案"
+  ],
+  "avatar": "avatars/live.jpg"
+}

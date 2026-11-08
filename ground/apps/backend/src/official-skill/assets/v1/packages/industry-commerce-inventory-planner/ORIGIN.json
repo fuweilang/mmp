@@ -1,0 +1,73 @@
+{
+  "key": "industry-commerce-inventory-planner",
+  "name": "库存规划辅助",
+  "summary": "根据用户提供库存和销量规划补货与周转，不自动采购。",
+  "category": "ecommerce",
+  "userCategoryLabel": "电商经营",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "small-business/skills/inventory-planner",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "9e797e87a89a7232d5903df73a2e9a53d941e21b",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/small-business/skills/inventory-planner/SKILL.md (git-blob:9e797e87a89a7232d5903df73a2e9a53d941e21b)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "f53c679acba79cbb292961fd9fb9e87ca20eab22",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [
+      {
+        "path": "small-business/skills/inventory-planner/reference/data_sources.md",
+        "sha": "d39cd10358089e2ea927e40a5734663e5be36426",
+        "mapped": "references/reference/data_sources.md"
+      },
+      {
+        "path": "small-business/skills/inventory-planner/reference/gotchas.md",
+        "sha": "abedbc390e4d79e09dc5e27ab03662345a495ae1",
+        "mapped": "references/reference/gotchas.md"
+      },
+      {
+        "path": "small-business/skills/inventory-planner/reference/po_drafting.md",
+        "sha": "29c05f36b8771972808670e640dcd470ea599738",
+        "mapped": "references/reference/po_drafting.md"
+      },
+      {
+        "path": "small-business/skills/inventory-planner/reference/seasonality.md",
+        "sha": "b22895d76f7741fb825777f3144c11b482695065",
+        "mapped": "references/reference/seasonality.md"
+      },
+      {
+        "path": "small-business/skills/inventory-planner/reference/velocity_and_reorder.md",
+        "sha": "cc1fb60ad9eb08eb5fd21b1b06528928a2882a2c",
+        "mapped": "references/reference/velocity_and_reorder.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "9a6fcc740c339a953cea3febb7a64c31225c90383ad7b1cf8b789ab8df52df4f"
+  },
+  "officialVsAdapted": "adapted"
+}

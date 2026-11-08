@@ -1,0 +1,57 @@
+{
+  "timeAsiaShanghai": "2026-11-07T19:46:17.848801+08:00",
+  "kind": "static source + actual compiled CSS/module/token verification; NOT browser-computed layout or screenshot QA",
+  "lightSurfaceResolved": "rgb(255, 255, 255)",
+  "darkSurfaceResolved": "rgb(44, 44, 46)",
+  "compiledDialogClass": "fX9eDW_detailDialog",
+  "checks": {
+    "old_token_absent_from_current_modal": true,
+    "old_token_not_defined_in_real_theme": true,
+    "real_surface_token_light_opaque": true,
+    "real_surface_token_dark_opaque": true,
+    "opaque_fallback_under_theme_paint": true,
+    "dark_missing_token_fallback": true,
+    "mask_separate_from_surface": true,
+    "header_and_footer_outside_only_body_scroll": true,
+    "viewport_margin_16_and_dynamic_height": true,
+    "native_top_layer_semantics_retained": true,
+    "scroll_lock_and_focus_cleanup": true,
+    "start_and_starter_business_unchanged": true,
+    "compiled_module_mapped_real_surface": true,
+    "compiled_single_body_scroller": true,
+    "compiled_native_open_flex": true,
+    "compiled_has_latest_cleanup": true
+  },
+  "allPassed": true,
+  "typecheckExit": 0,
+  "targetClientBuildExit": 0,
+  "visualBrowserVerified": false,
+  "files": [
+    {
+      "path": "packages/client/ui-official-agent-gallery/src/client/GalleryPage.tsx",
+      "sha256": "510b093243a8458ec5ee9c8b6b2c97ed57a43b87ed6caed604f9bea2bef582ee",
+      "bytes": 24169
+    },
+    {
+      "path": "packages/client/ui-official-agent-gallery/src/client/GalleryPage.module.css",
+      "sha256": "e06e2c929d06d48e6e0845f59fc8802280304af20b7d98440958c5e710520e86",
+      "bytes": 12606
+    },
+    {
+      "path": "packages/client/ui-official-agent-gallery/lib/types/client/GalleryPage.js",
+      "sha256": "8b2343c02606047cf0697a85d3724645cf798fd3a3d77fea5946e9a0365c8454",
+      "bytes": 23752
+    },
+    {
+      "path": "packages/client/ui-official-agent-gallery/lib/client.js",
+      "sha256": "1607163da96fba12db0f30fb5694c2921368b3a726f3ca1e05e7bf9cf3a1bd4f",
+      "bytes": 83813
+    },
+    {
+      "path": "packages/client/ui-official-agent-gallery/lib/client.js.map",
+      "sha256": "85ab2b093f4a1327e332991468f772c7cd40dc14a86b7692232561f1ab97f411",
+      "bytes": 94400
+    }
+  ],
+  "validationNote": "Checker accepts theme rgb(r,g,b) as opaque, not only hex; source/theme values were not changed to pass."
+}

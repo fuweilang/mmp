@@ -1,0 +1,57 @@
+{
+  "nativeAdmission": "success",
+  "detachedSessionRestore": true,
+  "count": 7,
+  "eventTypes": [
+    "official-gallery/composition",
+    "agent-preset/selected",
+    "official-agent/bound",
+    "official-gallery/source",
+    "permission/preset",
+    "sandbox/mode",
+    "approval/policy"
+  ],
+  "composition": {
+    "version": 3,
+    "profile": "managed-documents",
+    "preset": "standard",
+    "hasSelectedSkill": false
+  },
+  "runtimePhase": "bound",
+  "unknownRequiredStillRefused": true,
+  "allRequiredGalleryEventsKnown": true,
+  "originalLogUnchanged": true,
+  "sha256": "b31b109ec76b6b2f6b54b37a35b9c0cf2f59e7597e7e1d46905f3db845bcb13d",
+  "bytes": 1699,
+  "readOnly": true,
+  "runtimeResolutions": [
+    {
+      "caller": "apps/desktop",
+      "session": "no direct session dependency"
+    },
+    {
+      "caller": "apps/desktop-host",
+      "session": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/core/session/lib/index.js"
+    },
+    {
+      "caller": "packages/session/session-persistence",
+      "session": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/core/session/lib/index.js"
+    },
+    {
+      "caller": "packages/session/session-persistence-jsonl",
+      "session": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/core/session/lib/index.js"
+    },
+    {
+      "caller": "packages/session-query/session-query",
+      "session": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/core/session/lib/index.js"
+    },
+    {
+      "caller": "packages/session/session-format-catalog",
+      "session": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/core/session/lib/index.js"
+    },
+    {
+      "caller": "packages/preset/official-agent-gallery",
+      "session": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/core/session/lib/index.js"
+    }
+  ]
+}

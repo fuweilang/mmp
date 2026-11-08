@@ -190,6 +190,14 @@ export class WorkspaceCommands {
    * @returns the complete resulting archive set.
    */
   async unarchiveSession(request: WorkspaceUnarchiveSessionRequest): Promise<WorkspaceArchiveValue> {
+    const owner = this.ctx.workspaceRegistry.list().find(workspace => workspace.sessionIds.includes(request.sessionId))
+    if (owner === undefined) {
+      if (request.workspaceId === undefined) throw new RemoteError('gateway/bad-request', 'TASK_RESTORE_WORKSPACE_REQUIRED: choose a registered original workspace on this Host', {})
+      const destination = this.requireWorkspace(request.workspaceId)
+      if (!this.ctx.remoteAccess.allows({ kind: 'workspace', id: destination.id })) throw new RemoteError('gateway/bad-request', 'Workspace access is unavailable', {})
+      // Native attach validates the immutable cwd. No silent cross-directory migration.
+      await destination.attachSession(request.sessionId)
+    }
     await this.ctx.workspaceRegistry.unarchiveSession(request.sessionId)
     return { archivedSessionIds: [...this.ctx.workspaceRegistry.archivedSessionIds] }
   }

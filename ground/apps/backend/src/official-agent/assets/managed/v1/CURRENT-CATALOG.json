@@ -1,0 +1,345 @@
+{
+  "newExperts": 24,
+  "newDrafts": 24,
+  "newPublishedVersions": 0,
+  "newSkillPackages": 0,
+  "reusedDistinctSkills": 38,
+  "newLinks": 44,
+  "totalExperts": 46,
+  "totalPublished": 22,
+  "totalDrafts": 24,
+  "skillTotal": 115,
+  "enabledSkills": 115,
+  "experts": [
+    {
+      "id": "cmw5n4oc600005l4cz8q85oar",
+      "key": "agency-backend-architect",
+      "name": "后端架构方案专家",
+      "status": "DRAFT",
+      "group": "development",
+      "license": "MIT",
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "linkedSkills": [
+        "codex-security-threat-model",
+        "superpowers-writing-plans"
+      ]
+    },
+    {
+      "id": "cmw5n4oce00035l4comkkddaa",
+      "key": "agency-business-strategy",
+      "name": "商业战略决策专家",
+      "status": "DRAFT",
+      "group": "business",
+      "license": "MIT",
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "linkedSkills": [
+        "marketing-marketing-plan",
+        "marketing-pricing"
+      ]
+    },
+    {
+      "id": "cmw5n4oci00065l4cn1929ehn",
+      "key": "agency-customer-success",
+      "name": "客户成功运营专家",
+      "status": "DRAFT",
+      "group": "business",
+      "license": "MIT",
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "linkedSkills": [
+        "industry-support-draft-response",
+        "marketing-churn-prevention"
+      ]
+    },
+    {
+      "id": "cmw5n4ocm00095l4ckbmlysbl",
+      "key": "agency-frontend-advisor",
+      "name": "前端实现方案专家",
+      "status": "DRAFT",
+      "group": "development",
+      "license": "MIT",
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "linkedSkills": [
+        "frontend-design",
+        "dsh-responsive-ui"
+      ]
+    },
+    {
+      "id": "cmw5n4ocp000c5l4ccadxsw0y",
+      "key": "agency-hr-onboarding",
+      "name": "员工入职规划专家",
+      "status": "DRAFT",
+      "group": "business",
+      "license": "MIT",
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "linkedSkills": [
+        "industry-hr-onboarding"
+      ]
+    },
+    {
+      "id": "cmw5n4oct000e5l4cnikxi3dh",
+      "key": "agency-operations-manager",
+      "name": "流程运营改善专家",
+      "status": "DRAFT",
+      "group": "business",
+      "license": "MIT",
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "linkedSkills": [
+        "industry-ops-capacity-plan",
+        "industry-ops-process-optimization",
+        "industry-ops-runbook"
+      ]
+    },
+    {
+      "id": "cmw5n4ocx000i5l4cmk978ar1",
+      "key": "agency-project-planner",
+      "name": "项目范围与交付专家",
+      "status": "DRAFT",
+      "group": "business",
+      "license": "MIT",
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "linkedSkills": [
+        "project-governance",
+        "superpowers-writing-plans"
+      ]
+    },
+    {
+      "id": "cmw5n4od0000l5l4cs1pmgr6i",
+      "key": "agency-supply-chain",
+      "name": "供应链采购策略专家",
+      "status": "DRAFT",
+      "group": "business",
+      "license": "MIT",
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "linkedSkills": [
+        "industry-commerce-inventory-planner",
+        "industry-ops-risk-assessment"
+      ]
+    },
+    {
+      "id": "cmw5n4od4000o5l4c16wbqp5p",
+      "key": "agency-training-designer",
+      "name": "企业培训设计专家",
+      "status": "DRAFT",
+      "group": "business",
+      "license": "MIT",
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "linkedSkills": []
+    },
+    {
+      "id": "cmw5n4od7000q5l4cauze1qb5",
+      "key": "agency-ui-system",
+      "name": "界面设计系统专家",
+      "status": "DRAFT",
+      "group": "development",
+      "license": "MIT",
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "linkedSkills": [
+        "brand-guidelines",
+        "frontend-design",
+        "industry-design-accessibility-review"
+      ]
+    },
+    {
+      "id": "cmw5n4oda000u5l4cjpuf1kdc",
+      "key": "agency-ux-research",
+      "name": "用户体验研究专家",
+      "status": "DRAFT",
+      "group": "research",
+      "license": "MIT",
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "linkedSkills": [
+        "industry-design-user-research",
+        "industry-product-synthesize-research"
+      ]
+    },
+    {
+      "id": "cmw5n4ode000x5l4cwsjgcsv4",
+      "key": "kw-account-strategy",
+      "name": "大客户商机策略专家",
+      "status": "DRAFT",
+      "group": "business",
+      "license": "Apache-2.0",
+      "repository": "anthropics/knowledge-work-plugins",
+      "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+      "linkedSkills": [
+        "marketing-customer-research"
+      ]
+    },
+    {
+      "id": "cmw5n4odh000z5l4c1j8iq052",
+      "key": "kw-data-quality-lead",
+      "name": "数据分析质量复核专家",
+      "status": "DRAFT",
+      "group": "research",
+      "license": "Apache-2.0",
+      "repository": "anthropics/knowledge-work-plugins",
+      "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+      "linkedSkills": [
+        "industry-data-explore-data",
+        "industry-data-validate-data"
+      ]
+    },
+    {
+      "id": "cmw5n4odl00125l4ciboscs85",
+      "key": "kw-financial-controller",
+      "name": "财务关账统筹专家",
+      "status": "DRAFT",
+      "group": "business",
+      "license": "Apache-2.0",
+      "repository": "anthropics/knowledge-work-plugins",
+      "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+      "linkedSkills": [
+        "industry-accounting-close-management",
+        "industry-accounting-financial-statements",
+        "industry-accounting-reconciliation"
+      ]
+    },
+    {
+      "id": "cmw5n4odo00165l4clbh0v0l5",
+      "key": "kw-legal-review-lead",
+      "name": "合同与法律风险专家",
+      "status": "DRAFT",
+      "group": "business",
+      "license": "Apache-2.0",
+      "repository": "anthropics/knowledge-work-plugins",
+      "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+      "linkedSkills": [
+        "industry-legal-legal-risk-assessment",
+        "industry-legal-review-contract"
+      ]
+    },
+    {
+      "id": "cmw5n4odr00195l4c5jq58l15",
+      "key": "volt-api-designer",
+      "name": "API契约设计专家",
+      "status": "DRAFT",
+      "group": "development",
+      "license": "MIT",
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "linkedSkills": [
+        "dsh-doc",
+        "superpowers-writing-plans"
+      ]
+    },
+    {
+      "id": "cmw5n4odu001c5l4cx1urj3tg",
+      "key": "volt-code-reviewer",
+      "name": "代码质量审查专家",
+      "status": "DRAFT",
+      "group": "development",
+      "license": "MIT",
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "linkedSkills": [
+        "dsh-code-review",
+        "superpowers-receiving-code-review"
+      ]
+    },
+    {
+      "id": "cmw5n4odz001f5l4c823wnqah",
+      "key": "volt-database-optimizer",
+      "name": "数据库性能诊断专家",
+      "status": "DRAFT",
+      "group": "development",
+      "license": "MIT",
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "linkedSkills": [
+        "industry-data-sql-queries",
+        "dsh-speed-up-perf"
+      ]
+    },
+    {
+      "id": "cmw5n4oe2001i5l4c8nrgvkik",
+      "key": "volt-debugger",
+      "name": "故障根因诊断专家",
+      "status": "DRAFT",
+      "group": "development",
+      "license": "MIT",
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "linkedSkills": [
+        "dsh-error-handling",
+        "superpowers-systematic-debugging"
+      ]
+    },
+    {
+      "id": "cmw5n4oe6001l5l4c56cj2naz",
+      "key": "volt-devops-advisor",
+      "name": "交付与运维方案专家",
+      "status": "DRAFT",
+      "group": "development",
+      "license": "MIT",
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "linkedSkills": [
+        "industry-ops-runbook",
+        "superpowers-verification-before-completion"
+      ]
+    },
+    {
+      "id": "cmw5n4oe8001o5l4crxm865yp",
+      "key": "volt-literature-evidence",
+      "name": "科研文献证据专家",
+      "status": "DRAFT",
+      "group": "research",
+      "license": "MIT",
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "linkedSkills": []
+    },
+    {
+      "id": "cmw5n4oeb001p5l4cfkcwsedn",
+      "key": "volt-market-sizing",
+      "name": "市场规模研究专家",
+      "status": "DRAFT",
+      "group": "research",
+      "license": "MIT",
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "linkedSkills": [
+        "marketing-customer-research"
+      ]
+    },
+    {
+      "id": "cmw5n4oee001r5l4c6p1ng8o7",
+      "key": "volt-security-auditor",
+      "name": "安全审计顾问",
+      "status": "DRAFT",
+      "group": "development",
+      "license": "MIT",
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "linkedSkills": [
+        "codex-security-best-practices",
+        "codex-security-threat-model"
+      ]
+    },
+    {
+      "id": "cmw5n4oeh001u5l4cnh5lebeg",
+      "key": "volt-statistical-modeling",
+      "name": "统计实验与建模顾问",
+      "status": "DRAFT",
+      "group": "research",
+      "license": "MIT",
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "linkedSkills": [
+        "industry-data-statistical-analysis",
+        "marketing-ab-testing"
+      ]
+    }
+  ]
+}

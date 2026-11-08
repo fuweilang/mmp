@@ -16,3 +16,11 @@ it('includes padding and borders in the 44px account and 32px More rows', () => 
   expect(css).toMatch(/\.trigger\[data-signed-out='true'\]:not\(\[data-collapsed='true'\]\)\s*\{[^}]*height: 32px;/)
   expect(css).toMatch(/\.trigger\[data-collapsed='true'\]\s*\{[^}]*width: 36px;[^}]*height: 36px;/)
 })
+
+it('keeps name+phone on one panel row, company muted below, and no role chip styles', () => {
+  expect(css).toMatch(/\.panelNameRow\s*\{[^}]*display: flex;/)
+  expect(css).toMatch(/\.company\s*\{/)
+  expect(css).not.toMatch(/\.role\s*\{/)
+  expect(css).toMatch(/\.trigger\[data-signed-out='false'\]\[data-has-company='true'\]:not\(\[data-collapsed='true'\]\)\s*\{[^}]*height: 60px;/)
+  expect(css).toMatch(/\.trigger\[data-signed-out='false'\]:not\(\[data-collapsed='true'\]\)\s*\{[^}]*height: 44px;/)
+})

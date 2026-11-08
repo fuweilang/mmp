@@ -57,14 +57,14 @@ async function bench() {
 
 /** Open the Workspace row's hover card, which is where the home abbreviation shows. */
 function openHoverCard(): void {
-  const row = screen.getByRole('treeitem').parentElement as HTMLElement
+  const row = screen.getAllByRole('treeitem').find(row => row.getAttribute('data-row-key') !== 'archived-section')!.parentElement as HTMLElement
   fireEvent.pointerEnter(row)
   act(() => { vi.advanceTimersByTime(800) })
 }
 
 /** Close it again, so the next hover rebuilds the card from current props. */
 function closeHoverCard(): void {
-  const row = screen.getByRole('treeitem').parentElement as HTMLElement
+  const row = screen.getAllByRole('treeitem').find(row => row.getAttribute('data-row-key') !== 'archived-section')!.parentElement as HTMLElement
   fireEvent.pointerLeave(row)
   act(() => { vi.advanceTimersByTime(800) })
 }

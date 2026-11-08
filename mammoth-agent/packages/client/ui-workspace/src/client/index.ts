@@ -1,3 +1,4 @@
+import { installTaskDataSurfaces } from './task-data.tsx'
 import { IconEditOutlineRegular, IconTrashOutlineRegular, IconPinFillRegular, IconPinOutlineRegular, IconUnarchiveOutlineRegular, IconArchiveOutlineRegular, IconBranchOutlineRegular, IconCopyOutlineRegular } from '@mammoth-ai/mmp-client-ui-primitives'
 import { SessionMenu } from './session-actions/SessionMenu.tsx'
 import type {} from '@mammoth-ai/mmp-client-ui-context-menu/client'
@@ -101,7 +102,7 @@ const NS = 'workspace'
  * declaration through `slots.inject()` instead of assuming order.
  */
 export const inject = ['contextMenus',
-  'slots', 'sessions', 'workspaces', 'locale', 'remote', 'remote.directoryPicker', 'layout', 'shortcuts', 'remoteAccess',
+  'slots', 'sessions', 'workspaces', 'locale', 'remote', 'remote.directoryPicker', 'remote.session', 'remote.workspace', 'layout', 'shortcuts', 'remoteAccess',
 ]
 
 /**
@@ -198,7 +199,7 @@ export function apply(ctx: Context): void {
     // The Host's refusal for running work is the one case that asks first:
     // the confirmation names that work and offers to stop it.
     archiveSession: (sessionId) => {
-      uiWorkspace.archiveSession(sessionId).then(() => {
+      uiWorkspace.archiveSession(sessionId, { stopActivity: true }).then(() => {
         notify({ kind: 'archived', sessionId })
       }).catch((reason: unknown) => {
         const activity = activeSessionRefusal(reason)
@@ -248,7 +249,9 @@ export function apply(ctx: Context): void {
   })
   const toastActions = {
     undoArchive: unarchiveSession,
-    showArchived: () => { viewInstance.actions.setArchivedFilter('show') },
+    showArchived: () => {
+      ctx.emit('settings/open-section', 'data-management')
+    },
     openForkSource: (sessionId: SessionId) => {
       if (workspaces.list.getSnapshot().archivedSessionIds.includes(sessionId)) {
         notify({ kind: 'archivedNotOpenable' })
@@ -257,7 +260,9 @@ export function apply(ctx: Context): void {
       openSession(sessionId)
     },
   }
+  viewInstance.actions.setArchivedFilter('default')
   registerToasts(ctx, viewStore, toastActions)
+  installTaskDataSurfaces(ctx, { deleted: () => { notify({ kind: 'taskDeleted' }) } })
   const rowToastInjected = (): Pick<RowToastInjected, 'hooks' | 'dismissToast'> => ({
     hooks: { toast: rowToast },
     dismissToast: () => { rowToast.set(null) },

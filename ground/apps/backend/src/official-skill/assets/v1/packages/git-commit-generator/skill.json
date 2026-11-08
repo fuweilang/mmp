@@ -1,0 +1,27 @@
+{
+  "key": "git-commit-generator",
+  "name": "提交信息生成",
+  "description": "Generate clear, standardized git commit messages based on code changes (diffs), following Conventional Commits specification.",
+  "entry": "SKILL.md",
+  "category": "common",
+  "references": [
+    {
+      "path": "references/examples/input.md"
+    },
+    {
+      "path": "references/examples/output.md"
+    },
+    {
+      "path": "references/conventional-commits-types.md"
+    },
+    {
+      "path": "references/templates/commit-message.txt"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

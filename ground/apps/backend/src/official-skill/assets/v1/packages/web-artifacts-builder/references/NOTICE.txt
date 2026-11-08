@@ -1,0 +1,4 @@
+Source: github:anthropics/skills@main:skills/web-artifacts-builder#1c1c1f4b89de
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=3; dropped=0
+No scripts shipped.

@@ -1,0 +1,24 @@
+{
+  "key": "marketing-ab-testing",
+  "name": "A/B 实验设计",
+  "description": "组织实验假设、指标、样本与结果判定规则。",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evals/evals.json"
+    },
+    {
+      "path": "references/sample-size-guide.md"
+    },
+    {
+      "path": "references/test-templates.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

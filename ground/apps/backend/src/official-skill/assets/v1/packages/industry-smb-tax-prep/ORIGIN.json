@@ -1,0 +1,47 @@
+{
+  "key": "industry-smb-tax-prep",
+  "name": "税务资料准备",
+  "summary": "按适用地区和年度整理税务材料与待核实问题；不是税务申报或税务意见。",
+  "category": "legal",
+  "userCategoryLabel": "财税法务",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "small-business/skills/tax-prep",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "9d21a2cdbbdb2752f5dd731c2bb8c1164d4eca0e",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/small-business/skills/tax-prep/SKILL.md (git-blob:9d21a2cdbbdb2752f5dd731c2bb8c1164d4eca0e)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "f53c679acba79cbb292961fd9fb9e87ca20eab22",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "9f119e315a6c1d514ed79889532dc914331cb8d74668a24997a36e6728413693"
+  },
+  "officialVsAdapted": "adapted"
+}

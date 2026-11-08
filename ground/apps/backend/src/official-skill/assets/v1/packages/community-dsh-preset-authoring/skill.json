@@ -1,0 +1,15 @@
+{
+  "key": "community-dsh-preset-authoring",
+  "name": "DSH 预设编写",
+  "description": "指导组织可复用预设与插件组合，需目标项目环境。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

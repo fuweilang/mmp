@@ -90,7 +90,7 @@ describe('Workspace header actions under the page access snapshot', () => {
     const runtime = await bench(access)
     try {
       runtime.renderRoot()
-      const header = await screen.findByRole('treeitem')
+      const header = await screen.findByRole('treeitem', { name: /Project/ })
       expect(screen.queryByRole('button', { name: '在“Project”中新建会话' })).toBeNull()
       expect(screen.getByRole('button', { name: '工作区“Project”的操作' })).toBeTruthy()
       const target = { kind: 'workspace' as const, value: { workspaceId: WORKSPACE, path: '/projects/project', displayTitle: 'Project' } }
@@ -112,7 +112,7 @@ describe('Workspace header actions under the page access snapshot', () => {
       })
       expect(screen.getByRole('button', { name: '在“Project”中新建会话' })).toBeTruthy()
       expect(screen.getByRole('button', { name: '工作区“Project”的操作' })).toBeTruthy()
-      expect(screen.getByRole('treeitem').getAttribute('draggable')).toBe('true')
+      expect(screen.getAllByRole('treeitem').find(row => row.getAttribute('data-row-key') !== 'archived-section')!.getAttribute('draggable')).toBe('true')
 
       const grantedMenu = runtime.ctx.contextMenus.resolve(target)
       await grantedMenu.ready

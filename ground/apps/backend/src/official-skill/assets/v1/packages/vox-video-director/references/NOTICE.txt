@@ -1,0 +1,4 @@
+Source: github:modelstudioai/skills@main:skills/vox-video-director#aa7e1f304357
+License: Apache-2.0
+Adaptation: strip-scripts; stripped=19; dropped=1
+No scripts shipped.

@@ -1,0 +1,570 @@
+{
+  "recordedAt": "2026-11-06T16:21:36.953Z",
+  "before": 39,
+  "newImported": 76,
+  "newEnabled": 76,
+  "total": 115,
+  "totalEnabled": 115,
+  "changedOldKeys": [],
+  "categories": {
+    "common": 11,
+    "expertise": 50,
+    "content": 7,
+    "analytics": 6,
+    "files": 1,
+    "business": 14,
+    "legal": 11,
+    "ecommerce": 2,
+    "hr": 4,
+    "consulting": 6,
+    "sales": 3
+  },
+  "newSources": {
+    "deepseek-ai/deepseek-harness": 11,
+    "hackerFish/awesome-dsh-skills": 5,
+    "openai/plugins": 9,
+    "openai/skills": 6,
+    "anthropics/knowledge-work-plugins": 33,
+    "coreyhaines31/marketingskills": 12
+  },
+  "newLicenses": {
+    "MIT": 37,
+    "Apache-2.0": 39
+  },
+  "validation": "Importer and database inventory only. No tests, build, E2E or browser execution.",
+  "migrationApplied": "20261107002500_official_skill_industry_categories",
+  "newRows": [
+    {
+      "key": "codex-cli-creator",
+      "name": "命令行工具设计",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.407Z"
+    },
+    {
+      "key": "codex-define-goal",
+      "name": "目标定义与验收",
+      "category": "common",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.409Z"
+    },
+    {
+      "key": "codex-jupyter-notebook",
+      "name": "Notebook 分析流程",
+      "category": "analytics",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.411Z"
+    },
+    {
+      "key": "codex-pdf",
+      "name": "PDF 文档处理指南",
+      "category": "files",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.412Z"
+    },
+    {
+      "key": "codex-security-best-practices",
+      "name": "安全编码实践",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.413Z"
+    },
+    {
+      "key": "codex-security-threat-model",
+      "name": "应用威胁建模",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.415Z"
+    },
+    {
+      "key": "community-dsh-debug-session",
+      "name": "DSH 会话排障",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.416Z"
+    },
+    {
+      "key": "community-dsh-plugin-client",
+      "name": "DSH 插件客户端开发",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.418Z"
+    },
+    {
+      "key": "community-dsh-plugin-dev",
+      "name": "DSH 社区插件开发",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.419Z"
+    },
+    {
+      "key": "community-dsh-preset-authoring",
+      "name": "DSH 预设编写",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.421Z"
+    },
+    {
+      "key": "community-dsh-skill-adapter",
+      "name": "DSH 技能适配",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.422Z"
+    },
+    {
+      "key": "dsh-client-ui-ux",
+      "name": "DSH 客户端体验规范",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.424Z"
+    },
+    {
+      "key": "dsh-code-review",
+      "name": "DSH 代码审查",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.426Z"
+    },
+    {
+      "key": "dsh-doc",
+      "name": "DSH 技术文档维护",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.429Z"
+    },
+    {
+      "key": "dsh-error-handling",
+      "name": "DSH 错误处理",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.431Z"
+    },
+    {
+      "key": "dsh-find-simplifications",
+      "name": "代码简化分析",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.432Z"
+    },
+    {
+      "key": "dsh-pr-description",
+      "name": "变更说明撰写",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.433Z"
+    },
+    {
+      "key": "dsh-prose-standard",
+      "name": "技术文档表达规范",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.435Z"
+    },
+    {
+      "key": "dsh-responsive-ui",
+      "name": "响应式界面设计",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.436Z"
+    },
+    {
+      "key": "dsh-speed-up-perf",
+      "name": "性能瓶颈优化指导",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.437Z"
+    },
+    {
+      "key": "dsh-translate-docs",
+      "name": "DSH 文档翻译",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.439Z"
+    },
+    {
+      "key": "dsh-trim-cot-leakage",
+      "name": "推理泄露检查",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.440Z"
+    },
+    {
+      "key": "industry-accounting-audit-support",
+      "name": "审计材料整理",
+      "category": "legal",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.442Z"
+    },
+    {
+      "key": "industry-accounting-close-management",
+      "name": "财务结账流程",
+      "category": "legal",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.443Z"
+    },
+    {
+      "key": "industry-accounting-financial-statements",
+      "name": "财务报表整理",
+      "category": "legal",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.444Z"
+    },
+    {
+      "key": "industry-accounting-reconciliation",
+      "name": "财务对账辅助",
+      "category": "legal",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.446Z"
+    },
+    {
+      "key": "industry-accounting-variance-analysis",
+      "name": "财务差异分析",
+      "category": "legal",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.447Z"
+    },
+    {
+      "key": "industry-commerce-inventory-planner",
+      "name": "库存规划辅助",
+      "category": "ecommerce",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.449Z"
+    },
+    {
+      "key": "industry-commerce-restock",
+      "name": "补货清单草拟",
+      "category": "ecommerce",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.450Z"
+    },
+    {
+      "key": "industry-data-data-visualization",
+      "name": "数据图表设计",
+      "category": "analytics",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.451Z"
+    },
+    {
+      "key": "industry-data-explore-data",
+      "name": "探索性数据分析",
+      "category": "analytics",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.453Z"
+    },
+    {
+      "key": "industry-data-sql-queries",
+      "name": "SQL 查询编写",
+      "category": "analytics",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.454Z"
+    },
+    {
+      "key": "industry-data-statistical-analysis",
+      "name": "统计分析指导",
+      "category": "analytics",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.455Z"
+    },
+    {
+      "key": "industry-data-validate-data",
+      "name": "数据结果校验",
+      "category": "analytics",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.457Z"
+    },
+    {
+      "key": "industry-design-accessibility-review",
+      "name": "无障碍设计审阅",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.458Z"
+    },
+    {
+      "key": "industry-design-user-research",
+      "name": "用户研究方案",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.459Z"
+    },
+    {
+      "key": "industry-hr-interview-prep",
+      "name": "招聘面试准备",
+      "category": "hr",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.461Z"
+    },
+    {
+      "key": "industry-hr-onboarding",
+      "name": "员工入职计划",
+      "category": "hr",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.462Z"
+    },
+    {
+      "key": "industry-hr-org-planning",
+      "name": "组织规划辅助",
+      "category": "hr",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.463Z"
+    },
+    {
+      "key": "industry-hr-performance-review",
+      "name": "绩效回顾草案",
+      "category": "hr",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.465Z"
+    },
+    {
+      "key": "industry-legal-compliance-check",
+      "name": "合规检查整理",
+      "category": "legal",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.466Z"
+    },
+    {
+      "key": "industry-legal-legal-risk-assessment",
+      "name": "法律风险辅助分析",
+      "category": "legal",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.468Z"
+    },
+    {
+      "key": "industry-legal-review-contract",
+      "name": "合同风险审阅",
+      "category": "legal",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.469Z"
+    },
+    {
+      "key": "industry-legal-triage-nda",
+      "name": "保密协议初筛",
+      "category": "legal",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.470Z"
+    },
+    {
+      "key": "industry-ops-capacity-plan",
+      "name": "业务容量规划",
+      "category": "consulting",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.472Z"
+    },
+    {
+      "key": "industry-ops-process-optimization",
+      "name": "业务流程优化",
+      "category": "consulting",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.473Z"
+    },
+    {
+      "key": "industry-ops-risk-assessment",
+      "name": "经营风险梳理",
+      "category": "consulting",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.475Z"
+    },
+    {
+      "key": "industry-ops-runbook",
+      "name": "操作手册编写",
+      "category": "consulting",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.476Z"
+    },
+    {
+      "key": "industry-product-synthesize-research",
+      "name": "用户研究归纳",
+      "category": "consulting",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.477Z"
+    },
+    {
+      "key": "industry-product-write-spec",
+      "name": "产品规格编写",
+      "category": "consulting",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.479Z"
+    },
+    {
+      "key": "industry-smb-tax-prep",
+      "name": "税务资料准备",
+      "category": "legal",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.480Z"
+    },
+    {
+      "key": "industry-smb-tax-season-organizer",
+      "name": "报税季材料清单",
+      "category": "legal",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.482Z"
+    },
+    {
+      "key": "industry-support-draft-response",
+      "name": "客户答复草拟",
+      "category": "sales",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.483Z"
+    },
+    {
+      "key": "industry-support-kb-article",
+      "name": "客服知识文章",
+      "category": "sales",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.485Z"
+    },
+    {
+      "key": "industry-support-ticket-triage",
+      "name": "客户工单分流",
+      "category": "sales",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.486Z"
+    },
+    {
+      "key": "marketing-ab-testing",
+      "name": "A/B 实验设计",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.487Z"
+    },
+    {
+      "key": "marketing-churn-prevention",
+      "name": "客户流失预防",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.489Z"
+    },
+    {
+      "key": "marketing-community-marketing",
+      "name": "社群营销规划",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.490Z"
+    },
+    {
+      "key": "marketing-content-strategy",
+      "name": "内容策略规划",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.491Z"
+    },
+    {
+      "key": "marketing-copywriting",
+      "name": "营销文案写作",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.493Z"
+    },
+    {
+      "key": "marketing-customer-research",
+      "name": "客户需求研究",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.495Z"
+    },
+    {
+      "key": "marketing-launch",
+      "name": "产品发布策划",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.496Z"
+    },
+    {
+      "key": "marketing-marketing-plan",
+      "name": "营销计划制定",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.497Z"
+    },
+    {
+      "key": "marketing-marketing-psychology",
+      "name": "营销心理学应用",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.499Z"
+    },
+    {
+      "key": "marketing-pricing",
+      "name": "定价策略分析",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.500Z"
+    },
+    {
+      "key": "marketing-referrals",
+      "name": "推荐增长方案",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.502Z"
+    },
+    {
+      "key": "marketing-seo-audit",
+      "name": "SEO 诊断清单",
+      "category": "business",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.503Z"
+    },
+    {
+      "key": "superpowers-brainstorming",
+      "name": "开发方案头脑风暴",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.504Z"
+    },
+    {
+      "key": "superpowers-executing-plans",
+      "name": "分步实施计划",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.506Z"
+    },
+    {
+      "key": "superpowers-receiving-code-review",
+      "name": "代码评审意见处理",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.507Z"
+    },
+    {
+      "key": "superpowers-requesting-code-review",
+      "name": "代码送审准备",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.509Z"
+    },
+    {
+      "key": "superpowers-systematic-debugging",
+      "name": "系统化问题排查",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.510Z"
+    },
+    {
+      "key": "superpowers-test-driven-development",
+      "name": "测试驱动开发指南",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.511Z"
+    },
+    {
+      "key": "superpowers-verification-before-completion",
+      "name": "完成前证据检查",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.513Z"
+    },
+    {
+      "key": "superpowers-writing-plans",
+      "name": "实现计划编写",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.514Z"
+    },
+    {
+      "key": "superpowers-writing-skills",
+      "name": "技能写作与迭代",
+      "category": "expertise",
+      "currentRevision": 1,
+      "enabledAt": "2026-11-06T16:20:09.516Z"
+    }
+  ]
+}

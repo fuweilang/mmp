@@ -456,3 +456,37 @@
 .activity { display: flex; align-items: center; flex: none; }
 .activity:empty { display: none; }
 .activityExpanded { flex: 1; min-width: 0; }
+
+.knowledge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 0 4px 0 7px;
+  border: 1px solid var(--dsw-alias-border-1, rgba(128, 128, 128, 0.22));
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+}
+.knowledge > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.knowledge > button {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 16px;
+}
+.knowledge > button:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+.knowledge > button:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+.knowledge > button:disabled { opacity: 0.5; cursor: default; }

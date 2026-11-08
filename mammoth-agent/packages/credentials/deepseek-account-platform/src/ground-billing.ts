@@ -22,6 +22,7 @@ const ROUTES: Record<string, { method: 'GET' | 'POST'; path: string }> = {
   cancel: { method: 'POST', path: '/api/billing/recharge/cancel' },
   /** Read-only Ground session info (user.isPlatformAdmin, tenants). */
   me: { method: 'GET', path: '/api/auth/me' },
+  knowledge: { method: 'POST', path: '/console/api/kb/retrieve' },
   /** One-time 60s browser-sso ticket → `{ url, admin }` pointing at Ground `/login?sso=…`. */
   consoleLink: { method: 'POST', path: '/api/auth/browser-sso-ticket' },
 }
@@ -136,6 +137,16 @@ export function installGroundBilling(
         }
         const text = await upstream.text().catch(() => '')
         if (upstream.status === 401) void onUnauthorized(jwt).catch(() => undefined)
+        if (op === 'knowledge' && upstream.ok) {
+          try {
+            if (await token() !== jwt) { sendJson(res, 409, { message: '企业或账号已切换，请重新发送' }); return }
+            const data = JSON.parse(text) as { hits: Array<{ documentId: string }> }
+            sendJson(res, 200, { hits: data.hits.map(hit => ({ ...hit,
+              source: new URL(`/console/api/kb/sources/${encodeURIComponent(hit.documentId)}`, origin).href,
+            })) })
+          } catch { sendJson(res, 502, { message: '企业知识库返回异常' }) }
+          return
+        }
         if (op === 'consoleLink' && upstream.ok) {
           try { sendJson(res, 200, consoleLinkPayload(origin, text)) }
           catch { sendJson(res, 502, { message: '企业控制台登录票据无效，请稍后重试' }) }

@@ -11,6 +11,11 @@ import { VIEWER_ENDPOINT_CLASSES, assertSameViewerActions } from '../src/endpoin
 const CLASSIFIED = Object.keys(VIEWER_ENDPOINT_CLASSES)
 
 describe('viewer endpoint classification', () => {
+
+  it('classifies officialAgentGallery list as reader-global-read and create as owner-only', () => {
+    expect(VIEWER_ENDPOINT_CLASSES['officialAgentGallery/list']).toBe('reader-global-read')
+    expect(VIEWER_ENDPOINT_CLASSES['officialAgentGallery/create']).toBe('owner-only')
+  })
   it('reports the endpoint a classification is missing', () => {
     const incomplete = Object.fromEntries(
       Object.entries(VIEWER_ENDPOINT_CLASSES).filter(([endpoint]) => endpoint !== 'session/prompt'),
@@ -26,4 +31,9 @@ describe('viewer endpoint classification', () => {
       .toThrow('liveshare: VIEWER_ENDPOINT_CLASSES must name exactly the same actions; '
         + 'missing []; unexpected ["newPlugin/endpoint"]')
   })
+})
+
+it('t168 classifies new account catalog/private preferences/artifact/create/delete endpoints owner-only, not blanket global-read',()=>{
+ const endpoints=['officialAgentGallery/catalogDetail','officialAgentGallery/createSkill','officialAgentGallery/downloadArtifact','officialAgentGallery/expertCard','officialAgentGallery/expertFacets','officialAgentGallery/favourite','officialAgentGallery/listSkillFacets','officialAgentGallery/listSkills','officialAgentGallery/pageExperts','officialAgentGallery/pageSkills','officialAgentGallery/preferences','officialAgentGallery/skillFacets','session/deleteTask'] as const
+ for(const endpoint of endpoints)expect(VIEWER_ENDPOINT_CLASSES[endpoint]).toBe('owner-only')
 })

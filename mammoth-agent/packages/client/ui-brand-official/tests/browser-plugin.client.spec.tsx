@@ -80,7 +80,7 @@ describe('official browser-brand plugin', () => {
 
   it('renders the official name independently from both requested mark sizes', () => {
     const name = render(<OfficialBrandName />)
-    expect(name.container.textContent).toContain('猛犸智能体')
+    expect(name.container.textContent).toContain('猛犸AI')
     expect(name.container.querySelectorAll('img')).toHaveLength(0)
     name.unmount()
 

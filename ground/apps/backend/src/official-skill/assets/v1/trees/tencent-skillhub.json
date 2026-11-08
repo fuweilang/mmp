@@ -1,0 +1,118 @@
+{
+  "find-skill-skillhub": [
+    {
+      "path": "skills/find-skill-skillhub/SKILL.md",
+      "size": 3780
+    },
+    {
+      "path": "skills/find-skill-skillhub/_meta.json",
+      "size": 112
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/ai-agent.md",
+      "size": 835
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/api.md",
+      "size": 4352
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/business-ops.md",
+      "size": 776
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/categories.md",
+      "size": 1673
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/content-creation.md",
+      "size": 851
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/data-analysis.md",
+      "size": 829
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/design-media.md",
+      "size": 790
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/dev-programming.md",
+      "size": 739
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/education.md",
+      "size": 784
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/it-ops-security.md",
+      "size": 848
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/knowledge-management.md",
+      "size": 884
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/life-service.md",
+      "size": 813
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/office-efficiency.md",
+      "size": 814
+    },
+    {
+      "path": "skills/find-skill-skillhub/references/professional.md",
+      "size": 764
+    }
+  ],
+  "skillhub-trace-evaluator": [
+    {
+      "path": "skills/skillhub-trace-evaluator/SKILL.md",
+      "size": 2972
+    },
+    {
+      "path": "skills/skillhub-trace-evaluator/_meta.json",
+      "size": 117
+    },
+    {
+      "path": "skills/skillhub-trace-evaluator/examples/sample-report.invalid.json",
+      "size": 2411
+    },
+    {
+      "path": "skills/skillhub-trace-evaluator/examples/sample-report.valid.json",
+      "size": 5214
+    },
+    {
+      "path": "skills/skillhub-trace-evaluator/references/adaptability.md",
+      "size": 1041
+    },
+    {
+      "path": "skills/skillhub-trace-evaluator/references/convention.md",
+      "size": 1544
+    },
+    {
+      "path": "skills/skillhub-trace-evaluator/references/effectiveness.md",
+      "size": 1654
+    },
+    {
+      "path": "skills/skillhub-trace-evaluator/references/explore.md",
+      "size": 842
+    },
+    {
+      "path": "skills/skillhub-trace-evaluator/references/output-schema.md",
+      "size": 3404
+    },
+    {
+      "path": "skills/skillhub-trace-evaluator/references/reliability.md",
+      "size": 1506
+    },
+    {
+      "path": "skills/skillhub-trace-evaluator/references/trust.md",
+      "size": 1281
+    },
+    {
+      "path": "skills/skillhub-trace-evaluator/scripts/validate_trace_scores.py",
+      "size": 6552
+    }
+  ]
+}

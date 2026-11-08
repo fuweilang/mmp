@@ -1,0 +1,20 @@
+{
+  "key": "trae-claw-install",
+  "name": "trae-claw-install",
+  "summary": "Run a repository-driven OpenClaw deployment workflow with platform routing, setup/start/check, acceptance checks, and unified troubleshooti…",
+  "category": "common",
+  "userCategoryLabel": "通用协作",
+  "references": [
+    "references/examples/input.md",
+    "references/examples/output.md"
+  ],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/trae-claw-install",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/trae-claw-install#cd617c3814b1"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

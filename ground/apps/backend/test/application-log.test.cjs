@@ -11,3 +11,35 @@ test('HTTP start, finish and model logs share an isolated request id, omit queri
  await log.onModuleDestroy();assert.notEqual(ids[0],ids[1]);const files=await fs.readdir(directory);assert.equal(files.length,1);const records=(await fs.readFile(path.join(directory,files[0]),'utf8')).trim().split('\n').map(JSON.parse);assert.equal(records.length,6);for(const id of ids)assert.equal(records.filter(r=>r.requestId===id).length,3);assert.ok(!JSON.stringify(records).includes('do-not-log'));
  }finally{console.log=originalLog;if(originalDir===undefined)delete process.env.LOG_DIR;else process.env.LOG_DIR=originalDir;await fs.rm(directory,{recursive:true,force:true});}
 });
+
+test('successful http traces stay off the console but still land in the jsonl file', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mmp-log-quiet-'));
+  const originalDir = process.env.LOG_DIR;
+  process.env.LOG_DIR = directory;
+  const lines = [];
+  const originalLog = console.log;
+  const originalError = console.error;
+  console.log = (...args) => { lines.push(['log', ...args]); };
+  console.error = (...args) => { lines.push(['error', ...args]); };
+  const log = new ApplicationLog();
+  try {
+    log.event('info', 'http.start', { method: 'GET', path: '/api/auth/me' });
+    log.event('info', 'http.finish', { method: 'GET', path: '/api/auth/me', status: 200 });
+    log.event('warn', 'http.finish', { method: 'GET', path: '/api/auth/me', status: 401 });
+    log.event('info', 'model.health.probe', { ok: true });
+    await log.onModuleDestroy();
+    assert.equal(lines.filter(([kind, line]) => kind === 'log' && String(line).includes('http.start')).length, 0);
+    assert.equal(lines.filter(([kind, line]) => kind === 'log' && String(line).includes('"event":"http.finish"') && String(line).includes('"status":200')).length, 0);
+    assert.equal(lines.filter((entry) => String(entry[1]).includes('"status":401')).length, 1);
+    assert.equal(lines.filter((entry) => String(entry[1]).includes('model.health.probe')).length, 1);
+    const files = await fs.readdir(directory);
+    const records = (await fs.readFile(path.join(directory, files[0]), 'utf8')).trim().split('\n').map(JSON.parse);
+    assert.equal(records.filter((r) => r.event === 'http.start' || r.event === 'http.finish').length, 3);
+  } finally {
+    console.log = originalLog;
+    console.error = originalError;
+    if (originalDir === undefined) delete process.env.LOG_DIR;
+    else process.env.LOG_DIR = originalDir;
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});

@@ -1,0 +1,8 @@
+{
+  "adapter": "actual GroundLlmAdapter + actual body-budget + actual SSE parser",
+  "HTTP": "mock, not a live model call",
+  "requestFingerprint": "9cbf6aef2e220b06ff87497138734a4aca44a9e737fac1099358e218213ff360",
+  "oldInvalidModel": "deleted-sticky",
+  "sentModel": "cloud/active",
+  "methodPreserved": true
+}

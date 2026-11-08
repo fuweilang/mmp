@@ -1,0 +1,5 @@
+Source: https://github.com/hackerFish/awesome-dsh-skills/blob/main/skills/dsh-debug-session/SKILL.md (git-blob:7fa3bd89ea6e94a8068c784da2f5e599018af84b)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: skills/dsh-debug-session
+No third-party scripts are executed or shipped in this managed package.

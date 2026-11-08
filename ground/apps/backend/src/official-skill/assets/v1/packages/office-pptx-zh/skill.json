@@ -1,0 +1,15 @@
+{
+  "key": "office-pptx-zh",
+  "name": "PPT 演示文稿",
+  "description": "创建与编辑演示文稿，保持版式清晰，优先使用本地办公引擎。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

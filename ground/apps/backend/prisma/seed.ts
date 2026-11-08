@@ -1,13 +1,24 @@
-import { AccessScope, KbStatus, PrismaClient, TenantType, MemberRole, RoleScope } from '@prisma/client';
+import {
+  AccessScope,
+  KbStatus,
+  MemberRole,
+  OfficialAgentKind,
+  OfficialAgentStatus,
+  PrismaClient,
+  RoleScope,
+  TenantType,
+} from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { writeFile, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
 import { DEFAULT_AGENT_PERSONA, LEGAL_AGENT_PERSONA } from '../src/agent/personas';
 import { chunkText, embedText, vectorLiteral } from '../src/knowledge/index-text';
 import { uploadRoot } from '../src/knowledge/storage';
+import { loadOfficialAgentAssets } from '../src/official-agent/official-agent-assets';
 import {
   ALL_PERMISSION_KEYS,
   BUILTIN_ROLE_KEYS,
+  PORTAL_CONSOLE_KEYS,
   ROLE_META,
   ROLE_PERMISSION_PACKS,
   type BuiltinRoleKey,
@@ -52,19 +63,22 @@ async function stripOrgMemberConsoleResidue() {
   }
 }
 
-/** 安全回填：仅系统预置 org_admin 模板补 portal.console.billing，不改自定义角色。 */
-async function ensureOrgAdminBillingKey() {
+/** 安全回填：仅系统预置 org_admin 模板补齐企业控制台权限，不改自定义角色。 */
+async function ensureOrgAdminConsoleKeys() {
   const role = await prisma.role.findUnique({ where: { key: 'org_admin' } });
   if (!role) return;
-  const has = await prisma.rolePermission.findFirst({
-    where: { roleId: role.id, permKey: 'portal.console.billing' },
-    select: { id: true },
+  const existing = await prisma.rolePermission.findMany({
+    where: { roleId: role.id, permKey: { in: PORTAL_CONSOLE_KEYS } },
+    select: { permKey: true },
   });
-  if (has) return;
-  await prisma.rolePermission.create({
-    data: { roleId: role.id, permKey: 'portal.console.billing' },
+  const have = new Set(existing.map((row) => row.permKey));
+  const missing = PORTAL_CONSOLE_KEYS.filter((key) => !have.has(key));
+  if (!missing.length) return;
+  await prisma.rolePermission.createMany({
+    data: missing.map((permKey) => ({ roleId: role.id, permKey })),
+    skipDuplicates: true,
   });
-  console.log('backfilled portal.console.billing onto org_admin preset');
+  console.log('backfilled org_admin console keys:', missing.join(', '));
 }
 
 async function ensureBuiltinRoles() {
@@ -140,7 +154,7 @@ async function ensureOrgPresetRole(userId: string, roleKey: 'org_admin' | 'org_m
 
 async function main() {
   await ensureBuiltinRoles();
-  await ensureOrgAdminBillingKey();
+  await ensureOrgAdminConsoleKeys();
   await stripOrgMemberConsoleResidue();
   await purgeUnknownRolePermissions();
 
@@ -190,6 +204,7 @@ async function main() {
   // AgentRef 表暂留：演示种子仍静默写入，不再挂到企业设置 / console UI。
   await ensureAgent(enterprise.id, '法律顾问', LEGAL_AGENT_PERSONA);
   await ensureAgent(enterprise.id, '企业助手', DEFAULT_AGENT_PERSONA);
+  await ensureOfficialAgentDrafts();
   await prisma.tenant.update({
     where: { id: enterprise.id },
     data: {
@@ -227,6 +242,90 @@ async function ensureAgent(tenantId: string, name: string, persona: string) {
   return prisma.agentRef.create({
     data: { tenantId, name, persona, enabled: true, visibility: AccessScope.ALL },
   });
+}
+
+/** 一期试点只准备草稿，不自动发布或开通；已有草稿不被种子覆盖。 */
+async function ensureOfficialAgentDrafts() {
+  const drafts = [
+    {
+      key: 'copy-polish-master',
+      kind: OfficialAgentKind.GENERAL,
+      name: '文案润色大师',
+      summary: '在不改变事实和原意的前提下，提升企业文案的清晰度、简洁度与表达一致性。',
+      openingQuestions: [
+        '把这段产品说明改得更简洁，保留所有关键信息。',
+        '将这段内部通知改成正式、易读的企业公告。',
+      ],
+      systemPrompt: '你是文案润色大师。保留用户提供的事实、数字、名称和原意，不编造案例、资质、价格或承诺。先直接给出润色后的正文；用户需要时再简要说明修改点。',
+      toolScope: [] as string[],
+    },
+    {
+      key: 'enterprise-product-answer',
+      kind: OfficialAgentKind.KNOWLEDGE,
+      name: '企业资料答疑助手',
+      summary: '依据企业授权资料回答产品、制度和服务问题，并提供可定位的资料出处。',
+      openingQuestions: [
+        '根据企业资料介绍我们的核心产品。',
+        '这份资料对相关流程有什么要求？请附出处。',
+      ],
+      systemPrompt: '你是企业资料答疑助手。只能依据当前企业授权且当前成员可读的资料作事实性回答，并保留资料出处。资料不足时明确说明未找到依据，不编造产品功能、客户案例、价格、资质或服务承诺。',
+      toolScope: ['enterprise_knowledge'],
+    },
+  ];
+  for (const draft of drafts) {
+    await prisma.officialAgent.upsert({
+      where: { key: draft.key },
+      update: {},
+      create: draft,
+    });
+  }
+  // 批次 A 等仓内资产：仅创建缺失草稿；已发布不覆盖。
+  await ensureOfficialAgentAssetsDrafts();
+}
+
+/** 从 src/official-agent/assets 导入草稿（幂等；不发布）。 */
+async function ensureOfficialAgentAssetsDrafts() {
+  let assets;
+  try {
+    assets = loadOfficialAgentAssets();
+  } catch (err) {
+    console.warn('skip official agent assets:', err);
+    return;
+  }
+  for (const asset of assets) {
+    const existing = await prisma.officialAgent.findUnique({ where: { key: asset.key } });
+    if (!existing) {
+      await prisma.officialAgent.create({
+        data: {
+          key: asset.key,
+          kind: asset.kind,
+          name: asset.name,
+          summary: asset.summary,
+          openingQuestions: asset.openingQuestions,
+          systemPrompt: asset.systemPrompt,
+          toolScope: asset.toolScope,
+        },
+      });
+      console.log('official agent asset draft created:', asset.key);
+      continue;
+    }
+    if (existing.status === OfficialAgentStatus.DRAFT && !existing.onlineVersionId) {
+      await prisma.officialAgent.update({
+        where: { id: existing.id },
+        data: {
+          kind: asset.kind,
+          name: asset.name,
+          summary: asset.summary,
+          openingQuestions: asset.openingQuestions,
+          systemPrompt: asset.systemPrompt,
+          toolScope: asset.toolScope,
+        },
+      });
+      console.log('official agent asset draft updated:', asset.key);
+      continue;
+    }
+    console.log('official agent asset skipped (keep published/admin):', asset.key);
+  }
 }
 
 async function ensureFolder(tenantId: string, name: string) {

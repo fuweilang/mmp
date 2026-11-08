@@ -1,0 +1,22 @@
+{
+  "key": "xhs",
+  "kind": "GENERAL",
+  "name": "爆款小红书专家",
+  "summary": "选题 · 笔记 · 投放全链路",
+  "openingQuestions": [
+    "我卖国货护肤品，帮我想 5 个小红书爆款选题。",
+    "帮我写一篇职场穿搭的种草笔记，附标题和标签。",
+    "小红书笔记该怎么配合薯条投放？"
+  ],
+  "toolScope": [],
+  "toolScopeNotes": "latest 无工具依赖；不虚构 search",
+  "promptFile": "prompts/xhs.md",
+  "batch": "B",
+  "publish": true,
+  "category": "content",
+  "capabilities": [
+    "选题策划",
+    "笔记写作",
+    "投放建议"
+  ]
+}

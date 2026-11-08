@@ -1,0 +1,15 @@
+{
+  "key": "dsh-error-handling",
+  "name": "DSH 错误处理",
+  "description": "指导错误传播、用户提示与日志处理的设计。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

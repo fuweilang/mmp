@@ -1,0 +1,12 @@
+{
+  "note": "Stopped per t172. Earlier source edits and two tsc emits existed; prior tests exit1. No bundles for those fixes and no continuation of delete/archive. Hashes are preservation checkpoints, not claims those bugs were shipped fixed.",
+  "files": {
+    "packages/client/ui-workspace/src/client/index.ts": "4da1d77e2fb4466cee11f2c21fbfa609eaad4e64aeba709817ae168a9a9e994b",
+    "packages/client/ui-workspace/src/client/task-data.tsx": "ee2e40c80ff2a4787ea1b30398003b15d54e8b76bd5a0cbc9008f760be98ce5f",
+    "packages/client/ui-workspace/src/client/locales.ts": "02352ee8203a15313acbe113b3b2ac0c7e6a189ad2f682b795b27d7332d8d864",
+    "packages/client/ui-workspace/tests/task-data-regression.client.spec.tsx": "4cc7f0127ee34e2c6a27757f1dbe31e879f7d9ea4a864fb80114d41444d4b678",
+    "packages/api/workspace-controller/src/client/service.ts": "5186f74bef02b36a1531f40c1089ae316e66dcac154a6087aabf1cb4af8d283e",
+    "packages/api/workspace-controller/src/client/index.ts": "c8898c1fc1f91b937ebf34ef3d1ef58c44bd1fea09834da87f82f1982b9b949e",
+    "packages/api/workspace-controller/tests/transport.client.spec.ts": "b099f435e4d06f9b7ed9395349bb305692aba798e688e82c0e80c24627d483e0"
+  }
+}

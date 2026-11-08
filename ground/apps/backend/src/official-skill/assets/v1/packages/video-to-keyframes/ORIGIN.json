@@ -1,0 +1,19 @@
+{
+  "key": "video-to-keyframes",
+  "name": "video-to-keyframes",
+  "summary": "Extracts video frames, detects cuts/segments, selects candidate keyframes, and generates review HTML galleries. Invoke when users ask for k…",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [
+    "references/requirements.txt"
+  ],
+  "licenseId": "MIT",
+  "source": {
+    "owner": "trae-community",
+    "repo": "trae-skills",
+    "ref": "main",
+    "path": "skills/video-to-keyframes",
+    "immutableRef": "github:trae-community/trae-skills@main:skills/video-to-keyframes#ea3cb7fe3adc"
+  },
+  "adaptation": "strip-scripts; stripped=4; dropped=0"
+}

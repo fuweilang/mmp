@@ -1,3 +1,4 @@
+import type { TaskCatalogSelection } from '../../types.ts'
 // Sessions remain resident after creation so their open Remote sources keep running off-screen.
 
 import type { Context } from '@mammoth-ai/cordis'
@@ -263,6 +264,7 @@ export class Session implements SessionFace {
     mode: 'queue' | 'steer',
     signal?: AbortSignal,
     requestId?: SessionRequestId,
+    catalogSelection?: TaskCatalogSelection,
   ): Promise<RemoteResult<{ accepted: true }>> {
     this.promptError = null
     this.lastAgentError = null
@@ -278,6 +280,7 @@ export class Session implements SessionFace {
         mode,
         content,
         clientTimeZone,
+        ...(catalogSelection === undefined ? {} : { catalogSelection }),
       }, signal)
     } else if (content.some(part => part.type === 'file')) {
       result = {

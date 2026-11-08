@@ -1,0 +1,17 @@
+{
+  "key": "theme-factory",
+  "name": "主题配色工厂",
+  "summary": "Toolkit for styling artifacts with a theme. These artifacts can be slides, docs, reportings, HTML landing pages, etc. There are 10 pre-set …",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/theme-factory",
+    "immutableRef": "github:anthropics/skills@main:skills/theme-factory#c55e7e510c4f"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=11"
+}

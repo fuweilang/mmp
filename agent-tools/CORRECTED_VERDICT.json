@@ -1,0 +1,34 @@
+{
+  "data": {
+    "pass": false,
+    "executedTool": false,
+    "failReasons": [
+      "model emitted tabular_analyze as raw DSML text; host did not execute tool",
+      "missing expected aggregates 330/140/90/160"
+    ],
+    "galleryVersionLabel": "2",
+    "expectedVersionId": "cmw4h5epk0001i8omufs8r9zb",
+    "previousScriptPass": false
+  },
+  "spy": {
+    "pass": false,
+    "executedTool": false,
+    "failReasons": [
+      "agent admitted web_fetch unavailable; only web_search used"
+    ],
+    "galleryVersionLabel": "1",
+    "expectedVersionId": "cmw4gyoto0049i833sasbmjyn",
+    "previousScriptPass": true
+  },
+  "boss": {
+    "pass": false,
+    "executedTool": false,
+    "failReasons": [
+      "model emitted delegate_official_agent as raw <tool_call> text; host did not execute",
+      "missing verified total 15 / 上海12 after real delegate"
+    ],
+    "galleryVersionLabel": "2",
+    "expectedVersionId": "cmw4h5eq50004i8omly0toiu4",
+    "previousScriptPass": false
+  }
+}

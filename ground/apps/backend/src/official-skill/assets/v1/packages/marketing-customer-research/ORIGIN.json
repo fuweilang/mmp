@@ -1,0 +1,63 @@
+{
+  "key": "marketing-customer-research",
+  "name": "客户需求研究",
+  "summary": "基于已提供访谈和市场材料提炼需求与购买因素。",
+  "category": "business",
+  "userCategoryLabel": "运营增长",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "coreyhaines31",
+    "repo": "marketingskills",
+    "ref": "main",
+    "path": "skills/customer-research",
+    "treeSha": "88c79f6528a9347420e57ceb1fff9a60de651768",
+    "skillBlobSha": "8783f0835501e509583643dd3b1a9eb7226d7d63",
+    "immutableRef": "https://github.com/coreyhaines31/marketingskills/blob/main/skills/customer-research/SKILL.md (git-blob:8783f0835501e509583643dd3b1a9eb7226d7d63)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "7c48dd638a9ebed49a8ef0c0c4eea90105381cdf",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "coreyhaines31/marketingskills",
+      "html_url": "https://github.com/coreyhaines31/marketingskills",
+      "stargazers_count": 58856,
+      "forks_count": 8611,
+      "pushed_at": "2026-11-04T19:01:33Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Public MIT marketing skills collection; stars are popularity only, not quality tests."
+    },
+    "includedResources": [
+      {
+        "path": "skills/customer-research/evals/evals.json",
+        "sha": "a084bb359c75d9c243e43d726a7bc2bfce39eaeb",
+        "mapped": "references/evals/evals.json"
+      },
+      {
+        "path": "skills/customer-research/references/interviews-and-surveys.md",
+        "sha": "aade5bc6ed6c3f97c50bc03c1b00de8057021f9e",
+        "mapped": "references/interviews-and-surveys.md"
+      },
+      {
+        "path": "skills/customer-research/references/source-guides.md",
+        "sha": "be6fb691d16b6cbdf9d474c9cf52c42104e7e542",
+        "mapped": "references/source-guides.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "4aa31d134b44d6b2374b5bced7eed04f3a270d674b1868c500e821b47fdcc7fb"
+  },
+  "officialVsAdapted": "adapted"
+}

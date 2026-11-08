@@ -1,0 +1,30 @@
+{
+  "key": "industry-commerce-inventory-planner",
+  "name": "库存规划辅助",
+  "description": "根据用户提供库存和销量规划补货与周转，不自动采购。",
+  "entry": "SKILL.md",
+  "category": "ecommerce",
+  "references": [
+    {
+      "path": "references/reference/data_sources.md"
+    },
+    {
+      "path": "references/reference/gotchas.md"
+    },
+    {
+      "path": "references/reference/po_drafting.md"
+    },
+    {
+      "path": "references/reference/seasonality.md"
+    },
+    {
+      "path": "references/reference/velocity_and_reorder.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

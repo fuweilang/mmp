@@ -23,7 +23,7 @@
                 :disabled="!canOpenAgent"
                 :title="canOpenAgent ? '' : '当前账号还没有企业工作区'"
               >
-                <MessageSquare class="dropdown-icon" />猛犸智能体
+                <MessageSquare class="dropdown-icon" />打开猛犸专家客户端
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -45,9 +45,9 @@
 
       <div class="sidebar-footer">
         <div class="chat-jump">
-          <button class="chat-jump-open" type="button" title="打开猛犸智能体客户端" @click="openAgentClient">
+          <button class="chat-jump-open" type="button" title="打开猛犸专家网页版" :disabled="!agentWebUrl" @click="openAgentWeb">
             <MessageSquare class="chat-jump-icon" />
-            <span class="chat-jump-label">猛犸智能体</span>
+            <span class="chat-jump-label">猛犸专家</span>
           </button>
           <el-dropdown trigger="click" popper-class="agent-open-menu" @command="onAgentCommand">
             <button class="chat-jump-menu" type="button" title="其他打开方式">
@@ -55,7 +55,7 @@
             </button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="web" :disabled="!agentWebUrl">打开网页版</el-dropdown-item>
+                <el-dropdown-item command="client">打开客户端</el-dropdown-item>
                 <el-dropdown-item command="download">下载客户端</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -157,12 +157,14 @@ import {
   ChevronLeft,
   Download,
   FolderOpen,
+  Library,
   KeyRound,
   LayoutDashboard,
   Lock,
   LogOut,
   MessageSquare,
   ScrollText,
+  Sparkles,
   Settings,
   Shield,
   UserRound,
@@ -220,8 +222,8 @@ const homePath = computed(() => (session.value?.user.isPlatformAdmin ? '/admin' 
 const canOpenAgent = computed(() => hasEnterpriseWorkspace(session.value));
 
 function onAgentCommand(command: string) {
-  if (command === 'web') {
-    openAgentWeb();
+  if (command === 'client') {
+    openAgentClient();
   } else if (command === 'download') {
     openClientDownload();
   }
@@ -235,6 +237,7 @@ function onSwitchProduct(command: string) {
 const businessItems = [
   { path: '/console/', label: '工作台', icon: LayoutDashboard, perm: 'portal.console.workbench' },
   { path: '/console/knowledge', label: '知识库', icon: FolderOpen, perm: 'portal.console.kb' },
+  { path: '/library', label: '资料库', icon: Library, perm: 'portal.console.access' },
   { path: '/console/members', label: '成员管理', icon: Users, perm: 'portal.console.members' },
   { path: '/console/roles', label: '角色管理', icon: KeyRound, perm: 'portal.console.roles' },
   { path: '/console/usage', label: '操作审计', icon: BarChart3, perm: 'portal.console.usage' },
@@ -250,9 +253,13 @@ const platformItems = [
   { path: '/admin/enterprises', label: '企业管理', icon: Building2 },
   { path: '/admin/enterprise-wallets', label: '企业钱包', icon: Wallet },
   { path: '/admin/enterprise-token-stats', label: '企业token用量', icon: BarChart3 },
+  { path: '/admin/official-agents', label: '专家配置', icon: Bot },
+  { path: '/admin/official-skills', label: '技能管理', icon: Sparkles },
+  { path: '/admin/official-knowledge', label: '猛犸知识库', icon: FolderOpen },
   { path: '/admin/models', label: '模型管理', icon: Bot },
   { path: '/admin/pricing-config', label: 'AI币计价配置', icon: Coins },
   { path: '/admin/audit', label: '操作审计', icon: ScrollText, perm: 'portal.admin.audit' },
+  { path: '/admin/library', label: '资料库概况', icon: Library },
 ];
 
 const navItems = computed(() => {

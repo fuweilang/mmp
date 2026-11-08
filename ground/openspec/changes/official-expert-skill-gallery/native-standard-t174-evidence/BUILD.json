@@ -1,0 +1,128 @@
+[
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/core/tools/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0
+  },
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-tools",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0
+  },
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/context/agent-instructions/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0
+  },
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-agent-instructions",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0
+  },
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/skill/skill/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0
+  },
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-skill",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0
+  },
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/llm/llm-ground/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0
+  },
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-llm-ground",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0
+  },
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/preset/official-agent-gallery/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0
+  },
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-official-agent-gallery",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0
+  },
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-agent-preset/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0
+  },
+  {
+    "cmd": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-agent-preset",
+    "exitCode": 0
+  }
+]

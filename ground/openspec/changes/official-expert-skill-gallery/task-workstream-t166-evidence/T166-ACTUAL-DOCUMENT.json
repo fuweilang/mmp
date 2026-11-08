@@ -1,0 +1,8 @@
+{
+  "loop": "actual native loop + compressed session persistence + local managed attachment store",
+  "catalogAuthAndModel": "mock, not a live cloud/user account",
+  "inputSHA": "0a1dd104eccf08b80aeba14be525a7bd9e998b6fa9e52487894ad7c6695dd94c",
+  "outputSHA": "e9414568e3eb3167cf973afc16813a177691255cc24c7490a3c119056b9dedef",
+  "actualReadback": true,
+  "requests": 3
+}

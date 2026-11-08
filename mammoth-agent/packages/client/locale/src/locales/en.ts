@@ -33,7 +33,7 @@ export const en = {
   'collapse': 'Collapse',
   'expand': 'Expand',
   'back': 'Back',
-  'brand.localBuild': '猛犸智能体',
+  'brand.localBuild': '猛犸AI',
   'workspace.defaultName': 'Default workspace',
   'unknown': 'Unknown',
   'none': 'None',

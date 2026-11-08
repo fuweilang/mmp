@@ -1,0 +1,4 @@
+Source: github:trae-community/trae-skills@main:skills/web-design-teroop#eadea4215328
+License: MIT
+Adaptation: strip-scripts; stripped=0; dropped=0
+No scripts shipped.

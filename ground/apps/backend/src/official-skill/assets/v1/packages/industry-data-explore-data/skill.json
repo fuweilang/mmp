@@ -1,0 +1,15 @@
+{
+  "key": "industry-data-explore-data",
+  "name": "探索性数据分析",
+  "description": "梳理数据结构、分布、缺失值与后续分析问题。",
+  "entry": "SKILL.md",
+  "category": "analytics",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

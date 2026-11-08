@@ -1,0 +1,63 @@
+{
+  "key": "marketing-churn-prevention",
+  "name": "客户流失预防",
+  "summary": "梳理流失信号、挽留方案与续费体验改进。",
+  "category": "business",
+  "userCategoryLabel": "运营增长",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "coreyhaines31",
+    "repo": "marketingskills",
+    "ref": "main",
+    "path": "skills/churn-prevention",
+    "treeSha": "88c79f6528a9347420e57ceb1fff9a60de651768",
+    "skillBlobSha": "2cb8beed89c105207c10b88bc5371848b140f838",
+    "immutableRef": "https://github.com/coreyhaines31/marketingskills/blob/main/skills/churn-prevention/SKILL.md (git-blob:2cb8beed89c105207c10b88bc5371848b140f838)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "7c48dd638a9ebed49a8ef0c0c4eea90105381cdf",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "coreyhaines31/marketingskills",
+      "html_url": "https://github.com/coreyhaines31/marketingskills",
+      "stargazers_count": 58856,
+      "forks_count": 8611,
+      "pushed_at": "2026-11-04T19:01:33Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Public MIT marketing skills collection; stars are popularity only, not quality tests."
+    },
+    "includedResources": [
+      {
+        "path": "skills/churn-prevention/evals/evals.json",
+        "sha": "f2e311020a2369d0ead7b9bc9dd1b21ba8fb026e",
+        "mapped": "references/evals/evals.json"
+      },
+      {
+        "path": "skills/churn-prevention/references/cancel-flow-patterns.md",
+        "sha": "dcceeec677363734ed5557cc0933d919ad70fdbc",
+        "mapped": "references/cancel-flow-patterns.md"
+      },
+      {
+        "path": "skills/churn-prevention/references/dunning-playbook.md",
+        "sha": "413a4c8a4a819d9f5994c105db356996676aad0b",
+        "mapped": "references/dunning-playbook.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "abcfbdd539ec8b08fb74fa5ff3380c672cb9c8706f3dd8de78cc8a28899f90b6"
+  },
+  "officialVsAdapted": "adapted"
+}

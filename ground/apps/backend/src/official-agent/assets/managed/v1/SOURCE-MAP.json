@@ -1,0 +1,1560 @@
+{
+  "schemaVersion": 1,
+  "experts": [
+    {
+      "key": "agency-hr-onboarding",
+      "name": "员工入职规划专家",
+      "group": "business",
+      "source": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "paths": [
+          "specialized/hr-onboarding.md"
+        ],
+        "files": [
+          {
+            "repository": "msitarzewski/agency-agents",
+            "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+            "path": "specialized/hr-onboarding.md",
+            "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/hr-onboarding.md",
+            "localPath": "upstream/agency-agents/specialized/hr-onboarding.md",
+            "sha256": "28a52c26f27ab24d7fe11f5e48cfe712f6d27da142ec97911683b4a3ad92332c",
+            "bytes": 23923
+          }
+        ],
+        "assetPath": "managed/v1/experts/agency-hr-onboarding.json",
+        "communityEvidence": {
+          "stars": 166950,
+          "observedAt": "2026-11-07T00:02:51.644014+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/agency-hr-onboarding/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "evidence": {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+          "localPath": "upstream/agency-agents/LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "industry-hr-onboarding"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "agency-customer-success",
+      "name": "客户成功运营专家",
+      "group": "business",
+      "source": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "paths": [
+          "specialized/customer-success-manager.md"
+        ],
+        "files": [
+          {
+            "repository": "msitarzewski/agency-agents",
+            "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+            "path": "specialized/customer-success-manager.md",
+            "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/customer-success-manager.md",
+            "localPath": "upstream/agency-agents/specialized/customer-success-manager.md",
+            "sha256": "2fc5ebc10734a621d65d1bfe0a253158f0a7418ee39b7c93a18efe6b26661cfe",
+            "bytes": 23313
+          }
+        ],
+        "assetPath": "managed/v1/experts/agency-customer-success.json",
+        "communityEvidence": {
+          "stars": 166950,
+          "observedAt": "2026-11-07T00:02:51.644965+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/agency-customer-success/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "evidence": {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+          "localPath": "upstream/agency-agents/LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "marketing-churn-prevention",
+        "industry-support-draft-response"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "agency-operations-manager",
+      "name": "流程运营改善专家",
+      "group": "business",
+      "source": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "paths": [
+          "specialized/operations-manager.md"
+        ],
+        "files": [
+          {
+            "repository": "msitarzewski/agency-agents",
+            "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+            "path": "specialized/operations-manager.md",
+            "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/operations-manager.md",
+            "localPath": "upstream/agency-agents/specialized/operations-manager.md",
+            "sha256": "3c133a31ae1542922444d77d7c8f9964127704ba94638dde12e37a9ad0fd35bd",
+            "bytes": 19209
+          }
+        ],
+        "assetPath": "managed/v1/experts/agency-operations-manager.json",
+        "communityEvidence": {
+          "stars": 166950,
+          "observedAt": "2026-11-07T00:02:51.645563+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/agency-operations-manager/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "evidence": {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+          "localPath": "upstream/agency-agents/LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "industry-ops-process-optimization",
+        "industry-ops-capacity-plan",
+        "industry-ops-runbook"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "agency-supply-chain",
+      "name": "供应链采购策略专家",
+      "group": "business",
+      "source": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "paths": [
+          "specialized/supply-chain-strategist.md"
+        ],
+        "files": [
+          {
+            "repository": "msitarzewski/agency-agents",
+            "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+            "path": "specialized/supply-chain-strategist.md",
+            "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/supply-chain-strategist.md",
+            "localPath": "upstream/agency-agents/specialized/supply-chain-strategist.md",
+            "sha256": "aa6c0f0e7bfc7948a9ac5c76d3a0c140c54a59393eac54bdf15b12a9555662da",
+            "bytes": 33078
+          }
+        ],
+        "assetPath": "managed/v1/experts/agency-supply-chain.json",
+        "communityEvidence": {
+          "stars": 166950,
+          "observedAt": "2026-11-07T00:02:51.646168+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/agency-supply-chain/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "evidence": {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+          "localPath": "upstream/agency-agents/LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "industry-commerce-inventory-planner",
+        "industry-ops-risk-assessment"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "agency-business-strategy",
+      "name": "商业战略决策专家",
+      "group": "business",
+      "source": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "paths": [
+          "specialized/business-strategist.md"
+        ],
+        "files": [
+          {
+            "repository": "msitarzewski/agency-agents",
+            "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+            "path": "specialized/business-strategist.md",
+            "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/business-strategist.md",
+            "localPath": "upstream/agency-agents/specialized/business-strategist.md",
+            "sha256": "9314906805d8dee81c3e2d10cb93513a391731d9fceb2e4c936257005a144b92",
+            "bytes": 25296
+          }
+        ],
+        "assetPath": "managed/v1/experts/agency-business-strategy.json",
+        "communityEvidence": {
+          "stars": 166950,
+          "observedAt": "2026-11-07T00:02:51.646743+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/agency-business-strategy/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "evidence": {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+          "localPath": "upstream/agency-agents/LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "marketing-marketing-plan",
+        "marketing-pricing"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "agency-training-designer",
+      "name": "企业培训设计专家",
+      "group": "business",
+      "source": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "paths": [
+          "specialized/corporate-training-designer.md"
+        ],
+        "files": [
+          {
+            "repository": "msitarzewski/agency-agents",
+            "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+            "path": "specialized/corporate-training-designer.md",
+            "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/corporate-training-designer.md",
+            "localPath": "upstream/agency-agents/specialized/corporate-training-designer.md",
+            "sha256": "e70733229e87dde01bd404f502d2f5b491821f681d7230b314b18d98111b898c",
+            "bytes": 15673
+          }
+        ],
+        "assetPath": "managed/v1/experts/agency-training-designer.json",
+        "communityEvidence": {
+          "stars": 166950,
+          "observedAt": "2026-11-07T00:02:51.647299+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/agency-training-designer/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "evidence": {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+          "localPath": "upstream/agency-agents/LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [],
+      "newSkills": []
+    },
+    {
+      "key": "agency-project-planner",
+      "name": "项目范围与交付专家",
+      "group": "business",
+      "source": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "paths": [
+          "project-management/project-manager-senior.md"
+        ],
+        "files": [
+          {
+            "repository": "msitarzewski/agency-agents",
+            "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+            "path": "project-management/project-manager-senior.md",
+            "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/project-management/project-manager-senior.md",
+            "localPath": "upstream/agency-agents/project-management/project-manager-senior.md",
+            "sha256": "70fb27cab174c97375293311211d5563c5ac257fba274450d1ca9c05b540ef2d",
+            "bytes": 5308
+          }
+        ],
+        "assetPath": "managed/v1/experts/agency-project-planner.json",
+        "communityEvidence": {
+          "stars": 166950,
+          "observedAt": "2026-11-07T00:02:51.647824+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/agency-project-planner/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "evidence": {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+          "localPath": "upstream/agency-agents/LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+          "移除上游Laravel/图片源等特定示例约束；遵从用户实际项目技术栈。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "project-governance",
+        "superpowers-writing-plans"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "kw-financial-controller",
+      "name": "财务关账统筹专家",
+      "group": "business",
+      "source": {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "paths": [
+          "finance/README.md",
+          "finance/skills/close-management/SKILL.md",
+          "finance/skills/financial-statements/SKILL.md"
+        ],
+        "files": [
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "finance/README.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/README.md",
+            "localPath": "upstream/knowledge-work-plugins/finance/README.md",
+            "sha256": "055ceb266a9f8f45607ca1ee28e1ace10b8d761d83d8fc7bf142f46ef84def2b",
+            "bytes": 5248
+          },
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "finance/skills/close-management/SKILL.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/skills/close-management/SKILL.md",
+            "localPath": "upstream/knowledge-work-plugins/finance/skills/close-management/SKILL.md",
+            "sha256": "6c2df93bcd15eddf65017445fa44f3eb0b16a755711a5e0602d73ca595e73732",
+            "bytes": 10278
+          },
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "finance/skills/financial-statements/SKILL.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/skills/financial-statements/SKILL.md",
+            "localPath": "upstream/knowledge-work-plugins/finance/skills/financial-statements/SKILL.md",
+            "sha256": "1a9ba1cc85495eef32fa250b8a4c05e4854430af574a290b855f919dbb557dfc",
+            "bytes": 14699
+          }
+        ],
+        "assetPath": "managed/v1/experts/kw-financial-controller.json",
+        "communityEvidence": {
+          "stars": 34994,
+          "observedAt": "2026-11-07T00:02:51.648736+00:00",
+          "selection": "官方岗位插件",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "Apache-2.0",
+        "upstreamPath": "finance/LICENSE",
+        "path": "managed/v1/provenance/kw-financial-controller/LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "evidence": {
+          "repository": "anthropics/knowledge-work-plugins",
+          "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+          "path": "finance/LICENSE",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/finance/LICENSE",
+          "localPath": "upstream/knowledge-work-plugins/finance/LICENSE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "bytes": 11358
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "plugin-to-expert",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+          "岗位plugin组合改编为复合专家，不冒充上游现成独立agent；同源已有技能复用，不重复导入。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "industry-accounting-close-management",
+        "industry-accounting-financial-statements",
+        "industry-accounting-reconciliation"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "kw-legal-review-lead",
+      "name": "合同与法律风险专家",
+      "group": "business",
+      "source": {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "paths": [
+          "legal/README.md",
+          "legal/skills/review-contract/SKILL.md",
+          "legal/skills/legal-risk-assessment/SKILL.md"
+        ],
+        "files": [
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "legal/README.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/README.md",
+            "localPath": "upstream/knowledge-work-plugins/legal/README.md",
+            "sha256": "8fb3696cc0a641d18213318dc503fed6086b3ea4aab5a2484b9cee3508ed5429",
+            "bytes": 9773
+          },
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "legal/skills/review-contract/SKILL.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/skills/review-contract/SKILL.md",
+            "localPath": "upstream/knowledge-work-plugins/legal/skills/review-contract/SKILL.md",
+            "sha256": "3a6413475f51adedbff130f4d5aabbeeacfb2abd323e0338bc91c21937fbfb76",
+            "bytes": 16708
+          },
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "legal/skills/legal-risk-assessment/SKILL.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/skills/legal-risk-assessment/SKILL.md",
+            "localPath": "upstream/knowledge-work-plugins/legal/skills/legal-risk-assessment/SKILL.md",
+            "sha256": "9f7985e3a98ac8419b52067cdaa1b72f754fa38c20489e7f0bf9de36347d4d89",
+            "bytes": 12581
+          }
+        ],
+        "assetPath": "managed/v1/experts/kw-legal-review-lead.json",
+        "communityEvidence": {
+          "stars": 34994,
+          "observedAt": "2026-11-07T00:02:51.649638+00:00",
+          "selection": "官方岗位插件",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "Apache-2.0",
+        "upstreamPath": "legal/LICENSE",
+        "path": "managed/v1/provenance/kw-legal-review-lead/LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "evidence": {
+          "repository": "anthropics/knowledge-work-plugins",
+          "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+          "path": "legal/LICENSE",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/legal/LICENSE",
+          "localPath": "upstream/knowledge-work-plugins/legal/LICENSE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "bytes": 11358
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "plugin-to-expert",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+          "岗位plugin组合改编为复合专家，不冒充上游现成独立agent；同源已有技能复用，不重复导入。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "industry-legal-review-contract",
+        "industry-legal-legal-risk-assessment"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "kw-account-strategy",
+      "name": "大客户商机策略专家",
+      "group": "business",
+      "source": {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "paths": [
+          "sales/README.md",
+          "sales/skills/account-plan/SKILL.md",
+          "sales/skills/deal-review/SKILL.md"
+        ],
+        "files": [
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "sales/README.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/README.md",
+            "localPath": "upstream/knowledge-work-plugins/sales/README.md",
+            "sha256": "f4d40d38a3f88140e4620a42cc078e859f30e05eb00e2a63a9cbe0840f1130db",
+            "bytes": 9646
+          },
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "sales/skills/account-plan/SKILL.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/skills/account-plan/SKILL.md",
+            "localPath": "upstream/knowledge-work-plugins/sales/skills/account-plan/SKILL.md",
+            "sha256": "b9facd0dfe322873e43757167b93bf3a312f0d0629c4cb9afa031912b64f5162",
+            "bytes": 10000
+          },
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "sales/skills/deal-review/SKILL.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/skills/deal-review/SKILL.md",
+            "localPath": "upstream/knowledge-work-plugins/sales/skills/deal-review/SKILL.md",
+            "sha256": "a78f8382d1f65ae57f8468bd4c76c2ccfec2a7d0f47ac15db44b31aa53568700",
+            "bytes": 9676
+          }
+        ],
+        "assetPath": "managed/v1/experts/kw-account-strategy.json",
+        "communityEvidence": {
+          "stars": 34994,
+          "observedAt": "2026-11-07T00:02:51.650507+00:00",
+          "selection": "官方岗位插件",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "Apache-2.0",
+        "upstreamPath": "sales/LICENSE",
+        "path": "managed/v1/provenance/kw-account-strategy/LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "evidence": {
+          "repository": "anthropics/knowledge-work-plugins",
+          "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+          "path": "sales/LICENSE",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/sales/LICENSE",
+          "localPath": "upstream/knowledge-work-plugins/sales/LICENSE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "bytes": 11358
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "plugin-to-expert",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+          "岗位plugin组合改编为复合专家，不冒充上游现成独立agent；同源已有技能复用，不重复导入。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "marketing-customer-research"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "agency-frontend-advisor",
+      "name": "前端实现方案专家",
+      "group": "development",
+      "source": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "paths": [
+          "engineering/engineering-frontend-developer.md"
+        ],
+        "files": [
+          {
+            "repository": "msitarzewski/agency-agents",
+            "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+            "path": "engineering/engineering-frontend-developer.md",
+            "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/engineering/engineering-frontend-developer.md",
+            "localPath": "upstream/agency-agents/engineering/engineering-frontend-developer.md",
+            "sha256": "71eeb60cbeedd94b41b2e5852d8986c909e8d150c324b4bb99e3b184ae202094",
+            "bytes": 9633
+          }
+        ],
+        "assetPath": "managed/v1/experts/agency-frontend-advisor.json",
+        "communityEvidence": {
+          "stars": 166950,
+          "observedAt": "2026-11-07T00:02:51.651083+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/agency-frontend-advisor/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "evidence": {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+          "localPath": "upstream/agency-agents/LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "frontend-design",
+        "dsh-responsive-ui"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "agency-backend-architect",
+      "name": "后端架构方案专家",
+      "group": "development",
+      "source": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "paths": [
+          "engineering/engineering-backend-architect.md"
+        ],
+        "files": [
+          {
+            "repository": "msitarzewski/agency-agents",
+            "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+            "path": "engineering/engineering-backend-architect.md",
+            "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/engineering/engineering-backend-architect.md",
+            "localPath": "upstream/agency-agents/engineering/engineering-backend-architect.md",
+            "sha256": "45d94306c8f0f4c51efb76066008297fa4e87ce5b69f509cfede224084b74dfb",
+            "bytes": 11263
+          }
+        ],
+        "assetPath": "managed/v1/experts/agency-backend-architect.json",
+        "communityEvidence": {
+          "stars": 166950,
+          "observedAt": "2026-11-07T00:02:51.651661+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/agency-backend-architect/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "evidence": {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+          "localPath": "upstream/agency-agents/LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "codex-security-threat-model",
+        "superpowers-writing-plans"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "agency-ui-system",
+      "name": "界面设计系统专家",
+      "group": "development",
+      "source": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "paths": [
+          "design/design-ui-designer.md"
+        ],
+        "files": [
+          {
+            "repository": "msitarzewski/agency-agents",
+            "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+            "path": "design/design-ui-designer.md",
+            "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/design/design-ui-designer.md",
+            "localPath": "upstream/agency-agents/design/design-ui-designer.md",
+            "sha256": "4dc51255ffcb47e2bf4289a7d49a7cc224238af759f9e6e3c56771c698575d6d",
+            "bytes": 13436
+          }
+        ],
+        "assetPath": "managed/v1/experts/agency-ui-system.json",
+        "communityEvidence": {
+          "stars": 166950,
+          "observedAt": "2026-11-07T00:02:51.652245+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/agency-ui-system/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "evidence": {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+          "localPath": "upstream/agency-agents/LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "brand-guidelines",
+        "frontend-design",
+        "industry-design-accessibility-review"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "volt-api-designer",
+      "name": "API契约设计专家",
+      "group": "development",
+      "source": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "paths": [
+          "categories/01-core-development/api-designer.md"
+        ],
+        "files": [
+          {
+            "repository": "VoltAgent/awesome-claude-code-subagents",
+            "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+            "path": "categories/01-core-development/api-designer.md",
+            "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/01-core-development/api-designer.md",
+            "localPath": "upstream/awesome-claude-code-subagents/categories/01-core-development/api-designer.md",
+            "sha256": "dc8547318598b6abecfad8d3c5709c9bb21fc38c2e5f5b4f452bb02f668df1be",
+            "bytes": 6115
+          }
+        ],
+        "assetPath": "managed/v1/experts/volt-api-designer.json",
+        "communityEvidence": {
+          "stars": 26382,
+          "observedAt": "2026-11-07T00:02:51.652794+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/volt-api-designer/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "evidence": {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+          "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+          "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+          "bytes": 1065
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "dsh-doc",
+        "superpowers-writing-plans"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "volt-security-auditor",
+      "name": "安全审计顾问",
+      "group": "development",
+      "source": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "paths": [
+          "categories/04-quality-security/security-auditor.md"
+        ],
+        "files": [
+          {
+            "repository": "VoltAgent/awesome-claude-code-subagents",
+            "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+            "path": "categories/04-quality-security/security-auditor.md",
+            "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/04-quality-security/security-auditor.md",
+            "localPath": "upstream/awesome-claude-code-subagents/categories/04-quality-security/security-auditor.md",
+            "sha256": "62b0e511c9e0d8f1ec02b2fe0f4a1806134c850508c55420f558457225b1eb7d",
+            "bytes": 6781
+          }
+        ],
+        "assetPath": "managed/v1/experts/volt-security-auditor.json",
+        "communityEvidence": {
+          "stars": 26382,
+          "observedAt": "2026-11-07T00:02:51.653441+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/volt-security-auditor/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "evidence": {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+          "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+          "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+          "bytes": 1065
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "codex-security-best-practices",
+        "codex-security-threat-model"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "volt-code-reviewer",
+      "name": "代码质量审查专家",
+      "group": "development",
+      "source": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "paths": [
+          "categories/04-quality-security/code-reviewer.md"
+        ],
+        "files": [
+          {
+            "repository": "VoltAgent/awesome-claude-code-subagents",
+            "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+            "path": "categories/04-quality-security/code-reviewer.md",
+            "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/04-quality-security/code-reviewer.md",
+            "localPath": "upstream/awesome-claude-code-subagents/categories/04-quality-security/code-reviewer.md",
+            "sha256": "cf8235884dd8b4bc15aa20cc822f727ecbde2b65823b7ba2b027a638804dfc78",
+            "bytes": 6607
+          }
+        ],
+        "assetPath": "managed/v1/experts/volt-code-reviewer.json",
+        "communityEvidence": {
+          "stars": 26382,
+          "observedAt": "2026-11-07T00:02:51.653933+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/volt-code-reviewer/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "evidence": {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+          "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+          "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+          "bytes": 1065
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "dsh-code-review",
+        "superpowers-receiving-code-review"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "volt-debugger",
+      "name": "故障根因诊断专家",
+      "group": "development",
+      "source": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "paths": [
+          "categories/04-quality-security/debugger.md"
+        ],
+        "files": [
+          {
+            "repository": "VoltAgent/awesome-claude-code-subagents",
+            "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+            "path": "categories/04-quality-security/debugger.md",
+            "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/04-quality-security/debugger.md",
+            "localPath": "upstream/awesome-claude-code-subagents/categories/04-quality-security/debugger.md",
+            "sha256": "7e39938967cb1313f803a603e215ad0d8c778e0913328ccee220bb8470d617f3",
+            "bytes": 6577
+          }
+        ],
+        "assetPath": "managed/v1/experts/volt-debugger.json",
+        "communityEvidence": {
+          "stars": 26382,
+          "observedAt": "2026-11-07T00:02:51.654460+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/volt-debugger/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "evidence": {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+          "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+          "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+          "bytes": 1065
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "superpowers-systematic-debugging",
+        "dsh-error-handling"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "volt-devops-advisor",
+      "name": "交付与运维方案专家",
+      "group": "development",
+      "source": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "paths": [
+          "categories/03-infrastructure/devops-engineer.md"
+        ],
+        "files": [
+          {
+            "repository": "VoltAgent/awesome-claude-code-subagents",
+            "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+            "path": "categories/03-infrastructure/devops-engineer.md",
+            "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/03-infrastructure/devops-engineer.md",
+            "localPath": "upstream/awesome-claude-code-subagents/categories/03-infrastructure/devops-engineer.md",
+            "sha256": "0d62477d005660f1e43691a35bb5a94b40195cbe0c7e8da42de29a61c536b309",
+            "bytes": 6948
+          }
+        ],
+        "assetPath": "managed/v1/experts/volt-devops-advisor.json",
+        "communityEvidence": {
+          "stars": 26382,
+          "observedAt": "2026-11-07T00:02:51.655015+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/volt-devops-advisor/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "evidence": {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+          "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+          "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+          "bytes": 1065
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+          "删除上游示例中的已完成数字成果，不当作真实执行/评分。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "industry-ops-runbook",
+        "superpowers-verification-before-completion"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "volt-database-optimizer",
+      "name": "数据库性能诊断专家",
+      "group": "development",
+      "source": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "paths": [
+          "categories/05-data-ai/database-optimizer.md"
+        ],
+        "files": [
+          {
+            "repository": "VoltAgent/awesome-claude-code-subagents",
+            "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+            "path": "categories/05-data-ai/database-optimizer.md",
+            "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/05-data-ai/database-optimizer.md",
+            "localPath": "upstream/awesome-claude-code-subagents/categories/05-data-ai/database-optimizer.md",
+            "sha256": "3871a9853fce7bbf686fcec592a2770d91a9591c29fb4893e6f48760a6cf0e85",
+            "bytes": 6553
+          }
+        ],
+        "assetPath": "managed/v1/experts/volt-database-optimizer.json",
+        "communityEvidence": {
+          "stars": 26382,
+          "observedAt": "2026-11-07T00:02:51.655507+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/volt-database-optimizer/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "evidence": {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+          "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+          "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+          "bytes": 1065
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+          "删除上游示例中的已完成数字成果，不当作真实执行/评分。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "industry-data-sql-queries",
+        "dsh-speed-up-perf"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "agency-ux-research",
+      "name": "用户体验研究专家",
+      "group": "research",
+      "source": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "paths": [
+          "design/design-ux-researcher.md"
+        ],
+        "files": [
+          {
+            "repository": "msitarzewski/agency-agents",
+            "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+            "path": "design/design-ux-researcher.md",
+            "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/design/design-ux-researcher.md",
+            "localPath": "upstream/agency-agents/design/design-ux-researcher.md",
+            "sha256": "25f59c4333df2d0f1170ff7a1b11ea8415fd3d0ef80c3e0985209aeb4018680f",
+            "bytes": 13030
+          }
+        ],
+        "assetPath": "managed/v1/experts/agency-ux-research.json",
+        "communityEvidence": {
+          "stars": 166950,
+          "observedAt": "2026-11-07T00:02:51.656029+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/agency-ux-research/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "evidence": {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+          "localPath": "upstream/agency-agents/LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "industry-design-user-research",
+        "industry-product-synthesize-research"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "volt-market-sizing",
+      "name": "市场规模研究专家",
+      "group": "research",
+      "source": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "paths": [
+          "categories/10-research-analysis/market-researcher.md"
+        ],
+        "files": [
+          {
+            "repository": "VoltAgent/awesome-claude-code-subagents",
+            "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+            "path": "categories/10-research-analysis/market-researcher.md",
+            "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/10-research-analysis/market-researcher.md",
+            "localPath": "upstream/awesome-claude-code-subagents/categories/10-research-analysis/market-researcher.md",
+            "sha256": "5ee6d345b5a8b705e5da1f0696702536c75a87fedcbcab77faa18e3cf491772e",
+            "bytes": 6758
+          }
+        ],
+        "assetPath": "managed/v1/experts/volt-market-sizing.json",
+        "communityEvidence": {
+          "stars": 26382,
+          "observedAt": "2026-11-07T00:02:51.656474+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/volt-market-sizing/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "evidence": {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+          "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+          "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+          "bytes": 1065
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "marketing-customer-research"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "volt-literature-evidence",
+      "name": "科研文献证据专家",
+      "group": "research",
+      "source": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "paths": [
+          "categories/10-research-analysis/scientific-literature-researcher.md"
+        ],
+        "files": [
+          {
+            "repository": "VoltAgent/awesome-claude-code-subagents",
+            "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+            "path": "categories/10-research-analysis/scientific-literature-researcher.md",
+            "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/10-research-analysis/scientific-literature-researcher.md",
+            "localPath": "upstream/awesome-claude-code-subagents/categories/10-research-analysis/scientific-literature-researcher.md",
+            "sha256": "84c2657b9715a207494fd084e80fb80fc4c066e64b0c856fd95bfbb93a7295d7",
+            "bytes": 5250
+          }
+        ],
+        "assetPath": "managed/v1/experts/volt-literature-evidence.json",
+        "communityEvidence": {
+          "stars": 26382,
+          "observedAt": "2026-11-07T00:02:51.656960+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/volt-literature-evidence/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "evidence": {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+          "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+          "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+          "bytes": 1065
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+          "未连接BGPT MCP：仅公共检索、可读网页/论文输入；全文不可读时只提供摘要级证据。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [],
+      "newSkills": []
+    },
+    {
+      "key": "volt-statistical-modeling",
+      "name": "统计实验与建模顾问",
+      "group": "research",
+      "source": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "paths": [
+          "categories/05-data-ai/data-scientist.md"
+        ],
+        "files": [
+          {
+            "repository": "VoltAgent/awesome-claude-code-subagents",
+            "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+            "path": "categories/05-data-ai/data-scientist.md",
+            "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/05-data-ai/data-scientist.md",
+            "localPath": "upstream/awesome-claude-code-subagents/categories/05-data-ai/data-scientist.md",
+            "sha256": "d5d51ae2ac59e57a6537d94e6a3cb1ec38e8430d3aad0595cba7296c6b98fb97",
+            "bytes": 6876
+          }
+        ],
+        "assetPath": "managed/v1/experts/volt-statistical-modeling.json",
+        "communityEvidence": {
+          "stars": 26382,
+          "observedAt": "2026-11-07T00:02:51.657412+00:00",
+          "selection": "社区独立角色定义",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "upstreamPath": "LICENSE",
+        "path": "managed/v1/provenance/volt-statistical-modeling/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "evidence": {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+          "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+          "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+          "bytes": 1065
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "role-adaptation",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+          "无训练执行工具；移除来源统一p<0.05硬门槛，以预定分析/多重比较/效应量和区间解释取代。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "industry-data-statistical-analysis",
+        "marketing-ab-testing"
+      ],
+      "newSkills": []
+    },
+    {
+      "key": "kw-data-quality-lead",
+      "name": "数据分析质量复核专家",
+      "group": "research",
+      "source": {
+        "repository": "anthropics/knowledge-work-plugins",
+        "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+        "paths": [
+          "data/README.md",
+          "data/skills/analyze/SKILL.md",
+          "data/skills/validate-data/SKILL.md"
+        ],
+        "files": [
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "data/README.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/README.md",
+            "localPath": "upstream/knowledge-work-plugins/data/README.md",
+            "sha256": "4c7eb5edd9298a3cec8bb6a3cd703f28c81d3bf405ff790d6a70588d7131db70",
+            "bytes": 5067
+          },
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "data/skills/analyze/SKILL.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/skills/analyze/SKILL.md",
+            "localPath": "upstream/knowledge-work-plugins/data/skills/analyze/SKILL.md",
+            "sha256": "4ee816363d944c7a959e43384576d979a414f37fff7071c0bfb8935aae10143e",
+            "bytes": 4432
+          },
+          {
+            "repository": "anthropics/knowledge-work-plugins",
+            "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+            "path": "data/skills/validate-data/SKILL.md",
+            "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/skills/validate-data/SKILL.md",
+            "localPath": "upstream/knowledge-work-plugins/data/skills/validate-data/SKILL.md",
+            "sha256": "1e424822043480375b80aef9416227b1c8083af749ca536568716265f79ca54b",
+            "bytes": 14916
+          }
+        ],
+        "assetPath": "managed/v1/experts/kw-data-quality-lead.json",
+        "communityEvidence": {
+          "stars": 34994,
+          "observedAt": "2026-11-07T00:02:51.658290+00:00",
+          "selection": "官方岗位插件",
+          "notExecutionRating": true
+        }
+      },
+      "license": {
+        "spdx": "Apache-2.0",
+        "upstreamPath": "data/LICENSE",
+        "path": "managed/v1/provenance/kw-data-quality-lead/LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "evidence": {
+          "repository": "anthropics/knowledge-work-plugins",
+          "ref": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+          "path": "data/LICENSE",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d/data/LICENSE",
+          "localPath": "upstream/knowledge-work-plugins/data/LICENSE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "bytes": 11358
+        },
+        "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+      },
+      "adaptation": {
+        "language": "zh-CN",
+        "mode": "plugin-to-expert",
+        "notes": [
+          "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+          "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+          "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+          "岗位plugin组合改编为复合专家，不冒充上游现成独立agent；同源已有技能复用，不重复导入。"
+        ],
+        "executionValidation": "not-run"
+      },
+      "linkedSkillKeys": [
+        "industry-data-validate-data",
+        "industry-data-explore-data"
+      ],
+      "newSkills": []
+    }
+  ],
+  "count": 24,
+  "newSkillPackages": 0,
+  "state": "draft-only",
+  "excluded": [
+    "WorkBuddy community: redistribution/commercial restrictions",
+    "Third-party runtime/scripts/hooks/MCP configs: not executed or installed"
+  ],
+  "preservation": "Existing 22 experts /47 versions and 115 enabled skills are not overwritten"
+}

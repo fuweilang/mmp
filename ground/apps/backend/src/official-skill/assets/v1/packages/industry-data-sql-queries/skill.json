@@ -1,0 +1,15 @@
+{
+  "key": "industry-data-sql-queries",
+  "name": "SQL 查询编写",
+  "description": "按数据库方言编写并解释查询；仅在授权环境执行。",
+  "entry": "SKILL.md",
+  "category": "analytics",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

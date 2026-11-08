@@ -1,0 +1,77 @@
+{
+  "startedAt": "2026-11-06 15:22:19 Asia/Shanghai",
+  "web": {
+    "before": {
+      "entryPresent": true,
+      "entryAria": "已归档会话，共 0 个",
+      "entryExpanded": "false",
+      "entryText": "已归档 0",
+      "emptyPresent": false,
+      "emptyText": "",
+      "treeHas已归档": true,
+      "treeHead": [
+        "默认工作区",
+        "新会话",
+        "猛犸AI是什么及其来源",
+        "1小时",
+        "利基市场的本质特征",
+        "1小时",
+        "已归档",
+        "0"
+      ]
+    },
+    "expanded": {
+      "entryPresent": true,
+      "entryAria": "已归档会话，共 0 个",
+      "entryExpanded": "true",
+      "entryText": "已归档 0",
+      "emptyPresent": true,
+      "emptyText": "暂无归档会话 可在会话「…」菜单中选择「归档会话」",
+      "treeHas已归档": true,
+      "treeHead": [
+        "默认工作区",
+        "新会话",
+        "猛犸AI是什么及其来源",
+        "1小时",
+        "利基市场的本质特征",
+        "1小时",
+        "已归档",
+        "0",
+        "暂无归档会话",
+        "可在会话「…」菜单中选择「归档会话」"
+      ]
+    },
+    "ok": true
+  },
+  "electron": {
+    "before": {
+      "entryPresent": false,
+      "entryAria": null,
+      "entryExpanded": null,
+      "entryText": "",
+      "emptyPresent": false,
+      "emptyText": "",
+      "treeHas已归档": false,
+      "treeHead": [
+        "默认工作区",
+        "新会话",
+        "依据企业资料回答问题的说明",
+        "2小时",
+        "产品好用文案专业润色",
+        "2小时",
+        "小红书AI办公标题",
+        "2小时",
+        "短视频开头钩子创作",
+        "2小时",
+        "咨询转化的关键一步",
+        "2小时",
+        "展开其余 29 个会话"
+      ]
+    },
+    "reloaded": true,
+    "ok": false,
+    "note": "Entry missing — MMP Dev likely still on skip-build / old client bundle; lib/client.js already contains always-visible fix. Do not claim Electron UI live without rebuild/restart."
+  },
+  "ok": true,
+  "finishedAt": "2026-11-06 15:22:32 Asia/Shanghai"
+}

@@ -1,89 +1,137 @@
-/* Compact download card aligned with the account launcher below it. */
-.action {
-  align-items: center;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary) 2%, transparent);
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
-  border-radius: 12px;
+/* Compact brand card: primary install + quiet open link. */
+.actions {
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) 12%, transparent);
+  border-radius: 10px;
   box-sizing: border-box;
-  color: var(--dsw-alias-label-primary);
-  cursor: pointer;
   display: flex;
-  font: inherit;
-  font-size: 13px;
-  gap: 10px;
-  min-height: 46px;
+  flex-direction: column;
+  gap: 4px;
   margin: 4px 2px 8px;
-  padding: 7px 10px;
-  text-align: start;
+  padding: 8px;
   width: calc(100% - 4px);
-  transition: background-color 160ms ease, border-color 160ms ease;
 }
 
-.action:hover {
-  background: color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) 6%, transparent);
-  border-color: color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) 24%, transparent);
+.primary {
+  align-items: center;
+  background: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  border: 0;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: var(--dsw-alias-label-inverse, #ffffff);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  gap: 8px;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px;
+  transition: filter 160ms ease, background-color 160ms ease;
+  width: 100%;
 }
 
-.action:focus-visible {
+.primary:hover {
+  filter: brightness(1.06);
+}
+
+.primary:focus-visible {
   outline: 2px solid var(--dsw-alias-brand-primary-new-colorprimary-new-color);
   outline-offset: 2px;
 }
 
-.actionIcon {
+.primaryIcon {
+  display: inline-flex;
+  flex: none;
+}
+
+.open {
   align-items: center;
-  background: color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) 9%, transparent);
-  border-radius: 8px;
-  color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
-  display: flex;
-  flex: none;
-  height: 30px;
-  justify-content: center;
-  width: 30px;
-}
-
-.actionLabel {
-  flex: 1;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.actionArrow {
-  color: var(--dsw-alias-label-tertiary);
-  display: flex;
-  flex: none;
-  transition: color 160ms ease, transform 160ms ease;
-}
-
-.action:hover .actionArrow {
-  color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
-  transform: translateX(2px);
-}
-
-.action[data-wide='false'] {
   background: transparent;
-  border-color: transparent;
-  height: 36px;
+  border: 0;
+  box-sizing: border-box;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 12.5px;
+  gap: 4px;
   justify-content: center;
+  min-height: 32px;
+  padding: 2px;
+  text-align: center;
+  text-decoration: none;
+  transition: color 160ms ease;
+  width: 100%;
+}
+
+.open:hover {
+  color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+}
+
+.open:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  outline-offset: 1px;
+}
+
+.openArrow {
+  flex: none;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+/* Collapsed rail: one download icon; open stays keyboard-reachable. */
+.actions[data-wide='false'] {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  gap: 0;
   margin: 2px 0 6px;
+  padding: 0;
+  width: 36px;
+}
+
+.actions[data-wide='false'] .primary {
+  border-radius: 8px;
+  height: 36px;
   min-height: 36px;
   padding: 0;
   width: 36px;
 }
 
-.action[data-wide='false'] .actionIcon {
-  background: transparent;
-  color: var(--dsw-alias-label-secondary);
+.actions[data-wide='false'] .primaryLabel {
+  display: none;
 }
 
-.action[data-wide='false']:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+.actions[data-wide='false'] .open {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.actions[data-wide='false'] .open:focus-visible {
+  clip: auto;
+  clip-path: none;
+  height: auto;
+  margin: 4px 0 0;
+  overflow: visible;
+  position: static;
+  white-space: normal;
+  width: 36px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .action, .actionArrow { transition: none; }
-  .action:hover .actionArrow { transform: none; }
+  .primary, .open { transition: none; }
+  .primary:hover { filter: none; }
 }
 
 .dialog {

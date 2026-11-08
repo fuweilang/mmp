@@ -8,7 +8,7 @@ let sessionRefreshed = false;
 const AppShell = () => import('../layouts/AppShell.vue');
 
 function goAgentOrReport() {
-  if (!redirectToAgentWeb()) ElMessage.error('猛犸智能体地址未配置，请联系管理员');
+  if (!redirectToAgentWeb()) ElMessage.error('猛犸专家地址未配置，请联系管理员');
   return false;
 }
 
@@ -16,6 +16,8 @@ const router = createRouter({
   history: createWebHistory('/'),
   routes: [
     { path: '/login', component: () => import('../views/Login.vue') },
+    { path: '/library', meta: { title: '资料库' }, component: () => import('../views/Library.vue') },
+    { path: '/console/library', redirect: '/library' },
     {
       path: '/admin',
       component: AppShell,
@@ -50,6 +52,21 @@ const router = createRouter({
           }),
         },
         {
+          path: 'official-agents',
+          meta: { title: '专家配置' },
+          component: () => import('../views/admin/AdminOfficialAgents.vue'),
+        },
+        {
+          path: 'official-skills',
+          meta: { title: '技能管理' },
+          component: () => import('../views/admin/AdminOfficialSkills.vue'),
+        },
+        {
+          path: 'official-knowledge',
+          meta: { title: '猛犸知识库' },
+          component: () => import('../views/admin/AdminOfficialKnowledge.vue'),
+        },
+        {
           path: 'models',
           meta: { title: '模型管理' },
           component: () => import('../views/admin/AdminModels.vue'),
@@ -68,6 +85,11 @@ const router = createRouter({
           path: 'audit',
           meta: { title: '操作审计', perm: 'portal.admin.audit' },
           component: () => import('../views/admin/AdminAudit.vue'),
+        },
+        {
+          path: 'library',
+          meta: { title: '资料库概况' },
+          component: () => import('../views/admin/AdminLibrary.vue'),
         },
         {
           path: 'billing',
@@ -116,11 +138,15 @@ router.beforeEach(async (to) => {
   if (to.path === '/login') return true;
 
   const auth = useAuthStore();
+  const loginTarget = to.path === '/admin' || to.path.startsWith('/admin/')
+    || to.path === '/console' || to.path.startsWith('/console/')
+    ? { path: '/login', query: { next: to.fullPath } }
+    : '/login';
   if (!auth.session) {
     try {
       await auth.load();
     } catch {
-      return '/login';
+      return loginTarget;
     }
   }
 
@@ -131,7 +157,7 @@ router.beforeEach(async (to) => {
     try {
       await auth.load();
     } catch {
-      return '/login';
+      return loginTarget;
     }
   }
 

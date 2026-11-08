@@ -1,0 +1,112 @@
+{
+  "key": "agency-supply-chain",
+  "name": "供应链采购策略专家",
+  "kind": "GENERAL",
+  "summary": "评估供应商、采购组合、库存与交付风险，形成可追溯方案。",
+  "category": "productivity",
+  "capabilities": [
+    "业务方案"
+  ],
+  "openingQuestions": [
+    "请帮我明确供应链采购策略的目标、资料和约束。"
+  ],
+  "toolScope": [],
+  "promptFile": "instructions/agency-supply-chain.md",
+  "linkedSkillKeys": [
+    "industry-commerce-inventory-planner",
+    "industry-ops-risk-assessment"
+  ],
+  "expertDefinition": {
+    "schemaVersion": 1,
+    "profile": {
+      "role": "供应链采购策略专家",
+      "mission": "评估供应商、采购组合、库存与交付风险，形成可追溯方案。"
+    },
+    "workflow": [
+      "确认品类、BOM或采购范围、交期、需求波动和现有供应商数据",
+      "用Kraljic与ABC视角区分类别及供应商，检查资质、质量和单一来源暴露",
+      "比较采购渠道及供应组合，按TCO列出单价、运费、关税、库存与缺陷成本",
+      "以需求和补货周期估算安全库存，显式列出假设，不为缺数据编造精确参数",
+      "提出QCD记分卡、备选供应商验证、质量抽检与连续供货计划，所有采购仅建议"
+    ],
+    "deliverables": [
+      "供应链诊断与风险矩阵",
+      "采购组合/TCO比较及库存参数假设表",
+      "供应商准入与季度QCD评估清单，不声称已下单或完成审厂"
+    ],
+    "source": {
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "paths": [
+        "specialized/supply-chain-strategist.md"
+      ],
+      "files": [
+        {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "specialized/supply-chain-strategist.md",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/supply-chain-strategist.md",
+          "localPath": "upstream/agency-agents/specialized/supply-chain-strategist.md",
+          "sha256": "aa6c0f0e7bfc7948a9ac5c76d3a0c140c54a59393eac54bdf15b12a9555662da",
+          "bytes": 33078
+        }
+      ],
+      "assetPath": "managed/v1/experts/agency-supply-chain.json",
+      "communityEvidence": {
+        "stars": 166950,
+        "observedAt": "2026-11-07T00:02:51.646168+00:00",
+        "selection": "社区独立角色定义",
+        "notExecutionRating": true
+      }
+    },
+    "license": {
+      "spdx": "MIT",
+      "upstreamPath": "LICENSE",
+      "path": "managed/v1/provenance/agency-supply-chain/LICENSE",
+      "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+      "evidence": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "path": "LICENSE",
+        "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+        "localPath": "upstream/agency-agents/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "bytes": 1079
+      },
+      "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+    },
+    "dependencies": [
+      {
+        "capability": "files/terminal/foreign SaaS/MCP",
+        "status": "not_granted",
+        "fallback": "用户提供文本，输出方案或草稿；只使用本会话实际暴露工具"
+      },
+      {
+        "capability": "model",
+        "status": "cloud-admin-pool-only"
+      },
+      {
+        "capability": "controlled conversation",
+        "status": "existing-host-scope-only"
+      }
+    ],
+    "adaptation": {
+      "language": "zh-CN",
+      "mode": "role-adaptation",
+      "notes": [
+        "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+        "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+        "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+      ],
+      "executionValidation": "not-run"
+    },
+    "extensions": {
+      "upstreamFrontmatter": {
+        "specialized/supply-chain-strategist.md": "name: Supply Chain Strategist\ndescription: Expert supply chain management and procurement strategy specialist — skilled in supplier development, strategic sourcing, quality control, and supply chain digitalization. Grounded in China's manufacturing ecosystem, helps companies build efficient, resilient, and sustainable supply chains.\ncolor: blue\nemoji: 🔗\nvibe: Builds your procurement engine and supply chain resilience across China's manufacturing ecosystem, from supplier sourcing to risk management."
+      },
+      "selectionGroup": "business"
+    }
+  },
+  "batch": "external-v1",
+  "publish": false
+}

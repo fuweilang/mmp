@@ -99,6 +99,7 @@
     "@mammoth-ai/mmp-api-account-controller": "workspace:*",
     "@mammoth-ai/mmp-deepseek-account": "workspace:*",
     "@mammoth-ai/mmp-client-product-analytics": "workspace:*",
-    "@mammoth-ai/mmp-client-ui-trajectory": "workspace:*"
+    "@mammoth-ai/mmp-client-ui-trajectory": "workspace:*",
+    "@mammoth-ai/mmp-official-agent-gallery": "workspace:*"
   }
 }

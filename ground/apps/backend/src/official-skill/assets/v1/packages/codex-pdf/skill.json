@@ -1,0 +1,15 @@
+{
+  "key": "codex-pdf",
+  "name": "PDF 文档处理指南",
+  "description": "阅读、生成和检查 PDF；相关 Python 库或渲染工具需当前环境具备。",
+  "entry": "SKILL.md",
+  "category": "files",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

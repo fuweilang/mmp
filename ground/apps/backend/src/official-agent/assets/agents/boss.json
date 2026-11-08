@@ -1,0 +1,22 @@
+{
+  "key": "boss",
+  "kind": "GENERAL",
+  "name": "猛犸大总管",
+  "summary": "总控编排 · 单层委派专科智能体",
+  "openingQuestions": [
+    "帮我看看这段销售 CSV 的异常，并给增长建议该找谁。",
+    "调研一下某竞品的公开信息，再让文案写一版对比帖。",
+    "你能同时调用多少个智能体？有什么限制？"
+  ],
+  "toolScope": [
+    "delegate_official_agent"
+  ],
+  "toolScopeNotes": "单层路由；allowlist；子工具在 Ground 执行",
+  "promptFile": "prompts/boss.md",
+  "batch": "D",
+  "publish": true,
+  "category": "productivity",
+  "capabilities": [
+    "任务编排"
+  ]
+}

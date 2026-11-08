@@ -24,5 +24,5 @@ RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g; s|security.debian.org|mirrors
 COPY --from=dockercli /usr/local/bin/docker /usr/local/bin/docker
 WORKDIR /app
 COPY --from=build /app /app
-ENV MMP_WEB_BUILT_RUNTIME=1 MMP_HOME=/home/mmp
+ENV MMP_WEB_BUILT_RUNTIME=1 MMP_HOME=/home/mmp HOME=/home/mmp
 CMD ["node", "runtime/serve-ground-web.mjs", "--port", "33080", "--no-open"]

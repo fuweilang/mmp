@@ -642,7 +642,7 @@ describe('desktop main startup', () => {
     await vi.advanceTimersByTimeAsync(0)
     const zh = locale === 'zh-CN'
     expect(harness.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
-      type: 'info', title: zh ? '关于猛犸智能体' : 'About 猛犸智能体', message: '猛犸智能体',
+      type: 'info', title: zh ? '关于猛犸AI' : 'About 猛犸AI', message: '猛犸AI',
       detail: zh ? '版本 V1.0.0' : 'Version V1.0.0', buttons: [zh ? '确定' : 'OK'], cancelId: 0,
     }))
     // A dialog that cannot open is logged, not surfaced as an unhandled rejection.
@@ -1086,7 +1086,7 @@ describe('desktop main startup', () => {
     expect(() => handler(event, 'application', NaN, 34)).toThrow('invalid popup request')
     const application = handler(event, 'application', 48, 34)
     expect(harness.menu.buildFromTemplate.mock.lastCall![0].map(item => item.label ?? item.type)).toEqual([
-      '关于猛犸智能体', 'separator', '检查更新…', '管理 mmp 命令…', 'separator', zh.toggleDevToolsMenu, 'separator', '退出',
+      '关于猛犸AI', 'separator', '检查更新…', '管理 mmp 命令…', 'separator', zh.toggleDevToolsMenu, 'separator', '退出',
     ])
     expect(harness.popup.mock.lastCall![0]).toMatchObject({ window, x: 48, y: 34 })
     expect(harness.popup.mock.lastCall![0].callback).toBeTypeOf('function')
@@ -2760,4 +2760,28 @@ it('destroys the previous account document and waits for its Host to exit before
   second.onPlatformSession!(bob)
   second.ready.resolve()
   await vi.waitFor(() => { expect(window.urls.at(-1)).toBe('mmp-app://app/') })
+})
+
+it('keeps a pending boot on the signed-in replacement Host instead of failing on the data-home switch', async () => {
+  await import('../src/main.ts')
+  await harness.preparing.promise
+  const alice = { origin: 'https://ground.example', userId: 'alice' as AccountUserId, token: 'alice-grant' }
+  harness.prepared.resolve()
+  await harness.hostStarted.promise
+  const bootstrap = harness.hosts[0]!
+  bootstrap.onPlatformSession!(alice)
+  // Let the privacy block schedule its replacement before the document asks to boot.
+  await vi.advanceTimersByTimeAsync(0)
+  // The request was dispatched while mmp-app://app/ was still the committed
+  // document; the block navigates the window away before the handler resumes.
+  const boot = harness.handlers.get(DESKTOP_IPC.boot)!({ senderFrame: { url: 'mmp-app://app/' } })
+  bootstrap.ready.resolve()
+  await bootstrap.stopping.promise
+  bootstrap.exited.resolve()
+  await vi.waitFor(() => { expect(harness.hosts).toHaveLength(2) })
+  const replacement = harness.hosts[1]!
+  replacement.url = 'http://127.0.0.1:3081/?token=account'
+  replacement.ready.resolve()
+  await expect(boot).resolves.toEqual({ injections: [], streamBaseUrl: 'http://127.0.0.1:3081' })
+  expect(harness.dialog.showMessageBox).not.toHaveBeenCalled()
 })

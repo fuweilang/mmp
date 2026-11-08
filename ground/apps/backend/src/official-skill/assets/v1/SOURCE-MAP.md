@@ -1,0 +1,144 @@
+# Official Skill SOURCE-MAP
+
+Packages: 115; expansion: 76; previous: 39
+
+## Evidence and limits
+All new packages retain the applicable per-directory/ancestor MIT or Apache license, original file git-blob hash, source repo tree hash and upstream notices. Existing 39 assets are unchanged.
+Community metrics are upstream popularity at collection time, NOT a rating, execution test, stability certification or guarantee. Instructions-only adaptation does not add missing tools.
+WorkBuddy/marketplace listings without a per-package license are not imported. No duplicate translations, AGENTS.md or fabricated skills count toward totals.
+
+## Source selection
+- deepseek-ai/deepseek-harness: 274718 GitHub stars; https://github.com/deepseek-ai/deepseek-harness; not archived; observed 2026-11-06T16:17:00.476Z
+- hackerFish/awesome-dsh-skills: 5 GitHub stars; https://github.com/hackerFish/awesome-dsh-skills; not archived; observed 2026-11-06T16:17:00.476Z
+- openai/plugins: 7785 GitHub stars; https://github.com/openai/plugins; not archived; observed 2026-11-06T16:17:00.476Z
+- openai/skills: 28549 GitHub stars; https://github.com/openai/skills; not archived; observed 2026-11-06T16:17:00.476Z
+- anthropics/knowledge-work-plugins: 34957 GitHub stars; https://github.com/anthropics/knowledge-work-plugins; not archived; observed 2026-11-06T16:17:00.476Z
+- coreyhaines31/marketingskills: 58856 GitHub stars; https://github.com/coreyhaines31/marketingskills; not archived; observed 2026-11-06T16:17:00.476Z
+
+## Packages
+- **frontend-design** | 前端界面设计 | 设计前端/expertise | Apache-2.0 | github:anthropics/skills@main:skills/frontend-design#bd77d81dd89e
+- **brand-guidelines** | 品牌视觉规范 | 中文写作/内容/content | Apache-2.0 | github:anthropics/skills@main:skills/brand-guidelines#d3f4f52bc89b
+- **canvas-design** | 画布视觉设计 | 设计前端/expertise | Apache-2.0 | github:anthropics/skills@main:skills/canvas-design#20a0b1b7a7fb
+- **internal-comms** | 内部沟通文案 | 中文写作/内容/content | Apache-2.0 | github:anthropics/skills@main:skills/internal-comms#358d579ce330
+- **theme-factory** | 主题配色工厂 | 设计前端/expertise | Apache-2.0 | github:anthropics/skills@main:skills/theme-factory#c55e7e510c4f
+- **algorithmic-art** | 算法艺术创作 | 设计前端/expertise | Apache-2.0 | github:anthropics/skills@main:skills/algorithmic-art#2e7af3985155
+- **skill-creator** | 技能编写指南 | 通用协作/common | Apache-2.0 | github:anthropics/skills@main:skills/skill-creator#6feb3191b967
+- **academy-guide** | 学院学习指南 | 通用协作/common | Apache-2.0 | github:anthropics/skills@main:skills/academy-guide#cb36bd4f78b4
+- **discernment-nudge** | 审慎判断提醒 | 通用协作/common | Apache-2.0 | github:anthropics/skills@main:skills/discernment-nudge#1b42489bae8f
+- **mcp-builder** | MCP 构建指南 | 设计前端/expertise | Apache-2.0 | github:anthropics/skills@main:skills/mcp-builder#694b9f88f6e9
+- **web-artifacts-builder** | 网页产物构建 | 设计前端/expertise | Apache-2.0 | github:anthropics/skills@main:skills/web-artifacts-builder#1c1c1f4b89de
+- **novel-game** | 互动小说游戏 | 中文写作/内容/content | Apache-2.0 | github:modelstudioai/skills@main:skills/novel-game#fb4a66023d59
+- **bailian-docs-llm-wiki** | 百炼文档百科 | 检索研究/common | Apache-2.0 | github:modelstudioai/skills@main:skills/bailian-docs-llm-wiki#c02033e2c82e
+- **bailian-model-recommend** | bailian-model-recommend | 检索研究/common | Apache-2.0 | github:modelstudioai/skills@main:skills/bailian-model-recommend#df4d99637999
+- **happyhorse-prompt-studio** | happyhorse-prompt-studio | 设计前端/expertise | Apache-2.0 | github:modelstudioai/skills@main:skills/happyhorse-prompt-studio#1dae19907446
+- **spark-video** | spark-video-episode | 设计前端/expertise | Apache-2.0 | github:modelstudioai/skills@main:skills/spark-video#874dc98eb2cc
+- **vox-video-director** | vox-video-director | 设计前端/expertise | Apache-2.0 | github:modelstudioai/skills@main:skills/vox-video-director#aa7e1f304357
+- **cn-punctuation-checker** | 中文标点校对 | 中文写作/内容/content | MIT | github:trae-community/trae-skills@main:skills/cn-punctuation-checker#dd16200086ef
+- **daily-trend-writer** | 热点内容写作 | 运营增长/content | MIT | github:trae-community/trae-skills@main:skills/daily-trend-writer#4d5c2290ef22
+- **git-commit-generator** | 提交信息生成 | 通用协作/common | MIT | github:trae-community/trae-skills@main:skills/git-commit-generator#d1b72c5ca283
+- **kz-article-deep-analysis** | 文章深度解读 | 检索研究/content | MIT | github:trae-community/trae-skills@main:skills/kz-article-deep-analysis#c7a10696fa90
+- **web-design-teroop** | 网页设计指导 | 设计前端/expertise | MIT | github:trae-community/trae-skills@main:skills/web-design-teroop#eadea4215328
+- **wechat-mini-program-development** | 微信小程序开发 | 设计前端/expertise | MIT | github:trae-community/trae-skills@main:skills/wechat-mini-program-development#3ef4054017e5
+- **cycle-delivery** | 周期交付协作 | 运营增长/business | MIT | github:trae-community/trae-skills@main:skills/cycle-delivery#7a8ce62fe2fd
+- **gbr-pair** | 结对协作规范 | 通用协作/common | MIT | github:trae-community/trae-skills@main:skills/gbr-pair#5d8a2f335a02
+- **entropy-box-zh** | 熵盒知识整理 | 检索研究/common | MIT | github:trae-community/trae-skills@main:skills/entropy-box-zh#9b3d90305730
+- **daily-hot-news** | 热点资讯整理 | 运营增长/content | MIT | github:trae-community/trae-skills@main:skills/daily-hot-news#d15b818ef58a
+- **project-governance** | 项目治理文档 | 通用协作/business | MIT | github:trae-community/trae-skills@main:skills/project-governance#d276b911df97
+- **docx-diff-comment** | 文档差异批注 | 办公协作/expertise | MIT | github:trae-community/trae-skills@main:skills/docx-diff-comment#2769eb5fbbd0
+- **cloudbase** | 云开发指南 | 设计前端/expertise | MIT | github:trae-community/trae-skills@main:skills/cloudbase#649b915c3a61
+- **video-to-keyframes** | video-to-keyframes | 设计前端/expertise | MIT | github:trae-community/trae-skills@main:skills/video-to-keyframes#ea3cb7fe3adc
+- **trae-claw-install** | trae-claw-install | 通用协作/common | MIT | github:trae-community/trae-skills@main:skills/trae-claw-install#cd617c3814b1
+- **zopia-ai-skills** | zopia-api | 设计前端/expertise | MIT | github:trae-community/trae-skills@main:skills/zopia_ai_skills#62220b15da36
+- **find-skill-skillhub** | SkillHub 技能检索 | 检索研究/common | MIT | github:Tencent/skillhub@main:skills/find-skill-skillhub
+- **skillhub-trace-evaluator** | 技能轨迹评估 | 通用协作/expertise | MIT | github:Tencent/skillhub@main:skills/skillhub-trace-evaluator
+- **office-router-zh** | 办公文档总览 | 办公协作/expertise | MIT | local:mammoth-agent/packages/skill/skill-office/assets/office
+- **office-docx-zh** | Word 文档处理 | 办公协作/expertise | MIT | local:mammoth-agent/packages/skill/skill-office/assets/office-docx
+- **office-pptx-zh** | PPT 演示文稿 | 办公协作/expertise | MIT | local:mammoth-agent/packages/skill/skill-office/assets/office-pptx
+- **office-xlsx-zh** | Excel 表格处理 | 办公协作/expertise | MIT | local:mammoth-agent/packages/skill/skill-office/assets/office-xlsx
+- **dsh-error-handling** | DSH 错误处理 | 开发设计/expertise | MIT | https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-error-handling/SKILL.md (git-blob:f9dd7fd80999c7c5f4cf03096d6a42649b15e40e)
+- **dsh-code-review** | DSH 代码审查 | 开发设计/expertise | MIT | https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-code-review/SKILL.md (git-blob:2be16611a8be11022980e4338da4988c15780fd6)
+- **dsh-client-ui-ux** | DSH 客户端体验规范 | 开发设计/expertise | MIT | https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-client-ui-ux/SKILL.md (git-blob:4455609b71cbf2cf245304a43b245ed3af249055)
+- **dsh-responsive-ui** | 响应式界面设计 | 开发设计/expertise | MIT | https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-responsive-ui/SKILL.md (git-blob:44b2fbe977c0471d7bc1b628f7dad87d9b4494bf)
+- **dsh-speed-up-perf** | 性能瓶颈优化指导 | 开发设计/expertise | MIT | https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-speed-up-perf/SKILL.md (git-blob:491e39f81c440d0ef15978579ce55dd3dc56f0ac)
+- **dsh-find-simplifications** | 代码简化分析 | 开发设计/expertise | MIT | https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-find-simplifications/SKILL.md (git-blob:d1ad560b81b58cf7c6a8ff1456c0690de59e2069)
+- **dsh-prose-standard** | 技术文档表达规范 | 开发设计/expertise | MIT | https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-prose-standard/SKILL.md (git-blob:338ff29a217a455a2a44270d496abfea30b87ac2)
+- **dsh-translate-docs** | DSH 文档翻译 | 开发设计/expertise | MIT | https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-translate-docs/SKILL.md (git-blob:6ff2650c74c7f581e6ff7f095b36eb82584c785c)
+- **dsh-pr-description** | 变更说明撰写 | 开发设计/expertise | MIT | https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-pr-description/SKILL.md (git-blob:5841e73f94c422cd0f480b35a61d2528410780c9)
+- **dsh-trim-cot-leakage** | 推理泄露检查 | 开发设计/expertise | MIT | https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-trim-cot-leakage/SKILL.md (git-blob:f8a852bd66f398fc8c29f50d336df07d47218c27)
+- **dsh-doc** | DSH 技术文档维护 | 开发设计/expertise | MIT | https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-doc/SKILL.md (git-blob:5e32d4c07ec5fe26b2407b8d408713f4f9cb7457)
+- **community-dsh-plugin-dev** | DSH 社区插件开发 | 开发设计/expertise | MIT | https://github.com/hackerFish/awesome-dsh-skills/blob/main/skills/dsh-plugin-dev/SKILL.md (git-blob:b2593ac79e3c6d9b68ccd3826875ba52b7e696be)
+- **community-dsh-preset-authoring** | DSH 预设编写 | 开发设计/expertise | MIT | https://github.com/hackerFish/awesome-dsh-skills/blob/main/skills/dsh-preset-authoring/SKILL.md (git-blob:c7b918d86392558b21e36b52271513312548bdae)
+- **community-dsh-plugin-client** | DSH 插件客户端开发 | 开发设计/expertise | MIT | https://github.com/hackerFish/awesome-dsh-skills/blob/main/skills/dsh-plugin-client/SKILL.md (git-blob:49ba2f007a53e2b54950b6ad4945f00bbf887069)
+- **community-dsh-skill-adapter** | DSH 技能适配 | 开发设计/expertise | MIT | https://github.com/hackerFish/awesome-dsh-skills/blob/main/skills/dsh-skill-adapter/SKILL.md (git-blob:5fe6e401e2c327f9f7d6e373df582f27d87849e0)
+- **community-dsh-debug-session** | DSH 会话排障 | 开发设计/expertise | MIT | https://github.com/hackerFish/awesome-dsh-skills/blob/main/skills/dsh-debug-session/SKILL.md (git-blob:7fa3bd89ea6e94a8068c784da2f5e599018af84b)
+- **superpowers-executing-plans** | 分步实施计划 | 开发设计/expertise | MIT | https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/executing-plans/SKILL.md (git-blob:b51d97d2cc4c2ecc5eabecf27e499aa8c933efac)
+- **superpowers-brainstorming** | 开发方案头脑风暴 | 开发设计/expertise | MIT | https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/brainstorming/SKILL.md (git-blob:b56a3b5ed6ea0d6216501e0e401ecb00a1b4675f)
+- **superpowers-receiving-code-review** | 代码评审意见处理 | 开发设计/expertise | MIT | https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/receiving-code-review/SKILL.md (git-blob:950da7b74bf6dbed6b8726d12ddadd65a9f5fda7)
+- **superpowers-test-driven-development** | 测试驱动开发指南 | 开发设计/expertise | MIT | https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/test-driven-development/SKILL.md (git-blob:4320d8879a639d0536c2239bb80c9d7257ad8947)
+- **superpowers-requesting-code-review** | 代码送审准备 | 开发设计/expertise | MIT | https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/requesting-code-review/SKILL.md (git-blob:fa4f2f9965591d6d8a7ef4ad47e6ba4d5ac344d0)
+- **superpowers-systematic-debugging** | 系统化问题排查 | 开发设计/expertise | MIT | https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/systematic-debugging/SKILL.md (git-blob:095d194ac041502905f15b01d22d294fb94db8b2)
+- **superpowers-verification-before-completion** | 完成前证据检查 | 开发设计/expertise | MIT | https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/verification-before-completion/SKILL.md (git-blob:7d45333cc4a49c57a80df6c1fe2fa777a207afbc)
+- **superpowers-writing-plans** | 实现计划编写 | 开发设计/expertise | MIT | https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/writing-plans/SKILL.md (git-blob:f74605bfa9af7a3fb7e4ad7f17750a86a9b0d728)
+- **codex-cli-creator** | 命令行工具设计 | 开发设计/expertise | Apache-2.0 | https://github.com/openai/skills/blob/main/skills/.curated/cli-creator/SKILL.md (git-blob:60e5a9a03f89cf66a60aa798bfc6f3c3fa5ed8c4)
+- **superpowers-writing-skills** | 技能写作与迭代 | 开发设计/expertise | MIT | https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/writing-skills/SKILL.md (git-blob:f33f39f523c8a3ae2ec0eaf365a524571df8ff3d)
+- **codex-pdf** | PDF 文档处理指南 | 文件处理/files | Apache-2.0 | https://github.com/openai/skills/blob/main/skills/.curated/pdf/SKILL.md (git-blob:fd5d56058f10202e4f50a30bc2906f39696024a1)
+- **codex-security-threat-model** | 应用威胁建模 | 开发设计/expertise | Apache-2.0 | https://github.com/openai/skills/blob/main/skills/.curated/security-threat-model/SKILL.md (git-blob:abd3c1c95d49c4e0e0664f198f4bf168c6291aec)
+- **codex-jupyter-notebook** | Notebook 分析流程 | 数据分析/analytics | Apache-2.0 | https://github.com/openai/skills/blob/main/skills/.curated/jupyter-notebook/SKILL.md (git-blob:e1d1748cac9e9313c8229763751714628d1f6853)
+- **codex-security-best-practices** | 安全编码实践 | 开发设计/expertise | Apache-2.0 | https://github.com/openai/skills/blob/main/skills/.curated/security-best-practices/SKILL.md (git-blob:45ccbd8d671c4c4cc3e7e0645a16a3f80ec50de7)
+- **industry-legal-review-contract** | 合同风险审阅 | 财税法务/legal | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/legal/skills/review-contract/SKILL.md (git-blob:030204860ec70bf80254f9894721504df7c81bd5)
+- **industry-legal-triage-nda** | 保密协议初筛 | 财税法务/legal | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/legal/skills/triage-nda/SKILL.md (git-blob:143c1113e926cd7b69f2dfc9bca6171097d35f0a)
+- **codex-define-goal** | 目标定义与验收 | 效率工具/common | Apache-2.0 | https://github.com/openai/skills/blob/main/skills/.curated/define-goal/SKILL.md (git-blob:87f111bd700e0d993465f7ac741847b5daee57d6)
+- **industry-legal-compliance-check** | 合规检查整理 | 财税法务/legal | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/legal/skills/compliance-check/SKILL.md (git-blob:688d8c967870e6036c27e8fa2f1bc34ca5cf0896)
+- **industry-legal-legal-risk-assessment** | 法律风险辅助分析 | 财税法务/legal | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/legal/skills/legal-risk-assessment/SKILL.md (git-blob:636075c5846c0da11fe41b3f26810b397ccb7735)
+- **industry-accounting-audit-support** | 审计材料整理 | 财税法务/legal | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/audit-support/SKILL.md (git-blob:6480bcddb2d01d8c7ed1730a803f0df5065a0f23)
+- **industry-accounting-close-management** | 财务结账流程 | 财税法务/legal | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/close-management/SKILL.md (git-blob:f302f6e3b02f31af03c0d32972174590ddad608c)
+- **industry-accounting-financial-statements** | 财务报表整理 | 财税法务/legal | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/financial-statements/SKILL.md (git-blob:5a9a8fc83fa68280759541dbdf6703d1b0cac5de)
+- **industry-accounting-reconciliation** | 财务对账辅助 | 财税法务/legal | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/reconciliation/SKILL.md (git-blob:5f212646c3827aa0d2b88137ade6829cb520ec03)
+- **industry-accounting-variance-analysis** | 财务差异分析 | 财税法务/legal | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/variance-analysis/SKILL.md (git-blob:4a430511eac2af771e55caf965bf713fff88d649)
+- **industry-hr-interview-prep** | 招聘面试准备 | 人力行政/hr | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/human-resources/skills/interview-prep/SKILL.md (git-blob:853cf0f9e4f395c76a21ac55d5c902fcdc8495f6)
+- **industry-hr-onboarding** | 员工入职计划 | 人力行政/hr | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/human-resources/skills/onboarding/SKILL.md (git-blob:98a45db739e8f1024615ba9f8bfe46ae4a2cfda1)
+- **industry-hr-org-planning** | 组织规划辅助 | 人力行政/hr | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/human-resources/skills/org-planning/SKILL.md (git-blob:0f023937d9c270121a99c9fb9d0b8d8477707e6f)
+- **industry-hr-performance-review** | 绩效回顾草案 | 人力行政/hr | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/human-resources/skills/performance-review/SKILL.md (git-blob:02310addbe621a8866932e8cc0280f15114f5190)
+- **industry-data-sql-queries** | SQL 查询编写 | 数据分析/analytics | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/sql-queries/SKILL.md (git-blob:f92e232c67054b078fcc1ee558101163ebdbb87d)
+- **industry-data-explore-data** | 探索性数据分析 | 数据分析/analytics | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/explore-data/SKILL.md (git-blob:f1e7032d0abee77903fc3abbfdc7646e383d4993)
+- **industry-data-statistical-analysis** | 统计分析指导 | 数据分析/analytics | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/statistical-analysis/SKILL.md (git-blob:59cc87de24a0c1b2b5b1d7ba2d8d10eb314a6557)
+- **industry-data-validate-data** | 数据结果校验 | 数据分析/analytics | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/validate-data/SKILL.md (git-blob:30a1bac41bf9679dc7d96b7ec59a116f03ec0575)
+- **industry-data-data-visualization** | 数据图表设计 | 数据分析/analytics | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/data-visualization/SKILL.md (git-blob:409cce60f59b463a8386c83cde03dc7e70be93f3)
+- **industry-support-ticket-triage** | 客户工单分流 | 客户销售/sales | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/customer-support/skills/ticket-triage/SKILL.md (git-blob:d5ebee4105be8ad8a32c6767fb741fb47e44c12a)
+- **industry-support-kb-article** | 客服知识文章 | 客户销售/sales | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/customer-support/skills/kb-article/SKILL.md (git-blob:d9f3274c1954099a7a4ff0c9fabd0d2e9d5235c0)
+- **industry-ops-risk-assessment** | 经营风险梳理 | 企业咨询/consulting | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/operations/skills/risk-assessment/SKILL.md (git-blob:80518b6ce0c094debb53226df6188443ee61de0f)
+- **industry-support-draft-response** | 客户答复草拟 | 客户销售/sales | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/customer-support/skills/draft-response/SKILL.md (git-blob:3fd6fdc027fedba01c48958a6e962656331df131)
+- **industry-ops-process-optimization** | 业务流程优化 | 企业咨询/consulting | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/operations/skills/process-optimization/SKILL.md (git-blob:8d1f2c9b81ff9b6c6cb4d32fd2ee7df3e525fd31)
+- **industry-ops-capacity-plan** | 业务容量规划 | 企业咨询/consulting | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/operations/skills/capacity-plan/SKILL.md (git-blob:34c8cfc668c2f0389ac86d8034017f3fc321f6e8)
+- **industry-smb-tax-prep** | 税务资料准备 | 财税法务/legal | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/small-business/skills/tax-prep/SKILL.md (git-blob:9d21a2cdbbdb2752f5dd731c2bb8c1164d4eca0e)
+- **industry-ops-runbook** | 操作手册编写 | 企业咨询/consulting | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/operations/skills/runbook/SKILL.md (git-blob:f3610539eeb61b4a3909aa836df16792bd499c7d)
+- **industry-smb-tax-season-organizer** | 报税季材料清单 | 财税法务/legal | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/small-business/skills/tax-season-organizer/SKILL.md (git-blob:a0dd4967e02cc64745fd30d9934a527e335aa367)
+- **industry-commerce-restock** | 补货清单草拟 | 电商经营/ecommerce | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/small-business/skills/restock/SKILL.md (git-blob:24b86118fa0f7158a0077132e29af8406871c998)
+- **industry-product-write-spec** | 产品规格编写 | 企业咨询/consulting | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/product-management/skills/write-spec/SKILL.md (git-blob:183cf053df391e761c21431bc0dfb791b6d52b80)
+- **industry-product-synthesize-research** | 用户研究归纳 | 企业咨询/consulting | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/product-management/skills/synthesize-research/SKILL.md (git-blob:37920edef38ed91481547e426dbd1505bbd0a105)
+- **industry-commerce-inventory-planner** | 库存规划辅助 | 电商经营/ecommerce | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/small-business/skills/inventory-planner/SKILL.md (git-blob:9e797e87a89a7232d5903df73a2e9a53d941e21b)
+- **industry-design-accessibility-review** | 无障碍设计审阅 | 开发设计/expertise | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/design/skills/accessibility-review/SKILL.md (git-blob:3ef332cd837da5b4f7089503eb93e14c04090ccf)
+- **industry-design-user-research** | 用户研究方案 | 开发设计/expertise | Apache-2.0 | https://github.com/anthropics/knowledge-work-plugins/blob/main/design/skills/user-research/SKILL.md (git-blob:7f1b681e377b0e3471e5a686b6fe0e1af32261a8)
+- **marketing-marketing-psychology** | 营销心理学应用 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/marketing-psychology/SKILL.md (git-blob:806c09fba8228e53b9d2443cea7e2bbb104e6ee9)
+- **marketing-marketing-plan** | 营销计划制定 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/marketing-plan/SKILL.md (git-blob:aac98990a566ed27964d9e7e56e9c67a6ae3f740)
+- **marketing-content-strategy** | 内容策略规划 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/content-strategy/SKILL.md (git-blob:0efc441269144abe5af37603291d860f47a52430)
+- **marketing-customer-research** | 客户需求研究 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/customer-research/SKILL.md (git-blob:8783f0835501e509583643dd3b1a9eb7226d7d63)
+- **marketing-pricing** | 定价策略分析 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/pricing/SKILL.md (git-blob:7497dc500404081ed175c56db26b36de7264c246)
+- **marketing-seo-audit** | SEO 诊断清单 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/seo-audit/SKILL.md (git-blob:e0a41d8c46c06d1e33ce5295c0f303a94d8f6c5b)
+- **marketing-launch** | 产品发布策划 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/launch/SKILL.md (git-blob:b7783f50953c77cfc1d21fab4425549c2cd3ac33)
+- **marketing-ab-testing** | A/B 实验设计 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/ab-testing/SKILL.md (git-blob:c9deeb82ba70977fbdf6eae4a7a4e0a818afec9e)
+- **marketing-churn-prevention** | 客户流失预防 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/churn-prevention/SKILL.md (git-blob:2cb8beed89c105207c10b88bc5371848b140f838)
+- **marketing-referrals** | 推荐增长方案 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/referrals/SKILL.md (git-blob:d5fb5946d0a033de986d47205afb3a80bdae9e04)
+- **marketing-community-marketing** | 社群营销规划 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/community-marketing/SKILL.md (git-blob:426ddcaa9b380dd39b9dc38d66349b7ec7c911a5)
+- **marketing-copywriting** | 营销文案写作 | 运营增长/business | MIT | https://github.com/coreyhaines31/marketingskills/blob/main/skills/copywriting/SKILL.md (git-blob:2453731ab7a5e52535b7cf29beccbebe687d5a62)
+
+## Skipped
+- docx: proprietary Anthropic document skill
+- pdf: proprietary Anthropic document skill
+- pptx: proprietary Anthropic document skill
+- xlsx: proprietary Anthropic document skill
+- doc-coauthoring: no per-skill LICENSE.txt
+- financial-expert: requires secrets
+- bailian-train-deploy: requires secrets
+- agent-experience: Insufficient substantive instructions
+- community-dsh-plugin-i18n: fetch failed

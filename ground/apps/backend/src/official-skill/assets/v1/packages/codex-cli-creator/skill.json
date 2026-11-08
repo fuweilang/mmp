@@ -1,0 +1,18 @@
+{
+  "key": "codex-cli-creator",
+  "name": "命令行工具设计",
+  "description": "指导可供人和智能体使用的 CLI 结构、输入输出与错误契约。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/agent-cli-patterns.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "key": "industry-accounting-close-management",
+  "name": "财务结账流程",
+  "description": "组织月结任务、依赖与问题清单，不自动记账。",
+  "entry": "SKILL.md",
+  "category": "legal",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

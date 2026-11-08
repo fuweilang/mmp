@@ -1,0 +1,15 @@
+{
+  "key": "industry-commerce-restock",
+  "name": "补货清单草拟",
+  "description": "整理库存缺口、数量依据与待确认的补货建议，不自动下单。",
+  "entry": "SKILL.md",
+  "category": "ecommerce",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "key": "community-dsh-plugin-client",
+  "name": "DSH 插件客户端开发",
+  "summary": "指导插件客户端组件、入口与宿主集成。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "hackerFish",
+    "repo": "awesome-dsh-skills",
+    "ref": "main",
+    "path": "skills/dsh-plugin-client",
+    "treeSha": "d982b4a04c87ea8b0a254ebae33d923e9d4a351a",
+    "skillBlobSha": "49ba2f007a53e2b54950b6ad4945f00bbf887069",
+    "immutableRef": "https://github.com/hackerFish/awesome-dsh-skills/blob/main/skills/dsh-plugin-client/SKILL.md (git-blob:49ba2f007a53e2b54950b6ad4945f00bbf887069)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "798ec24a6d6fcf2d4e3d0a90becc6d6b5b2dc559",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "hackerFish/awesome-dsh-skills",
+      "html_url": "https://github.com/hackerFish/awesome-dsh-skills",
+      "stargazers_count": 5,
+      "forks_count": 2,
+      "pushed_at": "2026-09-04T14:24:43Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Small community project; selected for DSH-specific subject matter, not popularity or proven stability."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "9a3847406341c8bcb09591f1f5610127b06a855a7b91c9976c793280e0d447cf"
+  },
+  "officialVsAdapted": "adapted"
+}

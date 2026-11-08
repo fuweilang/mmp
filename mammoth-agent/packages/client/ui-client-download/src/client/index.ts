@@ -26,7 +26,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.slots.inject('sidebar.footer.action', () =>
     ctx.slots.register({
       name: 'sidebar.footer.action', id: 'client-download', order: 0,
-      label: () => t('action'), locale: 'clientDownload',
+      label: () => t('getApp'), locale: 'clientDownload',
     }, ClientDownloadButton)),
     'client-download: sidebar action')
 }

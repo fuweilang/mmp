@@ -1,0 +1,8 @@
+Adapted from https://github.com/msitarzewski/agency-agents at b859c515d813efcfc4755d3471dd9e7686c7706d.
+Applicable license: MIT; upstream path: LICENSE.
+Original copyright and license retained in LICENSE and upstream source files.
+Changes: substantive Chinese role/profile, workflow and deliverables; host-specific tool/model limitations and explicit no-execution claims.
+No affiliation or upstream endorsement is implied. No tests or execution validation performed.
+中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。
+来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。
+文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。

@@ -34,7 +34,7 @@ export const ru = {
   'collapse': 'Свернуть',
   'expand': 'Развернуть',
   'back': 'Назад',
-  'brand.localBuild': '猛犸智能体',
+  'brand.localBuild': '猛犸AI',
   'workspace.defaultName': 'Рабочая область по умолчанию',
   'unknown': 'Неизвестно',
   'none': 'Нет',

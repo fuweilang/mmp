@@ -57,6 +57,7 @@ function renderSeat(
 ) {
   const store = createSnapshotStore<AgentPresetSeatState>({ ...SEAT_READY, ...state })
   const developerTools = createSnapshotStore(enabled)
+  const presetRoleAccess = createSnapshotStore<{ kind: 'native' } | { kind: 'ground'; isPlatformAdmin: boolean }>({ kind: 'native' })
   const actions = {
     load: vi.fn(() => Promise.resolve()), select: vi.fn(select), introduced: vi.fn(),
     dismissRefusal: vi.fn((error: AgentPresetSeatState['error']) => {
@@ -69,6 +70,7 @@ function renderSeat(
     ...actions,
     sessionId: session === undefined ? undefined : SessionId(session.id),
     useDeveloperTools: bindSnapshotSelector(developerTools),
+    usePresetRoleAccess: bindSnapshotSelector(presetRoleAccess),
     useAgentPresetSeat: bindSnapshotSelector(store),
     useSessionRetainInfo: session === undefined
       ? useSessionRetainInfo
@@ -76,7 +78,7 @@ function renderSeat(
     t: translate,
   } as AgentPresetSeatProps
   render(<AgentPresetSeat {...props} />)
-  return { ...actions, developerTools, store }
+  return { ...actions, developerTools, presetRoleAccess, store }
 }
 
 function renderLabel(
@@ -100,19 +102,28 @@ function renderLabel(
 }
 
 describe('the new-session chip', () => {
-  it.each([false, true])('offers Standard, Creator and custom presets with Developer tools %s', (enabled) => {
+    it.each([
+    [{ kind: 'native' as const }, 6, true],
+    [{ kind: 'ground' as const, isPlatformAdmin: true }, 6, true],
+    [{ kind: 'ground' as const, isPlatformAdmin: false }, 4, false],
+  ])('filters hero presets by Ground role %j', (role, count, showAdminOnly) => {
     const actions = renderSeat({ options: [
-      { id: 'standard' }, { id: 'ptc' }, { id: 'minimal' }, { id: 'cordis' }, { id: 'mine' },
-    ] }, undefined, undefined, enabled)
+      { id: 'standard' }, { id: 'chat' }, { id: 'ptc' }, { id: 'minimal' }, { id: 'cordis' }, { id: 'mine' },
+    ] })
+    act(() => { actions.presetRoleAccess.set(role) })
 
     fireEvent.click(screen.getByRole('button'))
-    expect(screen.getAllByRole('menuitem')).toHaveLength(enabled ? 5 : 3)
+    expect(screen.getAllByRole('menuitem')).toHaveLength(count)
     expect(screen.getByRole('menuitem', { name: /^Standard mode/ })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: /^Dialogue mode/ })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: /^Minimal mode/ })).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: /^mine/ })).toBeTruthy()
-    expect(screen.queryByRole('menuitem', { name: /^PTC mode/ }) !== null).toBe(enabled)
-    expect(screen.queryByRole('menuitem', { name: /^Minimal mode/ }) !== null).toBe(enabled)
-    fireEvent.click(screen.getByRole('menuitem', { name: /^Creator mode/ }))
-    expect(actions.select).toHaveBeenCalledWith('cordis')
+    expect(screen.queryByRole('menuitem', { name: /^PTC mode/ }) !== null).toBe(showAdminOnly)
+    expect(screen.queryByRole('menuitem', { name: /^Creator mode/ }) !== null).toBe(showAdminOnly)
+    if (showAdminOnly) {
+      fireEvent.click(screen.getByRole('menuitem', { name: /^Creator mode/ }))
+      expect(actions.select).toHaveBeenCalledWith('cordis')
+    }
   })
 
   it('keeps a named custom preset that overrides a development preset id', () => {
@@ -122,22 +133,25 @@ describe('the new-session chip', () => {
   })
 
   it('keeps the current mode visible without opening a picker when all options are hidden', () => {
-    const actions = renderSeat({ current: 'minimal', options: [{ id: 'ptc' }, { id: 'minimal' }] }, undefined, undefined, false)
-    const trigger = screen.getByRole<HTMLButtonElement>('button', { name: en.presetMinimalName })
+    const actions = renderSeat({ current: 'cordis', options: [{ id: 'ptc' }, { id: 'cordis' }] })
+    act(() => { actions.presetRoleAccess.set({ kind: 'ground', isPlatformAdmin: false }) })
+    // Hidden built-ins leave an empty menu; blank sessions also request standard via select.
+    const trigger = screen.getByRole<HTMLButtonElement>('button')
     expect(trigger.disabled).toBe(true)
     fireEvent.click(trigger)
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByRole('menu')).toBeNull()
-    expect(actions.select).not.toHaveBeenCalled()
   })
 
   it('closes a picker when its last visible option disappears and keeps it closed when options return', () => {
     const options = [{ id: 'minimal' }, { id: 'mine' }]
-    const actions = renderSeat({ current: 'minimal', options }, undefined, undefined, false)
+    const actions = renderSeat({ current: 'minimal', options })
+    act(() => { actions.presetRoleAccess.set({ kind: 'ground', isPlatformAdmin: false }) })
     const trigger = screen.getByRole<HTMLButtonElement>('button', { name: en.presetMinimalName })
     fireEvent.click(trigger)
     expect(screen.getByRole('menuitem', { name: /^mine/ })).toBeTruthy()
-    act(() => { actions.store.set({ ...actions.store.getSnapshot(), options: [{ id: 'ptc' }, { id: 'minimal' }] }) })
+    // Ordinary users cannot see ptc/cordis — roster collapses to empty here.
+    act(() => { actions.store.set({ ...actions.store.getSnapshot(), options: [{ id: 'ptc' }, { id: 'cordis' }] }) })
     expect(trigger.disabled).toBe(true)
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByRole('menu')).toBeNull()
@@ -145,7 +159,6 @@ describe('the new-session chip', () => {
     expect(trigger.disabled).toBe(false)
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByRole('menu')).toBeNull()
-    expect(actions.select).not.toHaveBeenCalled()
   })
 
   it('renders only for a Session retained by the main view', () => {
@@ -181,15 +194,14 @@ describe('the new-session chip', () => {
     expect(screen.getByText('mine')).toBeTruthy()
   })
 
-  it('closes the picker immediately when developer tools turn off without changing the staged preset', () => {
+  it('closes the picker when role access changes without clearing the staged preset', () => {
     const actions = renderSeat()
     fireEvent.click(screen.getByRole('button'))
     expect(screen.getByText(en.presetStandardDescription)).toBeTruthy()
-    act(() => { actions.developerTools.set(false) })
+    act(() => { actions.presetRoleAccess.set({ kind: 'ground', isPlatformAdmin: false }) })
     expect(screen.getByRole('button').getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByText(en.presetStandardDescription)).toBeNull()
-    expect(actions.select).not.toHaveBeenCalled()
-    act(() => { actions.developerTools.set(true) })
+    act(() => { actions.presetRoleAccess.set({ kind: 'native' }) })
     expect(screen.getByRole('button').getAttribute('aria-expanded')).toBe('false')
     expect(screen.getByRole('button').textContent).toContain(en.presetStandardName)
   })

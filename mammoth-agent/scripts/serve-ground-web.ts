@@ -44,7 +44,7 @@ async function startIdentityHost(identity: GroundWebIdentity, publicOrigin: stri
       '--cpus', String(positiveEnvironment('MMP_WEB_WORKER_CPUS', 1)),
       '--tmpfs', '/tmp:rw,nosuid,nodev,exec,size=256m',
       '--mount', `type=bind,source=${join(hostRoot, 'web-identities', partition)},target=/home/mmp`,
-      '--workdir', '/home/mmp', '-e', 'MMP_HOME=/home/mmp', '-e', 'MMP_WEB_SSO=1',
+      '--workdir', '/home/mmp', '-e', 'HOME=/home/mmp', '-e', 'MMP_HOME=/home/mmp', '-e', 'MMP_WEB_SSO=1',
       '-e', 'MMP_WEB_READY_STDOUT=1', '-e', `MMP_WEB_SESSION_ORIGIN=${publicOrigin}`,
       '-e', `GROUND_PUBLIC_ORIGIN=${options.groundOrigin}`, image, 'node', '/app/apps/cli/lib/bin.js', ...webArgs]
   }
@@ -135,7 +135,8 @@ async function main(): Promise<void> {
   const router = await startGroundWebRouter({ host, port, groundOrigin,
     ...(publicOrigin ? { publicOrigin } : {}),
     cookieName: process.env.MMP_GROUND_COOKIE_NAME || 'mammothai_access_token',
-    maxWorkers: positiveEnvironment('MMP_WEB_MAX_IDENTITIES', 4), requestTimeoutMs: positiveEnvironment('MMP_WEB_AUTH_TIMEOUT_MS', 30000),
+    maxWorkers: positiveEnvironment('MMP_WEB_MAX_IDENTITIES', publicOrigin ? 4 : 8),
+    requestTimeoutMs: positiveEnvironment('MMP_WEB_AUTH_TIMEOUT_MS', 30000),
     startWorker: (identity, origin, signal) => startIdentityHost(identity, origin, signal, {
       groundOrigin, home: resolve(process.env.MMP_HOME || join(homedir(), '.mmp')), workerArgs,
       startupTimeoutMs: positiveEnvironment('MMP_WEB_HOST_STARTUP_TIMEOUT_MS', 60000),

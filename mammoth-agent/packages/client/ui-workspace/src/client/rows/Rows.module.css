@@ -489,3 +489,22 @@
     transition: none;
   }
 }
+
+/* Fixed archived section: count sits where workspace row actions usually do. */
+.archivedCount {
+  flex: none;
+  margin-inline-end: 8px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.archivedSection {
+  margin-top: 4px;
+}
+
+/* Keep the archive glyph visible while expanded; chevron still swaps on hover. */
+.archivedSection[aria-expanded='true'] .folder {
+  color: var(--dsw-alias-label-secondary);
+}

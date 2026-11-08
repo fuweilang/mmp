@@ -1,0 +1,22 @@
+{
+  "key": "internal-comms",
+  "name": "内部沟通文案",
+  "summary": "A set of resources to help me write all kinds of internal communications, using the formats that my company likes to use. Claude should use…",
+  "category": "content",
+  "userCategoryLabel": "中文写作/内容",
+  "references": [
+    "references/examples/3p-updates.md",
+    "references/examples/company-newsletter.md",
+    "references/examples/faq-answers.md",
+    "references/examples/general-comms.md"
+  ],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/internal-comms",
+    "immutableRef": "github:anthropics/skills@main:skills/internal-comms#358d579ce330"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

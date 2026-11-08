@@ -1,0 +1,252 @@
+[
+  {
+    "key": "copy-polish-master",
+    "name": "文案润色大师",
+    "category": "content",
+    "capabilities": [
+      "文案润色",
+      "表达优化"
+    ],
+    "version": 6,
+    "versionId": "cmw4j5nu000gei8bui4ckxutp"
+  },
+  {
+    "key": "enterprise-product-answer",
+    "name": "企业资料答疑助手",
+    "category": "expertise",
+    "capabilities": [
+      "企业资料",
+      "企业答疑"
+    ],
+    "version": 18,
+    "versionId": "cmw4iuizx001ii8lvouwsyi1s"
+  },
+  {
+    "key": "c3274112ed041",
+    "name": "商业命名大师",
+    "category": "content",
+    "capabilities": [
+      "品牌命名",
+      "传播力"
+    ],
+    "version": 1,
+    "versionId": "cmw41rwfn0002gtksr2teey2m"
+  },
+  {
+    "key": "mammoth",
+    "name": "猛犸 AI",
+    "category": "common",
+    "capabilities": [
+      "联网检索",
+      "日常问答"
+    ],
+    "version": 2,
+    "versionId": "cmw4dtv550001fqc678ly67ea"
+  },
+  {
+    "key": "copy",
+    "name": "获客文案大师",
+    "category": "content",
+    "capabilities": [
+      "获客文案",
+      "转化写作"
+    ],
+    "version": 1,
+    "versionId": "cmw47t9xe0002gtbt296w9v8j"
+  },
+  {
+    "key": "growth",
+    "name": "增长战略顾问",
+    "category": "sales",
+    "capabilities": [
+      "增长诊断",
+      "策略落地"
+    ],
+    "version": 1,
+    "versionId": "cmw47t9xv0008gtbtah3obdd6"
+  },
+  {
+    "key": "live",
+    "name": "直播话术专家",
+    "category": "content",
+    "capabilities": [
+      "留人话术",
+      "逼单话术"
+    ],
+    "version": 1,
+    "versionId": "cmw47t9y5000egtbtzan8gqpl"
+  },
+  {
+    "key": "pyq",
+    "name": "朋友圈内容大师",
+    "category": "content",
+    "capabilities": [
+      "人设内容",
+      "朋友圈运营"
+    ],
+    "version": 1,
+    "versionId": "cmw47t9yg000kgtbtkwm2mst7"
+  },
+  {
+    "key": "qc",
+    "name": "客服质检官",
+    "category": "productivity",
+    "capabilities": [
+      "会话质检",
+      "话术打分"
+    ],
+    "version": 1,
+    "versionId": "cmw47t9yp000qgtbtjdpy9zku"
+  },
+  {
+    "key": "sifu",
+    "name": "私域运营大师",
+    "category": "sales",
+    "capabilities": [
+      "私域成交",
+      "复购运营"
+    ],
+    "version": 1,
+    "versionId": "cmw47t9yz000wgtbtjvddh9vu"
+  },
+  {
+    "key": "trans",
+    "name": "咨询转化教练",
+    "category": "sales",
+    "capabilities": [
+      "咨询转化",
+      "异议处理"
+    ],
+    "version": 1,
+    "versionId": "cmw47t9z70012gtbt7xeil39g"
+  },
+  {
+    "key": "video",
+    "name": "短视频脚本官",
+    "category": "content",
+    "capabilities": [
+      "脚本分镜",
+      "钩子设计"
+    ],
+    "version": 1,
+    "versionId": "cmw47t9zi0018gtbtmm3c6g03"
+  },
+  {
+    "key": "xhs",
+    "name": "爆款小红书专家",
+    "category": "content",
+    "capabilities": [
+      "选题策划",
+      "笔记写作",
+      "投放建议"
+    ],
+    "version": 1,
+    "versionId": "cmw47t9zr001egtbtw2y705ft"
+  },
+  {
+    "key": "gzh",
+    "name": "公众号改写专家",
+    "category": "content",
+    "capabilities": [
+      "企业资料",
+      "公众号改写",
+      "二次创作"
+    ],
+    "version": 1,
+    "versionId": "cmw4fgj020002fqfdyofkcsgu"
+  },
+  {
+    "key": "interview",
+    "name": "访谈大师",
+    "category": "expertise",
+    "capabilities": [
+      "企业资料",
+      "访谈设计",
+      "追问链"
+    ],
+    "version": 1,
+    "versionId": "cmw4fgj2j000hfqfd7sobdh0t"
+  },
+  {
+    "key": "ip",
+    "name": "IP策划大师",
+    "category": "content",
+    "capabilities": [
+      "企业资料",
+      "IP定位",
+      "人设策划"
+    ],
+    "version": 1,
+    "versionId": "cmw4fgja0001nfqfdoned252c"
+  },
+  {
+    "key": "method",
+    "name": "方法论大师",
+    "category": "expertise",
+    "capabilities": [
+      "企业资料",
+      "方法论",
+      "SOP"
+    ],
+    "version": 1,
+    "versionId": "cmw4fgjdz002mfqfd0sbty8rf"
+  },
+  {
+    "key": "niche",
+    "name": "利基战略顾问",
+    "category": "expertise",
+    "capabilities": [
+      "企业资料",
+      "利基战略",
+      "差异化"
+    ],
+    "version": 1,
+    "versionId": "cmw4fgjfw0035fqfdiakzzeib"
+  },
+  {
+    "key": "sell",
+    "name": "卖点大师",
+    "category": "sales",
+    "capabilities": [
+      "企业资料",
+      "卖点提炼",
+      "营销文案"
+    ],
+    "version": 1,
+    "versionId": "cmw4fgjhu003efqfdnufqpvfn"
+  },
+  {
+    "key": "boss",
+    "name": "猛犸大总管",
+    "category": "productivity",
+    "capabilities": [
+      "团队协作",
+      "任务编排"
+    ],
+    "version": 2,
+    "versionId": "cmw4h5eq50004i8omly0toiu4"
+  },
+  {
+    "key": "data",
+    "name": "数据分析师",
+    "category": "analytics",
+    "capabilities": [
+      "表格分析",
+      "经营洞察"
+    ],
+    "version": 2,
+    "versionId": "cmw4h5epk0001i8omufs8r9zb"
+  },
+  {
+    "key": "spy",
+    "name": "竞品情报官",
+    "category": "sales",
+    "capabilities": [
+      "联网检索",
+      "网页阅读",
+      "竞品对比"
+    ],
+    "version": 1,
+    "versionId": "cmw4gyoto0049i833sasbmjyn"
+  }
+]

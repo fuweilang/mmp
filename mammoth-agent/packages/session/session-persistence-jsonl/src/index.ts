@@ -1,3 +1,4 @@
+import { relative } from 'node:path'
 /**
  * JSONL durable session-persistence backend. It stores a header and contiguous
  * events in immutable generation files under one directory per session and serves the handle-based
@@ -14,7 +15,7 @@ import {
   sessionFormatCatalog,
 } from '@mammoth-ai/mmp-session-format-catalog'
 import { readdirSync, type Dirent } from 'node:fs'
-import { open, mkdir, readdir, realpath, link, rm, stat, truncate } from 'node:fs/promises'
+import { open, mkdir, readdir, realpath, link, rm, stat, lstat, unlink, truncate } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { scheduler } from 'node:timers/promises'
@@ -561,6 +562,39 @@ class JsonlSessionPersistence extends SessionPersistence {
     }
     signal?.throwIfAborted()
     return snapshots
+  }
+
+  /** Exclusive single-writer removal of known log files, never a recursive directory sweep. */
+  override async remove(id: SessionId): Promise<void> {
+    if (!/^[a-zA-Z0-9_-]{1,200}$/.test(id)) throw new Error('TASK_DELETE_INVALID_ID')
+    this.tracker.claimWrite(id)
+    let lease: SessionWriteLease | undefined
+    try {
+      const found = await this.findLog(id)
+      if (found === undefined) return
+      const snapshot = await this.stat(id)
+      if (snapshot === undefined) return
+      assertStoredId(id, snapshot.header)
+      const dir = dirname(found.currentPath)
+      const root = await realpath(this.root)
+      const actual = await realpath(dir)
+      if (actual !== resolve(root, relative(resolve(this.root), resolve(dir))) || !actual.startsWith(root + '/')) throw new Error('TASK_DELETE_UNSAFE_PATH')
+      const identity = await lstat(dir)
+      if (!identity.isDirectory() || identity.isSymbolicLink()) throw new Error('TASK_DELETE_UNSAFE_PATH')
+      lease = await this.acquireLease(id, undefined, dir)
+      for (const name of await readdir(dir)) {
+        if (parseGenerationLogFilename(name, this.compression) === undefined) continue
+        const current = await lstat(dir)
+        if (current.dev !== identity.dev || current.ino !== identity.ino || await realpath(dir) !== actual) throw new Error('TASK_DELETE_TARGET_CHANGED')
+        const path = join(dir, name)
+        const file = await lstat(path)
+        if (!file.isFile() || file.isSymbolicLink()) throw new Error('TASK_DELETE_UNSAFE_FILE')
+        await unlink(path)
+      }
+      this.coldLogMemo.delete(id)
+    } finally {
+      try { await lease?.release() } finally { this.tracker.releaseClaim(id) }
+    }
   }
 
   // --- handle-facing storage internals (package-private via the handle class below) ---

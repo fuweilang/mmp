@@ -44,7 +44,7 @@ declare module '@mammoth-ai/mmp-client-ui-slots' {
 export const en = {
   'section.files': 'Files & folders',
   'section.subagents': 'Subagents',
-  'section.sessions': 'Sessions',
+  'section.sessions': 'Tasks',
   'candidate.noCwd': '(no cwd)',
   'crumb.root': 'Workspace',
   'fileOpen.title': 'Couldn’t open file',

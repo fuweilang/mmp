@@ -1,0 +1,5 @@
+Source: https://github.com/openai/skills/blob/main/skills/.curated/cli-creator/SKILL.md (git-blob:60e5a9a03f89cf66a60aa798bfc6f3c3fa5ed8c4)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=1
+Original path: skills/.curated/cli-creator
+No third-party scripts are executed or shipped in this managed package.

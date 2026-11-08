@@ -1,0 +1,21 @@
+{
+  "key": "kz-article-deep-analysis",
+  "name": "文章深度解读",
+  "description": "深度解读非学术类文章（博客、随笔、评论），抽取核心议题与核心主张，评估其对读者认知的增量与张力，输出结构化分析报告。",
+  "entry": "SKILL.md",
+  "category": "content",
+  "references": [
+    {
+      "path": "references/assets/template.md"
+    },
+    {
+      "path": "references/methodology.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

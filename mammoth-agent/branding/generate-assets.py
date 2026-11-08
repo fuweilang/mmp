@@ -78,12 +78,10 @@ b64_64 = png_b64(resize(64))
 b64_mark36 = png_b64(resize(36))
 (OUT / 'mammoth-mark-24.b64.txt').write_text(png_b64(resize(48)))
 
-def tile_svg(width: int, height: int, *, rounded: bool, tray: bool, inset: bool) -> str:
-    rx = ' rx="192"' if rounded else ''
+def tile_svg(width: int, height: int, *, tray: bool, inset: bool) -> str:
     glyph = '<g id="tray-glyph" filter="url(#filter1_ddi_1637_371)">' if tray else '<g filter="url(#filter1_ddi_1637_371)">'
     if inset:
         body = f'''<g filter="url(#filter0_d_1637_371)">
-<rect width="1024" height="1024" transform="translate(40 32)" fill="#4A53A3"/>
 {glyph}
 <image x="40" y="32" width="1024" height="1024" href="data:image/png;base64,{b64_1024}" xlink:href="data:image/png;base64,{b64_1024}" preserveAspectRatio="xMidYMid meet"/>
 <path d="M40 32h1024v1024H40z" fill="none"/>
@@ -91,7 +89,6 @@ def tile_svg(width: int, height: int, *, rounded: bool, tray: bool, inset: bool)
 </g>'''
     else:
         body = f'''<g transform="translate(32 32) scale(0.9375) translate(-40 -32)"><g filter="url(#filter0_d_1637_371)">
-<rect{rx} width="1024" height="1024" transform="translate(40 32)" fill="#4A53A3"/>
 {glyph}
 <image x="40" y="32" width="1024" height="1024" href="data:image/png;base64,{b64_1024}" xlink:href="data:image/png;base64,{b64_1024}" preserveAspectRatio="xMidYMid meet"/>
 <path d="M40 32h1024v1024H40z" fill="none"/>
@@ -112,9 +109,9 @@ def tile_svg(width: int, height: int, *, rounded: bool, tray: bool, inset: bool)
 </svg>
 '''
 
-(OUT / 'icon.svg').write_text(tile_svg(1104, 1104, rounded=False, tray=False, inset=True))
-(OUT / 'icon-macos.svg').write_text(tile_svg(1024, 1024, rounded=False, tray=False, inset=False))
-(OUT / 'icon-windows.svg').write_text(tile_svg(1024, 1024, rounded=True, tray=True, inset=False))
+(OUT / 'icon.svg').write_text(tile_svg(1104, 1104, tray=False, inset=True))
+(OUT / 'icon-macos.svg').write_text(tile_svg(1024, 1024, tray=False, inset=False))
+(OUT / 'icon-windows.svg').write_text(tile_svg(1024, 1024, tray=True, inset=False))
 fav = f'''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="64" height="64" viewBox="0 0 64 64">
 <image width="64" height="64" href="data:image/png;base64,{b64_64}" xlink:href="data:image/png;base64,{b64_64}"/>
 </svg>

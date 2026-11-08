@@ -1,0 +1,5 @@
+Source: https://github.com/coreyhaines31/marketingskills/blob/main/skills/marketing-psychology/SKILL.md (git-blob:806c09fba8228e53b9d2443cea7e2bbb104e6ee9)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: skills/marketing-psychology
+No third-party scripts are executed or shipped in this managed package.

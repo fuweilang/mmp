@@ -46,6 +46,16 @@ afterEach(() => {
 const OWNER_MANIFEST = '{ "name": "@mammoth-ai/mmp-session" }\n'
 
 describe('gen-persistence-catalog collectLogEvents', () => {
+  it('ignores an emitted declaration sibling but retains standalone ambient event merges', () => {
+    const declared = merge('    /** A source-owned event. */\n    \'fix/source\': { value: number }')
+    const events = collectLogEvents(make({
+      'packages/group/fix/src/index.ts': declared,
+      'packages/group/fix/src/index.d.ts': declared,
+      'packages/group/fix/src/ambient.d.ts': merge('    /** A standalone ambient event. */\n    \'fix/ambient\': { value: string }'),
+    }))
+    expect(events.map(event => event.name).sort()).toEqual(['fix/ambient', 'fix/source'])
+  })
+
   it('generates required interpreter types from plugin-owned event declarations', () => {
     const events = collectLogEvents(make({
       'packages/group/fix/src/types.ts': merge('    /**\n     * Projects existing messages.\n     * @messageProjection\n     */\n    \'fix/project\': { seq: number }'),

@@ -39,7 +39,7 @@
         clearable
         filterable
         placeholder="全部操作"
-        @change="onSearch"
+        @change="onActionExact"
       >
         <el-option
           v-for="item in actionOptions"
@@ -47,6 +47,17 @@
           :label="item.label"
           :value="item.value"
         />
+      </el-select>
+
+      <el-select
+        v-model="actionPrefix"
+        class="filter-action"
+        clearable
+        placeholder="操作前缀"
+        @change="onActionPrefix"
+      >
+        <el-option label="官方专家相关（admin_…official_agent）" value="__official_agent__" />
+        <el-option label="全部总后台（admin_）" value="admin_" />
       </el-select>
 
       <el-input
@@ -163,6 +174,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { AuditActionLabel } from '@mammoth/shared';
 import {
@@ -183,8 +195,10 @@ const total = ref(0);
 const page = ref(1);
 const enterprises = ref<AdminEnterpriseRow[]>([]);
 
+const route = useRoute();
 const tenantId = ref('');
 const actionFilter = ref('');
+const actionPrefix = ref('');
 const actorDraft = ref('');
 const dateRange = ref<[string, string] | null>(null);
 const expandedIds = reactive(new Set<string>());
@@ -235,17 +249,25 @@ async function loadAudit() {
   loading.value = true;
   error.value = '';
   try {
+    const prefix = actionPrefix.value === '__official_agent__' ? 'admin_' : (actionPrefix.value || undefined);
     const data = await adminAuditApi.list({
       page: page.value,
-      pageSize,
+      pageSize: actionPrefix.value === '__official_agent__' ? 100 : pageSize,
       tenantId: tenantId.value || undefined,
       action: actionFilter.value || undefined,
+      actionPrefix: actionFilter.value ? undefined : prefix,
       actor: actorDraft.value.trim() || undefined,
       from: dateRange.value?.[0],
       to: dateRange.value?.[1],
     });
-    rows.value = data.rows;
-    total.value = data.total;
+    if (actionPrefix.value === '__official_agent__' && !actionFilter.value) {
+      const filtered = data.rows.filter((row) => row.action.includes('official_agent'));
+      rows.value = filtered;
+      total.value = filtered.length;
+    } else {
+      rows.value = data.rows;
+      total.value = data.total;
+    }
     expandedIds.clear();
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载审计失败';
@@ -265,9 +287,20 @@ function onSearch() {
   void loadAudit();
 }
 
+function onActionExact() {
+  if (actionFilter.value) actionPrefix.value = '';
+  onSearch();
+}
+
+function onActionPrefix() {
+  if (actionPrefix.value) actionFilter.value = '';
+  onSearch();
+}
+
 function onReset() {
   tenantId.value = '';
   actionFilter.value = '';
+  actionPrefix.value = '';
   actorDraft.value = '';
   dateRange.value = null;
   page.value = 1;
@@ -279,7 +312,13 @@ function onPage(next: number) {
   void loadAudit();
 }
 
-onMounted(load);
+onMounted(() => {
+  const qAction = typeof route.query.action === 'string' ? route.query.action : '';
+  const qPrefix = typeof route.query.actionPrefix === 'string' ? route.query.actionPrefix : '';
+  if (qAction) actionFilter.value = qAction;
+  if (qPrefix) actionPrefix.value = qPrefix === 'admin_' ? 'admin_' : qPrefix;
+  void load();
+});
 </script>
 
 <style scoped>

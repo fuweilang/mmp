@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/design/skills/accessibility-review/SKILL.md (git-blob:3ef332cd837da5b4f7089503eb93e14c04090ccf)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: design/skills/accessibility-review
+No third-party scripts are executed or shipped in this managed package.

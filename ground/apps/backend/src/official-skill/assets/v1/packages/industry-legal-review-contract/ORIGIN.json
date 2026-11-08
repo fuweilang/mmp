@@ -1,0 +1,47 @@
+{
+  "key": "industry-legal-review-contract",
+  "name": "合同风险审阅",
+  "summary": "整理合同条款、偏离点和风险清单，仅作辅助审阅，不替代律师。",
+  "category": "legal",
+  "userCategoryLabel": "财税法务",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "legal/skills/review-contract",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "030204860ec70bf80254f9894721504df7c81bd5",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/legal/skills/review-contract/SKILL.md (git-blob:030204860ec70bf80254f9894721504df7c81bd5)",
+    "licenseEvidence": [
+      {
+        "path": "legal/LICENSE",
+        "blobSha": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "aaa8e46b67099d0579cdecc4a6daef37345f46213c124c06fa8edc07ad9468e3"
+  },
+  "officialVsAdapted": "adapted"
+}

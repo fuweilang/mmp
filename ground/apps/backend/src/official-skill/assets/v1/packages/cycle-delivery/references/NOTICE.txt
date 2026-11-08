@@ -1,0 +1,4 @@
+Source: github:trae-community/trae-skills@main:skills/cycle-delivery#7a8ce62fe2fd
+License: MIT
+Adaptation: strip-scripts; stripped=0; dropped=0
+No scripts shipped.

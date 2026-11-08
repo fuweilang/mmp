@@ -3,14 +3,14 @@
     <div class="login-shell">
       <div v-if="booting" class="login-booting">
         <img class="login-boot-logo" src="/mengma-logo.png" alt="" width="56" height="56" />
-        <p>正在进入猛犸智能体…</p>
+        <p>正在进入猛犸专家…</p>
       </div>
 
       <template v-else>
         <form class="login-card" :class="{ 'login-card--register': mode === 'register' }" @submit.prevent="onSubmit">
           <div class="login-card-head">
             <img class="login-logo" src="/mengma-logo.png" alt="" width="72" height="72" />
-            <h2>猛犸智能体</h2>
+            <h2>猛犸专家</h2>
             <p>{{ mode === 'register' ? '注册后立即开通企业空间' : '企业用户使用手机号和密码进入系统' }}</p>
           </div>
 
@@ -97,7 +97,7 @@ import { canAccessConsole } from '@mammoth/shared';
 import { useAuthStore } from '../stores/auth';
 import ClientDownloadLink from '../components/ClientDownloadLink.vue';
 import { sanitizeText } from '../utils/sanitizeText';
-import { agentWebUrl, redirectToAgentWeb, trustedAgentReturn } from '../utils/agent';
+import { redirectToAgentWeb, trustedAgentReturn } from '../utils/agent';
 
 const CONSOLE_HOME = '/console';
 const auth = useAuthStore();
@@ -151,7 +151,7 @@ onMounted(async () => {
   booting.value = false;
 });
 function goAgent() {
-  if (!redirectToAgentWeb()) ElMessage.error('猛犸智能体地址未配置，请联系管理员');
+  if (!redirectToAgentWeb()) ElMessage.error('猛犸专家地址未配置，请联系管理员');
 }
 
 function goConsoleOrAgent() {
@@ -162,89 +162,41 @@ function goConsoleOrAgent() {
   goAgent();
 }
 
-async function goAfterLogin() {
+function goAfterLogin() {
   const next = nextParam();
   const agentReturn = trustedAgentReturn(next);
   if (agentReturn) {
-    window.location.href = agentReturn;
+    window.location.replace(agentReturn);
     return;
   }
-  // Desktop client SSO: always return to localhost next (never cloud /agent/chat).
-  if (next?.startsWith('http://') || next?.startsWith('https://')) {
+  if (next) {
     try {
-      const u = new URL(next);
-      if (['127.0.0.1', 'localhost'].includes(u.hostname)) {
-        // 回客户端的同时，顺手新开 Web 智能体首页；被弹窗拦截也不影响客户端回调。
-        if (agentWebUrl) window.open(agentWebUrl, '_blank', 'noopener,noreferrer');
-        window.location.href = next;
-        return;
+      const target = new URL(next, window.location.origin);
+      if (target.origin === window.location.origin && !target.username && !target.password) {
+        const { pathname, search, hash } = target;
+        // The original OIDC authorize request owns its callback and validates PKCE.
+        if (['/console/api/oidc/authorize', '/middle/api/oidc/authorize', '/api/oidc/authorize', '/api/auth/oidc/authorize'].includes(pathname)) {
+          window.location.replace(target.href);
+          return;
+        }
+        if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+          if (auth.session?.user.isPlatformAdmin) window.location.href = target.href;
+          else goConsoleOrAgent();
+          return;
+        }
+        const legacyConsole = pathname === '/middle' || pathname.startsWith('/middle/');
+        if (legacyConsole || pathname === '/console' || pathname.startsWith('/console/')) {
+          if (auth.session?.user.isPlatformAdmin && !auth.session.currentTenant) window.location.href = '/admin';
+          else if (!canAccessConsole(auth.session)) goAgent();
+          else window.location.href = legacyConsole ? `/console${pathname.slice('/middle'.length)}${search}${hash}` : target.href;
+          return;
+        }
       }
     } catch {
-      /* fall through */
+      // Invalid return URLs fall through to the Web home.
     }
   }
-  if (next?.startsWith('/admin')) {
-    if (auth.session?.user.isPlatformAdmin) {
-      window.location.href = next;
-      return;
-    }
-    goConsoleOrAgent();
-    return;
-  }
-  if (next?.startsWith('/console') || next?.startsWith('/middle')) {
-    const isOidc =
-      next.startsWith('/middle/api/oidc') || next.startsWith('/console/api/oidc');
-    if (isOidc) {
-      window.location.href = next;
-      return;
-    }
-    if (auth.session?.user.isPlatformAdmin && !auth.session.currentTenant) {
-      window.location.href = '/admin';
-      return;
-    }
-    if (!canAccessConsole(auth.session)) {
-      goAgent();
-      return;
-    }
-    window.location.href = next.startsWith('/middle')
-      ? `/console${next === '/middle' || next === '/middle/' ? '/' : next.slice('/middle'.length)}`
-      : next;
-    return;
-  }
-  if (next?.startsWith('/agent')) {
-    goAgent();
-    return;
-  }
-  if (next?.startsWith('http://') || next?.startsWith('https://')) {
-    try {
-      const u = new URL(next);
-      const okHost = u.hostname === location.hostname || ['127.0.0.1', 'localhost'].includes(u.hostname);
-      if (okHost && u.pathname.startsWith('/agent')) {
-        goAgent();
-        return;
-      }
-      const okDest =
-        u.pathname.startsWith('/console') ||
-        u.pathname.startsWith('/middle') ||
-        u.pathname.startsWith('/admin') ||
-        u.pathname.startsWith('/console/api/oidc') ||
-        u.pathname.startsWith('/middle/api/oidc') ||
-        u.pathname.startsWith('/api/oidc') ||
-        u.pathname.startsWith('/api/auth/oidc');
-      if (okHost && okDest) {
-        window.location.href = next;
-        return;
-      }
-    } catch {
-      /* fall through */
-    }
-  }
-  // 无 next：平台管理员进总后台，其余按控制台权限分流到控制台或智能终端。
-  if (auth.session?.user.isPlatformAdmin && !auth.session.currentTenant) {
-    window.location.href = '/admin';
-    return;
-  }
-  goConsoleOrAgent();
+  goAgent();
 }
 
 async function onSubmit() {
@@ -280,9 +232,6 @@ async function onSubmit() {
         slug: form.slug,
       });
       ElMessage.success('注册成功');
-      // Octop 已废弃：注册后进控制台
-      goAfterLogin();
-      return;
     } else {
       await auth.login(form.phone, form.password);
       ElMessage.success('登录成功');

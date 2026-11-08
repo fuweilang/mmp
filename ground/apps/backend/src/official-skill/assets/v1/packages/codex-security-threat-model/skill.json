@@ -1,0 +1,21 @@
+{
+  "key": "codex-security-threat-model",
+  "name": "应用威胁建模",
+  "description": "梳理资产、信任边界、攻击路径与缓解措施。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/prompt-template.md"
+    },
+    {
+      "path": "references/security-controls-and-assets.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

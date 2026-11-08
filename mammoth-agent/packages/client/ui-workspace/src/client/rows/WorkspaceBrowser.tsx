@@ -18,7 +18,7 @@ import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useStat
 import clsx from 'clsx'
 import { WorkspaceDialogs } from './WorkspaceDialogs.tsx'
 import {
-  AnimatedRows, HoverCardGroup, IconArchiveCheckOutlineRegular, IconArchiveOffOutlineRegular, IconArchiveOutlineRegular,
+  AnimatedRows, HoverCardGroup, IconArchiveOutlineRegular,
   IconChevronsUpDownOutlineRegular, IconClockOutlineRegular, IconCloseFillRegular,
   IconFlatListOutlineRegular, IconFolderCloseRegular, IconProjectAddOutlineRegular,
   IconQueueOutlineRegular, IconSearchOutlineRegular, IconSlidersTwoOutlineRegular,
@@ -34,10 +34,10 @@ import type { PropsRenderSlots } from '@mammoth-ai/mmp-client-ui-slots'
 import type { WorkspaceBrowserProps } from '../contract/slots.ts'
 import type { ArchivedFilter, GroupNode, SessionNode, SessionOrderBy, SessionRowState } from '../tree.ts'
 import {
-  deriveFlat, deriveGroups, deriveSearchResults, orderByRecency, owningGroupKey, owningParentFolder,
+  ARCHIVED_SECTION_KEY, deriveFlat, deriveGroups, deriveSearchResults, orderByRecency, owningGroupKey, owningParentFolder,
   pinCurrentBlank, reconcileManualOrder, sessionMemberIds, UNGROUPED_KEY,
 } from '../tree.ts'
-import { ProjectRowItem, SearchResultItem, SessionNodeItem } from './Rows.tsx'
+import { ArchivedSectionItem, ProjectRowItem, SearchResultItem, SessionNodeItem } from './Rows.tsx'
 import { FLAT_SESSION_ORDER_KEY, type SessionGroupBy } from '../stores.ts'
 import { WorkspacePickFlow } from '../WorkspacePicker.tsx'
 import css from './WorkspaceBrowser.module.css'
@@ -162,11 +162,7 @@ function ViewOptionsMenu({ groupBy, orderBy, archivedFilter, onGroupPick, onOrde
         { type: 'label' as const, id: 'order-by', text: t('orderBy.label') },
         { id: 'manual', label: t('orderBy.manual'), icon: <IconChevronsUpDownOutlineRegular /> },
         { id: 'updated', label: t('orderBy.updated'), icon: <IconClockOutlineRegular /> },
-        { type: 'separator' as const, id: 'archived-filter-separator' },
-        { type: 'label' as const, id: 'filter-by', text: t('filterBy.label') },
-        { id: 'hide-archived', label: t('viewOptions.hideArchived'), icon: <IconArchiveOffOutlineRegular /> },
-        { id: 'show-archived', label: t('viewOptions.showArchived'), icon: <IconQueueOutlineRegular /> },
-        { id: 'only-archived', label: t('viewOptions.onlyArchived'), icon: <IconArchiveCheckOutlineRegular /> },
+
       ]}
       selectedIds={[
         groupBy,
@@ -292,6 +288,22 @@ type SessionTreeProps = Pick<
   revealSessionId?: SessionId | undefined
   /** Acknowledge that the chosen Session row has been revealed. */
   onSessionRevealed: (sessionId: SessionId) => void
+}
+
+
+/** Archived rows for the fixed sidebar section under the default hide filter. */
+function archivedSectionRows(
+  list: SessionListState,
+  rowState: SessionRowState,
+  statuses: Parameters<typeof deriveFlat>[3],
+): SessionNode[] {
+  if (rowState.archivedFilter !== 'default' || rowState.archivedSessionIds.length === 0) return []
+  return deriveFlat(
+    list,
+    orderByRecency(rowState.archivedSessionIds, list.byId),
+    { ...rowState, archivedFilter: 'only' },
+    statuses,
+  )
 }
 
 /** The list-empty placeholder — a glyph over the text; the archived-only view names its filter and offers the way back. */
@@ -657,6 +669,18 @@ function SessionTree({
   }
 
   const groupRows = rootGroups.map(group => renderGroup(group, 0))
+  const archivedExpanded = groupExpansion[ARCHIVED_SECTION_KEY] ?? false
+  const archivedRows = archivedExpanded
+    ? archivedSectionRows(list, rowState, statuses)
+    : []
+  // Fixed entry: always present under the default hide-archived view, even at count 0.
+  const showArchivedSection = false
+  const archivedEmpty = archivedExpanded && rowState.archivedSessionIds.length === 0
+  if (showArchivedSection) {
+    rowKeys.push('archived-section')
+    if (archivedEmpty) rowKeys.push('archived-empty')
+    for (const node of archivedRows) rowKeys.push(`session:${node.id}`)
+  }
   return (
     <HoverCardGroup className={clsx(css.treeBody, css.wide)}>
       {workspaceDropAtListStart && <span className={css.listTopDropIndicator} aria-hidden="true" />}
@@ -666,12 +690,45 @@ function SessionTree({
         label={t('section.sessions')}
         rowKeys={rowKeys}
         ready={list.phase === 'ready' && workspaceReady && !nativeDragActive}
-        resetKey={JSON.stringify([animationResetKey, watermarkMotionKey])}
+        resetKey={JSON.stringify([animationResetKey, watermarkMotionKey, archivedExpanded])}
       >
         {groups.length === 0 && (
           <EmptySessions rowState={rowState} onLeaveArchivedOnly={onLeaveArchivedOnly} t={t} />
         )}
         {groupRows}
+        {showArchivedSection && (
+          <div className={css.groupSection} key={ARCHIVED_SECTION_KEY}>
+            <ArchivedSectionItem
+              count={rowState.archivedSessionIds.length}
+              expanded={archivedExpanded}
+              onToggle={() => { setGroupExpanded(ARCHIVED_SECTION_KEY, !archivedExpanded) }}
+              t={t}
+            />
+            {archivedEmpty && (
+              <div className={css.archivedEmpty} data-row-key="archived-empty" role="status">
+                <div>{t('section.archived.empty')}</div>
+                <div className={css.archivedEmptyHint}>{t('section.archived.emptyHint')}</div>
+              </div>
+            )}
+            {archivedRows.map(node => (
+              <SessionNodeItem
+                key={node.id}
+                node={node}
+                currentId={current}
+                now={now}
+                onOpen={open}
+                onRenameRequest={onSessionRenameRequest}
+                renderSlot={renderSlot}
+                openSessionMenu={openSessionMenu}
+                useContextMenu={useContextMenu}
+                useContextMenuTarget={useContextMenuTarget}
+                home={home}
+                useSessionAccess={useSessionAccess}
+                t={t}
+              />
+            ))}
+          </div>
+        )}
       </AnimatedRows>
       <span className={css.fade} />
     </HoverCardGroup>
@@ -683,6 +740,7 @@ function FlatList({
   list, sessionIds, rowState, onLeaveArchivedOnly, useSessionStatus, useSessionAccess, open, onSessionRenameRequest,
   usePanelInfo, setSessionOrder, workspaceReady, animationResetKey,
   revealSessionId, onSessionRevealed, renderSlot, openSessionMenu, useContextMenuTarget, useContextMenu, home, t,
+  groupExpansion, setGroupExpanded,
 }: Pick<
   SessionTreeProps,
   | 'useSessionStatus'
@@ -701,6 +759,8 @@ function FlatList({
   | 'onLeaveArchivedOnly'
   | 'home'
   | 't'
+  | 'groupExpansion'
+  | 'setGroupExpanded'
 > & {
   list: SessionListState
   sessionIds: readonly SessionId[]
@@ -725,15 +785,30 @@ function FlatList({
     if (nextOrder !== undefined) setSessionOrder(FLAT_SESSION_ORDER_KEY, nextOrder)
   }
   const now = Date.now()
+  const archivedExpanded = groupExpansion[ARCHIVED_SECTION_KEY] ?? false
+  const archivedRows = archivedExpanded
+    ? archivedSectionRows(list, rowState, statuses)
+    : []
+  // Fixed entry: always present under the default hide-archived view, even at count 0.
+  const showArchivedSection = false
+  const archivedEmpty = archivedExpanded && rowState.archivedSessionIds.length === 0
+  const rowKeys = [
+    ...(rows.length === 0 ? ['empty'] : rows.map(row => `session:${row.id}`)),
+    ...(!showArchivedSection ? [] : [
+      'archived-section',
+      ...archivedEmpty ? ['archived-empty'] : [],
+      ...archivedRows.map(node => `session:${node.id}`),
+    ]),
+  ]
   return (
     <HoverCardGroup className={clsx(css.treeBody, css.wide)}>
       <AnimatedRows
         className={clsx(css.list, css.flatList)}
         role="tree"
         label={t('section.sessions')}
-        rowKeys={rows.length === 0 ? ['empty'] : rows.map(row => `session:${row.id}`)}
+        rowKeys={rowKeys}
         ready={list.phase === 'ready' && workspaceReady && drag === null}
-        resetKey={animationResetKey}
+        resetKey={JSON.stringify([animationResetKey, archivedExpanded])}
       >
         {rows.length === 0 && (
           <EmptySessions rowState={rowState} onLeaveArchivedOnly={onLeaveArchivedOnly} t={t} />
@@ -783,6 +858,39 @@ function FlatList({
             />
           )
         })}
+        {showArchivedSection && (
+          <div className={css.groupSection} key={ARCHIVED_SECTION_KEY}>
+            <ArchivedSectionItem
+              count={rowState.archivedSessionIds.length}
+              expanded={archivedExpanded}
+              onToggle={() => { setGroupExpanded(ARCHIVED_SECTION_KEY, !archivedExpanded) }}
+              t={t}
+            />
+            {archivedEmpty && (
+              <div className={css.archivedEmpty} data-row-key="archived-empty" role="status">
+                <div>{t('section.archived.empty')}</div>
+                <div className={css.archivedEmptyHint}>{t('section.archived.emptyHint')}</div>
+              </div>
+            )}
+            {archivedRows.map(node => (
+              <SessionNodeItem
+                key={node.id}
+                node={node}
+                currentId={currentId}
+                now={now}
+                onOpen={open}
+                onRenameRequest={onSessionRenameRequest}
+                renderSlot={renderSlot}
+                openSessionMenu={openSessionMenu}
+                useContextMenu={useContextMenu}
+                useContextMenuTarget={useContextMenuTarget}
+                home={home}
+                useSessionAccess={useSessionAccess}
+                t={t}
+              />
+            ))}
+          </div>
+        )}
       </AnimatedRows>
       <span className={css.fade} />
     </HoverCardGroup>
@@ -1032,6 +1140,7 @@ export function WorkspaceBrowser({
     actions.retainAccountKeys([
       UNGROUPED_KEY,
       FLAT_SESSION_ORDER_KEY,
+      ARCHIVED_SECTION_KEY,
       ...workspaces.map(workspace => workspace.workspaceId),
     ])
   }, [actions.retainAccountKeys, workspacePhase, workspaces])
@@ -1390,6 +1499,8 @@ export function WorkspaceBrowser({
                 setSessionOrder={saveSessionOrder}
                 revealSessionId={revealSessionId}
                 onSessionRevealed={acknowledgeSessionReveal}
+                groupExpansion={groupExpansion}
+                setGroupExpanded={actions.setGroupExpanded}
                 home={home}
                 t={t}
               />

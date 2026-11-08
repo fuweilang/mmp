@@ -1,0 +1,49 @@
+{
+  "key": "superpowers-writing-plans",
+  "name": "实现计划编写",
+  "summary": "将设计转为可追踪的实施步骤和验收条件。",
+  "category": "expertise",
+  "userCategoryLabel": "开发设计",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=1",
+  "source": {
+    "owner": "openai",
+    "repo": "plugins",
+    "ref": "main",
+    "path": "plugins/superpowers/skills/writing-plans",
+    "treeSha": "b767f8fa3be1a22b093127dd59956c91ecffca9d",
+    "skillBlobSha": "f74605bfa9af7a3fb7e4ad7f17750a86a9b0d728",
+    "immutableRef": "https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/writing-plans/SKILL.md (git-blob:f74605bfa9af7a3fb7e4ad7f17750a86a9b0d728)",
+    "licenseEvidence": [
+      {
+        "path": "plugins/superpowers/LICENSE",
+        "blobSha": "abf0390320aa14406af7a520b9b0739fdda9bf08",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "openai/plugins",
+      "html_url": "https://github.com/openai/plugins",
+      "stargazers_count": 7785,
+      "forks_count": 1002,
+      "pushed_at": "2026-11-03T23:23:40Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": null,
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "OpenAI-distributed curated Superpowers plugin; original author Jesse Vincent."
+    },
+    "includedResources": [
+      {
+        "path": "plugins/superpowers/skills/writing-plans/plan-document-reviewer-prompt.md",
+        "sha": "1c12c1d6180395262d7150bdb12a9a90efc9cfa0",
+        "mapped": "references/plan-document-reviewer-prompt.md"
+      }
+    ],
+    "omittedFiles": [
+      "agents/openai.yaml"
+    ],
+    "originalBodySha256": "0a0474fd52d936b8260dd093bdb082c474db6f5d085de7f3c616b96d453dd632"
+  },
+  "officialVsAdapted": "adapted"
+}

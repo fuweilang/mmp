@@ -319,6 +319,13 @@
     - id: ui-plugin-manager
       name: '@mammoth-ai/mmp-client-ui-plugin-manager'
 
+    # Ground official Agent catalog and frozen, server-authorized Sessions.
+    - id: official-agent-gallery
+      name: '@mammoth-ai/mmp-official-agent-gallery'
+
+    - id: ui-official-agent-gallery
+      name: '@mammoth-ai/mmp-client-ui-official-agent-gallery'
+
     # Read-only Plugin list tab in the Settings Plugins section; the built-in
     # bundles the sidebar page leaves out are inspected here.
     - id: ui-settings-plugin-inventory
@@ -343,6 +350,9 @@
     # Web-only desktop-download action at the sidebar foot.
     - id: ui-client-download
       name: '@mammoth-ai/mmp-client-ui-client-download'
+
+    - id: ui-enterprise-library
+      name: '@mammoth-ai/mmp-client-ui-enterprise-library'
 
     - id: ui-attachment
       name: '@mammoth-ai/mmp-client-ui-attachment'
@@ -599,4 +609,6 @@
     - id: agent-preset-registry
       name: '@mammoth-ai/mmp-agent-preset-registry'
       config:
-        default: chat
+        # New sessions default to Standard mode (native tool composition).
+        # Chat / PTC / Minimal / Creator remain selectable; visibility is role-gated in UI.
+        default: standard

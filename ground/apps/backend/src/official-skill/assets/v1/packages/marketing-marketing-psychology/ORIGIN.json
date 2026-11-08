@@ -1,0 +1,53 @@
+{
+  "key": "marketing-marketing-psychology",
+  "name": "营销心理学应用",
+  "summary": "用行为原理审视营销内容与用户决策，不作效果保证。",
+  "category": "business",
+  "userCategoryLabel": "运营增长",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "coreyhaines31",
+    "repo": "marketingskills",
+    "ref": "main",
+    "path": "skills/marketing-psychology",
+    "treeSha": "88c79f6528a9347420e57ceb1fff9a60de651768",
+    "skillBlobSha": "806c09fba8228e53b9d2443cea7e2bbb104e6ee9",
+    "immutableRef": "https://github.com/coreyhaines31/marketingskills/blob/main/skills/marketing-psychology/SKILL.md (git-blob:806c09fba8228e53b9d2443cea7e2bbb104e6ee9)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "7c48dd638a9ebed49a8ef0c0c4eea90105381cdf",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "coreyhaines31/marketingskills",
+      "html_url": "https://github.com/coreyhaines31/marketingskills",
+      "stargazers_count": 58856,
+      "forks_count": 8611,
+      "pushed_at": "2026-11-04T19:01:33Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Public MIT marketing skills collection; stars are popularity only, not quality tests."
+    },
+    "includedResources": [
+      {
+        "path": "skills/marketing-psychology/evals/evals.json",
+        "sha": "09bda2f99b77dc9953e61b9b2368392334b5e7e2",
+        "mapped": "references/evals/evals.json"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "5deebb8df16e04dc7c235408051025504215a2e4b5dd87fa9adffe780ac45ba9"
+  },
+  "officialVsAdapted": "adapted"
+}

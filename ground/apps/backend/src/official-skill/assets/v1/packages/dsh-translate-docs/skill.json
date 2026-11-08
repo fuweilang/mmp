@@ -1,0 +1,15 @@
+{
+  "key": "dsh-translate-docs",
+  "name": "DSH 文档翻译",
+  "description": "根据文档结构与术语规范翻译 DSH 技术资料。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

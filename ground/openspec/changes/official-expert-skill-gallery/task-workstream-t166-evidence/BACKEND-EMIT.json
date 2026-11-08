@@ -1,0 +1,6 @@
+{
+  "command": "./node_modules/.bin/tsc -p tsconfig.build.json",
+  "cwd": "/Users/fuweilang/Documents/code/mmp/ground/apps/backend",
+  "exitCode": 0,
+  "at": "2026-11-07T22:12:12.990560+08:00"
+}

@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/legal/skills/triage-nda/SKILL.md (git-blob:143c1113e926cd7b69f2dfc9bca6171097d35f0a)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: legal/skills/triage-nda
+No third-party scripts are executed or shipped in this managed package.

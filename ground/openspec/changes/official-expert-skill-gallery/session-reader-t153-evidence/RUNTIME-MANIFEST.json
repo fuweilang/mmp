@@ -1,0 +1,86 @@
+{
+  "files": [
+    {
+      "path": "packages/core/session/src/known-event-types.ts",
+      "bytes": 2969,
+      "sha256": "7fe1b77c3b2619dcbad2420494ab6641a0b6222acb5903487c7c961a6102546c",
+      "requiredGalleryTypesPresent": {
+        "composition": true,
+        "receipt": true,
+        "artifact": true
+      }
+    },
+    {
+      "path": "packages/core/session/lib/index.js",
+      "bytes": 96284,
+      "sha256": "c09e64350ca9889520b925b7c224b78f4ded9e7530763500b1fae50264ddf7be",
+      "requiredGalleryTypesPresent": {
+        "composition": true,
+        "receipt": true,
+        "artifact": true
+      }
+    },
+    {
+      "path": "packages/core/session/lib/types/known-event-types.js",
+      "bytes": 3110,
+      "sha256": "4ac33821c7a1bb2485e5fa274a6cd8e99db06de2e2cfbc81ff6b84cfca2fd928",
+      "requiredGalleryTypesPresent": {
+        "composition": true,
+        "receipt": true,
+        "artifact": true
+      }
+    },
+    {
+      "path": "packages/core/session/lib/types/known-event-types.d.ts",
+      "bytes": 1422,
+      "sha256": "fcfe9446ba8da5f919bed2548126b9cbe58009535ee9612e22094aa8d9ffdafb"
+    },
+    {
+      "path": "packages/preset/official-agent-gallery/lib/index.js",
+      "bytes": 76391,
+      "sha256": "9eab2de8207944b6327b89ba89ff48950d0383b19e69f3bd992a059c1f50e836",
+      "requiredGalleryTypesPresent": {
+        "composition": true,
+        "receipt": true,
+        "artifact": true
+      }
+    },
+    {
+      "path": "packages/preset/official-agent-gallery/lib/types/managed-runtime.js",
+      "bytes": 12380,
+      "sha256": "ea332b57bb6df90a24cf51870e2950e193c966997cbac217b7f895ce5875d5e5",
+      "requiredGalleryTypesPresent": {
+        "composition": true,
+        "receipt": true,
+        "artifact": true
+      }
+    },
+    {
+      "path": "packages/preset/official-agent-gallery/lib/typert.host.js",
+      "bytes": 105088,
+      "sha256": "40d21355c4ceb095ad927a137fc2d98cbe0a9994db1c8047592776ea11ef4c78",
+      "requiredGalleryTypesPresent": {
+        "composition": true,
+        "receipt": true,
+        "artifact": true
+      }
+    },
+    {
+      "path": "packages/api/session-controller/lib/typert.host.js",
+      "bytes": 383599,
+      "sha256": "463c89c34a673762bfaef4b3addd368402640f28ff2db9cc6f72c483d739296b",
+      "requiredGalleryTypesPresent": {
+        "composition": true,
+        "receipt": true,
+        "artifact": true
+      }
+    }
+  ],
+  "developmentProjectLinks": {
+    "mmp-session": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/core/session",
+    "mmp-desktop-host": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/apps/desktop-host",
+    "mmp-official-agent-gallery": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/preset/official-agent-gallery"
+  },
+  "descriptorSchemaChanged": false,
+  "descriptorNote": "Existing gallery and session-controller descriptors already contain all three types; no regeneration required. Native persistence/query readers share the rebuilt session/lib/index.js."
+}

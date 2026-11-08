@@ -34,6 +34,12 @@ export class AdminAuditQueryDto {
   @MaxLength(80)
   action?: string;
 
+  /** 按 action 前缀筛选（如 admin_），与精确 action 互斥时优先精确 action */
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  actionPrefix?: string;
+
   /** 操作者：姓名 / 手机 / userId 关键字 */
   @IsOptional()
   @IsString()

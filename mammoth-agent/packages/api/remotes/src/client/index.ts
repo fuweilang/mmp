@@ -16,6 +16,7 @@ import dynamicRemote from '@mammoth-ai/mmp-cordis-host-runner/remote'
 import pluginManagerRemote from '@mammoth-ai/mmp-plugin-manager/remote'
 import toolResultsRemote from '@mammoth-ai/mmp-client-ui-trajectory/remote'
 import pluginRegistryProbeRemote from '@mammoth-ai/mmp-client-ui-plugin-manager/remote'
+import officialAgentGalleryRemote from '@mammoth-ai/mmp-official-agent-gallery/remote'
 import pluginMarketRemote from '@mammoth-ai/mmp-plugin-market/remote'
 import pluginInventoryRemote from '@mammoth-ai/mmp-host-plugin-inventory/remote'
 import messageFeedbackRemote from '@mammoth-ai/mmp-message-feedback/remote'
@@ -42,6 +43,7 @@ export type {
 } from '@mammoth-ai/mmp-plugin-manager/types'
 export type {} from '@mammoth-ai/mmp-plugin-manager/remote'
 export type {} from '@mammoth-ai/mmp-client-ui-plugin-manager/remote'
+export type {} from '@mammoth-ai/mmp-official-agent-gallery/remote'
 export type {} from '@mammoth-ai/mmp-client-ui-trajectory/remote'
 export type {} from '@mammoth-ai/mmp-plugin-market/remote'
 export type {
@@ -195,7 +197,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       messageFeedbackRemote, sessionFeedbackRemote,
       fileUploadsRemote, sessionReferencesRemote,
       permissionPresetsRemote, subagentsRemote, sessionRemote, jobRemote, workspaceRemote, workspaceFilesRemote, terminalRemote,
-      officeToPdfRemote, userQuestionsRemote,
+      officeToPdfRemote, userQuestionsRemote, officialAgentGalleryRemote,
     ]) {
       disposers.push(await ctx.remote.$mount(contribution))
     }

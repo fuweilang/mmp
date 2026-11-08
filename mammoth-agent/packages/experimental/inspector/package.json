@@ -57,6 +57,7 @@
     "@mammoth-ai/cordis": "workspace:~"
   },
   "devDependencies": {
+    "@mammoth-ai/mmp-atomic-write": "workspace:*",
     "chrome-devtools-frontend": "1.0.1638082",
     "@types/serve-static": "^2.2.0",
     "@mammoth-ai/mmp-client-test-runtime": "workspace:*",

@@ -1,0 +1,60 @@
+{
+  "key": "marketing-marketing-plan",
+  "name": "营销计划制定",
+  "description": "梳理目标人群、定位、渠道与阶段行动计划。",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evals/evals.json"
+    },
+    {
+      "path": "references/aarrr-framework.md"
+    },
+    {
+      "path": "references/budget-planning.md"
+    },
+    {
+      "path": "references/client-types.md"
+    },
+    {
+      "path": "references/current-state-rubric.md"
+    },
+    {
+      "path": "references/example-quietude.md"
+    },
+    {
+      "path": "references/funding-stage-unlocks.md"
+    },
+    {
+      "path": "references/growth-patterns.md"
+    },
+    {
+      "path": "references/idea-cross-reference.md"
+    },
+    {
+      "path": "references/market-sizing.md"
+    },
+    {
+      "path": "references/measurement-framework.md"
+    },
+    {
+      "path": "references/methodology.md"
+    },
+    {
+      "path": "references/ops-stack-mapping.md"
+    },
+    {
+      "path": "references/plan-template.md"
+    },
+    {
+      "path": "references/team-and-agency-model.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

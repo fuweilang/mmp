@@ -498,6 +498,44 @@ function SessionHoverContent({ node, cwd, now, renderSlot, t }: {
 }
 
 /**
+ * Fixed sidebar entry for archived Sessions: always visible under the default
+ * hide-archived view (including count 0), expands to list them for restore or
+ * an empty hint. Uses Workspace header row chrome so it reads as one more
+ * section, not a filter menu item.
+ */
+export function ArchivedSectionItem({
+  count, expanded, onToggle, t,
+}: {
+  count: number
+  expanded: boolean
+  onToggle: () => void
+  t: RowTranslate
+}) {
+  const label = t('section.archived')
+  return (
+    <div
+      className={clsx(css.projectRow, css.archivedSection)}
+      data-row-key="archived-section"
+      role="treeitem"
+      aria-expanded={expanded}
+      aria-label={t('section.archived.aria', { n: count })}
+      onClick={onToggle}
+    >
+      <span className={clsx(css.slot, css.folder)}>
+        <IconFolderCloseRegular size={14} />
+      </span>
+      <span className={clsx(css.slot, css.chevron)}>
+        <IconTriangleRightFillRegular className={clsx(css.arrow, expanded && css.arrowOpen)} />
+      </span>
+      <span className={css.projectText}>
+        <span className={css.title}>{label}</span>
+      </span>
+      <span className={css.archivedCount} aria-hidden="true">{count}</span>
+    </div>
+  )
+}
+
+/**
  * One flat search result: title, Workspace context, and optional content
  * excerpt. Search navigation opens the session only; it does not address an
  * event inside the conversation. Archived rows carry a hover unarchive

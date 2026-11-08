@@ -458,3 +458,17 @@ declare module '@mammoth-ai/mmp-workspace/types' {
     'probe-items': true
   }
 }
+
+describe('t171 metadata retry on the actual Gateway/Connection', () => {
+ pluginTest('t171 recreates a failed follow consumer without archive mutation',async({mock,start})=>{
+  mock.stream(FOLLOW,followGenerations([
+   (_args,stream)=>{stream.fail(new RemoteError('gateway/internal','t171 synthetic follow refusal',{}))},
+   openStream([baseline('t171-current-host')]),
+  ]))
+  const client=await start()
+  await vi.waitFor(()=>expect(client.ctx.workspaces.list.getSnapshot().state).toBe('error'))
+  await client.ctx.workspaces.retryList?.()
+  await vi.waitFor(()=>expect(client.ctx.workspaces.list.getSnapshot()).toMatchObject({state:'idle',phase:'ready',items:[{workspaceId:'t171-current-host'}]}))
+  expect(streamStates(mock)).toEqual(['failed','open'])
+ },COLD_BOOT_TIMEOUT_MS)
+})

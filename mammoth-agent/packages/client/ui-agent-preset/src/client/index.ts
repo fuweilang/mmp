@@ -1,3 +1,4 @@
+const TERMINAL_PRESET_SELECTION_VISIBLE = false
 /**
  * Agent-preset surface plugin, browser half — three surfaces over one roster:
  * a chip on the new-session screen for the session about to start, a
@@ -6,20 +7,16 @@
  * declared composition, and the way into Creator mode).
  *
  * A running session keeps the composition it began with (the host switches a
- * session's preset only before its first turn). That is what splits
- * the choice from the display: the hero chip is before-the-fact, while the
- * header only reports what a session already runs. The default preset is
- * edited where the roster is visible — the settings section's "make default"
- * — so General settings carries no duplicate control for the same field.
- *
- * Coding Tools (General settings) hide PTC and Minimal from the hero menu
- * and Settings roster when off. Hidden saved defaults fall back to Standard;
- * the existing gate clears staged choices while existing sessions keep their composition.
+ * session's preset only before its first turn). New sessions default to
+ * Standard mode (`standard` composition with tools). Ordinary Ground users see
+ * Standard / Dialogue / Minimal on the hero and do not get the Settings →
+ * Agent presets section; platform admins see every built-in mode and the
+ * settings section. Native desktop (no Ground session) keeps the full DSH
+ * roster. There is no Auto-mode router and no boot-time chat→standard rewrite.
  */
 
 // Type-only: pulls the Session Controller service merge (ctx.sessions).
 import type { SessionBinding } from '@mammoth-ai/mmp-api-session-controller/client'
-import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import { WeakMapWithValues } from '@mammoth-ai/mmp-util-values'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
 import type {} from '@mammoth-ai/mmp-client-locale/client'
@@ -36,15 +33,17 @@ import type { Context as ClientContext } from '@mammoth-ai/cordis'
 import { AgentPresetLabel } from './AgentPresetLabel.tsx'
 import { CreatePluginMenuItem } from './CreatePluginMenuItem.tsx'
 import type { AgentPresetLabelInjected } from './AgentPresetLabel.tsx'
-import { AgentPresetSeat } from './AgentPresetSeat.tsx'
-import type { AgentPresetSeatInjected } from './AgentPresetSeat.tsx'
 import { AgentPresetSection } from './AgentPresetSection.tsx'
 import type { AgentPresetSectionInjected } from './AgentPresetSection.tsx'
 import { AgentPresetSeatController, type AgentPresetStage } from './seat-store.ts'
 import { AgentPresetSectionController } from './section-store.ts'
 import { en, ja, es, fr, de, ru, pt, zh, type AgentPresetSettingsKey } from './locales.ts'
-import { AGENT_PRESET_SETTINGS_NS, AgentPresetSettingsController } from './settings-store.ts'
-import { analyticsMode } from './analytics.ts'
+import { AGENT_PRESET_SETTINGS_NS, AgentPresetSettingsController, isOrdinaryHiddenBuiltIn } from './settings-store.ts'
+import {
+  canManageAgentPresetSettings,
+  readPresetRoleAccess,
+  type PresetRoleAccess,
+} from './role-access.ts'
 
 declare module '@mammoth-ai/mmp-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -108,6 +107,29 @@ export function apply(ctx: ClientContext): void {
     return seat
   }
   const section = new AgentPresetSectionController(ctx)
+  // Ground `/me` via same-origin billing proxy; native/desktop stays full-roster DSH.
+  let presetRoleAccessSnapshot: PresetRoleAccess = { kind: 'pending' }
+  const presetRoleListeners = new Set<() => void>()
+  const presetRoleAccess={ getSnapshot:()=>presetRoleAccessSnapshot, subscribe:(listener:()=>void)=>{presetRoleListeners.add(listener);return()=>{presetRoleListeners.delete(listener)}} }
+
+  const publishPresetRoleAccess = (next: PresetRoleAccess): void => {
+    presetRoleAccessSnapshot = next
+    for (const listener of presetRoleListeners) listener()
+  }
+  void readPresetRoleAccess().then((access) => {
+    publishPresetRoleAccess(access)
+    // Blank new-task only: drop ordinary-hidden staged picks to standard.
+    if (access.kind === 'ground' && !access.isPlatformAdmin) {
+      const syncHidden = (seat: AgentPresetSeatController): void => {
+        const current = seat.store.getSnapshot().current
+        if (!current || !isOrdinaryHiddenBuiltIn({ id: current })) return
+        void seat.select('standard')
+      }
+      syncHidden(unboundSeat)
+      for (const seat of seats.values) syncHidden(seat)
+    }
+  })
+
   // Turning Developer tools off clears the shared stage before any apply can compose it.
   const developerTools = ctx.configForms.developerTools.enabled
   ctx.effect(() => developerTools.subscribe(() => {
@@ -182,31 +204,6 @@ export function apply(ctx: ClientContext): void {
   // render and simply hides the button while no flow exists.
   let creatorDraft: (() => void) | undefined
   ctx.inject(['slots', 'conversation', 'sessions', 'uiWorkspace'], (scope: ClientContext) => {
-    const seatInjected = (sessionId: SessionId | undefined): AgentPresetSeatInjected => {
-      const binding = sessionId === undefined ? undefined : ctx.sessions.binding(sessionId)
-      const seat = binding === undefined ? unboundSeat : seatFor(binding)
-      return {
-        hooks: { agentPresetSeat: seat.store, developerTools: ctx.configForms.developerTools.enabled },
-        load: () => seat.load(),
-        select: async (id: string) => {
-          const state = seat.store.getSnapshot()
-          const from = analyticsMode(state.current)
-          const to = analyticsMode(id)
-          const enabled = toolsSettings.getSnapshot().value?.enabled
-          const outcome = await seat.select(id)
-          // A bound pick counts once the Host applies it; an unbound pick counts when staged for the next Session.
-          const accepted = outcome.kind === 'applied' || (outcome.kind === 'staged' && sessionId === undefined)
-          if (accepted && from !== undefined && to !== undefined && to !== 'other' && from !== to && enabled !== undefined) {
-            ctx.get('productAnalytics')?.track('agent_preset_switch', {
-              switch_from: from, switch_to: to, code_work_view_enabled: enabled,
-            })
-          }
-          return outcome.kind === 'refused' ? outcome.reason : undefined
-        },
-        dismissRefusal: (error) => { seat.dismissRefusal(error) },
-        introduced: () => { seat.introduced() },
-      }
-    }
 
     const labelInjected = (): AgentPresetLabelInjected => ({
       hooks: { agentPresets: controller.store },
@@ -223,11 +220,8 @@ export function apply(ctx: ClientContext): void {
 
     scope.effect(() => {
       creatorDraft = startCreatorDraft
-      const chip = scope.slots.register({
-        name: 'conversation.hero.agentPreset',
-        locale: 'settings.agentPreset',
-        inject: seatInjected,
-      }, AgentPresetSeat)
+      // t166: no new-task mode picker. Existing task projections/modes stay intact.
+      const chip = () => {}
       const label = scope.slots.register({
         name: 'conversation.session.header.actions',
         id: 'agent-preset',
@@ -243,15 +237,10 @@ export function apply(ctx: ClientContext): void {
       }
     }, 'ui-agent-preset: new-session chip and header label')
 
-    scope.slots.inject('plugins.add.actions', () => scope.slots.register({
-      name: 'plugins.add.actions',
-      id: 'create-plugin',
-      locale: 'settings.agentPreset',
-      inject: () => ({
-        hooks: { agentPresets: controller.store },
-        load: () => controller.load(),
-        startCreatorDraft,
-      }),
+    // t174: presentation only, keep native authoring machinery dormant.
+    if (TERMINAL_PRESET_SELECTION_VISIBLE) scope.slots.inject('plugins.add.actions', () => scope.slots.register({
+      name: 'plugins.add.actions', id: 'create-plugin', locale: 'settings.agentPreset',
+      inject: () => ({ hooks: { agentPresets: controller.store }, load: () => controller.load(), startCreatorDraft }),
     }, CreatePluginMenuItem))
   })
 
@@ -278,14 +267,19 @@ export function apply(ctx: ClientContext): void {
     makeDefault: (id: string) => section.makeDefault(id, captureBlankSessionSync()),
   })
 
-  // Ordered after Models: choosing a model is routine, and composing an
-  // agent is the deployment-shaping act behind it.
-  ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section',
-    id: 'agent-presets',
-    order: 20,
-    label: () => ctx.locale.bind('settings.agentPreset')('nav'),
-    locale: 'settings.agentPreset',
-    inject: sectionInjected,
-  }, AgentPresetSection))
+  // t174: hide the selection panel, do not change native preset definitions.
+  if (TERMINAL_PRESET_SELECTION_VISIBLE) ctx.effect(() => {
+    let dispose: (() => void) | undefined
+    const sync = (): void => {
+      dispose?.(); dispose = undefined
+      if (!canManageAgentPresetSettings(presetRoleAccess.getSnapshot())) return
+      dispose = ctx.slots.inject('settings.section', () => ctx.slots.register({
+        name: 'settings.section', id: 'agent-presets', order: 20,
+        label: () => ctx.locale.bind('settings.agentPreset')('nav'), locale: 'settings.agentPreset', inject: sectionInjected,
+      }, AgentPresetSection))
+    }
+    sync(); const stop = presetRoleAccess.subscribe(sync)
+    return () => { stop(); dispose?.() }
+  }, 'ui-agent-preset: hidden terminal selection section')
 }
+

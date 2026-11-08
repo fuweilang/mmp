@@ -103,8 +103,12 @@ export function createGroundWebIdentity(options: {
     if (verified.size === 0) return
     const next = Math.min(...verified.values())
     expiryTimer = setTimeout(() => {
-      for (const [key, expiresAt] of verified) if (expiresAt <= Date.now()) verified.delete(key)
-      options.onExpired?.()
+      let removed = false
+      for (const [key, expiresAt] of verified) {
+        if (expiresAt <= Date.now()) { verified.delete(key); removed = true }
+      }
+      // Only drop browser peers when this Host has no remaining verified Ground cookie.
+      if (removed && verified.size === 0) options.onExpired?.()
       scheduleExpiry()
     }, Math.min(2_147_483_647, Math.max(1, next - Date.now())))
     expiryTimer.unref()
@@ -135,6 +139,8 @@ export function createGroundWebIdentity(options: {
       if (disposed) return refusal('Web 已停止，请刷新后重试。', 503)
       const token = groundWebCookie(request, options.cookieName)
       if (token === undefined) return challenge()
+      const cachedExpiry = verified.get(digest(token))
+      if (cachedExpiry !== undefined && cachedExpiry > Date.now()) return true
       try {
         const verifiedSession = await verifyGroundWebSession(ground.origin, token,
           AbortSignal.any([generation.signal, AbortSignal.timeout(options.requestTimeoutMs)]))

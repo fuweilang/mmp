@@ -1,0 +1,15 @@
+{
+  "key": "industry-ops-risk-assessment",
+  "name": "经营风险梳理",
+  "description": "根据已提供事实组织风险矩阵、应对措施与责任人。",
+  "entry": "SKILL.md",
+  "category": "consulting",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

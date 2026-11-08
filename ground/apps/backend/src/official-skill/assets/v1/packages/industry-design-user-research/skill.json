@@ -1,0 +1,15 @@
+{
+  "key": "industry-design-user-research",
+  "name": "用户研究方案",
+  "description": "组织研究问题、方法、访谈提纲和分析计划。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

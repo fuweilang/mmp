@@ -1,0 +1,88 @@
+{
+  "key": "marketing-seo-audit",
+  "name": "SEO 诊断清单",
+  "summary": "审视站点资料中的技术与内容 SEO 问题，外部指标需另行提供。",
+  "category": "business",
+  "userCategoryLabel": "运营增长",
+  "license": "MIT",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "coreyhaines31",
+    "repo": "marketingskills",
+    "ref": "main",
+    "path": "skills/seo-audit",
+    "treeSha": "88c79f6528a9347420e57ceb1fff9a60de651768",
+    "skillBlobSha": "e0a41d8c46c06d1e33ce5295c0f303a94d8f6c5b",
+    "immutableRef": "https://github.com/coreyhaines31/marketingskills/blob/main/skills/seo-audit/SKILL.md (git-blob:e0a41d8c46c06d1e33ce5295c0f303a94d8f6c5b)",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "7c48dd638a9ebed49a8ef0c0c4eea90105381cdf",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "coreyhaines31/marketingskills",
+      "html_url": "https://github.com/coreyhaines31/marketingskills",
+      "stargazers_count": 58856,
+      "forks_count": 8611,
+      "pushed_at": "2026-11-04T19:01:33Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Public MIT marketing skills collection; stars are popularity only, not quality tests."
+    },
+    "includedResources": [
+      {
+        "path": "skills/seo-audit/evals/evals.json",
+        "sha": "d569ae70cf4746f7a27e7808abbaea4878c27fd7",
+        "mapped": "references/evals/evals.json"
+      },
+      {
+        "path": "skills/seo-audit/references/ai-writing-detection.md",
+        "sha": "cb67ece4135f4153575bbbdfbf722364babff61d",
+        "mapped": "references/ai-writing-detection.md"
+      },
+      {
+        "path": "skills/seo-audit/references/international-seo.md",
+        "sha": "35a7ad2aeadcbef2541563b0077d5f717e4b147d",
+        "mapped": "references/international-seo.md"
+      },
+      {
+        "path": "skills/seo-audit/references/local-seo-pages-and-measurement.md",
+        "sha": "d49f0443e091c70e4778a4e33030a33d18a361a4",
+        "mapped": "references/local-seo-pages-and-measurement.md"
+      },
+      {
+        "path": "skills/seo-audit/references/local-seo-profile-and-citations.md",
+        "sha": "d34b7e043cb7c4d2da114f04e986bd476a22d0c6",
+        "mapped": "references/local-seo-profile-and-citations.md"
+      },
+      {
+        "path": "skills/seo-audit/references/local-seo.md",
+        "sha": "c2636ada98809d6ed8db588040817adc332add5e",
+        "mapped": "references/local-seo.md"
+      },
+      {
+        "path": "skills/seo-audit/references/rankings-push.md",
+        "sha": "5e3930e47e521cf3d27db2e7120ffde8ace3035d",
+        "mapped": "references/rankings-push.md"
+      },
+      {
+        "path": "skills/seo-audit/references/title-tags.md",
+        "sha": "5d5eac8002179ac5288f3b4bbd2aa35b3a409a42",
+        "mapped": "references/title-tags.md"
+      }
+    ],
+    "omittedFiles": [],
+    "originalBodySha256": "e6d37595ca5c7259c6c82d37a1777c90b851b3e0f72821b105a6e00b1770bd64"
+  },
+  "officialVsAdapted": "adapted"
+}

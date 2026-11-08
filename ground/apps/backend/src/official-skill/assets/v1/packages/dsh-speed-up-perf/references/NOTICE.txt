@@ -1,0 +1,5 @@
+Source: https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-speed-up-perf/SKILL.md (git-blob:491e39f81c440d0ef15978579ce55dd3dc56f0ac)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: .agents/skills/dsh-speed-up-perf
+No third-party scripts are executed or shipped in this managed package.

@@ -1,0 +1,29 @@
+{
+  "key": "spark-video",
+  "name": "spark-video-episode",
+  "summary": "One-shot autopilot orchestrator — runs the full spark-video pipeline (screenwriter ↔ director per-scene parallel → render chain-DAG paralle…",
+  "category": "expertise",
+  "userCategoryLabel": "设计前端",
+  "references": [
+    "references/AGENTS.md",
+    "references/README.md",
+    "references/README.zh.md",
+    "references/spark-video-cast/SKILL.md",
+    "references/spark-video-clip-review/SKILL.md",
+    "references/spark-video-clip-review/rewrite-system.md",
+    "references/spark-video-clip-review/rubric.md",
+    "references/spark-video-director/SKILL.md",
+    "references/spark-video-episode/SKILL.md",
+    "references/spark-video-screenwriter/SKILL.md",
+    "references/spark-video-vfx-review/SKILL.md"
+  ],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "modelstudioai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/spark-video",
+    "immutableRef": "github:modelstudioai/skills@main:skills/spark-video#874dc98eb2cc"
+  },
+  "adaptation": "strip-scripts; stripped=33; dropped=24"
+}

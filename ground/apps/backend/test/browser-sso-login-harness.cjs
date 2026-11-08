@@ -46,7 +46,13 @@ module.exports = async function runLoginPage({ origin, ticket, next, cookieName,
       if (name === 'element-plus') return { ElMessage: { error: message => errors.push(message), warning: message => errors.push(message) } };
       if (name.endsWith('.vue')) return { default: {} };
       // Download artwork and non-console return routing are outside this authentication scenario.
-      if (name === '../utils/agent') return { trustedAgentReturn: () => null, redirectToAgentWeb: () => false };
+      if (name === '../utils/agent') return {
+        trustedAgentReturn: () => null,
+        redirectToAgentWeb: () => false,
+        launchAgentClient: () => {},
+        openAgentChat: () => false,
+        openAgentOnboarding: () => false,
+      };
       if (name.startsWith('.')) {
         const base = resolve(dirname(filename), name);
         const file = [base, base + '.ts'].find(path => existsSync(path));

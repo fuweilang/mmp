@@ -1,0 +1,51 @@
+{
+  "at": "2026-11-06 12:31:40 Asia/Shanghai",
+  "count": 22,
+  "keys": [
+    "copy-polish-master",
+    "enterprise-product-answer",
+    "c3274112ed041",
+    "mammoth",
+    "copy",
+    "growth",
+    "live",
+    "pyq",
+    "qc",
+    "sifu",
+    "trans",
+    "video",
+    "xhs",
+    "gzh",
+    "interview",
+    "ip",
+    "method",
+    "niche",
+    "sell",
+    "boss",
+    "data",
+    "spy"
+  ],
+  "hasData": true,
+  "hasSpy": true,
+  "hasBoss": true,
+  "cards": [
+    {
+      "key": "boss",
+      "aria": "开始对话 猛犸大总管",
+      "text": "猛 猛犸大总管 总控编排 · 单层委派专科智能体 通用 版本 2 开始对话",
+      "versionLabel": "2"
+    },
+    {
+      "key": "data",
+      "aria": "开始对话 数据分析师",
+      "text": "数 数据分析师 经营表格洞察 · 确定性汇总与异常 通用 版本 2 开始对话",
+      "versionLabel": "2"
+    },
+    {
+      "key": "spy",
+      "aria": "开始对话 竞品情报官",
+      "text": "竞 竞品情报官 公开信息竞品对比 · 带来源与访问时间 通用 版本 1 开始对话",
+      "versionLabel": "1"
+    }
+  ]
+}

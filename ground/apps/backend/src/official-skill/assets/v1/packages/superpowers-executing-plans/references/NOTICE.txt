@@ -1,0 +1,5 @@
+Source: https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/executing-plans/SKILL.md (git-blob:b51d97d2cc4c2ecc5eabecf27e499aa8c933efac)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=1
+Original path: plugins/superpowers/skills/executing-plans
+No third-party scripts are executed or shipped in this managed package.

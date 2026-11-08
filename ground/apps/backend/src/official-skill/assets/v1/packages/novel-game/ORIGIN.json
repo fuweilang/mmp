@@ -1,0 +1,20 @@
+{
+  "key": "novel-game",
+  "name": "互动小说游戏",
+  "summary": ">-",
+  "category": "content",
+  "userCategoryLabel": "中文写作/内容",
+  "references": [
+    "references/README.md",
+    "references/README.zh.md"
+  ],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "modelstudioai",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/novel-game",
+    "immutableRef": "github:modelstudioai/skills@main:skills/novel-game#fb4a66023d59"
+  },
+  "adaptation": "strip-scripts; stripped=0; dropped=0"
+}

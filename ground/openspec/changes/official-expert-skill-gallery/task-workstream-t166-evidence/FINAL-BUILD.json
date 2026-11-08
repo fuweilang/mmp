@@ -1,0 +1,844 @@
+[
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/core/session/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.65
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-session",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 1.33
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/core/tools/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.41
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-tools",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 1.05
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/session/session-persistence/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.48
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-session-persistence",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 1.07
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/session/session-persistence-jsonl/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.42
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-session-persistence-jsonl",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 1.05
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/workspace/workspace/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.38
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-workspace",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 1.07
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/api/session-controller/tsconfig.host.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.53
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-api-session-controller",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 1.08
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/api/session-controller/tsconfig.client.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.41
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/api/session-controller",
+    "exitCode": 0,
+    "seconds": 0.14
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/api/workspace-controller/tsconfig.host.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.76
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-api-workspace-controller",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 1.07
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/api/workspace-controller/tsconfig.client.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.33
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/api/workspace-controller",
+    "exitCode": 0,
+    "seconds": 0.12
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/preset/official-agent-gallery/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.5
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-official-agent-gallery",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 1.14
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/experimental/liveshare/tsconfig.host.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.61
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--filter",
+      "@mammoth-ai/mmp-experimental-liveshare",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 1.14
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/experimental/liveshare/tsconfig.client.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.74
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/experimental/liveshare",
+    "exitCode": 0,
+    "seconds": 0.14
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-conversation/tsconfig.host.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.31
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-conversation/tsconfig.client.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.71
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-conversation",
+    "exitCode": 0,
+    "seconds": 0.24
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-workspace/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.66
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-workspace",
+    "exitCode": 0,
+    "seconds": 0.18
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-official-agent-gallery/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.6
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-official-agent-gallery",
+    "exitCode": 0,
+    "seconds": 0.13
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-agent-preset/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.65
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-agent-preset",
+    "exitCode": 0,
+    "seconds": 0.14
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings/tsconfig.host.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.31
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings/tsconfig.client.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.61
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings",
+    "exitCode": 0,
+    "seconds": 0.13
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings-general/tsconfig.host.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.37
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings-general/tsconfig.client.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.91
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings-general",
+    "exitCode": 0,
+    "seconds": 0.13
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-sidebar/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.76
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-sidebar",
+    "exitCode": 0,
+    "seconds": 0.12
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-sidebar-terminal/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.59
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-sidebar-terminal",
+    "exitCode": 0,
+    "seconds": 0.18
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings-account/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.68
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings-account",
+    "exitCode": 0,
+    "seconds": 0.17
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-theme/tsconfig.host.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.35
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-theme/tsconfig.client.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.54
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-theme",
+    "exitCode": 0,
+    "seconds": 0.15
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-reference/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.82
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-reference",
+    "exitCode": 0,
+    "seconds": 0.16
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-model-selection/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.69
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-model-selection",
+    "exitCode": 0,
+    "seconds": 0.15
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-sidebar-files/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.8
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-sidebar-files",
+    "exitCode": 0,
+    "seconds": 0.24
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-trajectory/tsconfig.host.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.56
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-trajectory/tsconfig.client.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.76
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-trajectory",
+    "exitCode": 0,
+    "seconds": 0.18
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-subagent/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.7
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-subagent",
+    "exitCode": 0,
+    "seconds": 0.16
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings-subagent/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.67
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings-subagent",
+    "exitCode": 0,
+    "seconds": 0.19
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings-plugin-inventory/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.79
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-settings-plugin-inventory",
+    "exitCode": 0,
+    "seconds": 0.15
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-commands/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.72
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-commands",
+    "exitCode": 0,
+    "seconds": 0.16
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-permission-presets/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.71
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-permission-presets",
+    "exitCode": 0,
+    "seconds": 0.14
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-entry-customization/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.69
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-entry-customization",
+    "exitCode": 0,
+    "seconds": 0.16
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-sidebar-right/tsconfig.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.6
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-sidebar-right",
+    "exitCode": 0,
+    "seconds": 0.15
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-sidebar-browser/tsconfig.host.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.29
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsc",
+      "-p",
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-sidebar-browser/tsconfig.client.json"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent",
+    "exitCode": 0,
+    "seconds": 0.57
+  },
+  {
+    "command": [
+      "/Users/fuweilang/Documents/code/mmp/mammoth-agent/node_modules/.bin/tsdown",
+      "--env.MMP_BUILD_FACE",
+      "client",
+      "--no-clean",
+      "--logLevel",
+      "error"
+    ],
+    "cwd": "/Users/fuweilang/Documents/code/mmp/mammoth-agent/packages/client/ui-sidebar-browser",
+    "exitCode": 0,
+    "seconds": 0.19
+  }
+]

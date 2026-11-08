@@ -30,6 +30,15 @@ export function detectClientOs(): 'mac' | 'win' | 'other' {
   return 'other'
 }
 
+/** Choose the desktop handler from the Web page's hostname.
+ * @param hostname - Browser hostname without the port.
+ * @returns The development or installed desktop launch URL.
+ */
+export function clientLaunchUrl(hostname: string): string {
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(hostname)
+  return local ? 'mmp-dev://open' : 'mmp://open'
+}
+
 export function clientDownloadUrl(platform: ClientPlatform): string {
   return `${CLIENT_FILES[platform]}?v=${Date.now()}`
 }

@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/close-management/SKILL.md (git-blob:f302f6e3b02f31af03c0d32972174590ddad608c)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: finance/skills/close-management
+No third-party scripts are executed or shipped in this managed package.

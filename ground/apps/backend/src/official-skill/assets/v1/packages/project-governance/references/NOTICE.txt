@@ -1,0 +1,4 @@
+Source: github:trae-community/trae-skills@main:skills/project-governance#d276b911df97
+License: MIT
+Adaptation: strip-scripts; stripped=1; dropped=0
+No scripts shipped.

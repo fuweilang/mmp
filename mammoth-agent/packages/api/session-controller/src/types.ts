@@ -318,7 +318,17 @@ export interface SessionForkValue {
 }
 
 /** Session prompt request. */
+/** Complete next-send catalog selection; null removes, omission is legacy protocol. */
+export interface TaskCatalogSelection {
+  readonly protocol: 1
+  readonly selectionVersion: number
+  readonly expertRef: { readonly id: string; readonly versionId: string } | null
+  readonly skillRef: { readonly id: string; readonly revision: number } | null
+}
+
 export interface SessionPromptRequest {
+  readonly catalogSelection?: TaskCatalogSelection
+
   /** Client-minted identity persisted on the exact accepted user message. */
   readonly requestId: SessionRequestId
   readonly sessionId: SessionId
@@ -704,3 +714,10 @@ export type SessionProjectionValue = JsonValue
 
 /** Application metadata returned by the serving desktop for one file. */
 export type SessionWorkspacePathApplication = NativeFileApplication
+
+/** Host-only lifecycle capability: each creator disposes only handles it actually owns. */
+declare module '@mammoth-ai/cordis' {
+  interface Events {
+    'task/dispose-owned'(sessionId: SessionId): Promise<void>
+  }
+}

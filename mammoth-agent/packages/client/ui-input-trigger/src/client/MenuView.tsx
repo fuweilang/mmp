@@ -163,6 +163,7 @@ export function MenuView({ menu, headers, onPick, onCrumb, onHover, onDismiss, t
                         type="button"
                         role="option"
                         aria-selected={active}
+                        aria-checked={item.checked}
                         className={clsx(css.item, active && css.active)}
                         // mousedown, not click: the textarea keeps focus (combobox
                         // pattern) — preventing default stops the focus steal, and the
@@ -183,6 +184,7 @@ export function MenuView({ menu, headers, onPick, onCrumb, onHover, onDismiss, t
                               : <item.icon size={14} />}
                           </span>
                         )}
+                        {item.checked !== undefined && <span aria-hidden className={css.itemIcon}>{item.checked ? '✓' : '□'}</span>}
                         <span className={css.itemName}>{item.label ?? item.name}</span>
                         {item.label !== undefined && item.label.toLowerCase() !== item.name.toLowerCase() && (
                           <span className={css.itemAlias}>{item.name}</span>

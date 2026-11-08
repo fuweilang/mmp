@@ -8,10 +8,19 @@ import type {} from '@mammoth-ai/mmp-deepseek-account'
 import { Config, resolveGroundOrigin } from './config.ts'
 import { LlmError } from '@mammoth-ai/mmp-llm'
 import { GroundLlmAdapter } from './adapter.ts'
+import { GroundRequestAttribution } from './attribution.ts'
 
 export { Config } from './config.ts'
+export type { GroundOfficialAttribution } from './attribution.ts'
 export const name = 'llm-ground'
 export const inject = ['llm']
+
+declare module '@mammoth-ai/cordis' {
+  interface Context {
+    /** Session usage attribution shared with official Agent compositions. */
+    groundRequestAttribution: GroundRequestAttribution
+  }
+}
 
 const LOG = '[llm-ground]'
 
@@ -23,11 +32,14 @@ export function apply(ctx: Context, config: Config): void {
   const providerId = config.providerId.trim() || 'mammoth-ground'
   const displayName = config.displayName.trim() || '猛犸云端'
 
+  const attribution = new GroundRequestAttribution()
+  ctx.provide('groundRequestAttribution', attribution)
   const adapter = new GroundLlmAdapter({
     providerId,
     displayName,
     origin,
     account: () => ctx.get('deepseekAccount'),
+    officialFor: sessionId => attribution.officialFor(sessionId),
   })
 
   // Cloud route only: do not register as configurable (no BYOK / settings key form).

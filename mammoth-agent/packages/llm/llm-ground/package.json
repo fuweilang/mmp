@@ -16,6 +16,7 @@
   },
   "files": [
     "lib/index.js",
+    "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -27,6 +28,7 @@
     "@mammoth-ai/cordis-plugin-loader": "workspace:~",
     "@mammoth-ai/mmp-llm": "workspace:*",
     "@mammoth-ai/mmp-deepseek-account": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
     "@mammoth-ai/mmp-brand": "workspace:*"
   },
   "devDependencies": {
@@ -34,6 +36,7 @@
     "@mammoth-ai/cordis-plugin-loader": "workspace:~",
     "@mammoth-ai/mmp-llm": "workspace:*",
     "@mammoth-ai/mmp-deepseek-account": "workspace:*",
+    "@mammoth-ai/mmp-session": "workspace:*",
     "@mammoth-ai/mmp-brand": "workspace:*"
   }
 }

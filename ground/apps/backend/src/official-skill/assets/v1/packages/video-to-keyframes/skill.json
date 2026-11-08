@@ -1,0 +1,18 @@
+{
+  "key": "video-to-keyframes",
+  "name": "video-to-keyframes",
+  "description": "Extracts video frames, detects cuts/segments, selects candidate keyframes, and generates review HTML galleries. Invoke when users ask for k…",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/requirements.txt"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

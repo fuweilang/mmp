@@ -1,0 +1,15 @@
+{
+  "key": "industry-ops-runbook",
+  "name": "操作手册编写",
+  "description": "将已确认业务流程转为清晰的操作步骤与升级机制。",
+  "entry": "SKILL.md",
+  "category": "consulting",
+  "references": [
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "t155CodeWritten": false,
+  "evidence": "t155 stopped after read-only commands; original button/prefix parser/style still present on fresh read. No reversal required.",
+  "sourceHashes": {
+    "packages/client/ui-conversation/src/client/input/facade.ts": "1c4b116eeb6db4d9f7689a54a47412da085b543a189e00ad16e7a94c5042cd95",
+    "packages/client/ui-conversation/src/client/input/hub.ts": "6ed49f1fba9208d93acc45d0f1915ad97da10fdc64ed099d8a16e0abae2f984f",
+    "packages/client/ui-conversation/src/client/skeleton/InputBar.tsx": "324ad0c96f5588cbc2cea5f5e9e9c8649c4f97987c351f2e93d3176a9d7b761b",
+    "packages/client/ui-conversation/src/client/input/enterprise-knowledge.ts": "be5e6ffbe8f51f17e5b9fad57e8796d431be8a1aa2ff1b620ecfa367d24ca5f9",
+    "packages/client/ui-conversation/src/client/skeleton/InputBar.module.css": "0137bf254a6fe2958ac55ff240a72e4f741cb13204e79c6455bda4165c181934"
+  }
+}

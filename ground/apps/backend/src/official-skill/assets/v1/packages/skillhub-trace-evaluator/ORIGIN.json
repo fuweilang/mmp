@@ -1,0 +1,10 @@
+{
+  "key": "skillhub-trace-evaluator",
+  "name": "技能轨迹评估",
+  "summary": "按 TRACE 框架（Trust / Reliability / Adaptability / Convention / Effectiveness，5 维 15 子项）评测 Skill 包质量。当用户说『用 TRACE 评测』『评一下这个 skill』『skill 质量打分』…",
+  "license": "MIT",
+  "source": "github:Tencent/skillhub@main:skills/skillhub-trace-evaluator",
+  "adaptation": "strip-scripts=1",
+  "userCategoryLabel": "通用协作",
+  "category": "expertise"
+}

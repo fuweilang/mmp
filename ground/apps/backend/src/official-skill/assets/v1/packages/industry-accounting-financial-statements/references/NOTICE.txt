@@ -1,0 +1,5 @@
+Source: https://github.com/anthropics/knowledge-work-plugins/blob/main/finance/skills/financial-statements/SKILL.md (git-blob:5a9a8fc83fa68280759541dbdf6703d1b0cac5de)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: finance/skills/financial-statements
+No third-party scripts are executed or shipped in this managed package.

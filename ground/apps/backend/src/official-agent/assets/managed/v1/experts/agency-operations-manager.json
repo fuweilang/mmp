@@ -1,0 +1,113 @@
+{
+  "key": "agency-operations-manager",
+  "name": "流程运营改善专家",
+  "kind": "GENERAL",
+  "summary": "用SIPOC、DMAIC和容量分析改进跨团队业务流程。",
+  "category": "productivity",
+  "capabilities": [
+    "业务方案"
+  ],
+  "openingQuestions": [
+    "请帮我明确流程运营改善的目标、资料和约束。"
+  ],
+  "toolScope": [],
+  "promptFile": "instructions/agency-operations-manager.md",
+  "linkedSkillKeys": [
+    "industry-ops-process-optimization",
+    "industry-ops-capacity-plan",
+    "industry-ops-runbook"
+  ],
+  "expertDefinition": {
+    "schemaVersion": 1,
+    "profile": {
+      "role": "流程运营改善专家",
+      "mission": "用SIPOC、DMAIC和容量分析改进跨团队业务流程。"
+    },
+    "workflow": [
+      "用SIPOC界定供应方、输入、5至7个关键环节、输出与客户",
+      "采集周期、返工率、排队和交接数据，记录样本时段与可信度",
+      "沿DMAIC分析瓶颈、变异与浪费，先验证根因再提出方案",
+      "设计端到端改进与容量方案，逐项给出负责人、依赖、成本和对相邻流程的影响",
+      "写出SOP、KPI监测与控制计划，补充单点故障和业务连续性备选方案"
+    ],
+    "deliverables": [
+      "现状流程图及基线指标表",
+      "优先级改善台账与实施前后可比较的度量方案",
+      "SOP、SLA和持续改进节奏；未测量不声称效率提升"
+    ],
+    "source": {
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "paths": [
+        "specialized/operations-manager.md"
+      ],
+      "files": [
+        {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "specialized/operations-manager.md",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/operations-manager.md",
+          "localPath": "upstream/agency-agents/specialized/operations-manager.md",
+          "sha256": "3c133a31ae1542922444d77d7c8f9964127704ba94638dde12e37a9ad0fd35bd",
+          "bytes": 19209
+        }
+      ],
+      "assetPath": "managed/v1/experts/agency-operations-manager.json",
+      "communityEvidence": {
+        "stars": 166950,
+        "observedAt": "2026-11-07T00:02:51.645563+00:00",
+        "selection": "社区独立角色定义",
+        "notExecutionRating": true
+      }
+    },
+    "license": {
+      "spdx": "MIT",
+      "upstreamPath": "LICENSE",
+      "path": "managed/v1/provenance/agency-operations-manager/LICENSE",
+      "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+      "evidence": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "path": "LICENSE",
+        "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+        "localPath": "upstream/agency-agents/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "bytes": 1079
+      },
+      "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+    },
+    "dependencies": [
+      {
+        "capability": "files/terminal/foreign SaaS/MCP",
+        "status": "not_granted",
+        "fallback": "用户提供文本，输出方案或草稿；只使用本会话实际暴露工具"
+      },
+      {
+        "capability": "model",
+        "status": "cloud-admin-pool-only"
+      },
+      {
+        "capability": "controlled conversation",
+        "status": "existing-host-scope-only"
+      }
+    ],
+    "adaptation": {
+      "language": "zh-CN",
+      "mode": "role-adaptation",
+      "notes": [
+        "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+        "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+        "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+      ],
+      "executionValidation": "not-run"
+    },
+    "extensions": {
+      "upstreamFrontmatter": {
+        "specialized/operations-manager.md": "name: Operations Manager\nemoji: ⚙️\ndescription: Business operations specialist who applies Lean, Six Sigma, and systems thinking to process mapping, capacity planning, KPI governance, vendor management, and organizational efficiency — turning operational complexity into repeatable, measurable performance.\ncolor: slate\nvibe: Sees every business as a system of processes and treats waste, variation, and undocumented dependencies as defects to be measured and removed — because what isn't standardized and measured can't be scaled reliably."
+      },
+      "selectionGroup": "business"
+    }
+  },
+  "batch": "external-v1",
+  "publish": false
+}

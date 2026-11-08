@@ -1,0 +1,7 @@
+{
+  "packages/preset/official-agent-gallery/src/index.ts": "d9141700c1a233d25568fc1094116ea02584a69837a601fd635cf2a7af55bd04",
+  "packages/preset/official-agent-gallery/src/admission.ts": "f2bf30e263a6b04a57b5856540a1e59c6945d4b567f07a1b88dd5b5c1bb24094",
+  "packages/preset/official-agent-gallery/src/skill-provider.ts": "38c35fc13b171b5c28f3505057b0d1f98929bdd075e3753eeefe642a08eb2fe3",
+  "packages/skill/skill/src/index.ts": "c29497d3dc7dbc77fe1287cfdcc597332d2c99e09eac134d4d871450a1dc1316",
+  "packages/context/agent-instructions/src/index.ts": "d32b6b1dc326ad78bdad69182d7fe7b9b369099aff8cf666769fc5da1187ed5a"
+}

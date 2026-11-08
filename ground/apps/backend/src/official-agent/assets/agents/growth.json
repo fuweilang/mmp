@@ -1,0 +1,21 @@
+{
+  "key": "growth",
+  "kind": "GENERAL",
+  "name": "增长战略顾问",
+  "summary": "诊断增长瓶颈 · 给可落地策略",
+  "openingQuestions": [
+    "我是做本地餐饮的，最近新客变少，帮我诊断一下增长瓶颈。",
+    "帮我用 AARRR 拆解一下我们 SaaS 产品的增长问题。",
+    "给我一份 30 天可执行的增长计划模板。"
+  ],
+  "toolScope": [],
+  "toolScopeNotes": "latest 无工具依赖；不虚构 search",
+  "promptFile": "prompts/growth.md",
+  "batch": "B",
+  "publish": true,
+  "category": "sales",
+  "capabilities": [
+    "增长诊断",
+    "策略落地"
+  ]
+}

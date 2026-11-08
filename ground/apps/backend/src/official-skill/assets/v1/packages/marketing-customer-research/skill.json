@@ -1,0 +1,24 @@
+{
+  "key": "marketing-customer-research",
+  "name": "客户需求研究",
+  "description": "基于已提供访谈和市场材料提炼需求与购买因素。",
+  "entry": "SKILL.md",
+  "category": "business",
+  "references": [
+    {
+      "path": "references/evals/evals.json"
+    },
+    {
+      "path": "references/interviews-and-surveys.md"
+    },
+    {
+      "path": "references/source-guides.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

@@ -126,9 +126,10 @@ interface FileCommandRegistry {
   register(contribution: {
     name: string
     label(): string
-    icon: typeof IconPaperclipOutlineRegular
+    icon?: typeof IconPaperclipOutlineRegular
+    checked?(session: { sessionId: SessionId }): boolean
     available(session: { sessionId: SessionId }): boolean
-    ui: { kind: 'action'; run(session: { sessionId: SessionId }): void }
+    ui: { kind: 'action'; preserveDraftOnMenu?: true; run(session: { sessionId: SessionId }): void }
   }): () => void
 }
 
@@ -311,6 +312,21 @@ export function apply(ctx: Context, config: Config = Config({})): void {
       available: session => inputHub.canPickFiles(session.sessionId),
       ui: { kind: 'action', run: (session) => { inputHub.pickFiles(session.sessionId) } },
     }), 'ui-conversation: File action')
+    scope.effect(() => commands.register({
+      name: 'company-materials',
+      label: () => t('input.enterpriseKnowledge'),
+      checked: session => inputHub.shell(session.sessionId).snapshot.enterpriseKnowledge === true,
+      available: session => {
+        const binding = sessions.binding(session.sessionId)
+        if (binding === undefined || binding.session.getSnapshot().removed || binding.session.getSnapshot().subagent !== null) return false
+        return inputHub.shell(session.sessionId).snapshot.phase === 'plain'
+          && composerBlocks.storeFor(session.sessionId).getSnapshot() === undefined
+      },
+      ui: { kind: 'action', preserveDraftOnMenu: true, run: session => {
+        const shell = inputHub.shell(session.sessionId)
+        shell.setEnterpriseKnowledge(shell.snapshot.enterpriseKnowledge !== true)
+      } },
+    }), 'ui-conversation: Company materials option')
   })
 
   // Conversation assembly and input share the Session binding lifecycle. The
@@ -381,6 +397,8 @@ export function apply(ctx: Context, config: Config = Config({})): void {
             if (draft.text !== '') {
               next.setDraft(draft)
               from.setDraft('')
+              from.setEnterpriseKnowledge(false)
+              if (draft.catalogSelection !== undefined) from.setCatalogSelection({ protocol: 1, selectionVersion: draft.catalogSelection.selectionVersion + 1, expertRef: null, skillRef: null })
             }
             if (attachmentIds.length > 0) {
               for (const id of attachmentIds) from.removeAttachment(id)

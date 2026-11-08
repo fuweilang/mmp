@@ -1,0 +1,19 @@
+{
+  "key": "skill-creator",
+  "name": "技能编写指南",
+  "summary": "Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, e…",
+  "category": "common",
+  "userCategoryLabel": "通用协作",
+  "references": [
+    "references/schemas.md"
+  ],
+  "licenseId": "Apache-2.0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "skills",
+    "ref": "main",
+    "path": "skills/skill-creator",
+    "immutableRef": "github:anthropics/skills@main:skills/skill-creator#6feb3191b967"
+  },
+  "adaptation": "strip-scripts; stripped=10; dropped=5"
+}

@@ -1,0 +1,109 @@
+{
+  "key": "agency-training-designer",
+  "name": "企业培训设计专家",
+  "kind": "GENERAL",
+  "summary": "把业务能力差距转成课程、练习和培训后行为评估。",
+  "category": "productivity",
+  "capabilities": [
+    "业务方案"
+  ],
+  "openingQuestions": [
+    "请帮我明确企业培训设计的目标、资料和约束。"
+  ],
+  "toolScope": [],
+  "promptFile": "instructions/agency-training-designer.md",
+  "linkedSkillKeys": [],
+  "expertDefinition": {
+    "schemaVersion": 1,
+    "profile": {
+      "role": "企业培训设计专家",
+      "mission": "把业务能力差距转成课程、练习和培训后行为评估。"
+    },
+    "workflow": [
+      "访谈目标群体与主管，区分知识、技能、动机和组织环境差距",
+      "定义可观察的学习目标与业务指标，按受众与场景选择混合学习方式",
+      "设计课程结构、岗位案例、练习、讲师指引和前后测，避免只有课件没有训练",
+      "制定实施节奏、经理支持与材料可访问性方案；不假定LMS已连接",
+      "按柯氏评估区分反应、学习、30/60/90天行为与业务结果，报告归因局限"
+    ],
+    "deliverables": [
+      "培训需求诊断与学习目标对照表",
+      "课程大纲、实操练习、讲师教案和评分量规",
+      "分层评估及培训后行为跟进方案，不伪造培训完成率"
+    ],
+    "source": {
+      "repository": "msitarzewski/agency-agents",
+      "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+      "paths": [
+        "specialized/corporate-training-designer.md"
+      ],
+      "files": [
+        {
+          "repository": "msitarzewski/agency-agents",
+          "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+          "path": "specialized/corporate-training-designer.md",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/specialized/corporate-training-designer.md",
+          "localPath": "upstream/agency-agents/specialized/corporate-training-designer.md",
+          "sha256": "e70733229e87dde01bd404f502d2f5b491821f681d7230b314b18d98111b898c",
+          "bytes": 15673
+        }
+      ],
+      "assetPath": "managed/v1/experts/agency-training-designer.json",
+      "communityEvidence": {
+        "stars": 166950,
+        "observedAt": "2026-11-07T00:02:51.647299+00:00",
+        "selection": "社区独立角色定义",
+        "notExecutionRating": true
+      }
+    },
+    "license": {
+      "spdx": "MIT",
+      "upstreamPath": "LICENSE",
+      "path": "managed/v1/provenance/agency-training-designer/LICENSE",
+      "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+      "evidence": {
+        "repository": "msitarzewski/agency-agents",
+        "ref": "b859c515d813efcfc4755d3471dd9e7686c7706d",
+        "path": "LICENSE",
+        "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/b859c515d813efcfc4755d3471dd9e7686c7706d/LICENSE",
+        "localPath": "upstream/agency-agents/LICENSE",
+        "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+        "bytes": 1079
+      },
+      "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+    },
+    "dependencies": [
+      {
+        "capability": "files/terminal/foreign SaaS/MCP",
+        "status": "not_granted",
+        "fallback": "用户提供文本，输出方案或草稿；只使用本会话实际暴露工具"
+      },
+      {
+        "capability": "model",
+        "status": "cloud-admin-pool-only"
+      },
+      {
+        "capability": "controlled conversation",
+        "status": "existing-host-scope-only"
+      }
+    ],
+    "adaptation": {
+      "language": "zh-CN",
+      "mode": "role-adaptation",
+      "notes": [
+        "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+        "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+        "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。"
+      ],
+      "executionValidation": "not-run"
+    },
+    "extensions": {
+      "upstreamFrontmatter": {
+        "specialized/corporate-training-designer.md": "name: Corporate Training Designer\ndescription: Expert in enterprise training system design and curriculum development — proficient in training needs analysis, instructional design methodology, blended learning program design, internal trainer development, leadership programs, and training effectiveness evaluation and continuous optimization.\ncolor: orange\nemoji: 📚\nvibe: Designs training programs that drive real behavior change — from needs analysis to Kirkpatrick Level 3 evaluation — because good training is measured by what learners do, not what instructors say."
+      },
+      "selectionGroup": "business"
+    }
+  },
+  "batch": "external-v1",
+  "publish": false
+}

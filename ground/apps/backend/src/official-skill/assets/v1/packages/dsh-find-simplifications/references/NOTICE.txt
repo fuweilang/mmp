@@ -1,0 +1,5 @@
+Source: https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/skills/dsh-find-simplifications/SKILL.md (git-blob:d1ad560b81b58cf7c6a8ff1456c0690de59e2069)
+License: MIT
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=0
+Original path: .agents/skills/dsh-find-simplifications
+No third-party scripts are executed or shipped in this managed package.

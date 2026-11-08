@@ -1,3 +1,4 @@
+import type { CatalogDraftSelection } from './contract/draft-editor.ts'
 /**
  * Scope-addressed conversation send, cancel, and history orchestration.
  *
@@ -238,7 +239,10 @@ export class ConversationController extends Service implements IConversation {
     mode: InputSubmitMode,
     signal?: AbortSignal,
     accept?: () => void,
+    catalogSelection?: CatalogDraftSelection,
   ): Promise<SubmitOutcome> {
+    // Catalog protocol is a new immutable attempt, never a mutation of the running turn.
+    if(catalogSelection!==undefined)mode='queue'
     const attachments = this.resolveDraftAttachments(attachmentIds)
     if (attachments.length !== attachmentIds.length) {
       throw new Error('conversation.sendSession: one or more draft attachments are no longer available')
@@ -306,7 +310,7 @@ export class ConversationController extends Service implements IConversation {
     }
     // An Inbox row can show the acceptance before the receipt; a receipt that fails afterwards changes
     // nothing here because the Host already holds the message.
-    const result = await Promise.race([session.prompt(content, mode, signal, submission.requestId), acceptance.promise])
+    const result = await Promise.race([session.prompt(content, mode, signal, submission.requestId, catalogSelection===undefined?undefined:{protocol:1,selectionVersion:catalogSelection.selectionVersion,expertRef:catalogSelection.expertRef?{id:catalogSelection.expertRef.id,versionId:catalogSelection.expertRef.versionId}:null,skillRef:catalogSelection.skillRef?{id:catalogSelection.skillRef.id,revision:catalogSelection.skillRef.revision}:null}), acceptance.promise])
     if (result !== undefined && !result.ok) return { kind: 'error' }
     ownership.accepted = true
     // An accepted prompt whose echo already retired unobserved, as when its queue entry was removed.

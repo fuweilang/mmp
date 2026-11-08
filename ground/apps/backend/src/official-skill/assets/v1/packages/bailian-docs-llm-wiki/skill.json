@@ -1,0 +1,21 @@
+{
+  "key": "bailian-docs-llm-wiki",
+  "name": "百炼文档百科",
+  "description": ">-",
+  "entry": "SKILL.md",
+  "category": "common",
+  "references": [
+    {
+      "path": "references/README.md"
+    },
+    {
+      "path": "references/llms.txt"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

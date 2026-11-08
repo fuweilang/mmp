@@ -1,0 +1,54 @@
+{
+  "key": "dsh-doc",
+  "name": "DSH 技术文档维护",
+  "description": "指导框架文档、示例与实际接口保持一致。",
+  "entry": "SKILL.md",
+  "category": "expertise",
+  "references": [
+    {
+      "path": "references/metadata-links-i18n.md"
+    },
+    {
+      "path": "references/review.md"
+    },
+    {
+      "path": "references/structure-hierarchy.md"
+    },
+    {
+      "path": "references/style.md"
+    },
+    {
+      "path": "references/website-sync.md"
+    },
+    {
+      "path": "references/templates/package-bundle.md"
+    },
+    {
+      "path": "references/templates/package-group.md"
+    },
+    {
+      "path": "references/templates/package-library.md"
+    },
+    {
+      "path": "references/templates/package-reference.md"
+    },
+    {
+      "path": "references/templates/persistence-change.md"
+    },
+    {
+      "path": "references/templates/persistence-format.md"
+    },
+    {
+      "path": "references/templates/persistence-release.md"
+    },
+    {
+      "path": "references/templates/upgrade-guide.md"
+    },
+    {
+      "path": "references/LICENSE.txt"
+    },
+    {
+      "path": "references/NOTICE.txt"
+    }
+  ]
+}

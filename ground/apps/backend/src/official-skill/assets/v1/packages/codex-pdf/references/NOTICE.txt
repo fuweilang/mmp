@@ -1,0 +1,5 @@
+Source: https://github.com/openai/skills/blob/main/skills/.curated/pdf/SKILL.md (git-blob:fd5d56058f10202e4f50a30bc2906f39696024a1)
+License: Apache-2.0
+Adaptation: instructions-only; no scripts, secrets, or tool installation; omittedFiles=2
+Original path: skills/.curated/pdf
+No third-party scripts are executed or shipped in this managed package.

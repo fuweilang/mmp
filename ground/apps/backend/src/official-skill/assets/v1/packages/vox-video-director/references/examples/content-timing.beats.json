@@ -1,0 +1,61 @@
+{
+  "project": "content-timing-demo",
+  "topic": "Why local-first software matters",
+  "language": "en",
+  "aspect": "9:16",
+  "style": "collage",
+  "provider": "bailian_cli",
+  "theme": "newsprint-editorial",
+  "arc": "hook_payoff",
+  "timing_mode": "content",
+  "timing": {
+    "min_segment": 5,
+    "max_segment": 10,
+    "tail": 0.45
+  },
+  "voice": {
+    "voice_id": "loongandy_v3",
+    "language": "en",
+    "speed": 1.0
+  },
+  "beats": [
+    {
+      "id": 1,
+      "title_cn": "",
+      "title_en": "YOUR DATA LEFT",
+      "bg": "signal red",
+      "feel": "urgent",
+      "hook": "urgent_warning",
+      "narration": "Your favorite app can disappear. Your data should not disappear with it.",
+      "shots": [
+        {
+          "id": "a",
+          "title": true,
+          "shot_size": "WIDE",
+          "camera_move": "push_in",
+          "scene": "a cloud app card vanishes while a folder of user files remains",
+          "element_motion": "the app card tears away, files slide into a local folder, warning scraps flutter"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title_cn": "",
+      "title_en": "KEEP IT LOCAL",
+      "bg": "optimistic golden yellow",
+      "feel": "confident, practical",
+      "hook": "payoff",
+      "narration": "Local-first software keeps a usable copy on your device, so work continues offline and your files remain portable.",
+      "shots": [
+        {
+          "id": "a",
+          "title": true,
+          "shot_size": "MEDIUM",
+          "camera_move": "static",
+          "scene": "a laptop holding a durable file archive with offline and export badges",
+          "element_motion": "the archive locks into place, offline badge lights, export cards fan outward and settle"
+        }
+      ]
+    }
+  ]
+}

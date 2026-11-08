@@ -1,0 +1,22 @@
+{
+  "key": "data",
+  "kind": "GENERAL",
+  "name": "数据分析师",
+  "summary": "经营表格洞察 · 确定性汇总与异常",
+  "openingQuestions": [
+    "我粘一段 CSV，帮我看各渠道转化率和异常值。",
+    "没有数据时，你需要我提供什么格式？",
+    "按城市分组，汇总销售额和订单数该怎么做？"
+  ],
+  "toolScope": [
+    "tabular_analyze"
+  ],
+  "toolScopeNotes": "服务端确定性表格分析；不读企业库/数据库",
+  "promptFile": "prompts/data.md",
+  "batch": "D",
+  "publish": true,
+  "category": "analytics",
+  "capabilities": [
+    "经营洞察"
+  ]
+}

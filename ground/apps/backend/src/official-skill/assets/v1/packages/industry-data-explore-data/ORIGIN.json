@@ -1,0 +1,47 @@
+{
+  "key": "industry-data-explore-data",
+  "name": "探索性数据分析",
+  "summary": "梳理数据结构、分布、缺失值与后续分析问题。",
+  "category": "analytics",
+  "userCategoryLabel": "数据分析",
+  "license": "Apache-2.0",
+  "adaptation": "instructions-only; no scripts, secrets, or tool installation; omittedFiles=0",
+  "source": {
+    "owner": "anthropics",
+    "repo": "knowledge-work-plugins",
+    "ref": "main",
+    "path": "data/skills/explore-data",
+    "treeSha": "ab4cb1cd383b4eb87383be8cf4e70cb5b2a2348d",
+    "skillBlobSha": "f1e7032d0abee77903fc3abbfdc7646e383d4993",
+    "immutableRef": "https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/explore-data/SKILL.md (git-blob:f1e7032d0abee77903fc3abbfdc7646e383d4993)",
+    "licenseEvidence": [
+      {
+        "path": "data/LICENSE",
+        "blobSha": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+        "scope": "nearest explicit ancestor license"
+      }
+    ],
+    "communityEvidence": {
+      "full_name": "anthropics/knowledge-work-plugins",
+      "html_url": "https://github.com/anthropics/knowledge-work-plugins",
+      "stargazers_count": 34957,
+      "forks_count": 3850,
+      "pushed_at": "2026-11-06T07:25:04Z",
+      "default_branch": "main",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "observedAt": "2026-11-06T16:17:00.476Z",
+      "selection": "Upstream official skill/plugin repository; no execution validation."
+    },
+    "includedResources": [],
+    "omittedFiles": [],
+    "originalBodySha256": "df75a7a68668df015000e779203787323d0306cee8fadb48672e26125bde9f9d"
+  },
+  "officialVsAdapted": "adapted"
+}

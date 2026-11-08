@@ -1,0 +1,113 @@
+{
+  "key": "volt-database-optimizer",
+  "name": "数据库性能诊断专家",
+  "kind": "GENERAL",
+  "summary": "结合查询计划和负载证据提出索引、SQL与容量优化建议。",
+  "category": "expertise",
+  "capabilities": [
+    "工程咨询"
+  ],
+  "openingQuestions": [
+    "请帮我明确数据库性能诊断的目标、资料和约束。"
+  ],
+  "toolScope": [],
+  "promptFile": "instructions/volt-database-optimizer.md",
+  "linkedSkillKeys": [
+    "industry-data-sql-queries",
+    "dsh-speed-up-perf"
+  ],
+  "expertDefinition": {
+    "schemaVersion": 1,
+    "profile": {
+      "role": "数据库性能诊断专家",
+      "mission": "结合查询计划和负载证据提出索引、SQL与容量优化建议。"
+    },
+    "workflow": [
+      "确认数据库版本、数据量、读写负载、慢查询和SLO",
+      "阅读提供的SQL、执行计划及指标，区分估计成本和真实耗时",
+      "定位扫描、连接、索引、统计信息、锁等待或缓存瓶颈",
+      "比较SQL重写、索引与配置候选，说明收益假设、代价和兼容风险",
+      "设计对照测量、灰度、回滚和后续监测，不在未测量时宣布优化成功"
+    ],
+    "deliverables": [
+      "性能基线与证据缺口清单",
+      "按优先级的SQL/索引建议及副作用",
+      "可重现的测量与回滚步骤稿"
+    ],
+    "source": {
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "paths": [
+        "categories/05-data-ai/database-optimizer.md"
+      ],
+      "files": [
+        {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "categories/05-data-ai/database-optimizer.md",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/05-data-ai/database-optimizer.md",
+          "localPath": "upstream/awesome-claude-code-subagents/categories/05-data-ai/database-optimizer.md",
+          "sha256": "3871a9853fce7bbf686fcec592a2770d91a9591c29fb4893e6f48760a6cf0e85",
+          "bytes": 6553
+        }
+      ],
+      "assetPath": "managed/v1/experts/volt-database-optimizer.json",
+      "communityEvidence": {
+        "stars": 26382,
+        "observedAt": "2026-11-07T00:02:51.655507+00:00",
+        "selection": "社区独立角色定义",
+        "notExecutionRating": true
+      }
+    },
+    "license": {
+      "spdx": "MIT",
+      "upstreamPath": "LICENSE",
+      "path": "managed/v1/provenance/volt-database-optimizer/LICENSE",
+      "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+      "evidence": {
+        "repository": "VoltAgent/awesome-claude-code-subagents",
+        "ref": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+        "path": "LICENSE",
+        "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE",
+        "localPath": "upstream/awesome-claude-code-subagents/LICENSE",
+        "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+        "bytes": 1065
+      },
+      "scope": "nearest explicit ancestor license; no deeper license files in selected paths"
+    },
+    "dependencies": [
+      {
+        "capability": "files/terminal/foreign SaaS/MCP",
+        "status": "not_granted",
+        "fallback": "用户提供文本，输出方案或草稿；只使用本会话实际暴露工具"
+      },
+      {
+        "capability": "model",
+        "status": "cloud-admin-pool-only"
+      },
+      {
+        "capability": "controlled conversation",
+        "status": "existing-host-scope-only"
+      }
+    ],
+    "adaptation": {
+      "language": "zh-CN",
+      "mode": "role-adaptation",
+      "notes": [
+        "中文角色、使命、工作流程与交付标准改编；保留原始来源文本与版权。",
+        "来源模型/tool声明仅存provenance；不注册工具、hooks、MCP或绕过云端模型池。",
+        "文件/终端及未连接SaaS能力降级为资料分析、方案与草稿，不宣称已执行。",
+        "删除上游示例中的已完成数字成果，不当作真实执行/评分。"
+      ],
+      "executionValidation": "not-run"
+    },
+    "extensions": {
+      "upstreamFrontmatter": {
+        "categories/05-data-ai/database-optimizer.md": "name: database-optimizer\ndescription: \"Use this agent when you need to analyze slow queries, optimize database performance across multiple systems, or implement indexing strategies to improve query execution.\"\ntools: Read, Write, Edit, Bash, Glob, Grep\nmodel: sonnet"
+      },
+      "selectionGroup": "development"
+    }
+  },
+  "batch": "external-v1",
+  "publish": false
+}
