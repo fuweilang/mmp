@@ -59,9 +59,18 @@ export async function startGroundWebRouter(options: {
   const proxy = httpProxy.createProxyServer({ ws: true, xfwd: false, changeOrigin: false })
   let origin = ''
   const loginUrl = (): string => { const url = new URL('/login', ground); url.searchParams.set('next', `${origin}/`); return url.href }
-  const trusted = (req: IncomingMessage): boolean => origin !== '' && req.headers.host === new URL(origin).host
-    && (req.headers.origin === undefined || req.headers.origin === origin)
-    && req.headers['sec-fetch-site'] !== 'cross-site'
+  // The dev gateway serves this listener under Ground's own origin (`/agent`).
+  // A browser there sends Host and Origin for that origin, not for :3080.
+  // Direct loopback access to this listener stays valid. Any other host or a
+  // cross-site Origin is still refused.
+  const trusted = (req: IncomingMessage): boolean => {
+    if (origin === '') return false
+    const host = req.headers.host
+    if (host !== new URL(origin).host && host !== ground.host) return false
+    const requestOrigin = req.headers.origin
+    if (requestOrigin !== undefined && requestOrigin !== `http://${host}` && requestOrigin !== `https://${host}`) return false
+    return req.headers['sec-fetch-site'] !== 'cross-site'
+  }
   const identify = async (req: IncomingMessage): Promise<GroundWebIdentity | undefined> => {
     const token = groundWebCookie({ headers: req.headers }, options.cookieName)
     if (token === undefined) return undefined
