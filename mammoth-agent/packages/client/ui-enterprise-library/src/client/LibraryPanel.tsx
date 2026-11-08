@@ -68,6 +68,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [blocked, setBlocked] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [newOpen, setNewOpen] = useState(false)
@@ -88,12 +89,19 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   useEffect(() => {
     let current = true
     void libraryRequest(origin, 'config', 'GET', undefined, fetchImpl).then(value => {
-      const config = value as { maxFileBytes?: number; allowedExtensions?: string[] }
-      if (current && typeof config.maxFileBytes === 'number' && Array.isArray(config.allowedExtensions)) setLimits({ maxFileBytes: config.maxFileBytes, allowedExtensions: config.allowedExtensions })
-    }).catch(() => { /* Upload validates current config again and surfaces errors before sending. */ })
+      const config = value as { maxFileBytes?: number; allowedExtensions?: string[]; enabled?: boolean; message?: string }
+      if (!current) return
+      if (config.enabled === false) { setBlocked(config.message ?? t('loadError')); return }
+      setBlocked(null)
+      if (typeof config.maxFileBytes === 'number' && Array.isArray(config.allowedExtensions)) setLimits({ maxFileBytes: config.maxFileBytes, allowedExtensions: config.allowedExtensions })
+    }).catch(e => {
+      // Older Ground builds answer 403 NO_TENANT instead of a disabled config.
+      if (current && e instanceof Error && /缺少企业上下文|NO_TENANT/.test(e.message)) setBlocked('资料库属于企业能力：请先在控制台进入企业工作台，再打开资料库')
+    })
     return () => { current = false }
   }, [origin, fetchImpl])
   useEffect(() => {
+    if (blocked !== null) { setLoading(false); setItems([]); setSelected([]); return }
     const control = new AbortController()
     setLoading(true); setItems([]); setSelected([])
     void fetchLibraryPage(origin, view, query, fetchImpl, control.signal, parentId, page, filter).then(next => {
@@ -106,7 +114,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       setError(`${t('loadError')} ${e instanceof Error ? e.message : ''}`)
     } }).finally(() => { if (!control.signal.aborted) setLoading(false) })
     return () => { control.abort() }
-  }, [origin, view, query, fetchImpl, t, revision, parentId, page, filter])
+  }, [blocked, origin, view, query, fetchImpl, t, revision, parentId, page, filter])
   useEffect(() => {
     if (edit?.kind !== 'move') return
     const control = new AbortController()
@@ -214,11 +222,12 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       <header className={css.heading}>
         <div><h2>{t(view)}</h2><p>{t('panelDescription')}</p></div>
         {view !== 'trash' && <div className={css.headerActions}>
-          <Menu open={newOpen} onClose={() => { setNewOpen(false) }} portal align="end" items={[{ id: 'folder', label: t('folder'), icon: <IconFolderCloseRegular size={16} /> }, { id: 'link', label: t('link'), icon: <IconLinkOutlineRegular size={16} /> }]} onSelect={id => { setNewOpen(false); openEdit(id as 'folder' | 'link') }} anchor={<Button variant="outline" disabled={busy} aria-haspopup="menu" aria-expanded={newOpen} onClick={() => { setNewOpen(!newOpen) }}>{t('new')}<IconChevronDownOutlineRegular size={14} /></Button>} />
-          <Button variant="primary" icon={<UploadIcon />} disabled={busy} onClick={() => { setUploadTarget({ parentId }) }}>{t('upload')}</Button>
+          <Menu open={newOpen} onClose={() => { setNewOpen(false) }} portal align="end" items={[{ id: 'folder', label: t('folder'), icon: <IconFolderCloseRegular size={16} /> }, { id: 'link', label: t('link'), icon: <IconLinkOutlineRegular size={16} /> }]} onSelect={id => { setNewOpen(false); openEdit(id as 'folder' | 'link') }} anchor={<Button variant="outline" disabled={busy || blocked !== null} aria-haspopup="menu" aria-expanded={newOpen} onClick={() => { setNewOpen(!newOpen) }}>{t('new')}<IconChevronDownOutlineRegular size={14} /></Button>} />
+          <Button variant="primary" icon={<UploadIcon />} disabled={busy || blocked !== null} onClick={() => { setUploadTarget({ parentId }) }}>{t('upload')}</Button>
         </div>}
       </header>
       <p className={css.uploadHint}>{t('uploadHint')}{limits ? ` · ${fileSizeText(limits.maxFileBytes)}` : ''}</p>
+      {blocked !== null && <div role="alert" className={css.error}><span>{blocked}</span></div>}
       <div className={css.toolbar}>
         <div className={css.search}><IconSearchOutlineRegular size={18} /><Input type="search" aria-label={t('searchPlaceholder')} value={query} placeholder={t('searchPlaceholder')} onChange={e => { setQuery(e.target.value) }} /></div>
         <Menu open={filterOpen} onClose={() => { setFilterOpen(false) }} portal compact minWidthFromAnchor autoFocus align="end" selectedId={filter} listClassName={css.filterList}

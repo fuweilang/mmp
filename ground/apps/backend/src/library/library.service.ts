@@ -105,9 +105,19 @@ export class LibraryService {
   }
 
   async config(actor: Actor) {
+    // A platform account that has not entered an enterprise workbench has no tenant
+    // context. Report that state instead of failing every library request with 403,
+    // so the client can explain how to enable the library.
+    if (!actor.tenantId) return {
+      enabled: false,
+      reason: 'NO_TENANT',
+      message: '资料库属于企业能力：请先在控制台进入企业工作台，再打开资料库',
+      ...this.limitsView(),
+      usedBytes: 0,
+    };
     this.requireTenantActor(actor);
     await this.sweep(actor.tenantId);
-    return { ...this.limitsView(), usedBytes: await this.usedBytes(actor.tenantId) };
+    return { enabled: true, ...this.limitsView(), usedBytes: await this.usedBytes(actor.tenantId) };
   }
 
   async list(actor: Actor, view: LibraryView, parentId?: string | null, q?: string, flat = false, page = 1, pageSize?: number, status = 'all') {
