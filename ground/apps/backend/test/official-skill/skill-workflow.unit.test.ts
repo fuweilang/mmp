@@ -5,8 +5,16 @@ import {
   assertFreshStamp,
   candidateSkillKeys,
   packageWriteClaim,
+  planSkillDelete,
+  skillDeletePatch,
   skillEnableGaps,
   skillEnableMessage,
+  skillCanRevive,
+  skillHistoryReadable,
+  skillOfferedForNewUse,
+  skillReadDecision,
+  skillStartDecision,
+  skillVisibleInAdmin,
   zipReplaceDecision,
 } from '../../src/official-skill/skill-workflow';
 
@@ -43,5 +51,35 @@ describe('skill save and enable rules', () => {
       packageWriteClaim({ updatedAt: '2026-11-09T00:00:00.000Z', revision: 3 }, '2026-11-09T00:00:00.000Z'),
       { revision: 4 },
     );
+  });
+
+  it('hides enabled and linked skills without dropping history', () => {
+    const enabled = planSkillDelete({ enabled: true, linkedAgentCount: 2 });
+    assert.equal(enabled.allowed, true);
+    assert.equal(enabled.retainPackages, true);
+    assert.equal(enabled.retainAgentLinks, true);
+    assert.equal(enabled.retainUserHistory, true);
+    const now = new Date('2026-11-09T00:00:00.000Z');
+    const patch = skillDeletePatch(now);
+    assert.equal(patch.enabledAt, null);
+    assert.equal(patch.deletedAt, now);
+    const hidden = { deletedAt: now, enabledAt: null, revision: 4 };
+    assert.equal(skillVisibleInAdmin(hidden), false);
+    assert.equal(skillOfferedForNewUse(hidden), false);
+    assert.equal(skillHistoryReadable(4), true);
+    assert.equal(skillHistoryReadable(undefined), false);
+    assert.equal(skillOfferedForNewUse({ deletedAt: null, enabledAt: now, revision: 4 }), true);
+    assert.deepEqual(skillStartDecision({ deleted: true, enabled: false, revision: 4 }), {
+      ok: false,
+      code: 'OFFICIAL_SKILL_DELETED',
+      message: '技能已删除，请重新选择',
+    });
+    const disabled = skillStartDecision({ deleted: false, enabled: false, revision: 4 });
+    assert.equal(disabled.ok, false);
+    if (!disabled.ok) assert.equal(disabled.code, 'OFFICIAL_CONTENT_DISABLED');
+    assert.equal(skillReadDecision({ deleted: true, enabled: false, pinnedRevision: 4 }).ok, true);
+    assert.equal(skillReadDecision({ deleted: true, enabled: false, pinnedRevision: undefined }).ok, false);
+    assert.equal(skillCanRevive(true), false);
+    assert.equal(skillCanRevive(false), true);
   });
 });

@@ -284,9 +284,14 @@ export class AdminSupportService {
 
   /** 删除自定义角色：仅超管/平台管（按角色身份，不依赖 roles.write）。 */
   async assertActorCanDeleteCustomRoles(actor: User) {
+    await this.assertPlatformOperator(actor, '删除角色');
+  }
+
+  /** 总后台删除类操作：仅超级管理员或平台管理员。 */
+  async assertPlatformOperator(actor: User, action = '执行此操作') {
     const keys = await this.getRoleKeys(actor.id);
     if (keys.includes('super_admin') || keys.includes('platform_admin')) return;
-    throw new ForbiddenException('仅超级管理员、平台管理员可删除角色');
+    throw new ForbiddenException(`仅超级管理员、平台管理员可${action}`);
   }
 
   isBuiltinRoleKey(key: string) {

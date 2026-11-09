@@ -34,6 +34,12 @@ export class OfficialSkillController {
     return this.skills.publicList(query);
   }
 
+  @Get(':id/availability')
+  @Header('Cache-Control', 'private, no-store')
+  availability(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.skills.availability(user, id);
+  }
+
   @Get(':id/catalog-detail')
   @Header('Cache-Control','private, no-store')
   catalogDetail(@CurrentUser() user:User,@Param('id') id:string){return this.skills.catalogDetail(user,id);}

@@ -40,12 +40,22 @@ export function installTaskCatalog(ctx:Context):void {
   const allowed=useSyncExternalStore(canCompose.subscribe,canCompose.getSnapshot)
   const input=useInput(value=>value),running=useSession(value=>value.running)??false
   const value=input?.catalogSelection??initial(sessionId)
+  const [deleted,setDeleted]=useState(false)
+  useEffect(()=>{
+    const id=value.skillRef?.id
+    if(!id){setDeleted(false);return}
+    let alive=true
+    const remote=ctx.remote.officialAgentGallery as {skillAvailability?:(id:string)=>Promise<{ok:true;value:{deleted:boolean}}|{ok:false}>}
+    if(!remote.skillAvailability)return
+    void remote.skillAvailability(id).then(result=>{if(alive&&result.ok)setDeleted(result.value.deleted)})
+    return()=>{alive=false}
+  },[value.skillRef?.id])
   useEffect(()=>{if(allowed&&input?.catalogSelection===undefined&&(value.expertRef||value.skillRef))inputActions?.setCatalogSelection?.(value,true)},[allowed,sessionId,input?.catalogSelection,value.expertRef?.id,value.skillRef?.id])
   const remove=(kind:Kind)=>{const live=inputFor(sessionId),current=live?.state.getSnapshot().catalogSelection??initial(sessionId);live?.setCatalogSelection?.({...current,selectionVersion:current.selectionVersion+1,...kind==='expert'?{expertRef:null}:{skillRef:null}});live?.focus()}
   if(!allowed)return null
   return <span className={css.tags} title={t('selectorNextSend')}>
     {(['expert','skill'] as const).map(kind=>{const ref=kind==='expert'?value.expertRef:value.skillRef;return ref?<span className={css.tag} key={kind}>
-      <span className={css.smallIcon}><CatalogIcon catalogKey={ref.id} kind={kind==='expert'?'people':'plan'} src={ref.icon}/></span><span className={css.name}>{ref.name}</span>
+      <span className={css.smallIcon}><CatalogIcon catalogKey={ref.id} kind={kind==='expert'?'people':'plan'} src={ref.icon}/></span><span className={css.name}>{kind==='skill'&&deleted?t('skillDeletedMark',{name:ref.name}):ref.name}</span>
       <button type="button" className={css.remove} disabled={input?.phase!=='plain'} aria-label={t(kind==='expert'?'selectorRemoveExpert':'selectorRemoveSkill')} onMouseDown={event=>event.preventDefault()} onClick={()=>remove(kind)}>×</button>
     </span>:null})}{running&&(value.expertRef||value.skillRef)?<small className={css.next}>{t('selectorNextSend')}</small>:null}
   </span>

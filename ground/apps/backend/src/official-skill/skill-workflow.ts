@@ -64,6 +64,80 @@ export function packageWriteClaim(
   return { revision: locked.revision + 1 };
 }
 
+export type SkillDeletePlan = {
+  allowed: true;
+  /** Drop the row from the admin list and from new catalog/session entry points. */
+  hideFromAdminList: true;
+  hideFromNewUse: true;
+  /** Packages, expert links and pinned historical reads stay. */
+  retainPackages: true;
+  retainAgentLinks: true;
+  retainUserHistory: true;
+};
+
+/** Enabled skills and expert links are not blockers. Deletion never cascades user history. */
+export function planSkillDelete(_input: { enabled: boolean; linkedAgentCount: number } = { enabled: false, linkedAgentCount: 0 }): SkillDeletePlan {
+  return {
+    allowed: true,
+    hideFromAdminList: true,
+    hideFromNewUse: true,
+    retainPackages: true,
+    retainAgentLinks: true,
+    retainUserHistory: true,
+  };
+}
+
+export function skillDeletePatch(now: Date) {
+  return { deletedAt: now, enabledAt: null as null };
+}
+
+export function skillVisibleInAdmin(row: { deletedAt: Date | string | null }) {
+  return row.deletedAt == null;
+}
+
+export function skillOfferedForNewUse(row: { deletedAt: Date | string | null; enabledAt: Date | string | null; revision: number }) {
+  return skillVisibleInAdmin(row) && row.enabledAt != null && row.revision > 0;
+}
+
+/** A pinned package revision stays readable after the skill leaves the catalog. */
+export function skillHistoryReadable(revision: number | undefined) {
+  return revision !== undefined;
+}
+
+export const SKILL_DELETED_MESSAGE = '技能已删除，请重新选择';
+
+/** New session or a later execution. A pinned revision is not enough to start again. */
+export function skillStartDecision(input: { deleted: boolean; enabled: boolean; revision: number }) {
+  if (input.deleted) {
+    return { ok: false as const, code: 'OFFICIAL_SKILL_DELETED', message: SKILL_DELETED_MESSAGE };
+  }
+  if (!input.enabled || input.revision < 1) {
+    return { ok: false as const, code: 'OFFICIAL_CONTENT_DISABLED', message: '该技能暂不可用' };
+  }
+  return { ok: true as const };
+}
+
+/**
+ * Content and resource reads.
+ * A revision keeps an in-flight or historical snapshot working after delete.
+ * A read without a revision is a new use and is rejected.
+ */
+export function skillReadDecision(input: { deleted: boolean; enabled: boolean; pinnedRevision: number | undefined }) {
+  if (input.pinnedRevision !== undefined) return { ok: true as const, snapshot: true };
+  if (input.deleted) {
+    return { ok: false as const, code: 'OFFICIAL_SKILL_DELETED', message: SKILL_DELETED_MESSAGE };
+  }
+  if (!input.enabled) {
+    return { ok: false as const, code: 'OFFICIAL_CONTENT_DISABLED', message: '该技能暂不可用' };
+  }
+  return { ok: true as const, snapshot: false };
+}
+
+/** Deleted rows stay deleted. Disable can be enabled again; delete cannot. */
+export function skillCanRevive(deleted: boolean) {
+  return !deleted;
+}
+
 /** Decide a ZIP replace before any package bytes are stored. */
 export function zipReplaceDecision(currentKey: string, parsed: { key: string; keyDerived: boolean }) {
   if (parsed.keyDerived || parsed.key === currentKey) return { ok: true as const, key: currentKey };

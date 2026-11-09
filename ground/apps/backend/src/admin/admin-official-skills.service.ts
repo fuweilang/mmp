@@ -89,6 +89,7 @@ export class AdminOfficialSkillsService {
 
   async remove(actor: User, id: string) {
     await this.support.adminScope(actor);
+    await this.support.assertPlatformOperator(actor, '删除技能');
     return this.skills.remove(actor, id);
   }
 

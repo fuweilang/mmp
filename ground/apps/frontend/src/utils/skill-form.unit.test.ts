@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { keepStoredExecution, skillFormIssues, skillFormToast } from './skill-form';
+import { clampPage, keepStoredExecution, skillDeleteConfirm, skillDeleteRequest, skillFormIssues, skillFormToast } from './skill-form';
 
 const base = {
   name: '简报',
@@ -98,5 +98,17 @@ describe('skill form validation', () => {
     });
     assert.equal(issues.zip, '技能包已损坏，无法解压');
     assert.equal(skillFormToast(issues).includes('标识'), false);
+  });
+
+  it('confirms deletion by name and does not call the API on cancel or while busy', () => {
+    const copy = skillDeleteConfirm({ name: '简报整理' });
+    assert.equal(copy.message, '确定删除技能「简报整理」？删除后不可再选用，已有对话和任务记录不受影响。');
+    assert.equal(copy.confirm, '删除');
+    assert.equal(skillDeleteRequest({ confirmed: false, inFlight: false }), 'skip');
+    assert.equal(skillDeleteRequest({ confirmed: true, inFlight: true }), 'skip');
+    assert.equal(skillDeleteRequest({ confirmed: true, inFlight: false }), 'call');
+    assert.equal(clampPage(2, 10, 11), 2);
+    assert.equal(clampPage(2, 10, 10), 1);
+    assert.equal(clampPage(3, 10, 0), 1);
   });
 });

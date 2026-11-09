@@ -75,7 +75,7 @@
             <el-button text type="primary" @click="toggleEnable(row)">
               {{ row.enabled ? '停用' : '启用' }}
             </el-button>
-            <el-button text type="danger" @click="onDelete(row)">删除</el-button>
+            <el-button text type="danger" :loading="deletingId === row.id" :disabled="Boolean(deletingId)" @click="onDelete(row)">删除</el-button>
           </div>
         </template>
       </el-table-column>
@@ -223,7 +223,7 @@ import {
   type OfficialSkillRow,
   type OfficialSkillZipPreview,
 } from '../../api/admin';
-import { keepStoredExecution, skillFormIssues, skillFormToast } from '../../utils/skill-form';
+import { clampPage, keepStoredExecution, skillDeleteConfirm, skillDeleteRequest, skillFormIssues, skillFormToast } from '../../utils/skill-form';
 
 const rows = ref<OfficialSkillRow[]>([]);
 const categoryFilter = ref<OfficialSkillCategory | ''>('');
@@ -247,8 +247,7 @@ function resetPage() {
 }
 // Reload after delete/disable may shrink the last page; never leave an empty out-of-range page.
 watch([() => filteredRows.value.length, pageSize], () => {
-  const lastPage = Math.max(1, Math.ceil(filteredRows.value.length / pageSize.value));
-  currentPage.value = Math.min(Math.max(1, currentPage.value), lastPage);
+  currentPage.value = clampPage(currentPage.value, pageSize.value, filteredRows.value.length);
 }, { flush: 'sync' });
 
 const editorOpen = ref(false);
@@ -258,6 +257,7 @@ const contentSource = ref<'zip' | 'form' | 'none'>('none');
 const formUpdatedAt = ref('');
 const saveIntent = ref<'save' | 'enable'>('save');
 const saving = ref(false);
+const deletingId = ref('');
 const thumbFailed = reactive<Record<string, string>>({});
 const fieldErrors = reactive({ name: '', summary: '', instruction: '', zip: '' });
 const pendingIcon=ref<File|null>(null);
@@ -623,29 +623,34 @@ async function toggleEnable(row: OfficialSkillRow) {
 }
 
 async function onDelete(row: OfficialSkillRow) {
+  if (deletingId.value) return;
+  const copy = skillDeleteConfirm({ name: row.name });
+  let confirmed = false;
   try {
-    if (row.linkedAgentCount > 0 || row.enabled) {
-      await ElMessageBox.alert(
-        row.linkedAgentCount > 0
-          ? '该技能仍被专家关联，只能停用，不能删除。'
-          : '已启用技能请先停用；被引用内容仅可停用。',
-        '无法删除',
-        { type: 'warning', customClass: 'official-skill-message-box', confirmButtonText: '知道了' },
-      );
-      return;
-    }
-    await ElMessageBox.confirm('确认删除该未引用草稿技能？此操作不可恢复。', '确认删除', {
+    await ElMessageBox.confirm(copy.message, copy.title, {
       type: 'warning',
       customClass: 'official-skill-message-box',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
+      confirmButtonText: copy.confirm,
+      cancelButtonText: copy.cancel,
+      confirmButtonClass: 'el-button--danger',
+      closeOnClickModal: false,
     });
+    confirmed = true;
+  } catch {
+    confirmed = false;
+  }
+  if (skillDeleteRequest({ confirmed, inFlight: Boolean(deletingId.value) }) !== 'call') return;
+  deletingId.value = row.id;
+  try {
     await adminOfficialSkillApi.remove(row.id);
+    if (editingId.value === row.id) editorOpen.value = false;
+    if (discoveryId.value === row.id) discoveryId.value = '';
     ElMessage.success('已删除');
     await reload();
   } catch (error) {
-    if (error === 'cancel' || error === 'close') return;
     ElMessage.error(error instanceof Error ? error.message : '删除失败');
+  } finally {
+    deletingId.value = '';
   }
 }
 

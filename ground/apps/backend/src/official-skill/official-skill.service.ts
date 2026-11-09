@@ -32,7 +32,7 @@ import {
   writeSkillPackageToDisk,
   type OfficialSkillCategoryKey,
 } from './skill-package';
-import { assertFreshStamp, candidateSkillKeys, packageWriteClaim, skillEnableGaps, skillEnableMessage, zipReplaceDecision } from './skill-workflow';
+import { assertFreshStamp, candidateSkillKeys, packageWriteClaim, planSkillDelete, skillDeletePatch, skillEnableGaps, skillEnableMessage, skillOfferedForNewUse, skillReadDecision, skillStartDecision, zipReplaceDecision } from './skill-workflow';
 import {
   buildDisplayTranslationPrompt,
   displaySourceHash,
@@ -71,9 +71,9 @@ export class OfficialSkillService {
     if(actorId)await this.audit(actorId,file?'admin_upload_official_skill_icon':'admin_remove_official_skill_icon',{skillId:id});
     return this.adminDetail(id,{includeInstruction:true});
   }
-  async catalogFacets(){const rows=await this.prisma.officialSkill.findMany({where:{enabledAt:{not:null},currentRevision:{gt:0}},select:{key:true}});return catalogFacets('skill',rows.map(x=>x.key));}
+  async catalogFacets(){const rows=await this.prisma.officialSkill.findMany({where:{deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}},select:{key:true}});return catalogFacets('skill',rows.map(x=>x.key));}
   async catalogPage(query:CatalogQuery){
-    const f=catalogQuery(query,'skill');const filters:Prisma.OfficialSkillWhereInput[]=[{enabledAt:{not:null},currentRevision:{gt:0}}];
+    const f=catalogQuery(query,'skill');const filters:Prisma.OfficialSkillWhereInput[]=[{deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}}];
     if(f.capability!=='all'||f.industry!=='all')filters.push(catalogDiscoveryWhere('skill',f.capability,f.industry));
     if(f.q)filters.push({OR:[...['name','summary','key'].map(field=>({[field]:{contains:f.q,mode:'insensitive' as const}})),...Object.entries(DESCRIPTIONS).filter(([,v])=>v.summary.toLocaleLowerCase().includes(f.q.toLocaleLowerCase())).map(([key,v])=>({key,summary:v.expectedOriginal}))]});
     const where:Prisma.OfficialSkillWhereInput={AND:filters};
@@ -95,9 +95,28 @@ export class OfficialSkillService {
     });
     return this.adminDetail(id,{includeInstruction:true});
   }
+  async availability(user: User, id: string) {
+    this.requireActiveAccount(user);
+    const row = await this.prisma.officialSkill.findUnique({
+      where: { id },
+      select: { id: true, name: true, deletedAt: true, enabledAt: true, currentRevision: true },
+    });
+    if (!row) throw new NotFoundException('技能不存在');
+    return {
+      id: row.id,
+      name: row.name,
+      deleted: Boolean(row.deletedAt),
+      selectable: skillOfferedForNewUse({
+        deletedAt: row.deletedAt,
+        enabledAt: row.enabledAt,
+        revision: row.currentRevision,
+      }),
+    };
+  }
+
   async catalogDetail(user:User,id:string){
     this.requireActiveAccount(user);
-    const row=await this.prisma.officialSkill.findFirst({where:{id,enabledAt:{not:null},currentRevision:{gt:0}},select:{id:true,key:true,name:true,summary:true,category:true,enabledAt:true,currentRevision:true,customAvatarPath:true,discoveryDetail:true}});
+    const row=await this.prisma.officialSkill.findFirst({where:{id,deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}},select:{id:true,key:true,name:true,summary:true,category:true,enabledAt:true,currentRevision:true,customAvatarPath:true,discoveryDetail:true}});
     if(!row)throw new NotFoundException('技能不可用');
     return {kind:'skill' as const,id:row.id,key:row.key,name:row.name,summary:displaySummary(row.key,row.summary),avatarUrl:uploadedCatalogIconUrl(row.customAvatarPath),packageRevision:row.currentRevision,discovery:discoveryOf('skill',row.key),detail:publicDiscoveryDetail(row.discoveryDetail),linkedSkills:[]};
   }
@@ -108,6 +127,7 @@ export class OfficialSkillService {
       query.enabled === 'true' ? true : query.enabled === 'false' ? false : undefined;
     const rows = await this.prisma.officialSkill.findMany({
       where: {
+        deletedAt: null,
         ...(enabled === true ? { enabledAt: { not: null } } : {}),
         ...(enabled === false ? { enabledAt: null } : {}),
         ...(keyword
@@ -136,7 +156,7 @@ export class OfficialSkillService {
 
   async listEnabledOptions() {
     const rows = await this.prisma.officialSkill.findMany({
-      where: { enabledAt: { not: null }, currentRevision: { gt: 0 } },
+      where: { deletedAt: null, enabledAt: { not: null }, currentRevision: { gt: 0 } },
       select: {
         id: true,
         key: true,
@@ -388,16 +408,34 @@ export class OfficialSkillService {
   }
 
   async remove(actor: User, id: string) {
-    const row = await this.requireSkill(id);
-    if (row.agentLinks.length) {
-      throw new ConflictException('技能仍被专家关联，只能停用，不能删除');
-    }
-    if (row.enabledAt) {
-      throw new ConflictException('已启用过的技能请先停用；被引用内容仅可停用');
-    }
-    await this.prisma.officialSkill.delete({ where: { id } });
-    await this.audit(actor.id, 'admin_delete_official_skill', { skillId: id, key: row.key });
-    return { ok: true };
+    const row = await this.prisma.officialSkill.findUnique({ where: { id }, include: skillInclude });
+    if (!row || row.deletedAt) throw new NotFoundException('官方技能不存在');
+    const plan = planSkillDelete({ enabled: Boolean(row.enabledAt), linkedAgentCount: row.agentLinks.length });
+    await this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM official_skill WHERE id = ${id} FOR UPDATE
+      `;
+      if (!locked.length) throw new NotFoundException('官方技能不存在');
+      const fresh = await tx.officialSkill.findUnique({ where: { id }, select: { deletedAt: true } });
+      if (!fresh || fresh.deletedAt) throw new NotFoundException('官方技能不存在');
+      await tx.officialSkill.update({ where: { id }, data: skillDeletePatch(new Date()) });
+      if (plan.hideFromNewUse) {
+        await tx.officialCatalogPreference.deleteMany({ where: { kind: 'skill', resourceId: id } });
+      }
+      await this.auditTx(tx, actor.id, 'admin_delete_official_skill', {
+        skillId: id,
+        key: row.key,
+        name: row.name,
+        enabled: Boolean(row.enabledAt),
+        linkedAgentCount: row.agentLinks.length,
+        retained: [
+          ...(plan.retainPackages ? ['packages' as const] : []),
+          ...(plan.retainAgentLinks ? ['agentLinks' as const] : []),
+          ...(plan.retainUserHistory ? ['userHistory' as const] : []),
+        ],
+      });
+    });
+    return { ok: true as const, id: row.id, key: row.key, name: row.name };
   }
 
   /** Public enabled directory for both clients. */
@@ -407,6 +445,7 @@ export class OfficialSkillService {
       query.category && isOfficialSkillCategory(query.category) ? query.category : undefined;
     const rows = await this.prisma.officialSkill.findMany({
       where: {
+        deletedAt: null,
         enabledAt: { not: null },
         currentRevision: { gt: 0 },
         ...(category ? { category } : {}),
@@ -446,10 +485,12 @@ export class OfficialSkillService {
     if (!row) {
       throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
     }
-    // Directory/new sessions still require enabled; frozen Host sessions may pin a revision after disable.
-    if (!row.enabledAt && revision === undefined) {
-      throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
-    }
+    const decision = skillReadDecision({
+      deleted: Boolean(row.deletedAt),
+      enabled: Boolean(row.enabledAt),
+      pinnedRevision: revision,
+    });
+    if (!decision.ok) throw skillPackageError(decision.code, decision.message, 403);
     const targetRevision = revision ?? row.currentRevision;
     const pkg =
       row.packages.find((item) => item.revision === targetRevision) ??
@@ -483,9 +524,12 @@ export class OfficialSkillService {
     if (!row) {
       throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
     }
-    if (!row.enabledAt && revision === undefined) {
-      throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
-    }
+    const decision = skillReadDecision({
+      deleted: Boolean(row.deletedAt),
+      enabled: Boolean(row.enabledAt),
+      pinnedRevision: revision,
+    });
+    if (!decision.ok) throw skillPackageError(decision.code, decision.message, 403);
     const safe = String(resourcePath || '')
       .replace(/\\/g, '/')
       .replace(/^\/+/, '');
@@ -521,13 +565,24 @@ export class OfficialSkillService {
    */
   async beginSession(user: User, id: string, expectedRevision?: number) {
     this.requireActiveAccount(user);
-    const row = await this.prisma.officialSkill.findUnique({ where: { id } });
-    if (!row || !row.enabledAt || row.currentRevision < 1) {
-      throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
-    }
-    if (expectedRevision != null && expectedRevision !== row.currentRevision) {
-      throw skillPackageError('SKILL_REVISION_UNAVAILABLE', '技能包版本已更新，请刷新后重试', 409);
-    }
+    const row = await this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM official_skill WHERE id = ${id} FOR UPDATE
+      `;
+      if (!locked.length) throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
+      const fresh = await tx.officialSkill.findUnique({ where: { id } });
+      if (!fresh) throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
+      const decision = skillStartDecision({
+        deleted: Boolean(fresh.deletedAt),
+        enabled: Boolean(fresh.enabledAt),
+        revision: fresh.currentRevision,
+      });
+      if (!decision.ok) throw skillPackageError(decision.code, decision.message, 403);
+      if (expectedRevision != null && expectedRevision !== fresh.currentRevision) {
+        throw skillPackageError('SKILL_REVISION_UNAVAILABLE', '技能包版本已更新，请刷新后重试', 409);
+      }
+      return fresh;
+    });
     return {
       sessionSource: {
         type: 'skill' as const,
@@ -559,6 +614,7 @@ export class OfficialSkillService {
     const rows = await (tx ?? this.prisma).officialSkill.findMany({
       where: {
         id: { in: skillIds },
+        deletedAt: null,
         enabledAt: { not: null },
         currentRevision: { gt: 0 },
       },
@@ -738,7 +794,7 @@ export class OfficialSkillService {
       `;
       if (!locked.length) throw new NotFoundException('官方技能不存在');
       const row = await tx.officialSkill.findUnique({ where: { id }, include: skillInclude });
-      if (!row) throw new NotFoundException('官方技能不存在');
+      if (!row || row.deletedAt) throw new NotFoundException('官方技能不存在');
       assertFreshStamp(row.updatedAt.toISOString(), expectedUpdatedAt);
       return run(tx, row);
     }, { timeout: 20000 });
@@ -863,7 +919,7 @@ export class OfficialSkillService {
       where: { id },
       include: skillInclude,
     });
-    if (!row) throw new NotFoundException('官方技能不存在');
+    if (!row || row.deletedAt) throw new NotFoundException('官方技能不存在');
     return row;
   }
 

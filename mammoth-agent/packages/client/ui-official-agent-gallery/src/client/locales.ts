@@ -156,6 +156,7 @@ export const zh = {
   workspaceRequired: '请先创建一个工作区，再开始对话',
   sourceExpert: '专家 · {name}',
   sourceSkill: '技能 · {name}',
+  skillDeletedMark: '{name} 已删除',
   sourceHint: '本任务来源；不会改写旧对话',
 } as const
 
@@ -320,6 +321,7 @@ export const en = {
   workspaceRequired: 'Create a workspace before starting a chat.',
   sourceExpert: 'Expert · {name}',
   sourceSkill: 'Skill · {name}',
+  skillDeletedMark: '{name} deleted',
   sourceHint: 'Task origin; older chats stay unchanged',
 } satisfies Record<OfficialAgentGalleryLocaleKey, string>
 

@@ -62,3 +62,25 @@ export function keepStoredExecution(input: {
 export function skillFormToast(issues: Partial<Record<SkillField, string>>) {
   return Object.values(issues).filter(Boolean).join('；');
 }
+
+export function clampPage(current: number, pageSize: number, total: number) {
+  const size = Math.max(1, pageSize);
+  const last = Math.max(1, Math.ceil(Math.max(0, total) / size));
+  return Math.min(Math.max(1, current), last);
+}
+
+export function skillDeleteConfirm(input: { name: string }) {
+  const name = input.name.trim() || '未命名技能';
+  return {
+    title: '删除技能',
+    message: `确定删除技能「${name}」？删除后不可再选用，已有对话和任务记录不受影响。`,
+    confirm: '删除',
+    cancel: '取消',
+  };
+}
+
+/** Cancel, close, or an in-flight request must not call the API again. */
+export function skillDeleteRequest(input: { confirmed: boolean; inFlight: boolean }) {
+  if (!input.confirmed || input.inFlight) return 'skip' as const;
+  return 'call' as const;
+}
