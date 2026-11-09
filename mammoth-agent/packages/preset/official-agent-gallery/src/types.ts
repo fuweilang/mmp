@@ -185,7 +185,7 @@ export interface SkillCatalogPage { readonly items:readonly OfficialSkillCard[];
 export interface CatalogDiscoveryDetail {
  readonly schemaVersion:1; readonly displayRevision:number; readonly introduction:string;
  readonly outputs:readonly string[]; readonly materials:readonly string[]; readonly boundaries:readonly string[];
- readonly starters:readonly {readonly label:string;readonly text:string}[];
+ readonly starters:readonly {readonly text:string;readonly label?:string|undefined}[];
 }
 export interface CatalogDetail {
  readonly kind:'expert'|'skill';readonly id:string;readonly key:string;readonly name:string;readonly summary:string;readonly avatarUrl:string|null;

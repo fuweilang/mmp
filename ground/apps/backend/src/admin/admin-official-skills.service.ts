@@ -91,4 +91,12 @@ export class AdminOfficialSkillsService {
     await this.support.adminScope(actor);
     return this.skills.remove(actor, id);
   }
+
+  async translateDisplay(
+    actor: User,
+    body: { dryRun?: boolean; limit?: number; keys?: string[]; maxAttempts?: number },
+  ) {
+    await this.support.adminScope(actor);
+    return this.skills.translateDisplayBatch(actor, body ?? {});
+  }
 }

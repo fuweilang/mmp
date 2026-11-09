@@ -88,7 +88,7 @@ export class AdminOfficialAgentsController {
   /** Upload / replace custom avatar; persists immediately, does not publish draft. */
   @Post(':id/avatar')
   @HttpCode(200)
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
   uploadAvatar(
     @CurrentUser() actor: User,
     @Param('id') id: string,
@@ -111,6 +111,13 @@ export class AdminOfficialAgentsController {
   @HttpCode(200)
   offline(@CurrentUser() actor: User, @Param('id') id: string) {
     return this.agents.offline(actor, id);
+  }
+
+  /** Permanent physical delete; confirm in Admin UI. Cascades owned config only. */
+  @Delete(':id')
+  @HttpCode(200)
+  remove(@CurrentUser() actor: User, @Param('id') id: string) {
+    return this.agents.remove(actor, id);
   }
 
   @Put(':id/grants')

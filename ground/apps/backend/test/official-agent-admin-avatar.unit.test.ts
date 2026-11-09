@@ -16,7 +16,22 @@ function createListHarness(agents: Array<Record<string, unknown>>) {
           onlineVersion: null,
           versions: [],
           grants: [],
+          skillLinks: [],
         })),
+      groupBy: async () => {
+        const counts = new Map<string, number>();
+        for (const agent of agents) {
+          const status = String(agent.status);
+          counts.set(status, (counts.get(status) ?? 0) + 1);
+        }
+        return [...counts.entries()].map(([status, count]) => ({
+          status,
+          _count: { _all: count },
+        }));
+      },
+    },
+    user: {
+      findMany: async () => [],
     },
   };
   const service = new AdminOfficialAgentsService(
@@ -26,6 +41,7 @@ function createListHarness(agents: Array<Record<string, unknown>>) {
       loadAssetFiles: () => [],
       syncFromAssets: async () => [],
     } as never,
+    { setAgentSkillLinks: async () => undefined } as never,
   );
   return service;
 }
@@ -94,7 +110,11 @@ describe('admin official agent avatar presentation', () => {
       },
     ]);
 
-    const rows = await service.list(actor, {});
+    const listed = await service.list(actor, {});
+    const rows = listed.items;
+    assert.equal(listed.statusCounts.all, 3);
+    assert.equal(listed.statusCounts.PUBLISHED, 2);
+    assert.equal(listed.statusCounts.DRAFT, 1);
     const byKey = Object.fromEntries(rows.map((row) => [row.key, row]));
 
     assert.match(String(byKey.growth?.avatarUrl), /\/api\/official-agents\/avatars\/growth\.jpg$/);
@@ -153,13 +173,18 @@ describe('admin official agent avatar presentation', () => {
               updatedAt: new Date('2026-11-06T08:40:00Z'),
             },
           ],
+          skillLinks: [],
         }),
+      },
+      user: {
+        findMany: async () => [],
       },
     };
     const service = new AdminOfficialAgentsService(
       prisma as never,
       { adminScope: async () => null } as never,
       { loadAssetFiles: () => [], syncFromAssets: async () => [] } as never,
+      { setAgentSkillLinks: async () => undefined } as never,
     );
 
     const detail = await service.detail(actor, 'a-copy');
@@ -206,9 +231,9 @@ describe('admin official agent custom avatar presentation order', () => {
           updatedAt: new Date('2026-11-06T08:00:00Z'),
         },
       ]);
-      const rows = await service.list(actor, {});
+      const listed = await service.list(actor, {});
       assert.match(
-        String(rows[0]?.avatarUrl),
+        String(listed.items[0]?.avatarUrl),
         new RegExp(`/api/official-agents/avatars/${fileName.replace(/\./g, '\\.')}$`),
       );
     } finally {

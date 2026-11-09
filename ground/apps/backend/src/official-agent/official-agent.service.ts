@@ -58,7 +58,7 @@ export type OfficialAgentExecution = {
   }>;
 };
 
-const CATALOG_EXPERT_SELECT={id:true,key:true,kind:true,category:true,capabilities:true,customAvatarPath:true,onlineVersion:{select:{id:true,version:true,name:true,summary:true,openingQuestions:true,toolScope:true,expertDefinition:true,linkedSkillSummaries:true}}} as const;
+const CATALOG_EXPERT_SELECT={id:true,key:true,kind:true,category:true,capabilities:true,customAvatarPath:true,onlineVersion:{select:{id:true,version:true,name:true,summary:true,openingQuestions:true,toolScope:true,expertDefinition:true,linkedSkillSummaries:true,customAvatarPath:true}}} as const;
 
 @Injectable()
 export class OfficialAgentService {
@@ -131,7 +131,7 @@ export class OfficialAgentService {
     };
   }
 
-  async catalogFacets(user:User){this.requireActiveAccount(user);const rows=await this.prisma.officialAgent.findMany({where:{status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}},select:{key:true}});return catalogFacets('expert',rows.map(x=>x.key));}
+  async catalogFacets(user:User){this.requireActiveAccount(user);const rows=await this.prisma.officialAgent.findMany({where:{status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}},select:{key:true,category:true}});return catalogFacets('expert',rows.map(x=>({key:x.key,category:x.category})));}
   async catalogCard(user:User,id:string){this.requireActiveAccount(user);const row=await this.prisma.officialAgent.findFirst({where:{id,status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}},select:CATALOG_EXPERT_SELECT});if(!row?.onlineVersion)throw new NotFoundException('专家不可用');return {...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),linkedSkills:await this.versionLinkedSkills(row.id,row.onlineVersion)};}
   async catalogDetail(user:User,id:string){
     const card=await this.catalogCard(user,id);
@@ -146,7 +146,7 @@ export class OfficialAgentService {
     if(f.capability!=='all'||f.industry!=='all')filters.push(catalogDiscoveryWhere('expert',f.capability,f.industry));
     if(f.q)filters.push({OR:[{key:{contains:f.q,mode:'insensitive'}},{onlineVersion:{is:{OR:[{name:{contains:f.q,mode:'insensitive'}},{summary:{contains:f.q,mode:'insensitive'}}]}}},...Object.entries(DESCRIPTIONS).filter(([,v])=>v.summary.toLocaleLowerCase().includes(f.q.toLocaleLowerCase())).map(([key,v])=>({key,onlineVersion:{is:{summary:v.expectedOriginal}}}))]});
     const where:Prisma.OfficialAgentWhereInput={AND:filters};const [total,rows]=await this.prisma.$transaction([this.prisma.officialAgent.count({where}),this.prisma.officialAgent.findMany({where:{AND:[where,...f.after?[{key:{gt:f.after}}]:[]]},orderBy:{key:'asc'},take:21,select:CATALOG_EXPERT_SELECT})],{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
-    const page=rows.slice(0,20);const items=await Promise.all(page.map(async row=>({...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),summary:displaySummary(row.key,row.onlineVersion!.summary),discovery:discoveryOf('expert',row.key),linkedSkills:await this.versionLinkedSkills(row.id,row.onlineVersion!)})));
+    const page=rows.slice(0,20);const items=await Promise.all(page.map(async row=>({...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),summary:displaySummary(row.key,row.onlineVersion!.summary),discovery:discoveryOf('expert',row.key,row.category),linkedSkills:await this.versionLinkedSkills(row.id,row.onlineVersion!)})));
     return {items,total,hasMore:rows.length>20,nextCursor:rows.length>20?nextCatalogCursor(page[page.length-1]!.key,f.signature):null};
   }
 
@@ -457,7 +457,7 @@ export class OfficialAgentService {
       avatarUrl: this.resolveAvatarUrl(
         grant.agent.key,
         null,
-        grant.agent.customAvatarPath ?? null,
+        grant.version.customAvatarPath ?? grant.agent.customAvatarPath ?? null,
       ),
       executionGranted: true,
     };
@@ -478,6 +478,7 @@ export class OfficialAgentService {
         summary: string;
         openingQuestions: Prisma.JsonValue;
         toolScope: Prisma.JsonValue;
+        customAvatarPath?: string | null;
       } | null;
     },
     executionGranted: boolean,
@@ -485,6 +486,7 @@ export class OfficialAgentService {
   ) {
     const version = agent.onlineVersion;
     if (!version) throw new NotFoundException('专家尚未发布版本');
+    // Terminal reads published avatar only; draft parent customAvatarPath is Admin preview.
     return {
       id: agent.id,
       key: agent.key,
@@ -499,7 +501,7 @@ export class OfficialAgentService {
       avatarUrl: this.resolveAvatarUrl(
         agent.key,
         explicitAvatar,
-        agent.customAvatarPath ?? null,
+        version.customAvatarPath ?? null,
       ),
       executionGranted,
     };

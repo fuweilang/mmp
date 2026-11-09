@@ -235,6 +235,17 @@ export const EXPERT_DISCOVERY = {
         ]
     }
 } as const;
+
+/** Admin OfficialAgentCategory → gallery capability id. New experts filter without key map edits. */
+export const CATEGORY_TO_CAPABILITY: Record<string, string> = {
+  common: 'business',
+  productivity: 'product-project',
+  content: 'marketing',
+  sales: 'sales-customer',
+  expertise: 'development',
+  analytics: 'research-data',
+};
+
 export const DESCRIPTIONS: Record<string, {
     expectedOriginal: string;
     summary: string;
@@ -351,7 +362,14 @@ export type CatalogQuery = {
     industry?: string;
     cursor?: string;
 };
-export const discoveryOf = (kind: CatalogKind, key: string) => kind === 'skill' ? skillDiscovery(key) ?? { capability: 'general', industries: [] } : (Object.prototype.hasOwnProperty.call(EXPERT_DISCOVERY, key) ? EXPERT_DISCOVERY[key as keyof typeof EXPERT_DISCOVERY] : { capability: 'business', industries: [] });
+export const discoveryOf = (kind: CatalogKind, key: string, category?: string | null) => {
+  if (kind === 'skill') return skillDiscovery(key) ?? { capability: 'general', industries: [] as const };
+  if (Object.prototype.hasOwnProperty.call(EXPERT_DISCOVERY, key)) {
+    return EXPERT_DISCOVERY[key as keyof typeof EXPERT_DISCOVERY];
+  }
+  const mapped = category ? CATEGORY_TO_CAPABILITY[category] : undefined;
+  return { capability: mapped ?? 'business', industries: [] as const };
+};
 export const discoveryKeys = (kind: CatalogKind) => kind === 'skill' ? Object.keys(OFFICIAL_SKILL_DISCOVERY) : Object.keys(EXPERT_DISCOVERY);
 export function displaySummary(key: string, original: string) { const entry = Object.prototype.hasOwnProperty.call(DESCRIPTIONS, key) ? DESCRIPTIONS[key] : undefined; return entry && original === entry.expectedOriginal ? entry.summary : original; }
 export function catalogQuery(query: CatalogQuery, kind: CatalogKind) {
@@ -382,15 +400,43 @@ export function catalogQuery(query: CatalogQuery, kind: CatalogKind) {
     return { q, capability, industry, after, signature };
 }
 export const nextCatalogCursor = (key: string, signature: string) => Buffer.from(JSON.stringify({ key, signature })).toString('base64url');
-export function catalogFacets(kind: CatalogKind, keys: string[]) { const capabilities: Record<string, number> = {}, industries: Record<string, number> = {}; for (const key of keys) {
-    const d = discoveryOf(kind, key);
+export function catalogFacets(
+  kind: CatalogKind,
+  entries: Array<string | { key: string; category?: string | null }>,
+) {
+  const capabilities: Record<string, number> = {}, industries: Record<string, number> = {};
+  for (const entry of entries) {
+    const key = typeof entry === 'string' ? entry : entry.key;
+    const category = typeof entry === 'string' ? null : entry.category ?? null;
+    const d = discoveryOf(kind, key, category);
     capabilities[d.capability] = (capabilities[d.capability] ?? 0) + 1;
-    for (const id of d.industries)
-        industries[id] = (industries[id] ?? 0) + 1;
-} return { total: keys.length, capabilities: Object.entries(capabilities).map(([id, count]) => ({ id, count })), industries: Object.entries(industries).map(([id, count]) => ({ id, count })) }; }
-/** Include unmapped, user-created resources in their fallback facet instead of losing them on filter. */
+    for (const id of d.industries) industries[id] = (industries[id] ?? 0) + 1;
+  }
+  return {
+    total: entries.length,
+    capabilities: Object.entries(capabilities).map(([id, count]) => ({ id, count })),
+    industries: Object.entries(industries).map(([id, count]) => ({ id, count })),
+  };
+}
+/** Prefer key map; fall back to OfficialAgent.category for Admin-created experts. */
 export function catalogDiscoveryWhere(kind: CatalogKind, capability: string, industry: string) {
-    const keys = discoveryKeys(kind);
-    const accepts = (key: string) => { const d = discoveryOf(kind, key); return (capability === 'all' || d.capability === capability) && (industry === 'all' || (d.industries as readonly string[]).includes(industry)); };
-    return { OR: [{ key: { in: keys.filter(accepts) } }, ...(accepts('') ? [{ key: { notIn: keys } }] : [])] };
+  const keys = discoveryKeys(kind);
+  const accepts = (key: string, category?: string | null) => {
+    const d = discoveryOf(kind, key, category);
+    return (capability === 'all' || d.capability === capability)
+      && (industry === 'all' || (d.industries as readonly string[]).includes(industry));
+  };
+  const mapped = keys.filter((key) => accepts(key));
+  const or: Array<Record<string, unknown>> = [{ key: { in: mapped } }];
+  if (kind === 'expert' && capability !== 'all') {
+    const cats = Object.entries(CATEGORY_TO_CAPABILITY)
+      .filter(([, cap]) => cap === capability)
+      .map(([cat]) => cat);
+    if (cats.length) {
+      or.push({ AND: [{ key: { notIn: keys } }, { category: { in: cats } }] });
+    }
+  } else if (accepts('')) {
+    or.push({ key: { notIn: keys } });
+  }
+  return { OR: or };
 }

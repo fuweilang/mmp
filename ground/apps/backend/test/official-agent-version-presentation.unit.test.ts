@@ -1,14 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import {
   formatAgentDateTime,
   formatAgentTimeSummary,
 } from '../../frontend/src/views/admin/official-agent-version-presentation';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const root = path.resolve(__dirname, '../..');
 const vuePath = path.join(root, 'frontend/src/views/admin/AdminOfficialAgents.vue');
 const helperPath = path.join(
   root,

@@ -15,11 +15,11 @@
 .filters { display:flex;align-items:flex-start;gap:10px;min-width:0; }.filterLabel { flex:none;padding-top:7px;font-size:12px;color:var(--dsw-alias-label-secondary); }.facetList { flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px; }
 .chip { display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:30px;max-width:min(140px,100%);padding:4px 9px;border:1px solid var(--dsw-alias-border-l3);border-radius:8px;background:var(--dsw-alias-bg-elevated);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;line-height:20px;cursor:pointer;white-space:nowrap; }.chipText { overflow:hidden;text-overflow:ellipsis; }.chip > span:last-child { font-variant-numeric:tabular-nums; }.more { flex:none;max-width:none; }.chipActive { color:var(--dsw-alias-brand-primary);border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 45%,var(--dsw-alias-border-l3));background:color-mix(in srgb,var(--dsw-alias-brand-primary) 7%,var(--dsw-alias-bg-elevated)); }
 .resultBar { display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:28px; }.resultBar p,.feedback,.pageFooter p { margin:0;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:20px; }.resultBar button,.pageFooter button,.feedback button { border-radius:8px; }
-.cards { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;list-style:none;margin:0;padding:0; }.card { display:flex;flex-direction:column;min-width:0;border:1px solid var(--dsw-alias-border-l3);border-radius:14px;background:var(--dsw-alias-bg-elevated);overflow:hidden;transition:border-color 120ms ease,background 120ms ease; }.card:hover { border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 32%,var(--dsw-alias-border-l3));background:var(--dsw-alias-interactive-bg-hover,var(--dsw-alias-bg-elevated)); }
+.cards { display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:16px;list-style:none;margin:0;padding:0; }.card { display:flex;flex-direction:column;min-width:0;border:1px solid var(--dsw-alias-border-l3);border-radius:14px;background:var(--dsw-alias-bg-elevated);overflow:hidden;transition:border-color 120ms ease,background 120ms ease; }.card:hover { border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 32%,var(--dsw-alias-border-l3));background:var(--dsw-alias-interactive-bg-hover,var(--dsw-alias-bg-elevated)); }
 .cardAction { display:flex;flex:1;flex-direction:column;align-items:stretch;gap:10px;width:100%;min-width:0;border:0;border-radius:14px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer; }.expertAction { padding:14px 16px 12px;gap:10px; }.skillAction { padding:20px;gap:12px; }.cardAction:disabled { cursor:default;opacity:.6; }
 .cardBody { display:flex;align-items:center;gap:12px;min-width:0; }.cardText { display:flex;flex-direction:column;gap:3px;min-width:0; }.cardTitle { font-size:16px;line-height:23px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }.expertSummary { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:20px; }
-.skillSummary { display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;min-height:44px;overflow:hidden;color:var(--dsw-alias-label-secondary);font-size:14px;line-height:22px;overflow-wrap:anywhere; }.cardFooter { display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:auto;min-width:0; }.tags { display:flex;gap:6px;flex-wrap:wrap;min-width:0; }.tag { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;padding:2px 6px;border-radius:6px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-secondary);font-size:11px;line-height:18px; }.startBadge { display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 9px;border:1px solid var(--dsw-alias-border-l3);border-radius:8px;color:var(--dsw-alias-brand-primary);font-size:12px;white-space:nowrap; }.starting { font-size:12px;color:var(--dsw-alias-label-secondary); }
-.artwork { position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:40px;height:40px;border-radius:10px;overflow:hidden;color:var(--dsw-alias-brand-primary);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 8%,var(--dsw-alias-bg-elevated)); }.artwork[data-tone='1'] { background:color-mix(in srgb,var(--dsw-alias-brand-primary) 12%,var(--dsw-alias-bg-elevated)); }.artwork[data-tone='2'] { color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-base); }.artwork[data-tone='3'] { color:var(--dsw-alias-label-primary);background:color-mix(in srgb,var(--dsw-alias-label-tertiary) 12%,var(--dsw-alias-bg-elevated)); }.artwork img { position:absolute;inset:0;width:100%;height:100%;object-fit:cover; }
+.skillSummary { display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;min-height:44px;overflow:hidden;color:var(--dsw-alias-label-secondary);font-size:14px;line-height:22px;overflow-wrap:anywhere; }.cardFooter { display:flex;align-items:center;gap:8px;margin-top:auto;min-width:0; }.tags { display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-width:0; }.tag { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;padding:2px 8px;border-radius:4px;background:color-mix(in srgb,var(--dsw-alias-brand-primary) 10%,var(--dsw-alias-bg-elevated));color:color-mix(in srgb,var(--dsw-alias-brand-primary) 42%,var(--dsw-alias-label-primary));font-size:12px;line-height:18px;font-weight:500; }.tagMuted { background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-tertiary);font-weight:400; }.startBadge { display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 9px;border:1px solid var(--dsw-alias-border-l3);border-radius:8px;color:var(--dsw-alias-brand-primary);font-size:12px;white-space:nowrap; }.starting { font-size:12px;color:var(--dsw-alias-label-secondary); }
+.artwork { position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:40px;height:40px;border-radius:10px;overflow:hidden;color:var(--dsw-alias-brand-primary);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 8%,var(--dsw-alias-bg-elevated)); }.artwork[data-tone='1'] { background:color-mix(in srgb,var(--dsw-alias-brand-primary) 12%,var(--dsw-alias-bg-elevated)); }.artwork[data-tone='2'] { color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-base); }.artwork[data-tone='3'] { color:var(--dsw-alias-label-primary);background:color-mix(in srgb,var(--dsw-alias-label-tertiary) 12%,var(--dsw-alias-bg-elevated)); }.artwork[data-has-image='true'] { background:var(--dsw-alias-bg-elevated); }.artwork img { position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center; }
 .expertSkills { padding:0 16px 10px;font-size:12px;line-height:20px;color:var(--dsw-alias-label-secondary); }.expertSkills summary { cursor:pointer;width:fit-content; }.expertSkills ul { max-height:180px;overflow:auto;list-style:none;display:grid;gap:8px;margin:8px 0 0;padding:0; }.expertSkills strong,.expertSkills li span { display:block; }.expertSkills li span { display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;color:var(--dsw-alias-label-tertiary); }
 .empty { display:flex;flex-direction:column;align-items:center;gap:12px;padding:48px 20px;color:var(--dsw-alias-label-tertiary);font-size:13px;text-align:center; }.empty p { margin:0; }.feedback { display:flex;align-items:center;justify-content:center;gap:10px; }.notice { flex:none;margin:0;padding:10px 24px;font-size:13px;line-height:20px;color:var(--dsw-alias-label-secondary);border-top:1px solid var(--dsw-alias-border-l3); }.pageFooter { display:flex;justify-content:center;min-height:32px;align-items:center; }.sentinel { height:1px;flex:none; }
 .skeleton { padding:16px;gap:12px; }.skillCards .skeleton { padding:20px; }.skeleton span { display:block;height:20px;width:85%;border-radius:8px;background:var(--dsw-alias-bg-base); }.skeleton span:first-child { width:65%;height:40px; }.skeleton span:last-child { width:40%; }.skillCards .skeleton span:nth-child(2) { height:44px; }
@@ -27,7 +27,34 @@
 @media(max-width:700px) { .heading,.tabWrap,.content { padding-inline:16px; }.search { width:100%; }.industryField { flex:1; }.industryField select { flex:1; }.content { gap:14px; }.filters { gap:8px; }.cardTitle { font-size:15px; } }
 @media(prefers-reduced-motion:reduce) { .card { transition:none; } }
 
-.directStart{display:flex;justify-content:flex-end;padding:0 16px 12px}.directStart button{border-radius:8px;min-height:28px}
+.directStart{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;min-width:0;padding:0 16px 12px}
+.directStart button{border-radius:8px}
+.startAction{height:30px;min-height:30px;padding:0 12px;font-size:12px;line-height:18px;border-radius:8px}
+.favouriteAction{
+  height:30px;min-height:30px;padding:0 10px;gap:6px;border-radius:8px;
+  color:var(--dsw-alias-label-secondary);
+  background:var(--dsw-alias-bg-elevated,#fff);
+  /* light outline so it reads as a real secondary control next to 召唤专家 */
+  box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l3,#dedfe3);
+  border:0;
+}
+.favouriteOn{
+  color:var(--dsw-alias-brand-primary);
+  background:color-mix(in srgb,var(--dsw-alias-brand-primary) 10%,var(--dsw-alias-bg-elevated,#fff));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dsw-alias-brand-primary) 40%,var(--dsw-alias-border-l3,#dedfe3));
+}
+.favouriteStar{box-sizing:content-box;flex:none;flex-shrink:0;display:block;width:16px;height:16px;min-width:16px;min-height:16px;max-width:16px;max-height:16px;overflow:visible}
+.favouriteAction svg{flex-shrink:0;width:16px;height:16px;min-width:16px;min-height:16px;max-width:none;overflow:visible}
+@media (hover:hover){
+  .favouriteAction:hover:not(:disabled){
+    color:var(--dsw-alias-brand-primary);
+    background:color-mix(in srgb,var(--dsw-alias-brand-primary) 8%,var(--dsw-alias-bg-elevated,#fff));
+    box-shadow:inset 0 0 0 1px var(--dsw-alias-brand-primary);
+  }
+}
+.favouriteAction:focus-visible,.startAction:focus-visible{outline:2px solid var(--dsw-alias-interactive-border-focus,var(--dsw-alias-brand-primary));outline-offset:2px}
+.favouriteAction:disabled{opacity:.55;cursor:default}
+
 /* Shared expert/skill details. Native <dialog>.showModal() owns the top layer;
    the mask alone is translucent. An opaque base under the themed paint also
    prevents transparency if a custom theme supplies an alpha surface. */
@@ -90,4 +117,97 @@
   .detailHeader h2 { font-size: 16px; line-height: 24px; }
   .detailBody { padding: 16px; }
   .detailActions { padding: 12px 16px; }
+}
+
+.detailSection summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+/* Expert detail: full-width starter rows + light more-info panel */
+.starterRows { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.starterRow {
+  box-sizing: border-box;
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 44px; margin: 0; padding: 12px 14px;
+  /* Reset UA <button> chrome so only our 1px light stroke shows (no double/outset border). */
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid #eceef2;
+  border-radius: 10px;
+  /* Near-white wash; slightly lighter than elevated base gray. */
+  background: color-mix(in srgb, var(--dsw-alias-bg-elevated, #fff) 88%, #f4f5f7);
+  box-shadow: none;
+  outline: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.starterRow:hover:not(:disabled) {
+  border-width: 1px;
+  border-style: solid;
+  /* Very light theme tint — not a dark/heavy stroke. */
+  border-color: color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, #eceef2);
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 4%, #fff);
+  box-shadow: none;
+}
+/* Mouse click :focus must not look like keyboard focus; keep ring for :focus-visible only. */
+.starterRow:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+.starterRow:focus-visible {
+  outline: 2px solid var(--dsw-alias-interactive-border-focus, var(--dsw-alias-brand-primary));
+  outline-offset: 2px;
+}
+.starterRow:disabled { opacity: .55; cursor: default; }
+.starterRowText {
+  flex: 1; min-width: 0;
+  font-size: 14px; line-height: 22px;
+  white-space: pre-wrap; overflow-wrap: anywhere; text-align: left;
+}
+.starterRowArrow {
+  flex: none; color: var(--dsw-alias-label-tertiary, #8b8f98);
+  font-size: 18px; line-height: 1;
+}
+.starterRow:hover:not(:disabled) .starterRowArrow { color: color-mix(in srgb, var(--dsw-alias-brand-primary) 55%, var(--dsw-alias-label-tertiary, #8b8f98)); }
+.moreDetails > summary {
+  cursor: pointer; list-style: none;
+  font-size: 14px; line-height: 22px; font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.moreDetails > summary::-webkit-details-marker { display: none; }
+.moreDetails > summary::before {
+  content: '▸'; display: inline-block; margin-right: 6px;
+  color: var(--dsw-alias-label-tertiary); transition: transform 120ms ease;
+}
+.moreDetails[open] > summary::before { transform: rotate(90deg); }
+.morePanel {
+  margin-top: 10px; padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-base, #f7f8fa);
+  border: 1px solid var(--dsw-alias-border-l3, #dedfe3);
+  display: grid; gap: 14px;
+}
+.moreBlock { min-width: 0; }
+.moreBlockTitle {
+  margin: 0 0 6px;
+  font-size: 12px; line-height: 18px; font-weight: 600;
+  color: var(--dsw-alias-label-secondary, var(--gallery-detail-muted));
+}
+.moreBlockBody { display: grid; gap: 6px; }
+.moreBlockBody p {
+  margin: 0;
+  font-size: 13px; line-height: 21px; font-weight: 400;
+  color: var(--dsw-alias-label-primary);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.detailStartPrimary {
+  /* Prefer brand fill + light label so召唤专家 stays conspicuous. */
+  background: var(--dsw-alias-brand-primary) !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.detailStartPrimary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 88%, #000) !important;
 }

@@ -14,6 +14,7 @@ import { createReadStream, existsSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import { LlmChatGatewayService } from '../llm/llm-chat.gateway.service';
 import { absoluteUploadPath } from '../knowledge/storage';
 import { skillDiscovery } from './skill-discovery';
 import {
@@ -30,6 +31,12 @@ import {
   writeSkillPackageToDisk,
   type OfficialSkillCategoryKey,
 } from './skill-package';
+import {
+  buildDisplayTranslationPrompt,
+  displaySourceHash,
+  needsMachineDisplayTranslation,
+  parseDisplayTranslationJson,
+} from './skill-display-i18n';
 
 export type SkillSummary = {
   id: string;
@@ -50,7 +57,7 @@ type SkillRow = Prisma.OfficialSkillGetPayload<{ include: typeof skillInclude }>
 
 @Injectable()
 export class OfficialSkillService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private llm: LlmChatGatewayService) {}
 
   async setIcon(id:string,file?:{originalname:string;mimetype:string;buffer:Buffer},actorId?:string) {
     await this.requireSkill(id);let path:string|null=null;
@@ -209,6 +216,11 @@ export class OfficialSkillService {
     const data: Prisma.OfficialSkillUpdateInput = {};
     if (body.name !== undefined) data.name = assertSkillDisplayName(body.name);
     if (body.summary !== undefined) data.summary = assertSkillSummary(body.summary);
+    if (body.name !== undefined || body.summary !== undefined) {
+      data.displayProvenance = 'manual';
+      if (!row.sourceName) data.sourceName = row.name;
+      if (!row.sourceSummary) data.sourceSummary = row.summary;
+    }
     if (body.category !== undefined) {
       if (body.category === null || body.category === '') data.category = null;
       else if (!isOfficialSkillCategory(body.category)) {
@@ -557,6 +569,11 @@ export class OfficialSkillService {
         category: parsed.manifest.category ?? null,
         enabledAt: null,
         currentRevision: 0,
+        sourceName: parsed.manifest.name,
+        sourceSummary: parsed.manifest.description,
+        displayProvenance: 'source',
+        displayLocale: 'zh-Hans',
+        displaySourceHash: displaySourceHash(parsed.manifest.name, parsed.manifest.description),
       },
     });
     try {
@@ -614,14 +631,25 @@ export class OfficialSkillService {
         sourceZipPath: written.sourceZipPath,
       },
     });
+    const keepManual = row.displayProvenance === 'manual';
     await this.prisma.officialSkill.update({
       where: { id: row.id },
       data: {
         currentRevision: revision,
         currentPackageId: pkg.id,
-        name: parsed.manifest.name,
-        summary: parsed.manifest.description,
         category: parsed.manifest.category ?? null,
+        sourceName: parsed.manifest.name,
+        sourceSummary: parsed.manifest.description,
+        displaySourceHash: displaySourceHash(parsed.manifest.name, parsed.manifest.description),
+        ...(keepManual
+          ? {}
+          : {
+              name: parsed.manifest.name,
+              summary: parsed.manifest.description,
+              displayProvenance: 'source',
+              displayTranslatedAt: null,
+              displayModelRef: null,
+            }),
       },
     });
     void actor;
@@ -634,8 +662,8 @@ export class OfficialSkillService {
     const next = {
       ...prev,
       key: row.key,
-      name: row.name,
-      description: row.summary,
+      name: row.sourceName?.trim() || row.name,
+      description: (row.sourceSummary || row.summary || '').trim(),
       entry: 'SKILL.md',
       ...(row.category ? { category: row.category } : {}),
     };
@@ -783,4 +811,132 @@ export class OfficialSkillService {
       data: { userId: actorUserId, action, tenantId: null, meta },
     });
   }
+
+  /**
+   * Machine-fill zh display name/summary via Ground cloud model pool (preferred/auto).
+   * Never rewrites SKILL.md / instruction / tool ids. Skips displayProvenance=manual.
+   */
+  async translateDisplayBatch(
+    actor: User,
+    opts: { dryRun?: boolean; limit?: number; keys?: string[]; maxAttempts?: number } = {},
+  ) {
+    if (!actor.isPlatformAdmin) throw new ForbiddenException('仅平台管理员可批量翻译技能展示文案');
+    const limit = Math.max(1, Math.min(opts.limit ?? 20, 100));
+    const maxAttempts = Math.max(1, Math.min(opts.maxAttempts ?? 3, 5));
+    const rows = await this.prisma.officialSkill.findMany({
+      where: opts.keys?.length ? { key: { in: opts.keys } } : undefined,
+      orderBy: { key: 'asc' },
+      select: {
+        id: true,
+        key: true,
+        name: true,
+        summary: true,
+        sourceName: true,
+        sourceSummary: true,
+        displayProvenance: true,
+        displaySourceHash: true,
+      },
+    });
+    const candidates = rows.filter((row) =>
+      needsMachineDisplayTranslation({
+        name: row.name,
+        summary: row.summary,
+        sourceName: row.sourceName,
+        sourceSummary: row.sourceSummary,
+        displayProvenance: row.displayProvenance,
+        displaySourceHash: row.displaySourceHash,
+      }),
+    );
+    const skippedManual = rows.filter((r) => r.displayProvenance === 'manual').length;
+    const selected = candidates.slice(0, limit);
+    const report = {
+      dryRun: Boolean(opts.dryRun),
+      total: rows.length,
+      needingTranslation: candidates.length,
+      selected: selected.length,
+      skippedManual,
+      translated: 0,
+      failed: 0,
+      skipped: 0,
+      failures: [] as Array<{ key: string; error: string }>,
+      translatedKeys: [] as string[],
+      modelRef: null as string | null,
+    };
+    if (opts.dryRun) return report;
+
+    for (const row of selected) {
+      const sourceName = (row.sourceName ?? row.name).trim();
+      const sourceSummary = (row.sourceSummary || row.summary || '').trim();
+      // Ensure originals are pinned before mutating display fields.
+      if (!row.sourceName || row.sourceSummary === '') {
+        await this.prisma.officialSkill.update({
+          where: { id: row.id },
+          data: {
+            sourceName: row.sourceName ?? row.name,
+            sourceSummary: row.sourceSummary || row.summary || '',
+          },
+        });
+      }
+      let lastError = 'unknown';
+      let ok = false;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const completion = await this.llm.completeOnce(actor, null, {
+            model: 'auto',
+            temperature: 0.2,
+            messages: [
+              { role: 'system', content: '只输出 JSON 对象，不要解释。' },
+              {
+                role: 'user',
+                content: buildDisplayTranslationPrompt({
+                  key: row.key,
+                  sourceName,
+                  sourceSummary,
+                }),
+              },
+            ],
+          });
+          report.modelRef = completion.modelRef;
+          const parsed = parseDisplayTranslationJson(completion.content);
+          const name = assertSkillDisplayName(parsed.name);
+          const summary = assertSkillSummary(parsed.summary);
+          const hash = displaySourceHash(sourceName, sourceSummary);
+          await this.prisma.officialSkill.update({
+            where: { id: row.id },
+            data: {
+              name,
+              summary,
+              sourceName,
+              sourceSummary,
+              displayProvenance: 'machine',
+              displayLocale: 'zh-Hans',
+              displayTranslatedAt: new Date(),
+              displayModelRef: completion.modelRef,
+              displaySourceHash: hash,
+            },
+          });
+          // Do not rewrite package SKILL.md; manifest keeps source via sync helper when needed.
+          report.translated += 1;
+          report.translatedKeys.push(row.key);
+          ok = true;
+          break;
+        } catch (error) {
+          lastError = error instanceof Error ? error.message : String(error);
+          await new Promise((r) => setTimeout(r, 400 * attempt));
+        }
+      }
+      if (!ok) {
+        report.failed += 1;
+        report.failures.push({ key: row.key, error: lastError.slice(0, 300) });
+      }
+    }
+    await this.audit(actor.id, 'admin_translate_official_skill_display', {
+      translated: report.translated,
+      failed: report.failed,
+      selected: report.selected,
+      modelRef: report.modelRef,
+    });
+    return report;
+  }
+
 }

@@ -53,6 +53,15 @@ export class AdminOfficialSkillsController {
     return this.skills.enabledOptions(actor);
   }
 
+  @Post('translate-display')
+  @HttpCode(200)
+  translateDisplay(
+    @CurrentUser() actor: User,
+    @Body() body: { dryRun?: boolean; limit?: number; keys?: string[]; maxAttempts?: number },
+  ) {
+    return this.skills.translateDisplay(actor, body ?? {});
+  }
+
   @Get(':id')
   @Header('Cache-Control', 'private, no-store')
   detail(@CurrentUser() actor: User, @Param('id') id: string) {

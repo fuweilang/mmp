@@ -32,7 +32,7 @@ const catalogDetailSchema=z.object({
  kind:z.enum(['expert','skill']),id:z.string().min(1),key:z.string().min(1),name:z.string(),summary:z.string(),avatarUrl:z.string().nullable(),
  versionId:z.string().optional(),packageRevision:z.number().int().positive().optional(),
  discovery:z.object({capability:z.string(),industries:z.array(z.string())}).strict().optional(),
- detail:z.object({schemaVersion:z.literal(1),displayRevision:z.number().int().nonnegative(),introduction:z.string().max(2000),outputs:z.array(z.string().max(300)).max(5),materials:z.array(z.string().max(300)).max(5),boundaries:z.array(z.string().max(300)).max(5),starters:z.array(z.object({label:z.string().max(40),text:z.string().max(500)}).strict()).max(3)}).strict(),
+ detail:z.object({schemaVersion:z.literal(1),displayRevision:z.number().int().nonnegative(),introduction:z.string().max(2000),outputs:z.array(z.string().max(300)).max(5),materials:z.array(z.string().max(300)).max(5),boundaries:z.array(z.string().max(300)).max(5),starters:z.array(z.object({text:z.string().max(500),label:z.string().max(40).optional()}).strict().transform(({text,label})=>({text,...(label?{label}:{})}))).max(3)}).strict(),
  linkedSkills:z.array(z.object({id:z.string(),name:z.string(),summary:z.string()}).strict()),
 }).strict()
 

@@ -88,9 +88,10 @@ export class AdminOfficialAgentsService {
 
   async discovery(actor:User,id:string){
     await this.support.adminScope(actor);
-    const row=await this.prisma.officialAgent.findUnique({where:{id},select:{id:true,name:true,updatedAt:true,expertDefinition:true}});
+    const row=await this.prisma.officialAgent.findUnique({where:{id},select:{id:true,name:true,updatedAt:true,expertDefinition:true,openingQuestions:true}});
     if(!row)throw new NotFoundException('专家不存在');
-    return {id:row.id,name:row.name,updatedAt:row.updatedAt.toISOString(),discoveryDetail:expertDiscoveryDetail(row.expertDefinition)};
+    // Pass openingQuestions so legacy experts without discoveryDetail.starters remain editable once.
+    return {id:row.id,name:row.name,updatedAt:row.updatedAt.toISOString(),discoveryDetail:expertDiscoveryDetail(row.expertDefinition,row.openingQuestions)};
   }
 
   async saveDiscovery(actor:User,id:string,body:{expectedUpdatedAt:string;discoveryDetail:unknown}) {
@@ -100,10 +101,22 @@ export class AdminOfficialAgentsService {
       if(!row)throw new NotFoundException('专家不存在');
       if(row.updatedAt.toISOString()!==body.expectedUpdatedAt)throw new ConflictException('专家已更新，请重新打开后保存');
       const definition=row.expertDefinition&&typeof row.expertDefinition==='object'&&!Array.isArray(row.expertDefinition)?row.expertDefinition:{};
-      const discoveryDetail=normalizeDiscoveryDetail(body.discoveryDetail,expertDiscoveryDetail(definition));
-      const result=await tx.officialAgent.updateMany({where:{id,updatedAt:row.updatedAt},data:{expertDefinition:{...definition,discoveryDetail} as Prisma.InputJsonObject}});
+      const previous=expertDiscoveryDetail(definition,row.openingQuestions);
+      const discoveryDetail=normalizeDiscoveryDetail(body.discoveryDetail,previous);
+      // Canonical recommended questions live in discoveryDetail.starters[].text.
+      // Mirror into openingQuestions so publish/cards stay consistent; explicit [] disables fallback.
+      const starterTexts=Array.isArray((discoveryDetail as {starters?: Array<{text?: string}>}).starters)
+        ? (discoveryDetail as {starters: Array<{text: string}>}).starters.map((item)=>String(item.text||'').trim()).filter(Boolean).slice(0,3)
+        : [];
+      const result=await tx.officialAgent.updateMany({
+        where:{id,updatedAt:row.updatedAt},
+        data:{
+          expertDefinition:{...definition,discoveryDetail} as Prisma.InputJsonObject,
+          openingQuestions: starterTexts,
+        },
+      });
       if(result.count!==1)throw new ConflictException('专家已更新，请重新打开后保存');
-      await tx.auditLog.create({data:{userId:actor.id,action:'admin_update_official_agent_draft',meta:{agentId:id,fields:['discoveryDetail']}}});
+      await tx.auditLog.create({data:{userId:actor.id,action:'admin_update_official_agent_draft',meta:{agentId:id,fields:['discoveryDetail','openingQuestions']}}});
     });
     return this.load(id);
   }
@@ -111,22 +124,46 @@ export class AdminOfficialAgentsService {
   async list(actor: User, query: ListOfficialAgentsDto) {
     await this.support.adminScope(actor);
     const keyword = query.keyword?.trim();
-    const rows = await this.prisma.officialAgent.findMany({
-      where: {
-        status: query.status,
-        ...(keyword ? {
+    const keywordWhere: Prisma.OfficialAgentWhereInput = keyword
+      ? {
           OR: [
+            { id: { contains: keyword, mode: 'insensitive' } },
             { name: { contains: keyword, mode: 'insensitive' } },
             { key: { contains: keyword, mode: 'insensitive' } },
             { summary: { contains: keyword, mode: 'insensitive' } },
           ],
-        } : {}),
-      },
-      include: officialAgentInclude,
-      orderBy: { createdAt: 'asc' },
-    });
-    const avatarByKey = this.avatarExplicitByKey();
-    return rows.map((row) => this.present(row, avatarByKey));
+        }
+      : {};
+    const [rows, grouped] = await Promise.all([
+      this.prisma.officialAgent.findMany({
+        where: {
+          ...(query.status ? { status: query.status } : {}),
+          ...keywordWhere,
+        },
+        include: officialAgentInclude,
+        // Newest first so freshly created drafts surface on page 1; id break ties.
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      }),
+      this.prisma.officialAgent.groupBy({
+        by: ['status'],
+        where: keywordWhere,
+        _count: { _all: true },
+      }),
+    ]);
+    const statusCounts = {
+      all: 0,
+      DRAFT: 0,
+      PUBLISHED: 0,
+      OFFLINE: 0,
+    };
+    for (const row of grouped) {
+      statusCounts[row.status] = row._count._all;
+      statusCounts.all += row._count._all;
+    }
+    return {
+      items: await this.presentMany(rows),
+      statusCounts,
+    };
   }
 
   async detail(actor: User, id: string) {
@@ -502,7 +539,7 @@ export class AdminOfficialAgentsService {
       data.openingQuestions = this.normalizeList(dto.openingQuestions);
     }
     if (dto.systemPrompt !== undefined) {
-      data.systemPrompt = this.requiredText(dto.systemPrompt, '执行提示词');
+      data.systemPrompt = dto.systemPrompt.trim();
     }
     if (dto.toolScope !== undefined) data.toolScope = this.normalizeList(dto.toolScope);
     if (dto.category !== undefined) {
@@ -535,44 +572,59 @@ export class AdminOfficialAgentsService {
 
   async publish(actor: User, id: string) {
     await this.support.adminScope(actor);
-    await this.prisma.$transaction(async (tx) => {
-      const agent = await tx.officialAgent.findUnique({ where: { id } });
-      if (!agent) throw new NotFoundException('官方专家不存在');
-      const linkedSkillSummaries = await this.officialSkills.snapshotLinkedSkills(id, tx);
-      const latest = await tx.officialAgentVersion.findFirst({
-        where: { agentId: id },
-        orderBy: { version: 'desc' },
-        select: { version: true },
-      });
-      const published = await tx.officialAgentVersion.create({
-        data: {
-          agentId: id,
-          version: (latest?.version ?? 0) + 1,
-          name: agent.name,
-          summary: agent.summary,
-          openingQuestions: this.frozenStringList(agent.openingQuestions, '开场问题'),
-          systemPrompt: agent.systemPrompt,
-          toolScope: this.frozenStringList(agent.toolScope, '工具范围'),
-          linkedSkillSummaries: linkedSkillSummaries as unknown as Prisma.InputJsonValue,
-          expertDefinition: normalizeExpertDefinition(agent.expertDefinition, agent),
-          publishedByUserId: actor.id,
-        },
-      });
-      await tx.officialAgent.update({
-        where: { id },
-        data: {
-          status: OfficialAgentStatus.PUBLISHED,
-          onlineVersion: { connect: { id: published.id } },
-        },
-      });
-      await tx.auditLog.create({
-        data: {
-          userId: actor.id,
-          action: 'admin_publish_official_agent',
-          meta: { agentId: id, versionId: published.id, version: published.version },
-        },
-      });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const agent = await tx.officialAgent.findUnique({
+          where: { id },
+          include: { skillLinks: true },
+        });
+        if (!agent) throw new NotFoundException('官方专家不存在');
+        this.assertPublishable(agent);
+        const linkedSkillSummaries = await this.officialSkills.snapshotLinkedSkills(id, tx);
+        const latest = await tx.officialAgentVersion.findFirst({
+          where: { agentId: id },
+          orderBy: { version: 'desc' },
+          select: { version: true },
+        });
+        const published = await tx.officialAgentVersion.create({
+          data: {
+            agentId: id,
+            version: (latest?.version ?? 0) + 1,
+            name: agent.name,
+            summary: agent.summary,
+            openingQuestions: this.frozenStringList(agent.openingQuestions, '开场问题'),
+            systemPrompt: agent.systemPrompt,
+            toolScope: this.frozenStringList(agent.toolScope, '工具范围'),
+            customAvatarPath: agent.customAvatarPath || null,
+            linkedSkillSummaries: linkedSkillSummaries as unknown as Prisma.InputJsonValue,
+            expertDefinition: normalizeExpertDefinition(agent.expertDefinition, agent),
+            publishedByUserId: actor.id,
+          },
+        });
+        await tx.officialAgent.update({
+          where: { id },
+          data: {
+            status: OfficialAgentStatus.PUBLISHED,
+            onlineVersion: { connect: { id: published.id } },
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            userId: actor.id,
+            action: 'admin_publish_official_agent',
+            meta: { agentId: id, versionId: published.id, version: published.version },
+          },
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === 'P2002' || error.code === 'P2034')
+      ) {
+        throw new ConflictException('发布冲突，请重试');
+      }
+      throw error;
+    }
     const published = await this.load(id);
     const asset = loadOfficialAgentAssets([published.key])[0];
     if (asset?.kbFiles?.length) {
@@ -602,6 +654,65 @@ export class AdminOfficialAgentsService {
       versionId: agent.onlineVersionId,
     });
     return this.load(id);
+  }
+
+  /**
+   * Physical delete. Cascades versions/grants/skillLinks/official KB owned by this expert.
+   * Does not touch OfficialSkill bodies, user sessions/messages, or enterprise libraries.
+   * Host sessions keep frozen binding snapshots; new starts fail because the catalog row is gone.
+   */
+  async remove(actor: User, id: string) {
+    await this.support.adminScope(actor);
+    let avatarPath: string | null | undefined;
+    let snapshot: { id: string; key: string; name: string; status: OfficialAgentStatus };
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const agent = await tx.officialAgent.findUnique({ where: { id } });
+        if (!agent) throw new NotFoundException('官方专家不存在');
+        avatarPath = agent.customAvatarPath;
+        snapshot = { id: agent.id, key: agent.key, name: agent.name, status: agent.status };
+        // Break OfficialAgent.onlineVersionId ↔ Version circular FK before cascading versions.
+        if (agent.onlineVersionId) {
+          await tx.officialAgent.update({
+            where: { id },
+            data: { onlineVersion: { disconnect: true } },
+          });
+        }
+        await tx.officialAgent.delete({ where: { id } });
+        // Preferences are soft references (no FK); clear so favourites cannot resurrect UI ghosts.
+        await tx.officialCatalogPreference.deleteMany({
+          where: { kind: 'expert', resourceId: id },
+        });
+        await tx.auditLog.create({
+          data: {
+            userId: actor.id,
+            action: 'admin_delete_official_agent',
+            meta: {
+              agentId: snapshot.id,
+              key: snapshot.key,
+              name: snapshot.name,
+              status: snapshot.status,
+            },
+          },
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === 'P2002' || error.code === 'P2034' || error.code === 'P2025')
+      ) {
+        throw new ConflictException('删除冲突，请刷新后重试');
+      }
+      throw error;
+    }
+    if (avatarPath) {
+      try {
+        await removeStoredFile(avatarPath);
+      } catch {
+        // Orphan avatar file is acceptable; config row is already gone.
+      }
+    }
+    return { ok: true as const, id: snapshot!.id, key: snapshot!.key, name: snapshot!.name };
   }
 
   async grant(actor: User, id: string, dto: GrantOfficialAgentDto) {
@@ -683,12 +794,131 @@ export class AdminOfficialAgentsService {
       include: officialAgentInclude,
     });
     if (!row) throw new NotFoundException('官方专家不存在');
-    return this.present(row);
+    const [presented] = await this.presentMany([row]);
+    return presented;
+  }
+
+  private async presentMany(rows: OfficialAgentRow[]) {
+    const avatarByKey = this.avatarExplicitByKey();
+    const publisherIds = rows.flatMap((row) =>
+      row.versions.map((version) => version.publishedByUserId),
+    );
+    const publisherNames = await this.loadPublisherNames(publisherIds);
+    return rows.map((row) => this.present(row, avatarByKey, publisherNames));
+  }
+
+  private async loadPublisherNames(userIds: Array<string | null | undefined>) {
+    const ids = [...new Set(userIds.filter((id): id is string => Boolean(id)))];
+    if (!ids.length) return new Map<string, string>();
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true },
+    });
+    return new Map(users.map((user) => [user.id, user.name]));
+  }
+
+
+  /** Publish requires complete public+execution essentials; save may keep incomplete drafts. */
+  private assertPublishable(agent: {
+    name: string;
+    summary: string;
+    systemPrompt: string;
+    expertDefinition: Prisma.JsonValue;
+    toolScope: Prisma.JsonValue;
+    skillLinks?: Array<{ skillId: string }>;
+  }) {
+    const missing: string[] = [];
+    if (!agent.name.trim()) missing.push('专家名称');
+    if (!agent.summary.trim()) missing.push('一句话介绍');
+    if (!agent.systemPrompt.trim()) missing.push('专家指令');
+    const definition = normalizeExpertDefinition(agent.expertDefinition, agent);
+    const profile =
+      definition.profile && typeof definition.profile === 'object' && !Array.isArray(definition.profile)
+        ? (definition.profile as Record<string, unknown>)
+        : {};
+    // Storage may fill role from name on save; frontend still requires an explicit 角色定位 before publish.
+    const role = typeof profile.role === 'string' ? profile.role.trim() : '';
+    if (!role) missing.push('角色定位');
+    const tools = Array.isArray(agent.toolScope)
+      ? agent.toolScope.filter((item): item is string => typeof item === 'string')
+      : [];
+    const allowedTools = new Set([
+      'enterprise_knowledge',
+      'web_search',
+      'web_fetch',
+      'tabular_analyze',
+      'delegate_official_agent',
+      'delegate',
+    ]);
+    if (tools.some((tool) => tool && !allowedTools.has(tool))) {
+      missing.push('可用工具（存在无效标识）');
+    }
+    void agent.skillLinks;
+    if (missing.length) {
+      throw new BadRequestException(`发布前请完善：${missing.join('、')}`);
+    }
+  }
+
+  /** Sort object keys recursively so Postgres jsonb key-order churn cannot fake diffs. */
+  private stableJson(value: unknown): string {
+    const sortKeys = (input: unknown): unknown => {
+      if (Array.isArray(input)) return input.map(sortKeys);
+      if (input && typeof input === 'object') {
+        return Object.fromEntries(
+          Object.keys(input as Record<string, unknown>)
+            .sort()
+            .map((key) => [key, sortKeys((input as Record<string, unknown>)[key])]),
+        );
+      }
+      return input;
+    };
+    return JSON.stringify(sortKeys(value) ?? null);
+  }
+
+  private hasUnpublishedChanges(row: OfficialAgentRow): boolean {
+    const online = row.onlineVersion;
+    if (!online) return false;
+    const draftSkillIds = row.skillLinks.map((link) => link.skillId).slice().sort();
+    const onlineSkillIds = (
+      Array.isArray(online.linkedSkillSummaries)
+        ? online.linkedSkillSummaries
+            .map((item) =>
+              item && typeof item === 'object' && 'id' in item
+                ? String((item as { id?: unknown }).id ?? '')
+                : '',
+            )
+            .filter(Boolean)
+        : []
+    ).slice().sort();
+    // Compare semantic snapshots on both sides. discoveryDetail lives inside expertDefinition,
+    // so plaza-intro saves are included; jsonb key order must not create false positives.
+    const draftAvatar = row.customAvatarPath || null;
+    const onlineAvatar =
+      'customAvatarPath' in online
+        ? ((online as { customAvatarPath?: string | null }).customAvatarPath || null)
+        : null;
+    return !(
+      row.name === online.name &&
+      row.summary === online.summary &&
+      row.systemPrompt === online.systemPrompt &&
+      draftAvatar === onlineAvatar &&
+      this.stableJson(row.openingQuestions) === this.stableJson(online.openingQuestions) &&
+      this.stableJson(row.toolScope) === this.stableJson(online.toolScope) &&
+      this.stableJson(normalizeExpertDefinition(row.expertDefinition, row)) ===
+        this.stableJson(
+          normalizeExpertDefinition(online.expertDefinition, {
+            name: online.name,
+            summary: online.summary,
+          }),
+        ) &&
+      this.stableJson(draftSkillIds) === this.stableJson(onlineSkillIds)
+    );
   }
 
   private present(
     row: OfficialAgentRow,
     avatarByKey: Map<string, string | null> = this.avatarExplicitByKey(),
+    publisherNames: Map<string, string> = new Map(),
   ) {
     return {
       id: row.id,
@@ -697,6 +927,7 @@ export class AdminOfficialAgentsService {
       category: row.category,
       capabilities: Array.isArray(row.capabilities) ? row.capabilities : [],
       status: row.status,
+      hasUnpublishedChanges: this.hasUnpublishedChanges(row),
       avatarUrl: this.resolveAvatarUrl(
         row.key,
         avatarByKey.get(row.key) ?? null,
@@ -712,8 +943,10 @@ export class AdminOfficialAgentsService {
         toolScope: row.toolScope,
         expertDefinition: row.expertDefinition,
       },
-      onlineVersion: row.onlineVersion ? this.presentVersion(row.onlineVersion) : null,
-      versions: row.versions.map((version) => this.presentVersion(version)),
+      onlineVersion: row.onlineVersion
+        ? this.presentVersion(row.onlineVersion, publisherNames)
+        : null,
+      versions: row.versions.map((version) => this.presentVersion(version, publisherNames)),
       grants: row.grants.map((grant) => ({
         id: grant.id,
         tenant: grant.tenant,
@@ -789,9 +1022,14 @@ export class AdminOfficialAgentsService {
       where: { id },
       data: { customAvatarPath: storagePath },
     });
-    // Orphans are acceptable in v1; still best-effort remove previous custom file.
+    // Never delete a file still frozen on any published version snapshot.
     if (current.customAvatarPath && current.customAvatarPath !== storagePath) {
-      await removeStoredFile(current.customAvatarPath);
+      const referenced = await this.prisma.officialAgentVersion.count({
+        where: { customAvatarPath: current.customAvatarPath },
+      });
+      if (referenced === 0) {
+        await removeStoredFile(current.customAvatarPath);
+      }
     }
     await this.audit(actor.id, 'admin_upload_official_agent_avatar', null, {
       agentId: id,
@@ -801,9 +1039,30 @@ export class AdminOfficialAgentsService {
     return this.load(id);
   }
 
-  async removeAvatar(actor:User,id:string){await this.support.adminScope(actor);await this.requireAgent(id);await this.prisma.officialAgent.update({where:{id},data:{customAvatarPath:''}});await this.audit(actor.id,'admin_remove_official_agent_avatar',null,{agentId:id});return this.load(id);}
+  async removeAvatar(actor: User, id: string) {
+    await this.support.adminScope(actor);
+    const current = await this.requireAgent(id);
+    const previous = current.customAvatarPath || null;
+    await this.prisma.officialAgent.update({ where: { id }, data: { customAvatarPath: '' } });
+    if (previous) {
+      const referenced = await this.prisma.officialAgentVersion.count({
+        where: { customAvatarPath: previous },
+      });
+      if (referenced === 0) await removeStoredFile(previous);
+    }
+    await this.audit(actor.id, 'admin_remove_official_agent_avatar', null, { agentId: id });
+    return this.load(id);
+  }
 
-  private presentVersion(version: OfficialAgentRow['versions'][number]) {
+  private presentVersion(
+    version: OfficialAgentRow['versions'][number],
+    publisherNames: Map<string, string> = new Map(),
+  ) {
+    const publishedByUserId = version.publishedByUserId ?? null;
+    const publishedByName =
+      publishedByUserId && publisherNames.has(publishedByUserId)
+        ? publisherNames.get(publishedByUserId) ?? null
+        : null;
     return {
       id: version.id,
       version: version.version,
@@ -816,18 +1075,21 @@ export class AdminOfficialAgentsService {
       linkedSkillSummaries: Array.isArray(version.linkedSkillSummaries)
         ? version.linkedSkillSummaries
         : [],
-      publishedByUserId: version.publishedByUserId,
+      publishedByUserId,
+      // Only expose a real name when the user row still exists; never invent operators.
+      publishedByName,
       publishedAt: version.publishedAt,
     };
   }
 
   private normalizeDraft(dto: CreateOfficialAgentDto): DraftConfig {
+    // Save allows incomplete drafts; publish runs assertPublishable for required fields.
     return {
-      name: this.requiredText(dto.name, '名称'),
-      summary: dto.summary.trim(),
-      openingQuestions: this.normalizeList(dto.openingQuestions),
-      systemPrompt: this.requiredText(dto.systemPrompt, '执行提示词'),
-      toolScope: this.normalizeList(dto.toolScope),
+      name: this.requiredText(dto.name, '专家名称'),
+      summary: (dto.summary ?? '').trim(),
+      openingQuestions: this.normalizeList(dto.openingQuestions ?? []),
+      systemPrompt: (dto.systemPrompt ?? '').trim(),
+      toolScope: this.normalizeList(dto.toolScope ?? []),
     };
   }
 

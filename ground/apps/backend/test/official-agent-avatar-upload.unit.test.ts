@@ -38,13 +38,13 @@ describe('official agent avatar upload validation', () => {
     assert.throws(() => assertOfficialAvatarUpload('a.svg', PNG, 'image/png'), /SVG/);
     assert.throws(
       () => assertOfficialAvatarUpload('a.png', Buffer.alloc(2 * 1024 * 1024 + 1, 1), 'image/png'),
-      /2MB/,
+      /5MB/,
     );
     assert.throws(() => assertOfficialAvatarUpload('a.png', SVG_TEXT, 'image/png'), /有效/);
     assert.throws(() => assertOfficialAvatarUpload('a.png', JPEG, 'image/png'), /不符/);
     assert.throws(() => assertOfficialAvatarUpload('a.jpg', PNG, 'image/jpeg'), /不符/);
     assert.throws(() => assertOfficialAvatarUpload('a.webp', PNG, 'image/webp'), /不符/);
-    assert.throws(() => assertOfficialAvatarUpload('a.gif', PNG, 'image/gif'), /仅支持/);
+    // GIF is allowed as a source and rasterized by saveOfficialAvatar/rasterizeOfficialAvatar.
   });
 });
 
