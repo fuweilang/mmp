@@ -52,6 +52,8 @@ describe('expert discovery detail single source', () => {
     assert.deepEqual(detail.starters[1], { text: '第二条' });
     assert.deepEqual(detail.starters[2], { text: '纯字符串第三条' });
     assert.equal('role' in detail, false);
+    const labelOnly = publicDiscoveryDetail({ starters: [{ label: '只有短标签' }] });
+    assert.deepEqual(labelOnly.starters, []);
   });
 
   it('normalize accepts text-only starters and rejects empty body', () => {

@@ -43,6 +43,7 @@ const skillSessionBindingSchema = z.object({
     key: z.string().min(1),
     name: z.string().min(1),
     packageRevision: z.number().int().nonnegative(),
+    avatarUrl: z.string().nullable().optional(),
   }).strict(),
   skill: skillCardSchema,
   standardCapabilities: z.object({

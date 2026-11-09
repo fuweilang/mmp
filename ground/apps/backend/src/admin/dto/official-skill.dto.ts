@@ -1,5 +1,4 @@
 import {
-  IsArray,
   IsObject,
   IsIn,
   IsOptional,
@@ -7,6 +6,7 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class ListAdminOfficialSkillsDto {
@@ -21,29 +21,32 @@ export class ListAdminOfficialSkillsDto {
 }
 
 export class CreateOfficialSkillFormDto {
+  @IsOptional()
+  @ValidateIf((_, value) => typeof value === 'string' && value.trim().length > 0)
   @IsString()
   @Matches(/^[a-z][a-z0-9-]{1,63}$/, {
     message: '标识需以小写字母开头，只能包含小写字母、数字和连字符',
   })
-  key!: string;
+  key?: string;
 
   @IsString()
   @MinLength(1)
   @MaxLength(40)
   name!: string;
 
+  @IsOptional()
   @IsString()
   @MaxLength(140)
-  summary!: string;
+  summary?: string;
 
   @IsOptional()
   @IsIn(['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle'])
   category?: 'common' | 'content' | 'analytics' | 'office' | 'education' | 'expertise' | 'business' | 'ecommerce' | 'sales' | 'hr' | 'legal' | 'finance' | 'consulting' | 'research' | 'files' | 'search' | 'writing' | 'lifestyle';
 
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(100000)
-  instruction!: string;
+  instruction?: string;
 }
 
 export class UpdateOfficialSkillDto {
@@ -64,9 +67,13 @@ export class UpdateOfficialSkillDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(100000)
   instruction?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  expectedUpdatedAt?: string;
 }
 
 export class OfficialSkillZipMetaDto {
@@ -83,6 +90,18 @@ export class OfficialSkillZipMetaDto {
   @IsOptional()
   @IsIn(['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle', ''])
   category?: 'common' | 'content' | 'analytics' | 'office' | 'education' | 'expertise' | 'business' | 'ecommerce' | 'sales' | 'hr' | 'legal' | 'finance' | 'consulting' | 'research' | 'files' | 'search' | 'writing' | 'lifestyle' | '';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  expectedUpdatedAt?: string;
+}
+
+export class OfficialSkillIconDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  expectedUpdatedAt?: string;
 }
 
 export class UpdateCatalogDiscoveryDto {

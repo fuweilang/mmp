@@ -309,6 +309,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       key: binding.sessionSource.key,
       name: binding.sessionSource.name,
       packageRevision: binding.sessionSource.packageRevision,
+      ...(binding.sessionSource.avatarUrl ? { avatarUrl: binding.sessionSource.avatarUrl } : {}),
     }
     const handle = await this.ctx.agents.create({
       sessionId,

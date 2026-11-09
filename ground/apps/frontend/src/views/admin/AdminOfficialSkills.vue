@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h2>技能管理</h2>
-        <p>维护官方技能的名称、用途与启用状态。上传技能包后即可在专家广场使用。</p>
+        <p>维护技能的名称、一句话介绍和启用状态。停用只是不再提供新的使用，不删除已有任务。</p>
       </div>
       <el-button type="primary" @click="openCreate">新建技能</el-button>
     </div>
@@ -13,7 +13,7 @@
         v-model="keywordDraft"
         clearable
         class="toolbar-search"
-        placeholder="搜索名称 / 用途 / 标识"
+        placeholder="搜索名称 / 一句话介绍 / 标识"
         @clear="onSearchNow"
         @keyup.enter="onSearchNow"
         @input="scheduleSearch"
@@ -34,13 +34,26 @@
     </el-alert>
 
     <el-table v-loading="loading" :data="pagedRows" row-key="id" border class="skills-table" header-cell-class-name="skills-table-header">
-      <el-table-column label="名称" min-width="160" show-overflow-tooltip>
+      <el-table-column label="名称" min-width="220">
         <template #default="{ row }">
-          <strong class="cell-ellipsis">{{ row.name }}</strong>
-          <div class="muted cell-ellipsis">{{ row.key }}</div>
+          <div class="name-cell">
+            <span class="skill-thumb" aria-hidden="true">
+              <img
+                v-if="row.avatarUrl && thumbFailed[row.id] !== row.avatarUrl"
+                :src="row.avatarUrl"
+                alt=""
+                @error="thumbFailed[row.id] = row.avatarUrl || ''"
+              />
+              <ImageIcon v-else :size="16" />
+            </span>
+            <span class="name-copy">
+              <strong class="cell-ellipsis">{{ row.name }}</strong>
+              <span class="muted cell-ellipsis">{{ row.key }}</span>
+            </span>
+          </div>
         </template>
       </el-table-column>
-      <el-table-column label="用途" min-width="220" show-overflow-tooltip prop="summary" />
+      <el-table-column label="一句话介绍" min-width="220" show-overflow-tooltip prop="summary" />
       <el-table-column label="分类" min-width="110" show-overflow-tooltip>
         <template #default="{ row }">{{ categoryLabel(row.category) }}</template>
       </el-table-column>
@@ -58,7 +71,7 @@
         <template #default="{ row }">
           <div class="operation-buttons">
             <el-button text type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button text type="primary" @click="discoveryId = row.id">广场详情</el-button>
+            <el-button text type="primary" @click="openDiscovery(row)">技能介绍</el-button>
             <el-button text type="primary" @click="toggleEnable(row)">
               {{ row.enabled ? '停用' : '启用' }}
             </el-button>
@@ -102,21 +115,21 @@
       @closed="resetEditor"
     >
       <el-form v-loading="detailLoading" :model="form" label-position="top" :disabled="saving || zipValidating || detailLoading">
-        <el-form-item v-if="!editingId && createMode === 'form'" label="标识" required>
-          <el-input v-model="form.key" maxlength="64" placeholder="小写字母开头，如 meeting-notes" />
+        <el-form-item label="图片">
+          <CatalogIconEditor v-model="pendingIcon" v-model:removed="removeIcon" profile="expert" :current-url="formIconUrl" :disabled="saving || zipValidating || detailLoading" @validating="iconValidating=$event" />
         </el-form-item>
-        <el-form-item label="图标（可选）"><CatalogIconEditor v-model="pendingIcon" v-model:removed="removeIcon" :current-url="formIconUrl" :disabled="saving || zipValidating || detailLoading" @validating="iconValidating=$event" /><div class="hint">图标独立于ZIP保存，更换图标不改变技能包版本。</div></el-form-item>
-        <el-form-item label="名称" required>
-          <el-input v-model="form.name" maxlength="40" placeholder="前台卡片显示的名称" />
+        <el-form-item label="名称" required :error="fieldErrors.name">
+          <el-input v-model="form.name" maxlength="40" placeholder="用户看到的名称，可以是中文" @input="fieldErrors.name = ''" />
         </el-form-item>
-        <el-form-item label="用途" required>
+        <el-form-item label="一句话介绍" :required="saveIntent === 'enable' || editingEnabled" :error="fieldErrors.summary">
           <el-input
             v-model="form.summary"
             type="textarea"
             :rows="2"
             maxlength="140"
             show-word-limit
-            placeholder="一句白话用途"
+            placeholder="用一句话说明这个技能做什么"
+            @input="fieldErrors.summary = ''"
           />
         </el-form-item>
         <el-form-item label="分类">
@@ -135,7 +148,7 @@
         </template>
 
         <template v-if="createMode === 'zip' || (editingId && replaceZip)">
-          <el-form-item :label="editingId ? '替换技能包' : '技能包 ZIP'" :required="!editingId">
+          <el-form-item :label="editingId ? '替换技能包' : '技能包 ZIP'" :required="saveIntent === 'enable' && !editingId" :error="fieldErrors.zip">
             <div class="zip-upload">
               <el-upload
                 ref="zipUploadRef"
@@ -150,65 +163,67 @@
                 </el-button>
               </el-upload>
               <div v-if="zipFile" class="zip-file-name">{{ zipFile.name }}</div>
-              <div class="hint">选包 → 校验 → 预览后可改名称用途 → 保存</div>
             </div>
           </el-form-item>
-          <el-alert
-            v-if="zipError"
-            type="error"
-            :closable="false"
-            show-icon
-            title="技能包无法识别，请换一个包再试"
-            :description="zipError"
-            class="zip-alert"
-          />
           <el-descriptions v-if="zipPreview" :column="1" border size="small" class="zip-preview">
             <el-descriptions-item label="标识">{{ zipPreview.key }}</el-descriptions-item>
             <el-descriptions-item label="预览名称">{{ zipPreview.name }}</el-descriptions-item>
-            <el-descriptions-item label="预览用途">{{ zipPreview.summary || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="预览介绍">{{ zipPreview.summary || '—' }}</el-descriptions-item>
             <el-descriptions-item label="资源数">{{ zipPreview.resourceCount }}</el-descriptions-item>
           </el-descriptions>
         </template>
 
-        <template v-if="createMode === 'form' || (editingId && !replaceZip)">
-          <el-form-item v-if="createMode === 'form' || editingId" label="技能说明" :required="createMode === 'form'">
+        <template v-if="(!editingId && createMode === 'form') || (editingId && !replaceZip)">
+          <el-form-item label="技能指令" :required="saveIntent === 'enable' || editingEnabled" :error="fieldErrors.instruction">
             <el-input
               v-model="form.instruction"
               type="textarea"
               :rows="8"
               maxlength="100000"
-              placeholder="技能指令正文（对应 SKILL.md）"
+              placeholder="步骤、要求和输出。名称和介绍不能代替这段执行内容"
+              @input="fieldErrors.instruction = ''"
             />
           </el-form-item>
         </template>
 
-        <el-form-item v-if="editingId" label="更换技能包">
+        <el-form-item v-if="editingId && contentSource !== 'zip'" label="改为上传技能包">
           <el-switch v-model="replaceZip" />
-          <span class="hint inline">关闭则保留现包，仅更新名称/用途/说明</span>
         </el-form-item>
+        <el-collapse v-if="editingId">
+          <el-collapse-item title="高级信息" name="advanced">
+            <el-form-item label="标识">
+              <el-input :model-value="form.key" readonly />
+            </el-form-item>
+          </el-collapse-item>
+        </el-collapse>
       </el-form>
 
       <template #footer>
         <el-button :disabled="saving || zipValidating" @click="editorOpen = false">取消</el-button>
-        <el-button type="primary" :loading="saving" :disabled="zipValidating || detailLoading || iconValidating" @click="onSave">保存</el-button>
+        <el-button v-if="!editingEnabled" :loading="saving && saveIntent === 'save'" :disabled="zipValidating || detailLoading || iconValidating" @click="onSave(false)">保存</el-button>
+        <el-button v-if="!editingEnabled" type="primary" :loading="saving && saveIntent === 'enable'" :disabled="zipValidating || detailLoading || iconValidating" @click="onSave(true)">保存并启用</el-button>
+        <el-button v-else type="primary" :loading="saving" :disabled="zipValidating || detailLoading || iconValidating" @click="onSave(false)">保存修改</el-button>
       </template>
     </el-dialog>
-    <CatalogDiscoveryEditor v-if="discoveryId" kind="skill" :resource-id="discoveryId" @close="discoveryId=''" @saved="reload" />
+    <CatalogDiscoveryEditor v-if="discoveryId" kind="skill" :resource-id="discoveryId" :skill-enabled="discoveryEnabled" @close="discoveryId=''" @saved="reload" />
   </section>
 </template>
 
 <script setup lang="ts">
 import CatalogDiscoveryEditor from '../../components/CatalogDiscoveryEditor.vue';
 const discoveryId=ref('');
+const discoveryEnabled=ref(false);
 import CatalogIconEditor from '../../components/CatalogIconEditor.vue';
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox, type UploadFile, type UploadInstance } from 'element-plus';
+import { Image as ImageIcon } from 'lucide-vue-next';
 import {
   adminOfficialSkillApi,
   type OfficialSkillCategory,
   type OfficialSkillRow,
   type OfficialSkillZipPreview,
 } from '../../api/admin';
+import { skillFormIssues, skillFormToast } from '../../utils/skill-form';
 
 const rows = ref<OfficialSkillRow[]>([]);
 const categoryFilter = ref<OfficialSkillCategory | ''>('');
@@ -238,7 +253,13 @@ watch([() => filteredRows.value.length, pageSize], () => {
 
 const editorOpen = ref(false);
 const editingId = ref('');
+const editingEnabled = ref(false);
+const contentSource = ref<'zip' | 'form' | 'none'>('none');
+const formUpdatedAt = ref('');
+const saveIntent = ref<'save' | 'enable'>('save');
 const saving = ref(false);
+const thumbFailed = reactive<Record<string, string>>({});
+const fieldErrors = reactive({ name: '', summary: '', instruction: '', zip: '' });
 const pendingIcon=ref<File|null>(null);
 const removeIcon=ref(false);
 const iconValidating=ref(false);
@@ -346,17 +367,30 @@ function resetEditor() {
   detailLoading.value = false;
   zipValidating.value = false;
   editingId.value = '';
+  editingEnabled.value = false;
+  contentSource.value = 'none';
+  formUpdatedAt.value = '';
+  saveIntent.value = 'save';
   createMode.value = 'zip';
   replaceZip.value = false;
   zipFile.value = null;
   zipPreview.value = null;
   zipError.value = '';
+  fieldErrors.name = '';
+  fieldErrors.summary = '';
+  fieldErrors.instruction = '';
+  fieldErrors.zip = '';
   form.key = '';
   form.name = '';
   form.summary = '';
   form.category = '';
   form.instruction = '';
   zipUploadRef.value?.clearFiles();
+}
+
+function openDiscovery(row: OfficialSkillRow) {
+  discoveryEnabled.value = row.enabled;
+  discoveryId.value = row.id;
 }
 
 function openCreate() {
@@ -367,6 +401,10 @@ function openCreate() {
 async function openEdit(row: OfficialSkillRow) {
   resetEditor();
   editingId.value = row.id;
+  editingEnabled.value = row.enabled;
+  contentSource.value = row.contentSource ?? (row.packageRevision > 0 ? 'form' : 'none');
+  formUpdatedAt.value = row.updatedAt;
+  replaceZip.value = contentSource.value === 'zip';
   formIconUrl.value=row.avatarUrl??null;
   createMode.value = 'form';
   form.key = row.key;
@@ -381,6 +419,10 @@ async function openEdit(row: OfficialSkillRow) {
     if (sequence !== editorSequence || !editorOpen.value) return;
     form.instruction = detail.instruction ?? '';
     formIconUrl.value=detail.avatarUrl??null;
+    editingEnabled.value = detail.enabled;
+    contentSource.value = detail.contentSource ?? contentSource.value;
+    formUpdatedAt.value = detail.updatedAt;
+    replaceZip.value = contentSource.value === 'zip';
     contentBaseline.value=editorContent();
   } catch (error) {
     if (sequence !== editorSequence || !editorOpen.value) return;
@@ -406,65 +448,141 @@ async function onZipPicked(upload: UploadFile) {
     body.append('file', file);
     const preview = await adminOfficialSkillApi.validateZip(body);
     if (sequence !== editorSequence || !editorOpen.value) return;
-    if (preview.keyConflict && !editingId.value) {
-      zipError.value = '技能标识已存在，同标识请走编辑入口替换内容';
+    if (preview.keyConflict && !editingId.value && !preview.keyDerived) {
+      zipError.value = `技能标识「${preview.key}」已存在，未创建新技能`;
+      fieldErrors.zip = zipError.value;
       return;
     }
-    if (editingId.value && preview.key !== form.key) {
-      zipError.value = '技能包标识与当前技能不一致';
+    if (editingId.value && !preview.keyDerived && preview.key !== form.key) {
+      zipError.value = '技能包标识与当前技能不一致，原技能未替换';
+      fieldErrors.zip = zipError.value;
       return;
     }
     zipPreview.value = preview;
+    fieldErrors.zip = '';
     if (!form.name.trim()) form.name = preview.name;
     if (!form.summary.trim()) form.summary = preview.summary;
     if (!form.category && preview.category) form.category = preview.category;
   } catch (error) {
-    if (sequence === editorSequence && editorOpen.value) zipError.value = error instanceof Error ? error.message : '技能包无法识别，请换一个包再试';
+    if (sequence === editorSequence && editorOpen.value) {
+      zipError.value = error instanceof Error ? error.message : '技能包无法识别，请换一个包再试';
+      fieldErrors.zip = zipError.value;
+    }
   } finally {
     if (sequence === editorSequence) zipValidating.value = false;
   }
 }
 
-async function onSave() {
+function applyIssues(enable: boolean) {
+  fieldErrors.name = '';
+  fieldErrors.summary = '';
+  fieldErrors.instruction = '';
+  fieldErrors.zip = '';
+  const issues = skillFormIssues({
+    name: form.name,
+    summary: form.summary,
+    instruction: form.instruction,
+    mode: createMode.value,
+    replacingZip: (!editingId.value && createMode.value === 'zip') || replaceZip.value,
+    editing: Boolean(editingId.value),
+    enabled: editingEnabled.value,
+    enable,
+    hasPackage: contentSource.value !== 'none',
+    zipSelected: Boolean(zipFile.value),
+    zipReady: Boolean(zipPreview.value),
+    zipError: zipError.value,
+    contentSource: contentSource.value,
+  });
+  Object.assign(fieldErrors, issues);
+  const toast = skillFormToast(issues);
+  if (toast) ElMessage.warning(toast);
+  return !toast;
+}
+
+async function onSave(enable: boolean) {
   if (saving.value || zipValidating.value || detailLoading.value || iconValidating.value) return;
-  if (!form.name.trim()) {
-    ElMessage.warning('请填写名称');
-    return;
-  }
-  if (!form.summary.trim()) {
-    ElMessage.warning('请填写用途');
-    return;
-  }
+  saveIntent.value = enable ? 'enable' : 'save';
+  if (!applyIssues(enable)) return;
   saving.value = true;
   try {
     const wasNew=!editingId.value;
     let next:OfficialSkillRow|undefined;
-    if(wasNew){
-      if(createMode.value==='zip'){
-        if(!zipFile.value||!zipPreview.value){ElMessage.warning('请先选择并通过校验的技能包');return;}
-        const body=new FormData();body.append('file',zipFile.value);body.append('name',form.name.trim());body.append('summary',form.summary.trim());if(form.category)body.append('category',form.category);
-        next=await adminOfficialSkillApi.createFromZip(body);
-      }else{
-        if(!form.key.trim()||!form.instruction.trim()){ElMessage.warning('请填写标识和技能说明');return;}
-        next=await adminOfficialSkillApi.createFromForm({key:form.key.trim(),name:form.name.trim(),summary:form.summary.trim(),...(form.category?{category:form.category}:{}),instruction:form.instruction});
-      }
-    }else if(replaceZip.value){
-      if(!zipFile.value||!zipPreview.value){ElMessage.warning('请先选择并通过校验的技能包');return;}
-      const body=new FormData();body.append('file',zipFile.value);body.append('name',form.name.trim());body.append('summary',form.summary.trim());if(form.category)body.append('category',form.category);
-      next=await adminOfficialSkillApi.replaceZip(editingId.value,body);
+    const usingZip = Boolean(zipFile.value && zipPreview.value) && (wasNew ? createMode.value === 'zip' : replaceZip.value);
+    if(wasNew && usingZip){
+      const body=new FormData();
+      body.append('file', zipFile.value as File);
+      body.append('name', form.name.trim());
+      body.append('summary', form.summary.trim());
+      body.append('category', form.category);
+      next=await adminOfficialSkillApi.createFromZip(body);
+    }else if(wasNew){
+      next=await adminOfficialSkillApi.createFromForm({
+        name: form.name.trim(),
+        summary: form.summary.trim(),
+        ...(form.category ? { category: form.category } : {}),
+        ...(createMode.value === 'form' && form.instruction.trim() ? { instruction: form.instruction } : {}),
+      });
+    }else if(usingZip){
+      const body=new FormData();
+      body.append('file', zipFile.value as File);
+      body.append('name', form.name.trim());
+      body.append('summary', form.summary.trim());
+      body.append('category', form.category);
+      if(formUpdatedAt.value) body.append('expectedUpdatedAt', formUpdatedAt.value);
+      next=await adminOfficialSkillApi.replaceZip(editingId.value, body);
     }else{
       const value=editorContent(),previous=contentBaseline.value;
-      const patch={...(value.name!==previous?.name?{name:value.name}:{}),...(value.summary!==previous?.summary?{summary:value.summary}:{}),...(value.category!==previous?.category?{category:form.category||'' as const}:{}),...(value.instruction!==previous?.instruction?{instruction:value.instruction}:{})};
-      if(Object.keys(patch).length)next=await adminOfficialSkillApi.update(editingId.value,patch);
+      const patch={
+        ...(value.name!==previous?.name?{name:value.name}:{}),
+        ...(value.summary!==previous?.summary?{summary:value.summary}:{}),
+        ...(value.category!==previous?.category?{category:form.category||'' as const}:{}),
+        ...(contentSource.value!=='zip' && value.instruction!==previous?.instruction?{instruction:value.instruction}:{}),
+        ...(formUpdatedAt.value?{expectedUpdatedAt:formUpdatedAt.value}:{}),
+      };
+      const changed = Object.keys(patch).some((key) => key !== 'expectedUpdatedAt');
+      if(changed) next=await adminOfficialSkillApi.update(editingId.value, patch);
     }
-    // Remember the content save before image I/O, so a retry never reimports a ZIP/rebuilds a revision.
-    if(next){editingId.value=next.id;form.key=next.key;form.instruction=next.instruction??form.instruction;contentBaseline.value=editorContent();replaceZip.value=false;createMode.value='form';}
-    if(pendingIcon.value){const body=new FormData();body.append('file',pendingIcon.value);next=await adminOfficialSkillApi.uploadIcon(editingId.value,body);}
-    else if(removeIcon.value){next=await adminOfficialSkillApi.removeIcon(editingId.value);}
-    if(next)formIconUrl.value=next.avatarUrl??null;
+    if(next){
+      editingId.value=next.id;
+      form.key=next.key;
+      form.instruction=next.instruction??form.instruction;
+      formUpdatedAt.value=next.updatedAt;
+      editingEnabled.value=next.enabled;
+      contentSource.value=next.contentSource??contentSource.value;
+      contentBaseline.value=editorContent();
+      replaceZip.value=contentSource.value==='zip';
+      createMode.value='form';
+    }
+    if(editingId.value && pendingIcon.value){
+      const body=new FormData();
+      body.append('file', pendingIcon.value);
+      if(formUpdatedAt.value) body.append('expectedUpdatedAt', formUpdatedAt.value);
+      next=await adminOfficialSkillApi.uploadIcon(editingId.value, body);
+    }else if(editingId.value && removeIcon.value){
+      next=await adminOfficialSkillApi.removeIcon(editingId.value, formUpdatedAt.value);
+    }
+    if(next){
+      formIconUrl.value=next.avatarUrl??null;
+      formUpdatedAt.value=next.updatedAt;
+      editingEnabled.value=next.enabled;
+    }
     pendingIcon.value=null;removeIcon.value=false;
-    ElMessage.success(wasNew?'已保存（默认停用，启用后出现在前台）':'已保存');
-    editorOpen.value = false;
+    if(enable){
+      try {
+        next=await adminOfficialSkillApi.enable(editingId.value);
+        editingEnabled.value=next.enabled;
+        formUpdatedAt.value=next.updatedAt;
+        ElMessage.success('已保存并启用');
+        editorOpen.value=false;
+      } catch (error) {
+        ElMessage.error(error instanceof Error ? error.message : '启用失败，内容已保留且仍为停用');
+        await reload();
+        return;
+      }
+    } else {
+      ElMessage.success(editingEnabled.value ? '已保存修改' : '已保存');
+      editorOpen.value=false;
+    }
     await reload();
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '保存失败');
@@ -588,6 +706,20 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.name-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.name-copy { min-width: 0; }
+.skill-thumb {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
+}
+.skill-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; background: var(--el-fill-color-light); }
 .operation-buttons {
   display: flex;
   align-items: center;

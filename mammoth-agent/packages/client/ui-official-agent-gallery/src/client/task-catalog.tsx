@@ -28,7 +28,7 @@ export function installTaskCatalog(ctx:Context):void {
   const source=ctx.sessions.list.getSnapshot().byId[id]?.projectionValues?.officialGallerySource
   const value=empty()
   if(source?.type==='expert'&&source.versionId)return {...value,expertRef:{id:source.id,versionId:source.versionId,name:source.name}}
-  if(source?.type==='skill'&&source.packageRevision)return {...value,skillRef:{id:source.id,revision:source.packageRevision,key:source.key,name:source.name}}
+  if(source?.type==='skill'&&source.packageRevision)return {...value,skillRef:{id:source.id,revision:source.packageRevision,key:source.key,name:source.name,icon:source.avatarUrl??null}}
   return value
  }
  ctx.inject(['commandUi','conversation','sessions'],scope=>{
