@@ -350,6 +350,7 @@ step_web() {
   run rsync -az --delete \
     -e "ssh ${SSH_OPTS[*]}" \
     --exclude node_modules --exclude .git --exclude .desktop-build \
+    --exclude '/apps/web/dist' --exclude '/apps/desktop/dist' \
     --exclude '/release' --exclude '/releases' \
     "$AGENT_ROOT/" "$HOST:$build_dir/"
 
