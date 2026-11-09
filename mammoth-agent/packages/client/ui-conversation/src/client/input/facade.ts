@@ -77,6 +77,8 @@ export interface SessionInputDeps {
   quoteInsertionAllowed?: () => boolean
   /** Current localized quote removal copy. */
   quoteRemoveLabel?: () => string
+  /** Current localized skill-chip removal copy. */
+  skillRemoveLabel?: () => string
   /** Command-plane attachment plumbing (the hub owns the conversation face and the copy). */
   commandAttachments: {
     /** Resolve ordered draft ids to wire payloads without sending them; rejects when an id no longer resolves. */
@@ -166,6 +168,8 @@ export class SessionInputShell implements SessionInput {
     return this.draftEditor.projection
   }
   private catalogSelection: CatalogDraftSelection | undefined
+  /** Programmatic draft edits must not treat a missing skill chip as the user removing it. */
+  private placingSkill = false
   private enterpriseKnowledge = false
   private knowledgeRevision = 0
   private rev = 0
@@ -189,6 +193,7 @@ export class SessionInputShell implements SessionInput {
     this.draftEditor = new DraftEditorRuntime({
       onUpdate: () => { this.onEditorUpdate() },
       quoteLabels: () => ({ remove: this.deps.quoteRemoveLabel?.() ?? '' }),
+      skillLabels: () => ({ remove: this.deps.skillRemoveLabel?.() ?? '' }),
       openReference: (source, reference) =>
         this.deps.inputTriggers?.()?.openReference(source, reference) ?? false,
       lexicon: () => this.lexicon.getSnapshot(),
@@ -203,6 +208,7 @@ export class SessionInputShell implements SessionInput {
 
   /** Re-project, sync the claim with the leading command chip, publish, and feed trigger tracking after every editor commit. */
   private onEditorUpdate(): void {
+    if (!this.placingSkill) this.adoptSkillChip()
     const prev = this.draftEditor.refreshProjection()
     // Selection-only commits advance neither the revision nor the published
     // state: menus still track the caret below, while draftRev moves only
@@ -230,13 +236,19 @@ export class SessionInputShell implements SessionInput {
    */
   setDraft(text: DraftInput): void {
     const draft = resolveDraftInput(text)
-    if (typeof text !== 'string') { this.catalogSelection = draft.catalogSelection; this.draftSnapshotCache = undefined; this.updateEnterpriseKnowledge(draft.enterpriseKnowledge === true) }
-    this.cancelCommandRestore()
-    if (draft.references.length === 0 && (draft.quotes?.length ?? 0) === 0) this.draftEditor.setDraft(draft.text)
-    else this.draftEditor.restoreDraft(draft.text, draft.references, draft.quotes, { remove: this.deps.quoteRemoveLabel?.() ?? '' })
-    if (draft.command === undefined) return
-    this.pendingCommand = { token: draft.command.token, rev: this.rev }
-    this.restoreCommand()
+    this.placingSkill = true
+    try {
+      if (typeof text !== 'string') { this.catalogSelection = draft.catalogSelection; this.draftSnapshotCache = undefined; this.updateEnterpriseKnowledge(draft.enterpriseKnowledge === true) }
+      this.cancelCommandRestore()
+      if (draft.references.length === 0 && (draft.quotes?.length ?? 0) === 0) this.draftEditor.setDraft(draft.text)
+      else this.draftEditor.restoreDraft(draft.text, draft.references, draft.quotes, { remove: this.deps.quoteRemoveLabel?.() ?? '' })
+      this.placeSkillChip()
+      if (draft.command === undefined) return
+      this.pendingCommand = { token: draft.command.token, rev: this.rev }
+      this.restoreCommand()
+    } finally {
+      this.placingSkill = false
+    }
   }
 
   /** @param text - selected transcript text. @returns whether the editable draft accepted the quote. */
@@ -303,8 +315,30 @@ export class SessionInputShell implements SessionInput {
     if(this.disposed||frozen(this.core.state.phase)||(initializeOnly&&this.catalogSelection!==undefined)||(!initializeOnly&&this.catalogSelection!==undefined&&value.selectionVersion<=this.catalogSelection.selectionVersion))return false
     this.catalogSelection=structuredClone(value)
     this.draftSnapshotCache=undefined
+    this.placeSkillChip()
     this.publish()
     return true
+  }
+
+  /** Insert or clear the draft's skill chip to match the catalog selection. */
+  private placeSkillChip(): void {
+    if (this.disposed || frozen(this.core.state.phase)) return
+    this.placingSkill = true
+    try { this.draftEditor.syncSkillChip(this.catalogSelection?.skillRef ?? null) }
+    finally { this.placingSkill = false }
+  }
+
+  /** Follow a chip the user added or removed, without writing the draft again. */
+  private adoptSkillChip(): void {
+    if (this.disposed || frozen(this.core.state.phase)) return
+    const chip = this.draftEditor.skillChip()
+    const current = this.catalogSelection?.skillRef ?? null
+    if (chip === null && current === null) return
+    if (chip !== null && current !== null && chip.id === current.id && chip.revision === current.revision && chip.key === current.key && chip.name === current.name && (chip.icon ?? null) === (current.icon ?? null)) return
+    const before = this.catalogSelection ?? { protocol: 1 as const, selectionVersion: 0, expertRef: null, skillRef: null }
+    this.catalogSelection = { ...before, selectionVersion: before.selectionVersion + 1, skillRef: chip }
+    this.draftSnapshotCache = undefined
+    this.publish()
   }
 
   setEnterpriseKnowledge(enabled: boolean): void {
@@ -735,13 +769,19 @@ export class SessionInputShell implements SessionInput {
    * undo history so sent content cannot resurrect.
    */
   private commitDraft(retainSuffixOf: string | null): void {
-    this.draftEditor.clearCommittedDraft((clip) => {
-      if (retainSuffixOf !== null && clip !== retainSuffixOf && clip.startsWith(retainSuffixOf)) {
-        return retainSuffixOf.length
-      }
-      return null
-    })
-    this.draftEditor.clearHistory()
+    this.placingSkill = true
+    try {
+      this.draftEditor.clearCommittedDraft((clip) => {
+        if (retainSuffixOf !== null && clip !== retainSuffixOf && clip.startsWith(retainSuffixOf)) {
+          return retainSuffixOf.length
+        }
+        return null
+      })
+      this.draftEditor.syncSkillChip(this.catalogSelection?.skillRef ?? null)
+      this.draftEditor.clearHistory()
+    } finally {
+      this.placingSkill = false
+    }
   }
 
   /**

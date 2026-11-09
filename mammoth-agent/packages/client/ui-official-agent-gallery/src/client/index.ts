@@ -1,6 +1,7 @@
 import { installTaskCatalog } from './task-catalog.tsx'
 /** Shared Mac/Web official expert + skill gallery (expert plaza). */
 import type { Context as ClientContext } from '@mammoth-ai/cordis'
+import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import type { MainPanelId } from '@mammoth-ai/mmp-client-ui-layout/client'
 import type {} from '@mammoth-ai/mmp-client-locale/client'
 import type {} from '@mammoth-ai/mmp-client-ui-renderer/client'
@@ -37,7 +38,21 @@ declare module '@mammoth-ai/mmp-client-ui-slots' {
 const NS = 'officialAgentGallery'
 const PANEL_ID = 'official-agents' as MainPanelId
 
-export const inject = ['slots', 'locale', 'remote', 'remote.officialAgentGallery', 'uiWorkspace']
+/**
+ * Open the new task, then put the chosen example into its empty composer.
+ * A new task has no user text yet, so an existing saved draft is replaced.
+ * @returns draftFailed when the sentence cannot be written after the task exists.
+ */
+function placeStarterDraft(ctx: ClientContext, sessionId: SessionId, draft: string | undefined): 'draftFailed' | undefined {
+  ctx.uiWorkspace.openSession(sessionId)
+  if (!draft) return
+  const binding = ctx.sessions.binding(sessionId)
+  if (binding === undefined) return 'draftFailed'
+  const placed = ctx.conversation.input.requestDraftInitialization(binding, { prompt: draft, whenDraftExists: 'replace' })
+  return placed === 'applied' ? undefined : 'draftFailed'
+}
+
+export const inject = ['slots', 'locale', 'remote', 'remote.officialAgentGallery', 'uiWorkspace', 'sessions', 'conversation']
 
 /** Register one shared expert plaza for both desktop and browser shells. */
 export function apply(ctx: ClientContext): void {
@@ -83,8 +98,7 @@ export function apply(ctx: ClientContext): void {
         }
         return 'startFailed'
       }
-      ctx.uiWorkspace.openSession(result.value)
-      if(draft){const binding=ctx.sessions.binding(result.value);if(binding)ctx.conversation.input.requestDraftInitialization(binding,{prompt:draft,whenDraftExists:'keep'});}
+      return placeStarterDraft(ctx, result.value, draft)
     },
     /**
      * Task 4: Ground validates skill → Host creates a NEW standard Session with
@@ -99,8 +113,7 @@ export function apply(ctx: ClientContext): void {
         workspaceId,
       })
       if (!result.ok) return /GALLERY_EXECUTION_UNAVAILABLE/.test(result.error.message)?'executionUnavailable':'startFailed'
-      ctx.uiWorkspace.openSession(result.value)
-      if(draft){const binding=ctx.sessions.binding(result.value);if(binding)ctx.conversation.input.requestDraftInitialization(binding,{prompt:draft,whenDraftExists:'keep'});}
+      return placeStarterDraft(ctx, result.value, draft)
     },
   }
   ctx.slots.inject('main', () => ctx.slots.register({

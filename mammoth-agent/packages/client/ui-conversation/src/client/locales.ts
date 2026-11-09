@@ -10,6 +10,7 @@ const PLAN_NEXT_ACTION_EN = 'describe your task to generate plan'
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
   'quote.remove': '移除引用',
+  'skill.remove': '移除技能',
   'shortcut.newline': '换行',
   'shortcut.complementary': '使用互补的 Queue／Steer 方式',
   'shortcut.slash': '打开命令菜单',
@@ -402,6 +403,7 @@ export type ConversationKey = keyof typeof zh
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
   'quote.remove': 'Remove quote',
+  'skill.remove': 'Remove skill',
   'shortcut.newline': 'New line',
   'shortcut.complementary': 'Use the complementary Queue / Steer action',
   'shortcut.slash': 'Open command menu',
@@ -793,6 +795,7 @@ export const en = {
 /** Japanese copy, checked against the English keys. */
 export const ja = {
   'quote.remove': '引用を削除',
+  'skill.remove': 'スキルを外す',
   'shortcut.newline': '改行',
   'shortcut.complementary': '補助のキュー / 実行中の指示変更を使用',
   'shortcut.slash': 'コマンドメニューを開く',
@@ -1182,6 +1185,7 @@ export const ja = {
 /** Spanish dictionary, checked against the English keys. */
 export const es = {
   'quote.remove': 'Eliminar cotización',
+  'skill.remove': 'Quitar habilidad',
   'shortcut.newline': 'Nueva linea',
   'shortcut.complementary': 'Usar la acción alternativa de poner en cola o redirigir',
   'shortcut.slash': 'Abrir menú de comandos',
@@ -1573,6 +1577,7 @@ export const es = {
 /** French dictionary, checked against the English keys. */
 export const fr = {
   'quote.remove': 'Supprimer le devis',
+  'skill.remove': 'Retirer la compétence',
   'shortcut.newline': 'Nouvelle ligne',
   'shortcut.complementary': 'Utiliser l’action alternative de mise en attente ou de guidage',
   'shortcut.slash': 'Ouvrir le menu des commandes',
@@ -1964,6 +1969,7 @@ export const fr = {
 /** German dictionary, checked against the English keys. */
 export const de = {
   'quote.remove': 'Zitat entfernen',
+  'skill.remove': 'Skill entfernen',
   'shortcut.newline': 'Neue Zeile',
   'shortcut.complementary': 'Die alternative Aktion zum Vormerken oder Lenken verwenden',
   'shortcut.slash': 'Befehlsmenü öffnen',
@@ -2355,6 +2361,7 @@ export const de = {
 /** Russian dictionary, checked against the English keys. */
 export const ru = {
   'quote.remove': 'Удалить цитату',
+  'skill.remove': 'Убрать навык',
   'shortcut.newline': 'Новая линия',
   'shortcut.complementary': 'Использовать альтернативное действие: поставить в очередь или направить',
   'shortcut.slash': 'Открыть командное меню',
@@ -2746,6 +2753,7 @@ export const ru = {
 /** Portuguese dictionary, checked against the English keys. */
 export const pt = {
   'quote.remove': 'Remover cotação',
+  'skill.remove': 'Remover habilidade',
   'shortcut.newline': 'Nova linha',
   'shortcut.complementary': 'Usar a ação alternativa de enfileirar ou orientar',
   'shortcut.slash': 'Abrir menu de comando',

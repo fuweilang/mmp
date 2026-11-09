@@ -97,7 +97,7 @@ it('t175 + expert/skill choose removable tags; cancelling preserves user text an
  await waitFor(()=>expect(f.input.state.getSnapshot().phase).toBe('plain'))
  await act(async()=>{f.input.setDraft('原始问题')})
  fireEvent.click(f.view.getByRole('button',{name:/^移除专家/}));fireEvent.click(f.view.getByRole('button',{name:/^移除技能/}))
- expect(f.input.state.getSnapshot().catalogSelection).toMatchObject({expertRef:null,skillRef:null})
+ await waitFor(()=>expect(f.input.state.getSnapshot().catalogSelection).toMatchObject({expertRef:null,skillRef:null}))
  expect(f.input.state.getSnapshot().draft).toBe('原始问题')
  fireEvent.click(f.view.getByRole('button',{name:'发送消息'}))
  await waitFor(()=>expect(f.prompt).toHaveBeenCalledTimes(2))

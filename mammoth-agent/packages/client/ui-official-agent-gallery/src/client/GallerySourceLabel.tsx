@@ -50,8 +50,6 @@ export function GallerySourceLabel({
 
   const runtime=useSessions(state=>state.byId[sessionId]?.projectionValues?.officialGalleryRuntime)
   const [busy,setBusy]=useState(false),[failure,setFailure]=useState(false)
-  const phases:Record<string,OfficialAgentGalleryLocaleKey>={preparing:'sourcePreparing',fetching:'sourcePreparing',prepared:'sourceFetched',context_loaded:'sourceLoaded',running:'sourceRunning',completed:'sourceCompleted',cancelled:'sourceCancelled',failed:'sourceFailed'}
-  const phaseKey=runtime?phases[runtime.phase]:undefined
   const save=async()=>{
     const artifact=runtime?.lastArtifact;if(!artifact||!download||busy)return
     setBusy(true);setFailure(false)
@@ -63,15 +61,24 @@ export function GallerySourceLabel({
       const url=URL.createObjectURL(new Blob([bytes]));const anchor=document.createElement('a');anchor.href=url;anchor.download=file.name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
     }catch{setFailure(true)}finally{setBusy(false)}
   }
-  if (source === undefined && runtime === undefined) return null
+  // Composer row keeps only an artifact download. The origin glyph and phase are header-only.
+  if (download) {
+    const artifact = runtime?.lastArtifact
+    if (!artifact && !failure) return null
+    return (
+      <span className={css.group}>
+        {artifact ? <button type="button" className={css.download} onClick={() => void save()} disabled={busy}>{busy ? t('artifactBusy') : t('artifactDownload', { name: artifact.name })}</button> : null}
+        {failure ? <span role="alert" className={css.error}>{t('artifactFailed')}</span> : null}
+      </span>
+    )
+  }
+  if (source === undefined) return null
 
-  const key: OfficialAgentGalleryLocaleKey = source?.type === 'expert' ? 'sourceExpert' : 'sourceSkill'
-  const text = source ? t(key, { name: source.type === 'skill' && deleted ? t('skillDeletedMark', { name: source.name }) : source.name }) : ''
+  const key: OfficialAgentGalleryLocaleKey = source.type === 'expert' ? 'sourceExpert' : 'sourceSkill'
+  const text = t(key, { name: source.type === 'skill' && deleted ? t('skillDeletedMark', { name: source.name }) : source.name })
   return (
     <span className={css.group}>
-      <span className={css.label}><IconAppsAddOutlineRegular size={14}/> {download ? <span role="status">{phaseKey?t(phaseKey):''}</span> : <span>{t('sourceCreation')} {text}</span>}</span>
-      {download&&runtime?.lastArtifact&&<button type="button" className={css.download} onClick={()=>void save()} disabled={busy}>{busy?t('artifactBusy'):t('artifactDownload',{name:runtime.lastArtifact.name})}</button>}
-      {failure&&<span role="alert" className={css.error}>{t('artifactFailed')}</span>}
+      <span className={css.label}><IconAppsAddOutlineRegular size={14}/> <span>{t('sourceCreation')} {text}</span></span>
     </span>
   )
 }

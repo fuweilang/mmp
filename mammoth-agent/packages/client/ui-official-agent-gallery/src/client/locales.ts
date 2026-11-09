@@ -152,6 +152,7 @@ export const zh = {
   skillStartFailed: '无法使用该技能，请重试',
   notGranted: '暂未开通',
   startFailed: '无法开始对话，请重试',
+  draftFailed: '问题没有写入输入框，请再试一次',
   notGrantedHint: '当前企业暂未开通该专家，可浏览介绍，开通后即可对话',
   workspaceRequired: '请先创建一个工作区，再开始对话',
   sourceExpert: '专家 · {name}',
@@ -317,6 +318,7 @@ export const en = {
   skillStartFailed: 'Could not use this skill. Retry.',
   notGranted: 'Not enabled',
   startFailed: 'Could not start the chat. Retry.',
+  draftFailed: 'The example was not placed in the input. Retry.',
   notGrantedHint: 'This enterprise has not enabled the expert yet.',
   workspaceRequired: 'Create a workspace before starting a chat.',
   sourceExpert: 'Expert · {name}',
@@ -358,6 +360,7 @@ export const ja = {
   skillStartFailed: 'このスキルを使えません。再試行してください',
   notGranted: '未開通',
   startFailed: '会話を開始できません。再試行してください',
+  draftFailed: '例文を入力欄に入れられませんでした。再試行してください',
   workspaceRequired: '先にワークスペースを作成してから開始してください',
 } satisfies Record<OfficialAgentGalleryLocaleKey, string>
 

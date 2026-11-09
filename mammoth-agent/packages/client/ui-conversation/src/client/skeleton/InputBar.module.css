@@ -215,7 +215,8 @@
   caret-color: transparent;
 }
 
-.input[data-composer-composing] + .placeholder {
+.input[data-composer-composing] + .placeholder,
+.input:has([data-composer-skill]) + .placeholder {
   visibility: hidden;
 }
 

@@ -658,7 +658,7 @@ describe('plugin capabilities a share exposes', () => {
 })
 
 it('t168 actual reader policy denies account catalog, destructive mutations and artifacts globally and on source/own-child even if a plugin offers them',async()=>{
- const h=await fixture(),endpoints=['officialAgentGallery/catalogDetail','officialAgentGallery/createSkill','officialAgentGallery/downloadArtifact','officialAgentGallery/expertCard','officialAgentGallery/expertFacets','officialAgentGallery/favourite','officialAgentGallery/listSkillFacets','officialAgentGallery/listSkills','officialAgentGallery/pageExperts','officialAgentGallery/pageSkills','officialAgentGallery/preferences','officialAgentGallery/skillFacets','session/deleteTask'] as const
+ const h=await fixture(),endpoints=['officialAgentGallery/catalogDetail','officialAgentGallery/createSkill','officialAgentGallery/downloadArtifact','officialAgentGallery/expertCard','officialAgentGallery/expertFacets','officialAgentGallery/favourite','officialAgentGallery/listSkillFacets','officialAgentGallery/listSkills','officialAgentGallery/pageExperts','officialAgentGallery/pageSkills','officialAgentGallery/preferences','officialAgentGallery/skillFacets','officialAgentGallery/skillAvailability','session/deleteTask'] as const
  for(const action of endpoints)for(const resource of [GLOBAL,session('source'),session('own-child'),workspace('project')])expect(h.decide(action,resource).kind).toBe('deny')
  h.offer([capabilityGroup(endpoints,endpoints)]);h.select([capabilityGroup(endpoints,endpoints)])
  for(const action of endpoints)for(const resource of [GLOBAL,session('source'),session('own-child'),workspace('project')])expect(h.decide(action,resource).kind).toBe('deny')

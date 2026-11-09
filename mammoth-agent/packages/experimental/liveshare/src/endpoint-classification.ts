@@ -225,6 +225,7 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'officialAgentGallery/pageSkills': 'owner-only', // authenticated account skill catalog/filter/page
   'officialAgentGallery/preferences': 'owner-only', // tenant+user private favourites and genuine recent-use references
   'officialAgentGallery/skillFacets': 'owner-only', // authenticated owner skill catalog metadata
+  'officialAgentGallery/skillAvailability': 'owner-only', // authenticated Ground deleted/selectable probe; no share-viewer catalog grant
   'session/deleteTask': 'owner-only', // permanent owner task-record deletion, never reader mutation
   'agentPresets/list': 'owner-only', // owner agent presets
   'agentPresets/read': 'owner-only', // owner agent presets

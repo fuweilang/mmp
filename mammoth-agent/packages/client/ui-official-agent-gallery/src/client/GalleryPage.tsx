@@ -6,8 +6,8 @@ import type { OfficialAgentGalleryLocaleKey } from './locales.ts';
 import { CAPABILITIES, EXPERT_CAPABILITIES, INDUSTRIES } from './skill-facets.ts';
 import { CatalogIcon } from './CatalogIcon.tsx';
 import css from './GalleryPage.module.css';
-export type StartAgentFailure = 'workspaceRequired' | 'startFailed' | 'notGranted' | 'executionUnavailable';
-export type StartSkillResult = 'pending' | 'workspaceRequired' | 'startFailed' | 'executionUnavailable' | undefined;
+export type StartAgentFailure = 'workspaceRequired' | 'startFailed' | 'notGranted' | 'executionUnavailable' | 'draftFailed';
+export type StartSkillResult = 'pending' | 'workspaceRequired' | 'startFailed' | 'executionUnavailable' | 'draftFailed' | undefined;
 export type GalleryTab = 'experts' | 'skills';
 export interface GalleryFace {
     readonly preferences?: (kind:'expert'|'skill',view:'favourites'|'recent') => Promise<readonly {resourceId:string}[]>;
@@ -81,7 +81,7 @@ export function GalleryPage({ t, preferences, favourite, catalogDetail, pageExpe
             else {
                 const failure = await requestSkill(item.id,draft);
                 if (failure)
-                    setNotice(failure === 'pending' ? t('skillPending', { skillId: item.id }) : t(failure === 'executionUnavailable' ? 'executionUnavailable' : failure === 'workspaceRequired' ? 'workspaceRequired' : 'skillStartFailed'));
+                    setNotice(failure === 'pending' ? t('skillPending', { skillId: item.id }) : t(failure === 'draftFailed' ? 'draftFailed' : failure === 'executionUnavailable' ? 'executionUnavailable' : failure === 'workspaceRequired' ? 'workspaceRequired' : 'skillStartFailed'));
                 else setSelected(null);
             }
         }
@@ -287,6 +287,16 @@ function CatalogPanel({ kind, active, loadPage, loadFacets, starting, onStart, o
  </div>;
 }
 
+/** One existing example, chosen uniformly. No examples means the task opens with an empty input. */
+function randomStarter(choices: readonly string[]): string | undefined {
+  if (choices.length === 0) return undefined
+  return choices[Math.floor(Math.random() * choices.length)]
+}
+
+function starterChoices(starters: readonly { readonly text: string }[]): string[] {
+  return starters.map(starter => starter.text.trim()).filter(text => text !== '')
+}
+
 function CatalogDetails({item,load,onClose,onStart,busy,t}:{readonly item:Item;readonly load:(kind:'expert'|'skill',id:string)=>Promise<CatalogDetail>;readonly onClose:()=>void;readonly onStart:(item:Item,draft?:string)=>Promise<void>;readonly busy:boolean;readonly t:Translate<OfficialAgentGalleryLocaleKey>}):ReactNode {
  const dialog=useRef<HTMLDialogElement>(null),backdropDown=useRef(false);const [data,setData]=useState<CatalogDetail|null>(null),[error,setError]=useState(false),[retry,setRetry]=useState(0);
  const kind='executionGranted' in item?'expert':'skill';
@@ -330,6 +340,6 @@ function CatalogDetails({item,load,onClose,onStart,busy,t}:{readonly item:Item;r
    {hasMore?<details className={`${css.detailSection} ${css.moreDetails}`}><summary>{t('skillMoreLabel')}</summary><div className={css.morePanel}>{moreFields.map(({field,items})=><section key={field} className={css.moreBlock}><h4 className={css.moreBlockTitle}>{t(field==='outputs'?'expertOutputsLabel':field==='materials'?'expertMaterialsLabel':'expertBoundariesLabel')}</h4><div className={css.moreBlockBody}>{items.map((text,index)=><p key={index}>{text}</p>)}</div></section>)}</div></details>:null}
    </>}
    </div>
-   <footer className={css.detailActions}><Button className={css.detailStartPrimary} variant="primary" size="sm" disabled={busy||!data||error} onClick={()=>{void onStart(item);}}>{t(busy?'starting':kind==='expert'?'start':'useSkill')}</Button></footer>
+   <footer className={css.detailActions}><Button className={css.detailStartPrimary} variant="primary" size="sm" disabled={busy||!data||error} onClick={()=>{void onStart(item, randomStarter(starterChoices(starters)));}}>{t(busy?'starting':kind==='expert'?'start':'useSkill')}</Button></footer>
  </dialog>;
 }
