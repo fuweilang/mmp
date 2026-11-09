@@ -214,7 +214,7 @@ import CatalogDiscoveryEditor from '../../components/CatalogDiscoveryEditor.vue'
 const discoveryId=ref('');
 const discoveryEnabled=ref(false);
 import CatalogIconEditor from '../../components/CatalogIconEditor.vue';
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { computed, h, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox, type UploadFile, type UploadInstance } from 'element-plus';
 import { Image as ImageIcon } from 'lucide-vue-next';
 import {
@@ -625,16 +625,25 @@ async function toggleEnable(row: OfficialSkillRow) {
 async function onDelete(row: OfficialSkillRow) {
   if (deletingId.value) return;
   const copy = skillDeleteConfirm({ name: row.name });
+  const skillName = row.name.trim() || '未命名技能';
   let confirmed = false;
   try {
-    await ElMessageBox.confirm(copy.message, copy.title, {
-      type: 'warning',
-      customClass: 'official-skill-message-box',
-      confirmButtonText: copy.confirm,
-      cancelButtonText: copy.cancel,
-      confirmButtonClass: 'el-button--danger',
-      closeOnClickModal: false,
-    });
+    await ElMessageBox.confirm(
+      h('span', null, [
+        '确定删除技能「',
+        h('span', { style: { color: 'var(--el-color-primary, #409eff)' } }, skillName),
+        '」？删除后不可再选用，已有对话和任务记录不受影响。',
+      ]),
+      copy.title,
+      {
+        type: 'warning',
+        customClass: 'official-skill-message-box',
+        confirmButtonText: copy.confirm,
+        cancelButtonText: copy.cancel,
+        confirmButtonClass: 'el-button--danger',
+        closeOnClickModal: false,
+      },
+    );
     confirmed = true;
   } catch {
     confirmed = false;
@@ -806,6 +815,7 @@ onUnmounted(() => {
   display: inline-flex;
   flex-direction: column;
   box-sizing: border-box;
+  width: 480px;
   max-width: calc(100vw - 48px);
   max-height: calc(100vh - 48px);
   max-height: calc(100dvh - 48px);
