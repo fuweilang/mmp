@@ -223,7 +223,7 @@ import {
   type OfficialSkillRow,
   type OfficialSkillZipPreview,
 } from '../../api/admin';
-import { skillFormIssues, skillFormToast } from '../../utils/skill-form';
+import { keepStoredExecution, skillFormIssues, skillFormToast } from '../../utils/skill-form';
 
 const rows = ref<OfficialSkillRow[]>([]);
 const categoryFilter = ref<OfficialSkillCategory | ''>('');
@@ -507,26 +507,34 @@ async function onSave(enable: boolean) {
   try {
     const wasNew=!editingId.value;
     let next:OfficialSkillRow|undefined;
+    const kept = keepStoredExecution({
+      enable,
+      summary: form.summary.trim(),
+      instruction: form.instruction,
+      previousSummary: contentBaseline.value?.summary ?? '',
+      previousInstruction: contentBaseline.value?.instruction ?? '',
+      hasPackage: contentSource.value !== 'none',
+    });
     const usingZip = Boolean(zipFile.value && zipPreview.value) && (wasNew ? createMode.value === 'zip' : replaceZip.value);
     if(wasNew && usingZip){
       const body=new FormData();
       body.append('file', zipFile.value as File);
       body.append('name', form.name.trim());
-      body.append('summary', form.summary.trim());
+      if (kept.summary !== undefined) body.append('summary', kept.summary);
       body.append('category', form.category);
       next=await adminOfficialSkillApi.createFromZip(body);
     }else if(wasNew){
       next=await adminOfficialSkillApi.createFromForm({
         name: form.name.trim(),
-        summary: form.summary.trim(),
+        ...(kept.summary !== undefined ? { summary: kept.summary } : {}),
         ...(form.category ? { category: form.category } : {}),
-        ...(createMode.value === 'form' && form.instruction.trim() ? { instruction: form.instruction } : {}),
+        ...(createMode.value === 'form' && kept.instruction?.trim() ? { instruction: kept.instruction } : {}),
       });
     }else if(usingZip){
       const body=new FormData();
       body.append('file', zipFile.value as File);
       body.append('name', form.name.trim());
-      body.append('summary', form.summary.trim());
+      if (kept.summary !== undefined) body.append('summary', kept.summary);
       body.append('category', form.category);
       if(formUpdatedAt.value) body.append('expectedUpdatedAt', formUpdatedAt.value);
       next=await adminOfficialSkillApi.replaceZip(editingId.value, body);
@@ -534,9 +542,9 @@ async function onSave(enable: boolean) {
       const value=editorContent(),previous=contentBaseline.value;
       const patch={
         ...(value.name!==previous?.name?{name:value.name}:{}),
-        ...(value.summary!==previous?.summary?{summary:value.summary}:{}),
+        ...(kept.summary!==undefined && value.summary!==previous?.summary?{summary:value.summary}:{}),
         ...(value.category!==previous?.category?{category:form.category||'' as const}:{}),
-        ...(contentSource.value!=='zip' && value.instruction!==previous?.instruction?{instruction:value.instruction}:{}),
+        ...(contentSource.value!=='zip' && kept.instruction!==undefined && value.instruction!==previous?.instruction?{instruction:value.instruction}:{}),
         ...(formUpdatedAt.value?{expectedUpdatedAt:formUpdatedAt.value}:{}),
       };
       const changed = Object.keys(patch).some((key) => key !== 'expectedUpdatedAt');

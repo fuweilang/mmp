@@ -72,16 +72,25 @@ export function assertSafeSvgAvatar(buffer: Buffer): void {
     throw new Error('SVG 含脚本，已拒绝');
   }
   if (/<foreignObject[\s>]/i.test(text)) throw new Error('SVG 含 foreignObject，已拒绝');
-  if (
-    /(?:xlink:)?href\s*=\s*["']\s*(?:https?:|file:|data:|\/\/)/i.test(text) ||
-    /(?:xlink:)?href\s*=\s*["']\s*[.]{1,2}\//i.test(text)
-  ) {
-    throw new Error('SVG 含外链或本地引用，已拒绝');
+  if (/<(?:iframe|embed|object|link|meta)\b/i.test(text)) {
+    throw new Error('SVG 含外部资源标签，已拒绝');
   }
-  if (/@import/i.test(text) || /url\s*\(\s*["']?\s*(?:https?:|file:|\/\/)/i.test(text)) {
-    throw new Error('SVG 含外部样式引用，已拒绝');
-  }
+  assertSvgReferencesStayInside(text);
   if (!/<svg[\s>]/i.test(text)) throw new Error('不是有效的 SVG');
+}
+
+/** Allow fragment refs such as url(#grad). Every other href, src or url() can be loaded by the rasterizer. */
+function assertSvgReferencesStayInside(text: string) {
+  const attrs = /(?:\s)(?:xlink:href|href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi;
+  for (const match of text.matchAll(attrs)) {
+    const value = (match[1] ?? match[2] ?? match[3] ?? '').trim();
+    if (value && !value.startsWith('#')) throw new Error('SVG 含外链或本地引用，已拒绝');
+  }
+  if (/@import/i.test(text)) throw new Error('SVG 含外部样式引用，已拒绝');
+  for (const match of text.matchAll(/url\s*\(\s*(['"]?)([\s\S]*?)\1\s*\)/gi)) {
+    const value = match[2].trim();
+    if (!value.startsWith('#')) throw new Error('SVG 含外部样式引用，已拒绝');
+  }
 }
 
 /**

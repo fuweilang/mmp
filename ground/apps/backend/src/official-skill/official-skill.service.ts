@@ -1,7 +1,7 @@
 import { normalizeDiscoveryDetail, publicDiscoveryDetail } from '../official-agent/discovery-detail';
 import { catalogQuery, catalogFacets, catalogDiscoveryWhere, discoveryOf, displaySummary, DESCRIPTIONS, nextCatalogCursor, type CatalogQuery } from '../official-agent/catalog-discovery';
 import { uploadedCatalogIconUrl } from '../official-agent/gallery-avatars';
-import { saveOfficialAvatar } from '../knowledge/storage';
+import { absoluteUploadPath, officialSkillPackageRelDir, saveOfficialAvatar } from '../knowledge/storage';
 import {
   BadRequestException,
   ConflictException,
@@ -16,7 +16,6 @@ import { readFile, rm } from 'fs/promises';
 import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { LlmChatGatewayService } from '../llm/llm-chat.gateway.service';
-import { absoluteUploadPath } from '../knowledge/storage';
 import { skillDiscovery } from './skill-discovery';
 import {
   ParsedSkillPackage,
@@ -33,7 +32,7 @@ import {
   writeSkillPackageToDisk,
   type OfficialSkillCategoryKey,
 } from './skill-package';
-import { assertFreshStamp, candidateSkillKeys, skillEnableGaps, skillEnableMessage, zipReplaceDecision } from './skill-workflow';
+import { assertFreshStamp, candidateSkillKeys, packageWriteClaim, skillEnableGaps, skillEnableMessage, zipReplaceDecision } from './skill-workflow';
 import {
   buildDisplayTranslationPrompt,
   displaySourceHash,
@@ -285,7 +284,21 @@ export class OfficialSkillService {
     }
 
     if (rebuilt) {
-      await this.replacePackage(row, rebuilt, undefined, data);
+      const built = rebuilt;
+      await this.mutateSkill(id, body.expectedUpdatedAt, async (tx, locked) => {
+        await this.assertEnabledStillComplete(locked, {
+          name: body.name !== undefined ? String(data.name ?? locked.name) : locked.name,
+          summary: body.summary !== undefined ? String(data.summary ?? locked.summary) : locked.summary,
+          instruction: built.instruction,
+          hasPackage: true,
+        });
+        await this.replacePackage(tx, locked, built, undefined, data);
+        await this.auditTx(tx, actor.id, 'admin_update_official_skill', {
+          skillId: id,
+          fields: [...Object.keys(data), 'instruction', 'package'],
+        });
+      });
+      return this.adminDetail(id, { includeInstruction: true });
     } else {
       const updated = await this.prisma.officialSkill.updateMany({ where: { id, updatedAt: row.updatedAt }, data });
       if (updated.count !== 1) throw new ConflictException('技能已更新，请重新打开后保存');
@@ -309,56 +322,53 @@ export class OfficialSkillService {
   ) {
     if (!file?.buffer?.length) throw skillPackageError('SKILL_PACKAGE_INVALID', '请选择技能包');
     const parsed = await parseSkillZip(file.buffer);
-    const row = await this.requireSkill(id);
-    assertFreshStamp(row.updatedAt.toISOString(), overrides.expectedUpdatedAt);
-    const decision = zipReplaceDecision(row.key, { key: parsed.manifest.key, keyDerived: parsed.keyDerived });
-    if (!decision.ok) throw skillPackageError('SKILL_PACKAGE_INVALID', decision.message);
-    if (parsed.manifest.key !== decision.key) retargetPackageKey(parsed, decision.key);
-    const display = this.displayFromOverrides(parsed, overrides, row);
-    this.applyCategory(parsed, overrides.category);
-    await this.assertEnabledStillComplete(row, {
-      name: display.name,
-      summary: display.summary,
-      instruction: parsed.instruction,
-      hasPackage: true,
-    });
-    await this.replacePackage(row, parsed, file.buffer, {
-      name: display.name,
-      summary: display.summary,
-      category: parsed.manifest.category ?? null,
-      displayProvenance: display.provenance,
-    });
-    await this.audit(actor.id, 'admin_replace_official_skill_package', {
-      skillId: id,
-      key: row.key,
-      revision: row.currentRevision + 1,
+    await this.mutateSkill(id, overrides.expectedUpdatedAt, async (tx, row) => {
+      const decision = zipReplaceDecision(row.key, { key: parsed.manifest.key, keyDerived: parsed.keyDerived });
+      if (!decision.ok) throw skillPackageError('SKILL_PACKAGE_INVALID', decision.message);
+      if (parsed.manifest.key !== decision.key) retargetPackageKey(parsed, decision.key);
+      const display = this.displayFromOverrides(parsed, overrides, row);
+      this.applyCategory(parsed, overrides.category);
+      await this.assertEnabledStillComplete(row, {
+        name: display.name,
+        summary: display.summary,
+        instruction: parsed.instruction,
+        hasPackage: true,
+      });
+      await this.replacePackage(tx, row, parsed, file.buffer, {
+        name: display.name,
+        summary: display.summary,
+        category: parsed.manifest.category ?? null,
+        displayProvenance: display.provenance,
+      });
+      await this.auditTx(tx, actor.id, 'admin_replace_official_skill_package', {
+        skillId: id,
+        key: row.key,
+        revision: row.currentRevision + 1,
+      });
     });
     return this.adminDetail(id, { includeInstruction: true });
   }
 
   async enable(actor: User, id: string) {
-    const row = await this.requireSkill(id);
-    if (row.enabledAt) return this.presentAdmin(row);
-    const instruction = await this.readInstructionIfAny(row);
-    const gaps = skillEnableGaps({
-      name: row.name,
-      summary: row.summary,
-      instruction,
-      hasPackage: Boolean(row.currentPackageId && row.currentRevision >= 1 && row.currentPackage),
-    });
-    if (gaps.length) {
-      throw new BadRequestException({
-        code: 'SKILL_ENABLE_INCOMPLETE',
-        message: skillEnableMessage(gaps),
-        missing: gaps,
+    await this.mutateSkill(id, undefined, async (tx, row) => {
+      if (row.enabledAt) return;
+      const instruction = await this.readInstructionIfAny(row);
+      const gaps = skillEnableGaps({
+        name: row.name,
+        summary: row.summary,
+        instruction,
+        hasPackage: Boolean(row.currentPackageId && row.currentRevision >= 1 && row.currentPackage),
       });
-    }
-    const updated = await this.prisma.officialSkill.updateMany({
-      where: { id, enabledAt: null },
-      data: { enabledAt: new Date() },
+      if (gaps.length) {
+        throw new BadRequestException({
+          code: 'SKILL_ENABLE_INCOMPLETE',
+          message: skillEnableMessage(gaps),
+          missing: gaps,
+        });
+      }
+      await tx.officialSkill.update({ where: { id }, data: { enabledAt: new Date() } });
+      await this.auditTx(tx, actor.id, 'admin_enable_official_skill', { skillId: id, key: row.key });
     });
-    if (updated.count !== 1) return this.presentAdmin(await this.requireSkill(id));
-    await this.audit(actor.id, 'admin_enable_official_skill', { skillId: id, key: row.key });
     return this.presentAdmin(await this.requireSkill(id));
   }
 
@@ -622,27 +632,74 @@ export class OfficialSkillService {
     const name = display?.name ?? parsed.manifest.name;
     const summary = display?.summary ?? parsed.manifest.description;
     // Create skill row first to get id for storage path; then package + point current.
-    const created = await this.prisma.officialSkill.create({
-      data: {
-        key: parsed.manifest.key,
-        name,
-        summary,
-        category: parsed.manifest.category ?? null,
-        enabledAt: null,
-        currentRevision: 0,
-        sourceName: parsed.manifest.name,
-        sourceSummary: parsed.manifest.description,
-        displayProvenance: display?.provenance ?? 'source',
-        displayLocale: 'zh-Hans',
-        displaySourceHash: displaySourceHash(parsed.manifest.name, parsed.manifest.description),
-      },
-    });
-    try {
-      const revision = 1;
-      const written = await writeSkillPackageToDisk(created.id, revision, parsed, sourceZip);
-      const pkg = await this.prisma.officialSkillPackage.create({
+    const createdId = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.officialSkill.create({
         data: {
+          key: parsed.manifest.key,
+          name,
+          summary,
+          category: parsed.manifest.category ?? null,
+          enabledAt: null,
+          currentRevision: 0,
+          sourceName: parsed.manifest.name,
+          sourceSummary: parsed.manifest.description,
+          displayProvenance: display?.provenance ?? 'source',
+          displayLocale: 'zh-Hans',
+          displaySourceHash: displaySourceHash(parsed.manifest.name, parsed.manifest.description),
+        },
+      });
+      const revision = 1;
+      const rel = officialSkillPackageRelDir(created.id, revision);
+      try {
+        const written = await writeSkillPackageToDisk(created.id, revision, parsed, sourceZip);
+        const pkg = await tx.officialSkillPackage.create({
+          data: {
+            skillId: created.id,
+            revision,
+            storagePath: written.storagePath,
+            manifest: parsed.manifest as unknown as Prisma.InputJsonValue,
+            instructionBytes: Buffer.byteLength(parsed.instruction, 'utf8'),
+            resourceCount: parsed.resourceCount,
+            sourceZipPath: written.sourceZipPath,
+          },
+        });
+        await tx.officialSkill.update({
+          where: { id: created.id },
+          data: { currentRevision: revision, currentPackageId: pkg.id },
+        });
+        await this.auditTx(tx, actor.id, 'admin_create_official_skill', {
           skillId: created.id,
+          key: created.key,
+          revision: 1,
+        });
+        return created.id;
+      } catch (error) {
+        await rm(absoluteUploadPath(rel), { recursive: true, force: true }).catch(() => undefined);
+        throw error;
+      }
+    }, { timeout: 20000 });
+    return this.adminDetail(createdId, { includeInstruction: true });
+  }
+
+  private async replacePackage(
+    tx: Prisma.TransactionClient,
+    row: SkillRow,
+    parsed: ParsedSkillPackage,
+    sourceZip: Buffer | undefined,
+    extra: Prisma.OfficialSkillUpdateInput = {},
+  ) {
+    const { revision } = packageWriteClaim(
+      { updatedAt: row.updatedAt.toISOString(), revision: row.currentRevision },
+      row.updatedAt.toISOString(),
+    );
+    const rel = officialSkillPackageRelDir(row.id, revision);
+    const sourceName = row.sourceName?.trim() || parsed.manifest.name;
+    const sourceSummary = row.sourceSummary?.trim() || parsed.manifest.description;
+    try {
+      const written = await writeSkillPackageToDisk(row.id, revision, parsed, sourceZip);
+      const pkg = await tx.officialSkillPackage.create({
+        data: {
+          skillId: row.id,
           revision,
           storagePath: written.storagePath,
           manifest: parsed.manifest as unknown as Prisma.InputJsonValue,
@@ -651,60 +708,44 @@ export class OfficialSkillService {
           sourceZipPath: written.sourceZipPath,
         },
       });
-      await this.prisma.officialSkill.update({
-        where: { id: created.id },
-        data: { currentRevision: revision, currentPackageId: pkg.id },
+      await tx.officialSkill.update({
+        where: { id: row.id },
+        data: {
+          currentRevision: revision,
+          currentPackageId: pkg.id,
+          category: parsed.manifest.category ?? null,
+          ...(!row.sourceName?.trim() ? { sourceName: parsed.manifest.name } : {}),
+          ...(!row.sourceSummary?.trim() ? { sourceSummary: parsed.manifest.description } : {}),
+          displaySourceHash: displaySourceHash(sourceName, sourceSummary),
+          ...extra,
+        } as Prisma.OfficialSkillUncheckedUpdateInput,
       });
     } catch (error) {
-      await this.prisma.officialSkill.delete({ where: { id: created.id } }).catch(() => undefined);
+      await rm(absoluteUploadPath(rel), { recursive: true, force: true }).catch(() => undefined);
       throw error;
     }
-    await this.audit(actor.id, 'admin_create_official_skill', {
-      skillId: created.id,
-      key: created.key,
-      revision: 1,
-    });
-    return this.adminDetail(created.id, { includeInstruction: true });
   }
 
-  private async replacePackage(
-    row: SkillRow,
-    parsed: ParsedSkillPackage,
-    sourceZip?: Buffer,
-    extra: Prisma.OfficialSkillUpdateInput = {},
-  ) {
-    const revision = row.currentRevision + 1;
-    const written = await writeSkillPackageToDisk(row.id, revision, parsed, sourceZip);
-    const pkg = await this.prisma.officialSkillPackage.create({
-      data: {
-        skillId: row.id,
-        revision,
-        storagePath: written.storagePath,
-        manifest: parsed.manifest as unknown as Prisma.InputJsonValue,
-        instructionBytes: Buffer.byteLength(parsed.instruction, 'utf8'),
-        resourceCount: parsed.resourceCount,
-        sourceZipPath: written.sourceZipPath,
-      },
-    });
-    const sourceName = row.sourceName?.trim() || parsed.manifest.name;
-    const sourceSummary = row.sourceSummary?.trim() || parsed.manifest.description;
-    const updated = await this.prisma.officialSkill.updateMany({
-      where: { id: row.id, updatedAt: row.updatedAt },
-      data: {
-        currentRevision: revision,
-        currentPackageId: pkg.id,
-        category: parsed.manifest.category ?? null,
-        ...(!row.sourceName?.trim() ? { sourceName: parsed.manifest.name } : {}),
-        ...(!row.sourceSummary?.trim() ? { sourceSummary: parsed.manifest.description } : {}),
-        displaySourceHash: displaySourceHash(sourceName, sourceSummary),
-        ...extra,
-      },
-    });
-    if (updated.count !== 1) {
-      await this.prisma.officialSkillPackage.delete({ where: { id: pkg.id } }).catch(() => undefined);
-      await rm(absoluteUploadPath(written.storagePath), { recursive: true, force: true }).catch(() => undefined);
-      throw new ConflictException('技能已更新，请重新打开后保存');
-    }
+  /** Lock the skill row, then run the write. The stamp is checked on the locked row, not on an earlier read. */
+  private async mutateSkill<T>(
+    id: string,
+    expectedUpdatedAt: string | undefined,
+    run: (tx: Prisma.TransactionClient, row: SkillRow) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM official_skill WHERE id = ${id} FOR UPDATE
+      `;
+      if (!locked.length) throw new NotFoundException('官方技能不存在');
+      const row = await tx.officialSkill.findUnique({ where: { id }, include: skillInclude });
+      if (!row) throw new NotFoundException('官方技能不存在');
+      assertFreshStamp(row.updatedAt.toISOString(), expectedUpdatedAt);
+      return run(tx, row);
+    }, { timeout: 20000 });
+  }
+
+  private async auditTx(tx: Prisma.TransactionClient, actorUserId: string, action: string, meta: Prisma.InputJsonObject) {
+    await tx.auditLog.create({ data: { userId: actorUserId, action, tenantId: null, meta } });
   }
 
   private async syncCurrentManifestMeta(skillId: string) {

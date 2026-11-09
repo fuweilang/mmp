@@ -4,6 +4,7 @@ import { ConflictException } from '@nestjs/common';
 import {
   assertFreshStamp,
   candidateSkillKeys,
+  packageWriteClaim,
   skillEnableGaps,
   skillEnableMessage,
   zipReplaceDecision,
@@ -34,5 +35,13 @@ describe('skill save and enable rules', () => {
     if (!mismatch.ok) assert.match(mismatch.message, /原技能未替换/);
     assert.deepEqual(zipReplaceDecision('brief', { key: 'skill-import', keyDerived: true }), { ok: true, key: 'brief' });
     assert.deepEqual(zipReplaceDecision('brief', { key: 'brief', keyDerived: false }), { ok: true, key: 'brief' });
+    assert.throws(
+      () => packageWriteClaim({ updatedAt: '2026-11-09T00:00:00.000Z', revision: 3 }, '2026-11-08T00:00:00.000Z'),
+      ConflictException,
+    );
+    assert.deepEqual(
+      packageWriteClaim({ updatedAt: '2026-11-09T00:00:00.000Z', revision: 3 }, '2026-11-09T00:00:00.000Z'),
+      { revision: 4 },
+    );
   });
 });

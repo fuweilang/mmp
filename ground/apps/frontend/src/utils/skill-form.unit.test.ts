@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { skillFormIssues, skillFormToast } from './skill-form';
+import { keepStoredExecution, skillFormIssues, skillFormToast } from './skill-form';
 
 const base = {
   name: '简报',
@@ -23,15 +23,34 @@ describe('skill form validation', () => {
     assert.deepEqual(skillFormIssues(base), {});
   });
 
-  it('asks for the intro and instruction before enabling a hand-written skill', () => {
-    const issues = skillFormIssues({ ...base, enable: true });
-    assert.equal(issues.summary, '请填写一句话介绍');
-    assert.equal(issues.instruction, '请填写技能指令');
-    assert.match(skillFormToast(issues), /一句话介绍/);
-    assert.equal(skillFormIssues({ ...base, enable: true, summary: '整理', instruction: '按步骤输出' }).instruction, undefined);
+  it('saves an incomplete first draft before enable instead of rejecting the write', () => {
+    assert.deepEqual(skillFormIssues({ ...base, enable: true }), {});
+    const kept = keepStoredExecution({
+      enable: true,
+      summary: '',
+      instruction: '',
+      previousSummary: '',
+      previousInstruction: '',
+      hasPackage: false,
+    });
+    assert.equal(kept.summary, '');
+    assert.equal(kept.instruction, '');
   });
 
-  it('does not ask a zip skill for a hand-written instruction', () => {
+  it('keeps an existing intro and package when enable is attempted with blanks', () => {
+    const kept = keepStoredExecution({
+      enable: true,
+      summary: '  ',
+      instruction: '',
+      previousSummary: '整理材料',
+      previousInstruction: '按步骤输出',
+      hasPackage: true,
+    });
+    assert.equal(kept.summary, undefined);
+    assert.equal(kept.instruction, undefined);
+  });
+
+  it('does not ask a zip draft for a hand-written instruction', () => {
     const issues = skillFormIssues({
       ...base,
       mode: 'zip',
@@ -41,7 +60,7 @@ describe('skill form validation', () => {
       zipSelected: false,
     });
     assert.equal(issues.instruction, undefined);
-    assert.match(issues.zip || '', /技能包/);
+    assert.equal(issues.zip, undefined);
     assert.equal(skillFormIssues({
       ...base,
       editing: true,
@@ -50,7 +69,9 @@ describe('skill form validation', () => {
       summary: '整理',
       hasPackage: true,
       contentSource: 'zip',
-    }).zip, undefined);
+      zipSelected: true,
+      zipError: '技能包已损坏，无法解压',
+    }).zip, '技能包已损坏，无法解压');
   });
 
   it('keeps an enabled skill from being saved incomplete', () => {

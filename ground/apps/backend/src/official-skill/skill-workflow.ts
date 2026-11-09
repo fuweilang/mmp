@@ -52,6 +52,18 @@ export function assertFreshStamp(currentIso: string, expectedIso?: string | null
   }
 }
 
+/**
+ * Allocate the next package revision only after the row is locked and the stamp matches.
+ * A mismatch throws before any directory is created.
+ */
+export function packageWriteClaim(
+  locked: { updatedAt: string; revision: number },
+  expectedUpdatedAt?: string | null,
+) {
+  assertFreshStamp(locked.updatedAt, expectedUpdatedAt);
+  return { revision: locked.revision + 1 };
+}
+
 /** Decide a ZIP replace before any package bytes are stored. */
 export function zipReplaceDecision(currentKey: string, parsed: { key: string; keyDerived: boolean }) {
   if (parsed.keyDerived || parsed.key === currentKey) return { ok: true as const, key: currentKey };
