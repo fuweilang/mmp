@@ -55,7 +55,7 @@
       </el-table-column>
       <el-table-column label="一句话介绍" min-width="220" show-overflow-tooltip prop="summary" />
       <el-table-column label="分类" min-width="110" show-overflow-tooltip>
-        <template #default="{ row }">{{ categoryLabel(row.category) }}</template>
+        <template #default="{ row }">{{ categoryLabels(row) }}</template>
       </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
@@ -133,22 +133,36 @@
           />
         </el-form-item>
         <el-form-item label="分类">
-          <el-select v-model="form.category" clearable placeholder="未设置" style="width: 100%">
+          <el-select
+            v-model="form.categories"
+            multiple
+            clearable
+            collapse-tags
+            collapse-tags-tooltip
+            :multiple-limit="3"
+            placeholder="未设置，最多 3 个"
+            style="width: 100%"
+          >
             <el-option v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
 
-        <template v-if="!editingId">
-          <el-form-item label="创建方式">
-            <el-radio-group v-model="createMode">
-              <el-radio-button value="zip">上传 ZIP</el-radio-button>
-              <el-radio-button value="form">表单填写</el-radio-button>
-            </el-radio-group>
-          </el-form-item>
-        </template>
+        <el-form-item v-if="showStoredPackage" label="技能包">
+          <div class="zip-file-row">
+            <span class="zip-file-name">{{ form.key }}</span>
+            <button type="button" class="zip-clear" :disabled="saving || zipValidating || detailLoading" aria-label="移除技能包" @click="removeStoredPackage">×</button>
+          </div>
+        </el-form-item>
 
-        <template v-if="createMode === 'zip' || (editingId && replaceZip)">
-          <el-form-item :label="editingId ? '替换技能包' : '技能包 ZIP'" :required="saveIntent === 'enable' && !editingId" :error="fieldErrors.zip">
+        <el-form-item v-if="showSourceChoice" label="创建方式">
+          <el-radio-group v-model="createMode">
+            <el-radio value="zip">上传技能包</el-radio>
+            <el-radio value="form">在线填写</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <template v-if="showZipPicker">
+          <el-form-item label="技能包 ZIP" :required="saveIntent === 'enable' && !editingId" :error="fieldErrors.zip">
             <div class="zip-upload">
               <el-upload
                 ref="zipUploadRef"
@@ -162,7 +176,10 @@
                   {{ zipValidating ? '正在校验…' : zipFile ? '重新选择 ZIP' : '选择 ZIP 技能包' }}
                 </el-button>
               </el-upload>
-              <div v-if="zipFile" class="zip-file-name">{{ zipFile.name }}</div>
+              <div v-if="zipFile" class="zip-file-row">
+                <span class="zip-file-name">{{ zipFile.name }}</span>
+                <button type="button" class="zip-clear" :disabled="saving || zipValidating" aria-label="移除技能包" @click="clearZip">×</button>
+              </div>
             </div>
           </el-form-item>
           <el-descriptions v-if="zipPreview" :column="1" border size="small" class="zip-preview">
@@ -173,7 +190,7 @@
           </el-descriptions>
         </template>
 
-        <template v-if="(!editingId && createMode === 'form') || (editingId && !replaceZip)">
+        <template v-if="showInstruction">
           <el-form-item label="技能指令" :required="saveIntent === 'enable' || editingEnabled" :error="fieldErrors.instruction">
             <el-input
               v-model="form.instruction"
@@ -186,16 +203,6 @@
           </el-form-item>
         </template>
 
-        <el-form-item v-if="editingId && contentSource !== 'zip'" label="改为上传技能包">
-          <el-switch v-model="replaceZip" />
-        </el-form-item>
-        <el-collapse v-if="editingId">
-          <el-collapse-item title="高级信息" name="advanced">
-            <el-form-item label="标识">
-              <el-input :model-value="form.key" readonly />
-            </el-form-item>
-          </el-collapse-item>
-        </el-collapse>
       </el-form>
 
       <template #footer>
@@ -227,7 +234,11 @@ import { clampPage, keepStoredExecution, skillDeleteConfirm, skillDeleteRequest,
 
 const rows = ref<OfficialSkillRow[]>([]);
 const categoryFilter = ref<OfficialSkillCategory | ''>('');
-const filteredRows = computed(() => categoryFilter.value ? rows.value.filter(row => row.category === categoryFilter.value) : rows.value);
+function rowCategories(row: OfficialSkillRow): OfficialSkillCategory[] {
+  if (row.categories?.length) return row.categories;
+  return row.category ? [row.category] : [];
+}
+const filteredRows = computed(() => categoryFilter.value ? rows.value.filter(row => rowCategories(row).includes(categoryFilter.value as OfficialSkillCategory)) : rows.value);
 const loading = ref(false);
 const pageError = ref('');
 const keywordDraft = ref('');
@@ -264,12 +275,16 @@ const pendingIcon=ref<File|null>(null);
 const removeIcon=ref(false);
 const iconValidating=ref(false);
 const formIconUrl=ref<string|null>(null);
-const contentBaseline=ref<{name:string;summary:string;category:string;instruction:string}|null>(null);
-function editorContent(){return {name:form.name.trim(),summary:form.summary.trim(),category:form.category,instruction:form.instruction};}
+const contentBaseline=ref<{name:string;summary:string;categories:string;instruction:string}|null>(null);
+function editorContent(){return {name:form.name.trim(),summary:form.summary.trim(),categories:form.categories.join(','),instruction:form.instruction};}
 const detailLoading = ref(false);
 let editorSequence = 0;
 const createMode = ref<'zip' | 'form'>('zip');
-const replaceZip = ref(false);
+const storedPackageKept = ref(false);
+const showStoredPackage = computed(() => Boolean(editingId.value) && contentSource.value === 'zip' && storedPackageKept.value);
+const showSourceChoice = computed(() => !showStoredPackage.value);
+const showZipPicker = computed(() => showSourceChoice.value && createMode.value === 'zip');
+const showInstruction = computed(() => showSourceChoice.value && createMode.value === 'form');
 const zipFile = ref<File | null>(null);
 const zipPreview = ref<OfficialSkillZipPreview | null>(null);
 const zipError = ref('');
@@ -280,7 +295,7 @@ const form = reactive({
   key: '',
   name: '',
   summary: '',
-  category: '' as '' | OfficialSkillCategory,
+  categories: [] as OfficialSkillCategory[],
   instruction: '',
 });
 
@@ -304,11 +319,12 @@ const categoryOptions: Array<{ value: OfficialSkillCategory; label: string }> = 
   { value: 'writing', label: '翻译写作' },
   { value: 'lifestyle', label: '个人生活' },
 ];
-const availableCategoryOptions = computed(() => categoryOptions.filter(item => rows.value.some(row => row.category === item.value)));
+const availableCategoryOptions = computed(() => categoryOptions.filter(item => rows.value.some(row => rowCategories(row).includes(item.value))));
 
-function categoryLabel(category: OfficialSkillCategory | null | undefined) {
-  if (!category) return '未设置';
-  return categoryOptions.find((item) => item.value === category)?.label ?? category;
+function categoryLabels(row: OfficialSkillRow) {
+  const items = rowCategories(row);
+  if (!items.length) return '未设置';
+  return items.map((value) => categoryOptions.find((item) => item.value === value)?.label ?? value).join('、');
 }
 
 function formatTime(value: string) {
@@ -372,7 +388,7 @@ function resetEditor() {
   formUpdatedAt.value = '';
   saveIntent.value = 'save';
   createMode.value = 'zip';
-  replaceZip.value = false;
+  storedPackageKept.value = false;
   zipFile.value = null;
   zipPreview.value = null;
   zipError.value = '';
@@ -383,7 +399,7 @@ function resetEditor() {
   form.key = '';
   form.name = '';
   form.summary = '';
-  form.category = '';
+  form.categories = [];
   form.instruction = '';
   zipUploadRef.value?.clearFiles();
 }
@@ -404,13 +420,13 @@ async function openEdit(row: OfficialSkillRow) {
   editingEnabled.value = row.enabled;
   contentSource.value = row.contentSource ?? (row.packageRevision > 0 ? 'form' : 'none');
   formUpdatedAt.value = row.updatedAt;
-  replaceZip.value = contentSource.value === 'zip';
+  storedPackageKept.value = contentSource.value === 'zip';
   formIconUrl.value=row.avatarUrl??null;
-  createMode.value = 'form';
+  createMode.value = contentSource.value === 'zip' ? 'zip' : 'form';
   form.key = row.key;
   form.name = row.name;
   form.summary = row.summary;
-  form.category = (row.category ?? '') as typeof form.category;
+  form.categories = rowCategories(row);
   editorOpen.value = true;
   const sequence = editorSequence;
   detailLoading.value = true;
@@ -418,11 +434,13 @@ async function openEdit(row: OfficialSkillRow) {
     const detail = await adminOfficialSkillApi.detail(row.id);
     if (sequence !== editorSequence || !editorOpen.value) return;
     form.instruction = detail.instruction ?? '';
+    form.categories = rowCategories(detail);
     formIconUrl.value=detail.avatarUrl??null;
     editingEnabled.value = detail.enabled;
     contentSource.value = detail.contentSource ?? contentSource.value;
     formUpdatedAt.value = detail.updatedAt;
-    replaceZip.value = contentSource.value === 'zip';
+    storedPackageKept.value = contentSource.value === 'zip';
+    createMode.value = contentSource.value === 'zip' ? 'zip' : 'form';
     contentBaseline.value=editorContent();
   } catch (error) {
     if (sequence !== editorSequence || !editorOpen.value) return;
@@ -462,7 +480,10 @@ async function onZipPicked(upload: UploadFile) {
     fieldErrors.zip = '';
     if (!form.name.trim()) form.name = preview.name;
     if (!form.summary.trim()) form.summary = preview.summary;
-    if (!form.category && preview.category) form.category = preview.category;
+    if (!form.categories.length) {
+      const next = preview.categories?.length ? preview.categories : (preview.category ? [preview.category] : []);
+      if (next.length) form.categories = next;
+    }
   } catch (error) {
     if (sequence === editorSequence && editorOpen.value) {
       zipError.value = error instanceof Error ? error.message : '技能包无法识别，请换一个包再试';
@@ -478,25 +499,45 @@ function applyIssues(enable: boolean) {
   fieldErrors.summary = '';
   fieldErrors.instruction = '';
   fieldErrors.zip = '';
+  const packageKept = Boolean(editingId.value) && contentSource.value === 'zip' && storedPackageKept.value;
+  const replacingZip = createMode.value === 'zip' && !packageKept;
   const issues = skillFormIssues({
     name: form.name,
     summary: form.summary,
     instruction: form.instruction,
     mode: createMode.value,
-    replacingZip: (!editingId.value && createMode.value === 'zip') || replaceZip.value,
+    replacingZip,
     editing: Boolean(editingId.value),
     enabled: editingEnabled.value,
     enable,
-    hasPackage: contentSource.value !== 'none',
+    hasPackage: packageKept || (Boolean(editingId.value) && contentSource.value === 'form'),
     zipSelected: Boolean(zipFile.value),
     zipReady: Boolean(zipPreview.value),
     zipError: zipError.value,
     contentSource: contentSource.value,
   });
+  if (editingId.value && contentSource.value === 'zip' && !storedPackageKept.value) {
+    if (createMode.value === 'zip' && !zipPreview.value) issues.zip = issues.zip || '请上传并通过校验的技能包';
+    if (createMode.value === 'form' && !form.instruction.trim()) issues.instruction = issues.instruction || '请填写技能指令';
+  }
   Object.assign(fieldErrors, issues);
   const toast = skillFormToast(issues);
   if (toast) ElMessage.warning(toast);
   return !toast;
+}
+
+function clearZip() {
+  zipFile.value = null;
+  zipPreview.value = null;
+  zipError.value = '';
+  fieldErrors.zip = '';
+  zipUploadRef.value?.clearFiles();
+}
+
+function removeStoredPackage() {
+  storedPackageKept.value = false;
+  createMode.value = 'zip';
+  clearZip();
 }
 
 async function onSave(enable: boolean) {
@@ -515,19 +556,19 @@ async function onSave(enable: boolean) {
       previousInstruction: contentBaseline.value?.instruction ?? '',
       hasPackage: contentSource.value !== 'none',
     });
-    const usingZip = Boolean(zipFile.value && zipPreview.value) && (wasNew ? createMode.value === 'zip' : replaceZip.value);
+    const usingZip = Boolean(zipFile.value && zipPreview.value) && createMode.value === 'zip' && (wasNew || !storedPackageKept.value);
     if(wasNew && usingZip){
       const body=new FormData();
       body.append('file', zipFile.value as File);
       body.append('name', form.name.trim());
       if (kept.summary !== undefined) body.append('summary', kept.summary);
-      body.append('category', form.category);
+      body.append('categories', JSON.stringify(form.categories));
       next=await adminOfficialSkillApi.createFromZip(body);
     }else if(wasNew){
       next=await adminOfficialSkillApi.createFromForm({
         name: form.name.trim(),
         ...(kept.summary !== undefined ? { summary: kept.summary } : {}),
-        ...(form.category ? { category: form.category } : {}),
+        categories: form.categories,
         ...(createMode.value === 'form' && kept.instruction?.trim() ? { instruction: kept.instruction } : {}),
       });
     }else if(usingZip){
@@ -535,16 +576,17 @@ async function onSave(enable: boolean) {
       body.append('file', zipFile.value as File);
       body.append('name', form.name.trim());
       if (kept.summary !== undefined) body.append('summary', kept.summary);
-      body.append('category', form.category);
+      body.append('categories', JSON.stringify(form.categories));
       if(formUpdatedAt.value) body.append('expectedUpdatedAt', formUpdatedAt.value);
       next=await adminOfficialSkillApi.replaceZip(editingId.value, body);
     }else{
       const value=editorContent(),previous=contentBaseline.value;
+      const replaceWithForm = contentSource.value === 'zip' && !storedPackageKept.value && createMode.value === 'form';
       const patch={
         ...(value.name!==previous?.name?{name:value.name}:{}),
         ...(kept.summary!==undefined && value.summary!==previous?.summary?{summary:value.summary}:{}),
-        ...(value.category!==previous?.category?{category:form.category||'' as const}:{}),
-        ...(contentSource.value!=='zip' && kept.instruction!==undefined && value.instruction!==previous?.instruction?{instruction:value.instruction}:{}),
+        ...(value.categories!==previous?.categories?{categories:form.categories}:{}),
+        ...((replaceWithForm || (contentSource.value!=='zip' && kept.instruction!==undefined && value.instruction!==previous?.instruction))?{instruction:kept.instruction}:{}),
         ...(formUpdatedAt.value?{expectedUpdatedAt:formUpdatedAt.value}:{}),
       };
       const changed = Object.keys(patch).some((key) => key !== 'expectedUpdatedAt');
@@ -558,8 +600,8 @@ async function onSave(enable: boolean) {
       editingEnabled.value=next.enabled;
       contentSource.value=next.contentSource??contentSource.value;
       contentBaseline.value=editorContent();
-      replaceZip.value=contentSource.value==='zip';
-      createMode.value='form';
+      storedPackageKept.value=contentSource.value==='zip';
+      createMode.value=contentSource.value==='zip'?'zip':'form';
     }
     if(editingId.value && pendingIcon.value){
       const body=new FormData();
@@ -756,7 +798,27 @@ onUnmounted(() => {
 .hint { margin-top: 6px; line-height: 1.6; overflow-wrap: anywhere; }
 .hint.inline { margin-left: 10px; }
 .zip-upload { width: 100%; min-width: 0; }
-.zip-file-name { margin-top: 8px; line-height: 1.6; overflow-wrap: anywhere; }
+.zip-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  min-width: 0;
+}
+.zip-file-name { margin-top: 0; line-height: 1.6; overflow-wrap: anywhere; min-width: 0; flex: 1; }
+.zip-clear {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--el-text-color-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.zip-clear:disabled { cursor: not-allowed; opacity: 0.5; }
 .zip-alert, .zip-preview { margin-bottom: 12px; }
 @media (max-width: 640px) {
   .page-header { flex-wrap: wrap; }

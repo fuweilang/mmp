@@ -1,4 +1,5 @@
 import {
+  Allow,
   IsObject,
   IsIn,
   IsOptional,
@@ -44,6 +45,10 @@ export class CreateOfficialSkillFormDto {
   category?: 'common' | 'content' | 'analytics' | 'office' | 'education' | 'expertise' | 'business' | 'ecommerce' | 'sales' | 'hr' | 'legal' | 'finance' | 'consulting' | 'research' | 'files' | 'search' | 'writing' | 'lifestyle';
 
   @IsOptional()
+  @Allow()
+  categories?: unknown;
+
+  @IsOptional()
   @IsString()
   @MaxLength(100000)
   instruction?: string;
@@ -64,6 +69,10 @@ export class UpdateOfficialSkillDto {
   @IsOptional()
   @IsIn(['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle', ''])
   category?: 'common' | 'content' | 'analytics' | 'office' | 'education' | 'expertise' | 'business' | 'ecommerce' | 'sales' | 'hr' | 'legal' | 'finance' | 'consulting' | 'research' | 'files' | 'search' | 'writing' | 'lifestyle' | '';
+
+  @IsOptional()
+  @Allow()
+  categories?: unknown;
 
   @IsOptional()
   @IsString()
@@ -90,6 +99,10 @@ export class OfficialSkillZipMetaDto {
   @IsOptional()
   @IsIn(['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle', ''])
   category?: 'common' | 'content' | 'analytics' | 'office' | 'education' | 'expertise' | 'business' | 'ecommerce' | 'sales' | 'hr' | 'legal' | 'finance' | 'consulting' | 'research' | 'files' | 'search' | 'writing' | 'lifestyle' | '';
+
+  @IsOptional()
+  @Allow()
+  categories?: unknown;
 
   @IsOptional()
   @IsString()

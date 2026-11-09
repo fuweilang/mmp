@@ -326,7 +326,7 @@ model OfficialSkill {
   key              String                 @unique
   name             String
   summary          String                 @default("") @db.Text
-  category         OfficialSkillCategory?
+  categories       OfficialSkillCategory[] @default([])
   /// null = 停用/未启用；非空 = 启用时间（全员可见目录）。
   enabledAt        DateTime?              @map("enabled_at")
   /// 非空 = 已从管理列表和新使用入口移除；包、专家关联和历史读取仍保留。
@@ -341,7 +341,7 @@ model OfficialSkill {
 
   @@index([enabledAt])
   @@index([deletedAt])
-  @@index([category])
+  @@index([categories], type: Gin)
   @@map("official_skill")
   customAvatarPath String? @map("custom_avatar_path")
   /// Independent public discovery text; never package instructions or permissions.

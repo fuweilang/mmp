@@ -1126,6 +1126,7 @@ export type OfficialSkillRow = {
   name: string;
   summary: string;
   category: OfficialSkillCategory | null;
+  categories?: OfficialSkillCategory[];
   enabledAt: string | null;
   enabled: boolean;
   packageRevision: number;
@@ -1146,6 +1147,7 @@ export type OfficialSkillOption = {
   name: string;
   summary: string;
   category: OfficialSkillCategory | null;
+  categories?: OfficialSkillCategory[];
   packageRevision: number;
   enabledAt: string | null;
 };
@@ -1155,6 +1157,7 @@ export type OfficialSkillZipPreview = {
   name: string;
   summary: string;
   category: OfficialSkillCategory | null;
+  categories?: OfficialSkillCategory[];
   resourceCount: number;
   instructionBytes: number;
   keyConflict: boolean;
@@ -1181,11 +1184,12 @@ export const adminOfficialSkillApi = {
     name: string;
     summary?: string;
     category?: OfficialSkillCategory;
+    categories?: OfficialSkillCategory[];
     instruction?: string;
   }) => adminHttp<OfficialSkillRow>('/official-skills/from-form', { method: 'POST', body: JSON.stringify(body) }),
   update: (
     id: string,
-    body: Partial<{ name: string; summary: string; category: OfficialSkillCategory | ''; instruction: string; expectedUpdatedAt: string }>,
+    body: Partial<{ name: string; summary: string; category: OfficialSkillCategory | ''; categories: OfficialSkillCategory[]; instruction: string; expectedUpdatedAt: string }>,
   ) => adminHttp<OfficialSkillRow>(`/official-skills/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   replaceZip: (id: string, body: FormData) =>
     adminHttp<OfficialSkillRow>(`/official-skills/${id}/replace-zip`, { method: 'POST', body }),

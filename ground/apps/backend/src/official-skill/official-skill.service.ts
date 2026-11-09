@@ -22,13 +22,17 @@ import {
   assertSkillDisplayName,
   assertSkillKey,
   assertSkillSummary,
+  assignManifestCategories,
   buildSkillPackageFromForm,
   isOfficialSkillCategory,
   legacySkillCategory,
   packagePreview,
+  parseSkillCategories,
   parseSkillZip,
+  primarySkillCategory,
   retargetPackageKey,
   skillPackageError,
+  storedCategories,
   writeSkillPackageToDisk,
   type OfficialSkillCategoryKey,
 } from './skill-package';
@@ -77,8 +81,8 @@ export class OfficialSkillService {
     if(f.capability!=='all'||f.industry!=='all')filters.push(catalogDiscoveryWhere('skill',f.capability,f.industry));
     if(f.q)filters.push({OR:[...['name','summary','key'].map(field=>({[field]:{contains:f.q,mode:'insensitive' as const}})),...Object.entries(DESCRIPTIONS).filter(([,v])=>v.summary.toLocaleLowerCase().includes(f.q.toLocaleLowerCase())).map(([key,v])=>({key,summary:v.expectedOriginal}))]});
     const where:Prisma.OfficialSkillWhereInput={AND:filters};
-    const [total,rows]=await this.prisma.$transaction([this.prisma.officialSkill.count({where}),this.prisma.officialSkill.findMany({where:{AND:[where,...f.after?[{key:{gt:f.after}}]:[]]},orderBy:{key:'asc'},take:21,select:{id:true,key:true,name:true,summary:true,category:true,enabledAt:true,currentRevision:true,customAvatarPath:true}})],{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
-    const page=rows.slice(0,20);return {items:page.map(row=>({id:row.id,key:row.key,name:row.name,summary:displaySummary(row.key,row.summary),category:row.category,enabledAt:row.enabledAt?.toISOString()??null,packageRevision:row.currentRevision,avatarUrl:uploadedCatalogIconUrl(row.customAvatarPath),discovery:discoveryOf('skill',row.key)})),total,hasMore:rows.length>20,nextCursor:rows.length>20?nextCatalogCursor(page[page.length-1]!.key,f.signature):null};
+    const [total,rows]=await this.prisma.$transaction([this.prisma.officialSkill.count({where}),this.prisma.officialSkill.findMany({where:{AND:[where,...f.after?[{key:{gt:f.after}}]:[]]},orderBy:{key:'asc'},take:21,select:{id:true,key:true,name:true,summary:true,categories:true,enabledAt:true,currentRevision:true,customAvatarPath:true}})],{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
+    const page=rows.slice(0,20);return {items:page.map(row=>({id:row.id,key:row.key,name:row.name,summary:displaySummary(row.key,row.summary),category:primarySkillCategory(row.categories),enabledAt:row.enabledAt?.toISOString()??null,packageRevision:row.currentRevision,avatarUrl:uploadedCatalogIconUrl(row.customAvatarPath),discovery:discoveryOf('skill',row.key)})),total,hasMore:rows.length>20,nextCursor:rows.length>20?nextCatalogCursor(page[page.length-1]!.key,f.signature):null};
   }
 
   async discovery(id:string){const row=await this.requireSkill(id);return {id:row.id,name:row.name,enabled:Boolean(row.enabledAt),updatedAt:row.updatedAt.toISOString(),discoveryDetail:publicDiscoveryDetail(row.discoveryDetail)};}
@@ -116,7 +120,7 @@ export class OfficialSkillService {
 
   async catalogDetail(user:User,id:string){
     this.requireActiveAccount(user);
-    const row=await this.prisma.officialSkill.findFirst({where:{id,deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}},select:{id:true,key:true,name:true,summary:true,category:true,enabledAt:true,currentRevision:true,customAvatarPath:true,discoveryDetail:true}});
+    const row=await this.prisma.officialSkill.findFirst({where:{id,deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}},select:{id:true,key:true,name:true,summary:true,categories:true,enabledAt:true,currentRevision:true,customAvatarPath:true,discoveryDetail:true}});
     if(!row)throw new NotFoundException('技能不可用');
     return {kind:'skill' as const,id:row.id,key:row.key,name:row.name,summary:displaySummary(row.key,row.summary),avatarUrl:uploadedCatalogIconUrl(row.customAvatarPath),packageRevision:row.currentRevision,discovery:discoveryOf('skill',row.key),detail:publicDiscoveryDetail(row.discoveryDetail),linkedSkills:[]};
   }
@@ -162,7 +166,7 @@ export class OfficialSkillService {
         key: true,
         name: true,
         summary: true,
-        category: true,
+        categories: true,
         currentRevision: true,
         enabledAt: true,
       },
@@ -173,7 +177,8 @@ export class OfficialSkillService {
       key: row.key,
       name: row.name,
       summary: row.summary,
-      category: row.category,
+      category: primarySkillCategory(row.categories),
+      categories: row.categories,
       packageRevision: row.currentRevision,
       enabledAt: row.enabledAt?.toISOString() ?? null,
     }));
@@ -196,7 +201,7 @@ export class OfficialSkillService {
   async createFromZip(
     actor: User,
     file: { buffer: Buffer; originalname?: string } | undefined,
-    overrides: { name?: string; summary?: string; category?: string | null },
+    overrides: { name?: string; summary?: string; category?: string | null; categories?: unknown },
   ) {
     if (!file?.buffer?.length) throw skillPackageError('SKILL_PACKAGE_INVALID', '请选择技能包');
     const parsed = await parseSkillZip(file.buffer);
@@ -206,7 +211,7 @@ export class OfficialSkillService {
       await this.assertKeyAvailable(parsed.manifest.key);
     }
     const display = this.displayFromOverrides(parsed, overrides);
-    this.applyCategory(parsed, overrides.category);
+    this.applyCategories(parsed, this.resolveCategories(overrides));
     return this.persistNewSkill(actor, parsed, file.buffer, display);
   }
 
@@ -217,12 +222,13 @@ export class OfficialSkillService {
       name: string;
       summary?: string;
       category?: string | null;
+      categories?: unknown;
       instruction?: string;
     },
   ) {
     const name = assertSkillDisplayName(body.name);
     const summary = assertSkillSummary(body.summary ?? '');
-    const category = this.normalizeCategory(body.category);
+    const categories = this.resolveCategories(body) ?? [];
     const key = await this.allocateKey(body.key, name);
     const instruction = String(body.instruction ?? '');
     if (!instruction.trim()) {
@@ -231,7 +237,7 @@ export class OfficialSkillService {
           key,
           name,
           summary,
-          category,
+          categories,
           enabledAt: null,
           currentRevision: 0,
           sourceName: name,
@@ -248,7 +254,7 @@ export class OfficialSkillService {
       key,
       name,
       summary,
-      category,
+      categories,
       instruction,
     });
     return this.persistNewSkill(actor, parsed);
@@ -261,6 +267,7 @@ export class OfficialSkillService {
       name?: string;
       summary?: string;
       category?: string | null;
+      categories?: unknown;
       instruction?: string;
       expectedUpdatedAt?: string;
       linkedOnly?: boolean;
@@ -276,8 +283,9 @@ export class OfficialSkillService {
       if (!row.sourceName) data.sourceName = row.name;
       if (!row.sourceSummary) data.sourceSummary = row.summary;
     }
-    if (body.category !== undefined) {
-      data.category = this.normalizeCategory(body.category);
+    const categories = this.resolveCategories(body);
+    if (categories !== undefined) {
+      data.categories = categories;
     }
 
     const instructionProvided = body.instruction !== undefined;
@@ -289,8 +297,8 @@ export class OfficialSkillService {
     if (instructionProvided && instructionText.trim()) {
       const name = body.name !== undefined ? assertSkillDisplayName(body.name) : row.name;
       const summary = body.summary !== undefined ? assertSkillSummary(body.summary) : row.summary;
-      const category = body.category !== undefined ? this.normalizeCategory(body.category) : row.category;
-      rebuilt = buildSkillPackageFromForm({ key: row.key, name, summary, category, instruction: instructionText });
+      const nextCategories = categories ?? [...row.categories];
+      rebuilt = buildSkillPackageFromForm({ key: row.key, name, summary, categories: nextCategories, instruction: instructionText });
     }
     await this.assertEnabledStillComplete(row, {
       name: body.name !== undefined ? String(data.name) : row.name,
@@ -322,7 +330,7 @@ export class OfficialSkillService {
     } else {
       const updated = await this.prisma.officialSkill.updateMany({ where: { id, updatedAt: row.updatedAt }, data });
       if (updated.count !== 1) throw new ConflictException('技能已更新，请重新打开后保存');
-      if (row.currentPackageId && (body.name !== undefined || body.summary !== undefined || body.category !== undefined)) {
+      if (row.currentPackageId && (body.name !== undefined || body.summary !== undefined || categories !== undefined)) {
         await this.syncCurrentManifestMeta(id);
       }
     }
@@ -338,7 +346,7 @@ export class OfficialSkillService {
     actor: User,
     id: string,
     file: { buffer: Buffer; originalname?: string } | undefined,
-    overrides: { name?: string; summary?: string; category?: string | null; expectedUpdatedAt?: string },
+    overrides: { name?: string; summary?: string; category?: string | null; categories?: unknown; expectedUpdatedAt?: string },
   ) {
     if (!file?.buffer?.length) throw skillPackageError('SKILL_PACKAGE_INVALID', '请选择技能包');
     const parsed = await parseSkillZip(file.buffer);
@@ -347,7 +355,7 @@ export class OfficialSkillService {
       if (!decision.ok) throw skillPackageError('SKILL_PACKAGE_INVALID', decision.message);
       if (parsed.manifest.key !== decision.key) retargetPackageKey(parsed, decision.key);
       const display = this.displayFromOverrides(parsed, overrides, row);
-      this.applyCategory(parsed, overrides.category);
+      this.applyCategories(parsed, this.resolveCategories(overrides));
       await this.assertEnabledStillComplete(row, {
         name: display.name,
         summary: display.summary,
@@ -357,7 +365,7 @@ export class OfficialSkillService {
       await this.replacePackage(tx, row, parsed, file.buffer, {
         name: display.name,
         summary: display.summary,
-        category: parsed.manifest.category ?? null,
+        categories: storedCategories(parsed.manifest),
         displayProvenance: display.provenance,
       });
       await this.auditTx(tx, actor.id, 'admin_replace_official_skill_package', {
@@ -448,13 +456,13 @@ export class OfficialSkillService {
         deletedAt: null,
         enabledAt: { not: null },
         currentRevision: { gt: 0 },
-        ...(category ? { category } : {}),
+        ...(category ? { categories: { has: category } } : {}),
         ...(q
           ? {
               OR: [
                 { name: { contains: q, mode: 'insensitive' } },
                 { summary: { contains: q, mode: 'insensitive' } },
-                ...(isOfficialSkillCategory(q) ? [{ category: q as OfficialSkillCategoryKey }] : []),
+                ...(isOfficialSkillCategory(q) ? [{ categories: { has: q as OfficialSkillCategoryKey } }] : []),
               ],
             }
           : {}),
@@ -464,7 +472,7 @@ export class OfficialSkillService {
         key: true,
         name: true,
         summary: true,
-        category: true,
+        categories: true,
         enabledAt: true,
         currentRevision: true,
       },
@@ -623,7 +631,7 @@ export class OfficialSkillService {
         key: true,
         name: true,
         summary: true,
-        category: true,
+        categories: true,
         currentRevision: true,
         enabledAt: true,
       },
@@ -636,7 +644,7 @@ export class OfficialSkillService {
         key: row.key,
         name: row.name,
         summary: row.summary,
-        category: legacySkillCategory(row.category),
+        category: legacySkillCategory(primarySkillCategory(row.categories)),
         packageRevision: row.currentRevision,
         enabledAt: row.enabledAt?.toISOString() ?? null,
       }));
@@ -694,7 +702,7 @@ export class OfficialSkillService {
           key: parsed.manifest.key,
           name,
           summary,
-          category: parsed.manifest.category ?? null,
+          categories: storedCategories(parsed.manifest),
           enabledAt: null,
           currentRevision: 0,
           sourceName: parsed.manifest.name,
@@ -769,7 +777,7 @@ export class OfficialSkillService {
         data: {
           currentRevision: revision,
           currentPackageId: pkg.id,
-          category: parsed.manifest.category ?? null,
+          categories: storedCategories(parsed.manifest),
           ...(!row.sourceName?.trim() ? { sourceName: parsed.manifest.name } : {}),
           ...(!row.sourceSummary?.trim() ? { sourceSummary: parsed.manifest.description } : {}),
           displaySourceHash: displaySourceHash(sourceName, sourceSummary),
@@ -815,8 +823,10 @@ export class OfficialSkillService {
       description: (row.sourceSummary || row.summary || '').trim(),
       entry: 'SKILL.md',
     };
-    if (row.category) next.category = row.category;
+    if (row.categories.length) next.category = row.categories[0];
     else delete next.category;
+    if (row.categories.length > 1) next.categories = row.categories;
+    else delete next.categories;
     await this.prisma.officialSkillPackage.update({
       where: { id: row.currentPackage.id },
       data: { manifest: next as Prisma.InputJsonValue },
@@ -849,18 +859,16 @@ export class OfficialSkillService {
     return { name, summary, provenance };
   }
 
-  private applyCategory(parsed: ParsedSkillPackage, category: string | null | undefined) {
-    if (category === undefined) return;
-    const next = this.normalizeCategory(category);
-    if (next) parsed.manifest.category = next;
-    else delete parsed.manifest.category;
+  private applyCategories(parsed: ParsedSkillPackage, categories: OfficialSkillCategoryKey[] | undefined) {
+    if (categories === undefined) return;
+    assignManifestCategories(parsed.manifest, categories);
     retargetPackageKey(parsed, parsed.manifest.key);
   }
 
-  private normalizeCategory(category?: string | null): OfficialSkillCategoryKey | null {
-    if (category === undefined || category === null || category === '') return null;
-    if (!isOfficialSkillCategory(category)) throw new BadRequestException('分类不在允许范围内');
-    return category;
+  private resolveCategories(body: { categories?: unknown; category?: string | null }): OfficialSkillCategoryKey[] | undefined {
+    if (body.categories !== undefined) return parseSkillCategories(body.categories);
+    if (body.category !== undefined) return parseSkillCategories(body.category === '' ? [] : body.category);
+    return undefined;
   }
 
   private async allocateKey(requested: string | undefined, name: string) {
@@ -930,7 +938,8 @@ export class OfficialSkillService {
       key: row.key,
       name: row.name,
       summary: row.summary,
-      category: row.category,
+      category: primarySkillCategory(row.categories),
+      categories: row.categories,
       enabledAt: row.enabledAt?.toISOString() ?? null,
       enabled: Boolean(row.enabledAt),
       packageRevision: row.currentRevision,
@@ -954,16 +963,17 @@ export class OfficialSkillService {
     key: string;
     name: string;
     summary: string;
-    category: string | null;
+    categories: OfficialSkillCategoryKey[];
     enabledAt: Date | null;
     currentRevision: number;
   }, industryTaxonomy = false) {
+    const category = primarySkillCategory(row.categories);
     return {
       id: row.id,
       key: row.key,
       name: row.name,
       summary: row.summary,
-      category: industryTaxonomy ? row.category : legacySkillCategory(row.category),
+      category: industryTaxonomy ? category : legacySkillCategory(category),
       enabledAt: row.enabledAt?.toISOString() ?? null,
       packageRevision: row.currentRevision,
     };

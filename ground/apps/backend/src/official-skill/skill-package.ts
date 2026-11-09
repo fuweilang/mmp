@@ -24,6 +24,72 @@ const ALLOWED_RESOURCE_EXT = new Set([
 
 export const OFFICIAL_SKILL_CATEGORIES = ['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle'] as const;
 export type OfficialSkillCategoryKey = (typeof OFFICIAL_SKILL_CATEGORIES)[number];
+export const MAX_SKILL_CATEGORIES = 3;
+
+export function primarySkillCategory(categories: readonly OfficialSkillCategoryKey[]): OfficialSkillCategoryKey | null {
+  return categories[0] ?? null;
+}
+
+function categoryTokens(input: unknown): unknown[] {
+  if (input == null || input === '') return [];
+  if (Array.isArray(input)) return input;
+  if (typeof input === 'string') {
+    const text = input.trim();
+    if (!text) return [];
+    if (text.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(text) as unknown;
+        return Array.isArray(parsed) ? parsed : [text];
+      } catch {
+        throw skillPackageError('SKILL_PACKAGE_INVALID', '分类不在允许范围内');
+      }
+    }
+    return text.split(',').map((item) => item.trim()).filter(Boolean);
+  }
+  return [input];
+}
+
+/** Unique categories, max 3. Accepts a string, JSON array, comma list, or string[]. */
+export function parseSkillCategories(input: unknown): OfficialSkillCategoryKey[] {
+  const out: OfficialSkillCategoryKey[] = [];
+  const seen = new Set<OfficialSkillCategoryKey>();
+  for (const token of categoryTokens(input)) {
+    if (token == null || token === '') continue;
+    if (!isOfficialSkillCategory(token)) {
+      throw skillPackageError('SKILL_PACKAGE_INVALID', '分类不在允许范围内');
+    }
+    if (seen.has(token)) continue;
+    seen.add(token);
+    out.push(token);
+  }
+  if (out.length > MAX_SKILL_CATEGORIES) {
+    throw skillPackageError('SKILL_PACKAGE_INVALID', '分类最多 3 个');
+  }
+  return out;
+}
+
+export function categoriesFromManifest(obj: Record<string, unknown>): OfficialSkillCategoryKey[] {
+  return parseSkillCategories([
+    ...(obj.category !== undefined && obj.category !== null && String(obj.category).trim() ? [obj.category] : []),
+    ...categoryTokens(obj.categories),
+  ]);
+}
+
+export function assignManifestCategories(manifest: SkillManifest, categories: OfficialSkillCategoryKey[]) {
+  const next = parseSkillCategories(categories);
+  if (next.length) {
+    manifest.category = next[0];
+    if (next.length > 1) manifest.categories = next;
+    else delete manifest.categories;
+  } else {
+    delete manifest.category;
+    delete manifest.categories;
+  }
+}
+
+export function storedCategories(manifest: SkillManifest): OfficialSkillCategoryKey[] {
+  return parseSkillCategories(manifest.categories?.length ? manifest.categories : (manifest.category ?? []));
+}
 
 /** Keep pre-industry Host bundles usable; industry-aware directories opt in explicitly. */
 export function legacySkillCategory(category: string | null): 'common' | 'content' | 'business' | 'expertise' | null {
@@ -43,6 +109,7 @@ export type SkillManifest = {
   description: string;
   entry: 'SKILL.md';
   category?: OfficialSkillCategoryKey;
+  categories?: OfficialSkillCategoryKey[];
   /** Preserved import metadata. Not execution content. */
   license?: string;
   source?: string;
@@ -177,6 +244,7 @@ function manifestRecord(manifest: SkillManifest): Record<string, unknown> {
     description: manifest.description,
     entry: 'SKILL.md',
     ...(manifest.category ? { category: manifest.category } : {}),
+    ...(manifest.categories && manifest.categories.length > 1 ? { categories: manifest.categories } : {}),
     ...(manifest.license ? { license: manifest.license } : {}),
     ...(manifest.source ? { source: manifest.source } : {}),
     ...(manifest.references?.length ? { references: manifest.references } : {}),
@@ -277,13 +345,7 @@ function parseManifest(raw: Buffer): SkillManifest {
   if (entry !== 'SKILL.md') {
     throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包入口必须是 SKILL.md');
   }
-  let category: OfficialSkillCategoryKey | undefined;
-  if (obj.category !== undefined && obj.category !== null && String(obj.category).trim()) {
-    if (!isOfficialSkillCategory(obj.category)) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '分类不在允许范围内');
-    }
-    category = obj.category;
-  }
+  const categories = categoriesFromManifest(obj);
   const references: SkillReference[] = [];
   if (obj.references !== undefined) {
     if (!Array.isArray(obj.references)) {
@@ -307,7 +369,8 @@ function parseManifest(raw: Buffer): SkillManifest {
     name,
     description,
     entry: 'SKILL.md',
-    category,
+    ...(categories[0] ? { category: categories[0] } : {}),
+    ...(categories.length > 1 ? { categories } : {}),
     ...(license ? { license } : {}),
     ...(source ? { source } : {}),
     references: references.length ? references : undefined,
@@ -445,6 +508,7 @@ export function buildSkillPackageFromForm(input: {
   name: string;
   summary: string;
   category?: OfficialSkillCategoryKey | null;
+  categories?: OfficialSkillCategoryKey[] | null;
   instruction: string;
 }): ParsedSkillPackage {
   const key = assertSkillKey(input.key);
@@ -456,20 +520,16 @@ export function buildSkillPackageFromForm(input: {
   if (instructionBuf.length > SKILL_MD_MAX_BYTES) {
     throw skillPackageError('SKILL_PACKAGE_INVALID', '技能说明文件过大');
   }
-  let category: OfficialSkillCategoryKey | undefined;
-  if (input.category) {
-    if (!isOfficialSkillCategory(input.category)) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '分类不在允许范围内');
-    }
-    category = input.category;
-  }
+  const categories = parseSkillCategories(
+    input.categories !== undefined && input.categories !== null ? input.categories : (input.category ?? []),
+  );
   const manifest: SkillManifest = {
     key,
     name,
     description,
     entry: 'SKILL.md',
-    category,
   };
+  assignManifestCategories(manifest, categories);
   const files = new Map<string, Buffer>();
   files.set('SKILL.md', instructionBuf);
   writeManifestFile(files, manifest);
@@ -512,6 +572,7 @@ export function packagePreview(parsed: ParsedSkillPackage) {
     name: parsed.manifest.name,
     summary: parsed.manifest.description,
     category: parsed.manifest.category ?? null,
+    categories: storedCategories(parsed.manifest),
     resourceCount: parsed.resourceCount,
     instructionBytes: Buffer.byteLength(parsed.instruction, 'utf8'),
     keyDerived: parsed.keyDerived,

@@ -4,7 +4,7 @@ import type { AgentHandle } from '@mammoth-ai/mmp-agent'
 import {ManagedDocuments,managedRuntimeProjection,compositionOf,sha,type ManagedComposition,type GalleryReceipt} from './managed-runtime.ts'
 import type {} from '@mammoth-ai/mmp-agent-preset-registry'
 import type {} from '@mammoth-ai/mmp-agent-instructions'
-import type { CatalogQuery, CatalogFacets, ExpertCatalogPage, SkillCatalogPage, CatalogDetail } from './types.ts'
+import type { CatalogQuery, CatalogFacets, ExpertCatalogPage, SkillCatalogPage, CatalogDetail, OfficialSkillAvailability } from './types.ts'
 /** Ground official Expert gallery, frozen Sessions, tool enforcement, and usage attribution. */
 import { randomUUID } from 'node:crypto'
 import { Context, Service } from '@mammoth-ai/cordis'
@@ -216,7 +216,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
 
   /** Name and deleted flag for an existing tag. Does not make a deleted skill selectable. */
   @Remote
-  skillAvailability(id: string) { return this.ground.skillAvailability(id) }
+  skillAvailability(id: string): Promise<OfficialSkillAvailability> { return this.ground.skillAvailability(id) }
 
   /** Read20 visible experts with a stable server cursor. */
   @Remote

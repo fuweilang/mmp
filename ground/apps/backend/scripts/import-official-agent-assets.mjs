@@ -98,7 +98,7 @@ async function upsertDraft(asset) {
 async function linkedSkillSnapshot(tx, agentId) {
   const { legacySkillCategory } = require('./dist/official-skill/skill-package.js');
   const links = await tx.officialAgentSkillLink.findMany({ where: { agentId }, include: { skill: true }, orderBy: { createdAt: 'asc' } });
-  return links.filter(({skill}) => skill.enabledAt && skill.currentRevision > 0).map(({skill}) => ({id:skill.id,key:skill.key,name:skill.name,summary:skill.summary,category:legacySkillCategory(skill.category),packageRevision:skill.currentRevision,enabledAt:skill.enabledAt.toISOString()}));
+  return links.filter(({skill}) => skill.enabledAt && skill.currentRevision > 0).map(({skill}) => ({id:skill.id,key:skill.key,name:skill.name,summary:skill.summary,category:legacySkillCategory(skill.categories?.[0] ?? null),packageRevision:skill.currentRevision,enabledAt:skill.enabledAt.toISOString()}));
 }
 
 async function publish(agent, actorUserId) {

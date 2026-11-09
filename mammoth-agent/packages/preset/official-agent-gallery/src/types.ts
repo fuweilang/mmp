@@ -143,7 +143,7 @@ export interface OfficialSkillBinding {
     readonly key: string
     readonly name: string
     readonly packageRevision: number
-    readonly avatarUrl?: string | null
+    readonly avatarUrl?: string | null | undefined
   }
   readonly skill: OfficialSkillCard
   readonly standardCapabilities: {
@@ -196,6 +196,9 @@ export interface CatalogDetail {
  readonly detail:CatalogDiscoveryDetail;
  readonly linkedSkills:readonly {readonly id:string;readonly name:string;readonly summary:string}[];
 }
+
+/** Tag state for one official skill; a deleted skill is never selectable. */
+export interface OfficialSkillAvailability { readonly id:string; readonly name:string; readonly deleted:boolean; readonly selectable:boolean }
 
 export interface GalleryRuntimeView {phase:string;attemptId:string;turn:number;generation:number;loaded:boolean;artifactCount:number;lastArtifact:{id:string;name:string}|null}
 declare module '@mammoth-ai/mmp-session-projection/types' {interface SessionProjectionMap {officialGalleryRuntime:GalleryRuntimeView}}

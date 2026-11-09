@@ -55,7 +55,7 @@ const officialAgentInclude = {
           key: true,
           name: true,
           summary: true,
-          category: true,
+          categories: true,
           enabledAt: true,
           currentRevision: true,
         },
@@ -934,7 +934,7 @@ export class AdminOfficialAgentsService {
         row.customAvatarPath ?? null,
       ),
       linkedSkillIds: row.skillLinks.map(link => link.skillId),
-      linkedSkills: row.skillLinks.map(({ skill }) => ({ id: skill.id, key: skill.key, name: skill.name, summary: skill.summary, category: legacySkillCategory(skill.category), enabledAt: skill.enabledAt?.toISOString() ?? null, packageRevision: skill.currentRevision, enabled: skill.enabledAt !== null })),
+      linkedSkills: row.skillLinks.map(({ skill }) => ({ id: skill.id, key: skill.key, name: skill.name, summary: skill.summary, category: legacySkillCategory(skill.categories[0] ?? null), enabledAt: skill.enabledAt?.toISOString() ?? null, packageRevision: skill.currentRevision, enabled: skill.enabledAt !== null })),
       draft: {
         name: row.name,
         summary: row.summary,

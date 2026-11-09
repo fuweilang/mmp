@@ -51,9 +51,11 @@
               @input="starterError = ''"
             />
             <div class="starter-actions">
-              <el-button text :disabled="index === 0" @click="moveStarter(index, -1)">上移</el-button>
-              <el-button text :disabled="index === starters.length - 1" @click="moveStarter(index, 1)">下移</el-button>
-              <el-button text @click="starters.splice(index, 1)">删除</el-button>
+              <template v-if="starters.length > 1">
+                <el-button text :disabled="index === 0" @click="moveStarter(index, -1)">上移</el-button>
+                <el-button text :disabled="index === starters.length - 1" @click="moveStarter(index, 1)">下移</el-button>
+              </template>
+              <el-button text @click="removeStarter(index)">删除</el-button>
             </div>
           </div>
           <el-button v-if="starters.length < 3" @click="starters.push({ text: '' })">
@@ -83,6 +85,7 @@
           <el-button :disabled="busy" @click="emit('close')">取消</el-button>
           <el-button
             v-if="kind === 'expert' || skillIsEnabled"
+            :type="kind === 'skill' ? 'primary' : undefined"
             :loading="saving && !publishing"
             :disabled="busy || loading || !!error"
             @click="save(kind === 'expert' ? 'save' : 'save')"
@@ -202,11 +205,30 @@ const starterError = ref('');
 const busy = computed(() => saving.value || publishing.value || enabling.value);
 const moreOpen = ref<string[]>([]);
 const lists = reactive({ outputs: '', materials: '', boundaries: '' });
-const starters = ref<Detail['starters']>([]);
+const starters = ref<Detail['starters']>([{ text: '' }]);
 const base = `/official-${props.kind === 'expert' ? 'agents' : 'skills'}/${encodeURIComponent(props.resourceId)}/discovery`;
 let sequence = 0;
 let alive = true;
 const toLines = (text: string) => text.split('\n').map((v) => v.trim()).filter(Boolean);
+
+function ensureStarterSlot() {
+  if (!starters.value.length) starters.value = [{ text: '' }];
+}
+
+function filledStarters() {
+  return starters.value
+    .map((v) => ({ text: String(v.text || '').trim() }))
+    .filter((v) => v.text);
+}
+
+function removeStarter(index: number) {
+  starterError.value = '';
+  if (starters.value.length <= 1) {
+    starters.value = [{ text: '' }];
+    return;
+  }
+  starters.value.splice(index, 1);
+}
 
 function moveStarter(index: number, delta: number) {
   const target = index + delta;
@@ -233,7 +255,8 @@ async function load() {
     for (const field of listFields.value) lists[field.key] = d[field.key].join('\n');
     starters.value = d.starters
       .map((v) => ({ text: v.text || '' }))
-      .filter((v) => props.kind === 'expert' || v.text);
+      .filter((v) => v.text.trim());
+    ensureStarterSlot();
   } catch (e) {
     if (alive && seq === sequence) error.value = e instanceof Error ? e.message : '读取失败';
   } finally {
@@ -250,12 +273,6 @@ async function saveDiscoveryOnly() {
     }
   }
   starterError.value = '';
-  if (starters.value.some((v) => !String(v.text || '').trim())) {
-    const message = props.kind === 'expert' ? '请填写推荐提问正文，或删除空项' : '请填写完整示例问题，或删除空项';
-    starterError.value = message;
-    ElMessage.warning(message);
-    throw new Error('VALIDATION');
-  }
   await adminHttp(base, {
     method: 'PUT',
     body: JSON.stringify({
@@ -268,7 +285,7 @@ async function saveDiscoveryOnly() {
         materials: toLines(lists.materials),
         boundaries: toLines(lists.boundaries),
         // Always send starters (including []) so an explicit clear cannot come back from legacy fields.
-        starters: starters.value.map((v) => ({ text: String(v.text || '').trim() })),
+        starters: filledStarters(),
       },
     }),
   });

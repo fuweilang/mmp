@@ -91,4 +91,33 @@ describe('skill zip import', () => {
     assert.equal(slugSkillKey('Meeting Notes'), 'meeting-notes');
     assert.equal(readSkillFrontmatter(skillMd).description, 'Turn notes into actions');
   });
+
+  it('reads both category and categories from skill.json and caps at 3', async () => {
+    const parsed = await parseSkillZip(await zip({
+      'skill.json': JSON.stringify({
+        key: 'multi-cat',
+        name: 'Multi',
+        description: 'Has several categories',
+        entry: 'SKILL.md',
+        category: 'education',
+        categories: ['education', 'expertise', 'files'],
+      }),
+      'SKILL.md': '# Multi\n\nBody.\n',
+    }));
+    assert.equal(parsed.manifest.category, 'education');
+    assert.deepEqual(parsed.manifest.categories, ['education', 'expertise', 'files']);
+  });
+
+  it('rejects more than three categories', async () => {
+    await assert.rejects(parseSkillZip(await zip({
+      'skill.json': JSON.stringify({
+        key: 'too-many',
+        name: 'Too Many',
+        description: 'Overflow',
+        entry: 'SKILL.md',
+        categories: ['education', 'expertise', 'files', 'search'],
+      }),
+      'SKILL.md': '# Too Many\n\nBody.\n',
+    })), /分类最多 3 个/);
+  });
 });
