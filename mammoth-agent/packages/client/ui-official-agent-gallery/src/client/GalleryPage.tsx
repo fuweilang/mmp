@@ -256,17 +256,17 @@ function CatalogPanel({ kind, active, loadPage, loadFacets, starting, onStart, o
    </div>{available.length > visibleCount ? <button className={`${css.chip} ${css.more}`} type="button" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{t(expanded ? 'lessCapabilities' : 'moreCapabilities')}</button> : null}</div> : null}
    {facetError ? <p className={css.feedback}>{t('facetFailed')} <button type="button" onClick={() => { void fetchFacets(); }}>{t('retry')}</button></p> : null}
    <div className={css.resultBar}><p role="status" aria-live="polite">{state.loaded ? t(kind === 'experts' ? 'expertsFound' : 'skillsFound', { count: String(state.total) }) : t(kind === 'experts' ? 'loadingExperts' : 'loadingSkills')}</p>{filtered ? <Button variant="ghost" size="sm" onClick={clear}>{t('clearSkillFilters')}</Button> : null}</div>
-   {!state.loaded && state.loading ? <ul className={`${css.cards} ${kind === 'skills' ? css.skillCards : ''}`} aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <li key={index} className={`${css.card} ${css.skeleton}`}><span /><span /><span /></li>)}</ul> : null}
-   {state.items.length ? <ul className={`${css.cards} ${kind === 'skills' ? css.skillCards : ''}`}>
+   {!state.loaded && state.loading ? <ul className={css.cards} aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <li key={index} className={`${css.card} ${css.skeleton}`}><span /><span /><span /></li>)}</ul> : null}
+   {state.items.length ? <ul className={css.cards}>
     {state.items.map(item => {
                 const primary = labels.find(label => label.id === item.discovery?.capability);
                 const domain = INDUSTRIES.find(label => item.discovery?.industries.includes(label.id));
                 const expert = 'executionGranted' in item ? item : undefined;
                 const isStarting = starting === item.id;
+                const summaryText = expert || (item.summary.trim() && !/^[- >|]+$/.test(item.summary.trim())) ? item.summary : t('skillSummaryMissing');
                 return <li key={item.id} className={css.card} data-catalog-key={item.key}>
-      <button type="button" className={`${css.cardAction} ${expert ? css.expertAction : css.skillAction}`} disabled={starting !== undefined} aria-busy={isStarting} aria-label={`${t('viewDetails')} ${item.name}`} aria-describedby={`catalog-summary-${kind}-${item.id}`} onClick={() => { onDetail(item); }}>
-       <span className={css.cardBody}><CatalogIcon catalogKey={item.key} kind={primary?.icon ?? (expert ? 'case' : 'file')} src={item.avatarUrl}/><span className={css.cardText}><span className={css.cardTitle} title={item.name}>{item.name}</span>{expert ? <span id={`catalog-summary-${kind}-${item.id}`} className={css.expertSummary} title={item.summary}>{item.summary}</span> : null}</span></span>
-       {!expert ? <span id={`catalog-summary-${kind}-${item.id}`} className={css.skillSummary}>{item.summary.trim() && !/^[- >|]+$/.test(item.summary.trim()) ? item.summary : t('skillSummaryMissing')}</span> : null}
+      <button type="button" className={`${css.cardAction} ${css.expertAction}`} disabled={starting !== undefined} aria-busy={isStarting} aria-label={`${t('viewDetails')} ${item.name}`} aria-describedby={`catalog-summary-${kind}-${item.id}`} onClick={() => { onDetail(item); }}>
+       <span className={css.cardBody}><CatalogIcon catalogKey={item.key} kind={primary?.icon ?? (expert ? 'case' : 'file')} src={item.avatarUrl}/><span className={css.cardText}><span className={css.cardTitle} title={item.name}>{item.name}</span><span id={`catalog-summary-${kind}-${item.id}`} className={css.expertSummary} title={summaryText}>{summaryText}</span></span></span>
        <span className={css.cardFooter}><span className={css.tags}>{primary ? <span className={css.tag}>{t(primary.label)}</span> : null}{domain ? <span className={`${css.tag} ${css.tagMuted}`}>{t(domain.label)}</span> : null}</span></span>
       </button>
       <div className={css.directStart}>

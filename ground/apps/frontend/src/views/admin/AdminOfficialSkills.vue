@@ -23,7 +23,18 @@
         <el-option label="已停用" value="false" />
       </el-select>
       <el-select v-model="categoryFilter" clearable placeholder="分类" class="toolbar-select" @change="resetPage">
-        <el-option v-for="item in availableCategoryOptions" :key="item.value" :label="item.label" :value="item.value" />
+        <template #label="{ value }">
+          <span class="cat-mark">
+            <i class="cat-dot" :style="{ background: categoryColor(value) }" />
+            <span>{{ categoryName(value) }}</span>
+          </span>
+        </template>
+        <el-option v-for="item in availableCategoryOptions" :key="item.value" :label="item.label" :value="item.value">
+          <span class="cat-mark">
+            <i class="cat-dot" :style="{ background: categoryColor(item.value) }" />
+            <span>{{ item.label }}</span>
+          </span>
+        </el-option>
       </el-select>
       <el-button type="primary" :loading="loading" @click="onSearchNow">搜索</el-button>
       <el-button @click="onReset">重置</el-button>
@@ -44,7 +55,7 @@
                 alt=""
                 @error="thumbFailed[row.id] = row.avatarUrl || ''"
               />
-              <ImageIcon v-else :size="16" />
+              <component :is="categoryIcon(row)" v-else :size="16" />
             </span>
             <span class="name-copy">
               <strong class="cell-ellipsis">{{ row.name }}</strong>
@@ -55,7 +66,15 @@
       </el-table-column>
       <el-table-column label="一句话介绍" min-width="220" show-overflow-tooltip prop="summary" />
       <el-table-column label="分类" min-width="110" show-overflow-tooltip>
-        <template #default="{ row }">{{ categoryLabels(row) }}</template>
+        <template #default="{ row }">
+          <span v-if="!rowCategories(row).length" class="muted">未设置</span>
+          <span v-else class="cat-list">
+            <span v-for="value in rowCategories(row)" :key="value" class="cat-mark">
+              <i class="cat-dot" :style="{ background: categoryColor(value) }" />
+              <span>{{ categoryName(value) }}</span>
+            </span>
+          </span>
+        </template>
       </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
@@ -223,7 +242,24 @@ const discoveryEnabled=ref(false);
 import CatalogIconEditor from '../../components/CatalogIconEditor.vue';
 import { computed, h, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox, type UploadFile, type UploadInstance } from 'element-plus';
-import { Image as ImageIcon } from 'lucide-vue-next';
+import {
+  BarChart3,
+  BadgeCheck,
+  Briefcase,
+  FileText,
+  FolderOpen,
+  GraduationCap,
+  Handshake,
+  Heart,
+  Landmark,
+  MessagesSquare,
+  PenLine,
+  Scale,
+  Search,
+  ShoppingBag,
+  Sparkles,
+  Users,
+} from 'lucide-vue-next';
 import {
   adminOfficialSkillApi,
   type OfficialSkillCategory,
@@ -321,10 +357,59 @@ const categoryOptions: Array<{ value: OfficialSkillCategory; label: string }> = 
 ];
 const availableCategoryOptions = computed(() => categoryOptions.filter(item => rows.value.some(row => rowCategories(row).includes(item.value))));
 
-function categoryLabels(row: OfficialSkillRow) {
-  const items = rowCategories(row);
-  if (!items.length) return '未设置';
-  return items.map((value) => categoryOptions.find((item) => item.value === value)?.label ?? value).join('、');
+const categoryIcons: Record<OfficialSkillCategory, unknown> = {
+  common: Sparkles,
+  content: PenLine,
+  analytics: BarChart3,
+  office: FileText,
+  education: GraduationCap,
+  expertise: BadgeCheck,
+  business: Briefcase,
+  ecommerce: ShoppingBag,
+  sales: Handshake,
+  hr: Users,
+  legal: Scale,
+  finance: Landmark,
+  consulting: MessagesSquare,
+  research: Search,
+  files: FolderOpen,
+  search: Search,
+  writing: PenLine,
+  lifestyle: Heart,
+};
+
+function categoryIcon(row: OfficialSkillRow) {
+  const key = rowCategories(row)[0];
+  return (key && categoryIcons[key]) || Sparkles;
+}
+
+const categoryColors: Record<OfficialSkillCategory, string> = {
+  common: '#5b6ee1',
+  content: '#e25b4a',
+  analytics: '#1f9d8a',
+  office: '#3b82c4',
+  education: '#7a5af8',
+  expertise: '#d97706',
+  business: '#0f766e',
+  ecommerce: '#db2777',
+  sales: '#ea580c',
+  hr: '#0891b2',
+  legal: '#4f46e5',
+  finance: '#15803d',
+  consulting: '#9333ea',
+  research: '#0369a1',
+  files: '#64748b',
+  search: '#0284c7',
+  writing: '#be185d',
+  lifestyle: '#c026d3',
+};
+
+function categoryColor(value: string) {
+  return categoryColors[value as OfficialSkillCategory] ?? '#94a3b8';
+}
+
+function categoryName(value: string) {
+  return categoryOptions.find((item) => item.value === value)?.label ?? value;
 }
 
 function formatTime(value: string) {
@@ -784,6 +869,9 @@ onUnmounted(() => {
   color: var(--el-text-color-secondary);
 }
 .skill-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; background: var(--el-fill-color-light); }
+.cat-list { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.cat-mark { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.cat-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; }
 .operation-buttons {
   display: flex;
   align-items: center;
