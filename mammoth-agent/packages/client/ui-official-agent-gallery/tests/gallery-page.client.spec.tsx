@@ -362,7 +362,7 @@ describe('GalleryPage', () => {
         industries: [...industries].map(([id, count]) => ({ id, count })),
       }
     }
-    render(<GalleryPage t={t} catalogDetail={async () => ({ id: 'x', key: 'x', name: 'x', summary: '', avatarUrl: null, linkedSkills: [], detail: { schemaVersion: 1 as const, displayRevision: 1, introduction: '', outputs: [], materials: [], boundaries: [], starters: [] } })}
+    render(<GalleryPage t={t} catalogDetail={async () => ({ kind: 'expert' as const, id: 'x', key: 'x', name: 'x', summary: '', avatarUrl: null, linkedSkills: [], detail: { schemaVersion: 1 as const, displayRevision: 1, introduction: '', outputs: [], materials: [], boundaries: [], starters: [] } })}
       pageExperts={async (query) => pageOf(experts, query, item => `${item.name}`)}
       pageSkills={async (query) => pageOf(skills, query, item => `${item.name}`)}
       expertFacets={async () => facetsOf(experts)} skillFacets={async () => facetsOf(skills)}
