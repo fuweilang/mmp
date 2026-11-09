@@ -363,6 +363,12 @@ sed -e "s|^FROM node:24-bookworm|FROM hub.rat.dev/library/node:24-bookworm|" \
 if grep -q "^\*\*/lib$" .dockerignore 2>/dev/null; then
   sed -i "s|^\*\*/lib$|# **/lib|" .dockerignore
 fi
+# The image build context is mammoth-agent/ only, so the Ground library sources the
+# ui-enterprise-library project references are absent. Drop that project reference and the
+# two specs that import Ground sources; the shipped client never imports them.
+sed -i "/tsconfig.ground-library.json/d" tsconfig.client.json
+rm -f packages/client/ui-enterprise-library/tests/draft-send.client.spec.ts
+rm -f packages/credentials/deepseek-account-platform/tests/ground-history.integration.spec.ts
 test -s scripts/release/process.ts
 test -s packages/llm/llm-ground/lib/types/index.js
 test -s Dockerfile.server
