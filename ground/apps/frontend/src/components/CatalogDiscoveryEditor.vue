@@ -13,11 +13,10 @@
     @update:model-value="onDialogChange"
   >
     <el-alert
+      v-if="kind === 'expert'"
       type="info"
       :closable="false"
-      :title="kind === 'expert'
-        ? '只编辑专家公开介绍，不修改角色指令、工具或技能。「保存修改」仅存草稿；「保存并发布」会发布该专家全部待发布修改。'
-        : '启用技能保存后对外生效；不修改技能包正文、版本或启用状态。'"
+      title="只编辑专家公开介绍，不修改角色指令、工具或技能。「保存修改」仅存草稿；「保存并发布」会发布该专家全部待发布修改。"
     />
     <el-alert v-if="error" :title="error" type="error" :closable="false">
       <el-button text @click="load">重新加载</el-button>
@@ -39,22 +38,17 @@
         />
       </el-form-item>
 
-      <el-form-item :label="labels.starters">
+      <el-form-item :label="labels.starters" :error="starterError">
         <div class="starters">
           <div v-for="(starter, index) in starters" :key="index" class="starter">
             <el-input
-              v-if="kind === 'skill'"
-              v-model="starter.label"
-              maxlength="40"
-              :placeholder="labels.starterLabelPlaceholder"
-            />
-            <el-input
               v-model="starter.text"
               type="textarea"
-              :autosize="{ minRows: 2, maxRows: 6 }"
+              :autosize="{ minRows: 2, maxRows: 8 }"
               maxlength="500"
               show-word-limit
               :placeholder="labels.starterTextPlaceholder"
+              @input="starterError = ''"
             />
             <div class="starter-actions">
               <el-button text :disabled="index === 0" @click="moveStarter(index, -1)">上移</el-button>
@@ -62,11 +56,11 @@
               <el-button text @click="starters.splice(index, 1)">删除</el-button>
             </div>
           </div>
-          <el-button v-if="starters.length < 3" @click="starters.push(kind === 'skill' ? { label: '', text: '' } : { text: '' })">
+          <el-button v-if="starters.length < 3" @click="starters.push({ text: '' })">
             {{ labels.addStarter }}
           </el-button>
         </div>
-        <div class="hint">{{ labels.starterHint }}</div>
+        <div v-if="kind === 'expert'" class="hint">{{ labels.starterHint }}</div>
       </el-form-item>
 
       <el-collapse v-model="moreOpen">
@@ -88,20 +82,25 @@
         <div class="footer-actions">
           <el-button :disabled="busy" @click="emit('close')">取消</el-button>
           <el-button
-            v-if="kind === 'expert'"
+            v-if="kind === 'expert' || skillIsEnabled"
             :loading="saving && !publishing"
             :disabled="busy || loading || !!error"
-            @click="save('save')"
+            @click="save(kind === 'expert' ? 'save' : 'save')"
           >
             保存修改
           </el-button>
+          <template v-if="kind === 'skill' && !skillIsEnabled">
+            <el-button :loading="saving && !enabling" :disabled="busy || loading || !!error" @click="save('save')">保存</el-button>
+            <el-button type="primary" :loading="enabling" :disabled="busy || loading || !!error" @click="save('saveAndEnable')">保存并启用</el-button>
+          </template>
           <el-button
+            v-if="kind === 'expert'"
             type="primary"
-            :loading="kind === 'expert' ? publishing || (saving && publishing) : saving"
+            :loading="publishing || (saving && publishing)"
             :disabled="busy || loading || !!error"
-            @click="kind === 'expert' ? save('saveAndPublish') : save('save')"
+            @click="save('saveAndPublish')"
           >
-            {{ kind === 'expert' ? '保存并发布' : '保存公开详情' }}
+            保存并发布
           </el-button>
         </div>
       </div>
@@ -113,9 +112,9 @@
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { adminHttp } from '../api/http';
-import { adminOfficialAgentApi } from '../api/admin';
+import { adminOfficialAgentApi, adminOfficialSkillApi } from '../api/admin';
 
-const props = defineProps<{ kind: 'expert' | 'skill'; resourceId: string; agentStatus?: 'DRAFT' | 'PUBLISHED' | 'OFFLINE' | '' }>();
+const props = defineProps<{ kind: 'expert' | 'skill'; resourceId: string; agentStatus?: 'DRAFT' | 'PUBLISHED' | 'OFFLINE' | ''; skillEnabled?: boolean }>();
 const emit = defineEmits<{ close: []; saved: []; published: [] }>();
 function onDialogChange(value: boolean) {
   if (!value) emit('close');
@@ -133,6 +132,7 @@ interface Detail {
 interface Resource {
   id: string;
   name: string;
+  enabled?: boolean;
   updatedAt: string;
   discoveryDetail: Detail;
 }
@@ -155,27 +155,27 @@ const expertLabels = {
 } as const;
 
 const skillLabels = {
-  introduction: '详细介绍（可选，公开内容）',
-  introductionPlaceholder: '说明能解决什么问题；不要粘贴私有指令或敏感信息',
-  starters: '开场白（可选，最多3条）',
-  starterLabelPlaceholder: '短标签',
-  starterTextPlaceholder: '点击只预填草稿，不会自动发送',
-  addStarter: '添加开场白',
-  starterHint: '未填写的部分不会在终端显示。',
-  moreSection: '更多介绍',
-  outputs: '典型产出',
-  outputsPlaceholder: '每行一项，最多5项，每项300字；留空则隐藏',
-  materials: '所需材料',
-  materialsPlaceholder: '每行一项，最多5项，每项300字；留空则隐藏',
-  boundaries: '适用边界',
-  boundariesPlaceholder: '每行一项，最多5项，每项300字；留空则隐藏',
+  introduction: '详细介绍',
+  introductionPlaceholder: '选填',
+  starters: '示例问题',
+  starterLabelPlaceholder: '',
+  starterTextPlaceholder: '完整问题',
+  addStarter: '添加示例问题',
+  starterHint: '',
+  moreSection: '更多说明',
+  outputs: '交付内容',
+  outputsPlaceholder: '每行一项，最多 5 项',
+  materials: '准备资料',
+  materialsPlaceholder: '每行一项，最多 5 项',
+  boundaries: '使用边界',
+  boundariesPlaceholder: '每行一项，最多 5 项',
 } as const;
 
 const labels = computed(() => (props.kind === 'expert' ? expertLabels : skillLabels));
 const dialogTitle = computed(() =>
   props.kind === 'expert'
     ? `编辑专家介绍 · ${name.value || '加载中'}`
-    : `广场详情 · ${name.value || '加载中'}`,
+    : `技能介绍 · ${name.value || '加载中'}`,
 );
 
 const listFields = computed(() =>
@@ -196,7 +196,10 @@ const error = ref('');
 const loading = ref(false);
 const saving = ref(false);
 const publishing = ref(false);
-const busy = computed(() => saving.value || publishing.value);
+const enabling = ref(false);
+const skillIsEnabled = ref(Boolean(props.skillEnabled));
+const starterError = ref('');
+const busy = computed(() => saving.value || publishing.value || enabling.value);
 const moreOpen = ref<string[]>([]);
 const lists = reactive({ outputs: '', materials: '', boundaries: '' });
 const starters = ref<Detail['starters']>([]);
@@ -223,15 +226,14 @@ async function load() {
     if (!alive || seq !== sequence) return;
     name.value = value.name;
     stamp.value = value.updatedAt;
+    if (props.kind === 'skill') skillIsEnabled.value = Boolean(value.enabled);
     const d = value.discoveryDetail;
     revision.value = d.displayRevision;
     introduction.value = d.introduction;
     for (const field of listFields.value) lists[field.key] = d[field.key].join('\n');
-    starters.value = d.starters.map((v) =>
-      props.kind === 'expert'
-        ? { text: v.text || '' }
-        : { label: v.label || '', text: v.text || '' },
-    );
+    starters.value = d.starters
+      .map((v) => ({ text: v.text || '' }))
+      .filter((v) => props.kind === 'expert' || v.text);
   } catch (e) {
     if (alive && seq === sequence) error.value = e instanceof Error ? e.message : '读取失败';
   } finally {
@@ -247,13 +249,11 @@ async function saveDiscoveryOnly() {
       throw new Error('VALIDATION');
     }
   }
-  if (props.kind === 'expert') {
-    if (starters.value.some((v) => !String(v.text || '').trim())) {
-      ElMessage.warning('请填写推荐提问正文，或删除空项');
-      throw new Error('VALIDATION');
-    }
-  } else if (starters.value.some((v) => !String(v.label || '').trim() || !String(v.text || '').trim())) {
-    ElMessage.warning('请填写开场白标签和正文，或移除空项');
+  starterError.value = '';
+  if (starters.value.some((v) => !String(v.text || '').trim())) {
+    const message = props.kind === 'expert' ? '请填写推荐提问正文，或删除空项' : '请填写完整示例问题，或删除空项';
+    starterError.value = message;
+    ElMessage.warning(message);
     throw new Error('VALIDATION');
   }
   await adminHttp(base, {
@@ -267,10 +267,8 @@ async function saveDiscoveryOnly() {
         outputs: toLines(lists.outputs),
         materials: toLines(lists.materials),
         boundaries: toLines(lists.boundaries),
-        // Always send starters (including []) so cleared examples do not resurrect via openingQuestions fallback.
-        starters: props.kind === 'expert'
-          ? starters.value.map((v) => ({ text: String(v.text || '').trim() }))
-          : starters.value,
+        // Always send starters (including []) so an explicit clear cannot come back from legacy fields.
+        starters: starters.value.map((v) => ({ text: String(v.text || '').trim() })),
       },
     }),
   });
@@ -288,7 +286,7 @@ async function confirmPublishIfNeeded() {
   );
 }
 
-async function save(mode: 'save' | 'saveAndPublish' = 'save') {
+async function save(mode: 'save' | 'saveAndPublish' | 'saveAndEnable' = 'save') {
   if (busy.value || loading.value || error.value) return;
   if (mode === 'saveAndPublish' && props.kind === 'expert') {
     try {
@@ -301,9 +299,23 @@ async function save(mode: 'save' | 'saveAndPublish' = 'save') {
   try {
     await saveDiscoveryOnly();
     emit('saved');
+    if (mode === 'saveAndEnable' && props.kind === 'skill') {
+      enabling.value = true;
+      try {
+        await adminOfficialSkillApi.enable(props.resourceId);
+        ElMessage.success('已保存并启用');
+        emit('close');
+      } catch (e) {
+        ElMessage.error(e instanceof Error ? e.message : '启用失败，介绍已保留且技能仍为停用');
+        await load();
+      } finally {
+        enabling.value = false;
+      }
+      return;
+    }
     if (mode === 'save') {
       ElMessage.success(
-        props.kind === 'expert' ? '专家介绍已保存；发布后终端才会更新' : '公开详情已保存',
+        props.kind === 'expert' ? '专家介绍已保存；发布后终端才会更新' : '已保存',
       );
       emit('close');
       return;

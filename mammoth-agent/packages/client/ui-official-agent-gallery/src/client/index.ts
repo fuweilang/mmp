@@ -14,6 +14,17 @@ import { IconUsersOutlineRegular } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import { GalleryPage, type GalleryFace } from './GalleryPage.tsx'
 import { GallerySourceLabel } from './GallerySourceLabel.tsx'
+
+type SkillAvailability = { skillAvailability?: (id: string) => Promise<{ ok: true; value: { deleted: boolean } } | { ok: false }> }
+
+function readSkillAvailability(ctx: ClientContext) {
+  return async (id: string) => {
+    const call = (ctx.remote.officialAgentGallery as SkillAvailability).skillAvailability
+    if (!call) return { deleted: false }
+    const result = await call(id)
+    return { deleted: result.ok ? result.value.deleted : false }
+  }
+}
 import { zh, en, ja, es, fr, de, ru, pt, type OfficialAgentGalleryLocaleKey } from './locales.ts'
 
 declare module '@mammoth-ai/mmp-client-ui-slots' {
@@ -104,9 +115,9 @@ export function apply(ctx: ClientContext): void {
     // Sit with other static session context chips (agent-preset uses -10).
     order: -9,
     locale: NS,
-    inject: () => ({}),
+    inject: () => ({ skillAvailability: readSkillAvailability(ctx) }),
   }, GallerySourceLabel))
-  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({name:'conversation.input.left',id:'official-gallery-input-source',order:-9,locale:NS,inject:()=>({download:async(sessionId:string,id:string)=>{const result=await ctx.remote.officialAgentGallery.downloadArtifact(sessionId as Parameters<typeof ctx.remote.officialAgentGallery.downloadArtifact>[0],id);if(!result.ok)throw new Error(result.error.message);return result.value}})},GallerySourceLabel))
+  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({name:'conversation.input.left',id:'official-gallery-input-source',order:-9,locale:NS,inject:()=>({download:async(sessionId:string,id:string)=>{const result=await ctx.remote.officialAgentGallery.downloadArtifact(sessionId as Parameters<typeof ctx.remote.officialAgentGallery.downloadArtifact>[0],id);if(!result.ok)throw new Error(result.error.message);return result.value},skillAvailability:readSkillAvailability(ctx)})},GallerySourceLabel))
 }
 
 /** Decorative sidebar glyph; the row owns its localized navigation label. */

@@ -1,11 +1,11 @@
 /** Client preflight only; the server independently validates and rasterizes every image again. */
 
-const SKILL_MAX = 2 * 1024 * 1024;
+const SKILL_MAX = 5 * 1024 * 1024;
 const EXPERT_MAX = 5 * 1024 * 1024;
-/** Skill icons stay small; expert photos may be large camera shots (backend resizes). */
-const SKILL_MAX_EDGE = 4096;
+/** Both profiles accept the same camera-sized inputs; the server resizes and rasterizes. */
+const SKILL_MAX_EDGE = 10000;
 const EXPERT_MAX_EDGE = 10000;
-const SKILL_MAX_PIXELS = 16_777_216;
+const SKILL_MAX_PIXELS = 40_000_000;
 const EXPERT_MAX_PIXELS = 40_000_000;
 
 export type CatalogImageProfile = 'skill' | 'expert';
@@ -105,25 +105,15 @@ export async function validateCatalogImage(
 ): Promise<void> {
   const max = profile === 'expert' ? EXPERT_MAX : SKILL_MAX;
   if (!file.size || file.size > max) {
-    throw new Error(profile === 'expert' ? '请选择不超过5MB的图片' : '请选择不超过2MB的图片');
+    throw new Error('请选择不超过5MB的图片');
   }
   if (/[\\/\0]/.test(file.name)) throw new Error('图片文件名无效');
   const extension = extensionOf(file.name);
   const mime = file.type.toLowerCase();
-  const allowedExt =
-    profile === 'expert'
-      ? ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg']
-      : ['png', 'jpg', 'jpeg', 'webp'];
-  const allowedMime =
-    profile === 'expert'
-      ? ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/svg+xml', 'image/svg']
-      : ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+  const allowedExt = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'];
+  const allowedMime = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/svg+xml', 'image/svg'];
   if (!extension || !allowedExt.includes(extension) || !allowedMime.includes(mime)) {
-    throw new Error(
-      profile === 'expert'
-        ? '仅支持 PNG、JPG、WebP、GIF、SVG'
-        : '仅支持PNG、JPG、WebP图片',
-    );
+    throw new Error('仅支持 PNG、JPG、WebP、GIF、SVG');
   }
   const bytes = await readMagic(file);
   const headText =
@@ -148,11 +138,7 @@ export async function validateCatalogImage(
     const maxEdge = profile === 'expert' ? EXPERT_MAX_EDGE : SKILL_MAX_EDGE;
     const maxPixels = profile === 'expert' ? EXPERT_MAX_PIXELS : SKILL_MAX_PIXELS;
     if (!width || !height || width > maxEdge || height > maxEdge || width * height > maxPixels) {
-      throw new Error(
-        profile === 'expert'
-          ? `图片尺寸过大或无效（当前 ${width}×${height}）。请压缩到约 4000 万像素以内，最长边不超过 ${maxEdge}`
-          : '图片尺寸过大或无效，建议使用方形图标',
-      );
+      throw new Error(`图片尺寸过大或无效（当前 ${width}×${height}）。请压缩到约 4000 万像素以内，最长边不超过 ${maxEdge}`);
     }
   } finally {
     if ('close' in bitmap && typeof bitmap.close === 'function') bitmap.close();

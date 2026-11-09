@@ -1,7 +1,7 @@
 import { normalizeDiscoveryDetail, publicDiscoveryDetail } from '../official-agent/discovery-detail';
 import { catalogQuery, catalogFacets, catalogDiscoveryWhere, discoveryOf, displaySummary, DESCRIPTIONS, nextCatalogCursor, type CatalogQuery } from '../official-agent/catalog-discovery';
 import { uploadedCatalogIconUrl } from '../official-agent/gallery-avatars';
-import { saveOfficialAvatar } from '../knowledge/storage';
+import { absoluteUploadPath, officialSkillPackageRelDir, saveOfficialAvatar } from '../knowledge/storage';
 import {
   BadRequestException,
   ConflictException,
@@ -10,12 +10,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import { createReadStream, existsSync } from 'fs';
-import { readFile } from 'fs/promises';
+import { readFile, rm } from 'fs/promises';
 import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { LlmChatGatewayService } from '../llm/llm-chat.gateway.service';
-import { absoluteUploadPath } from '../knowledge/storage';
 import { skillDiscovery } from './skill-discovery';
 import {
   ParsedSkillPackage,
@@ -27,10 +27,12 @@ import {
   legacySkillCategory,
   packagePreview,
   parseSkillZip,
+  retargetPackageKey,
   skillPackageError,
   writeSkillPackageToDisk,
   type OfficialSkillCategoryKey,
 } from './skill-package';
+import { assertFreshStamp, candidateSkillKeys, packageWriteClaim, planSkillDelete, skillDeletePatch, skillEnableGaps, skillEnableMessage, skillOfferedForNewUse, skillReadDecision, skillStartDecision, zipReplaceDecision } from './skill-workflow';
 import {
   buildDisplayTranslationPrompt,
   displaySourceHash,
@@ -59,16 +61,19 @@ type SkillRow = Prisma.OfficialSkillGetPayload<{ include: typeof skillInclude }>
 export class OfficialSkillService {
   constructor(private prisma: PrismaService, private llm: LlmChatGatewayService) {}
 
-  async setIcon(id:string,file?:{originalname:string;mimetype:string;buffer:Buffer},actorId?:string) {
-    await this.requireSkill(id);let path:string|null=null;
+  async setIcon(id:string,file?:{originalname:string;mimetype:string;buffer:Buffer},actorId?:string,expectedUpdatedAt?:string) {
+    const row=await this.requireSkill(id);
+    assertFreshStamp(row.updatedAt.toISOString(),expectedUpdatedAt);
+    let path:string|null=null;
     if(file){try{path=await saveOfficialAvatar(id,file.originalname,file.buffer,file.mimetype);}catch(e){throw new BadRequestException(e instanceof Error?e.message:'图片无效');}}
-    await this.prisma.officialSkill.update({where:{id},data:{customAvatarPath:path}});
+    const updated=await this.prisma.officialSkill.updateMany({where:{id,updatedAt:row.updatedAt},data:{customAvatarPath:path}});
+    if(updated.count!==1)throw new ConflictException('技能已更新，请重新打开后保存');
     if(actorId)await this.audit(actorId,file?'admin_upload_official_skill_icon':'admin_remove_official_skill_icon',{skillId:id});
     return this.adminDetail(id,{includeInstruction:true});
   }
-  async catalogFacets(){const rows=await this.prisma.officialSkill.findMany({where:{enabledAt:{not:null},currentRevision:{gt:0}},select:{key:true}});return catalogFacets('skill',rows.map(x=>x.key));}
+  async catalogFacets(){const rows=await this.prisma.officialSkill.findMany({where:{deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}},select:{key:true}});return catalogFacets('skill',rows.map(x=>x.key));}
   async catalogPage(query:CatalogQuery){
-    const f=catalogQuery(query,'skill');const filters:Prisma.OfficialSkillWhereInput[]=[{enabledAt:{not:null},currentRevision:{gt:0}}];
+    const f=catalogQuery(query,'skill');const filters:Prisma.OfficialSkillWhereInput[]=[{deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}}];
     if(f.capability!=='all'||f.industry!=='all')filters.push(catalogDiscoveryWhere('skill',f.capability,f.industry));
     if(f.q)filters.push({OR:[...['name','summary','key'].map(field=>({[field]:{contains:f.q,mode:'insensitive' as const}})),...Object.entries(DESCRIPTIONS).filter(([,v])=>v.summary.toLocaleLowerCase().includes(f.q.toLocaleLowerCase())).map(([key,v])=>({key,summary:v.expectedOriginal}))]});
     const where:Prisma.OfficialSkillWhereInput={AND:filters};
@@ -76,7 +81,7 @@ export class OfficialSkillService {
     const page=rows.slice(0,20);return {items:page.map(row=>({id:row.id,key:row.key,name:row.name,summary:displaySummary(row.key,row.summary),category:row.category,enabledAt:row.enabledAt?.toISOString()??null,packageRevision:row.currentRevision,avatarUrl:uploadedCatalogIconUrl(row.customAvatarPath),discovery:discoveryOf('skill',row.key)})),total,hasMore:rows.length>20,nextCursor:rows.length>20?nextCatalogCursor(page[page.length-1]!.key,f.signature):null};
   }
 
-  async discovery(id:string){const row=await this.requireSkill(id);return {id:row.id,name:row.name,updatedAt:row.updatedAt.toISOString(),discoveryDetail:publicDiscoveryDetail(row.discoveryDetail)};}
+  async discovery(id:string){const row=await this.requireSkill(id);return {id:row.id,name:row.name,enabled:Boolean(row.enabledAt),updatedAt:row.updatedAt.toISOString(),discoveryDetail:publicDiscoveryDetail(row.discoveryDetail)};}
 
   async saveDiscovery(actor:User,id:string,body:{expectedUpdatedAt:string;discoveryDetail:unknown}) {
     await this.prisma.$transaction(async tx=>{
@@ -90,9 +95,28 @@ export class OfficialSkillService {
     });
     return this.adminDetail(id,{includeInstruction:true});
   }
+  async availability(user: User, id: string) {
+    this.requireActiveAccount(user);
+    const row = await this.prisma.officialSkill.findUnique({
+      where: { id },
+      select: { id: true, name: true, deletedAt: true, enabledAt: true, currentRevision: true },
+    });
+    if (!row) throw new NotFoundException('技能不存在');
+    return {
+      id: row.id,
+      name: row.name,
+      deleted: Boolean(row.deletedAt),
+      selectable: skillOfferedForNewUse({
+        deletedAt: row.deletedAt,
+        enabledAt: row.enabledAt,
+        revision: row.currentRevision,
+      }),
+    };
+  }
+
   async catalogDetail(user:User,id:string){
     this.requireActiveAccount(user);
-    const row=await this.prisma.officialSkill.findFirst({where:{id,enabledAt:{not:null},currentRevision:{gt:0}},select:{id:true,key:true,name:true,summary:true,category:true,enabledAt:true,currentRevision:true,customAvatarPath:true,discoveryDetail:true}});
+    const row=await this.prisma.officialSkill.findFirst({where:{id,deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}},select:{id:true,key:true,name:true,summary:true,category:true,enabledAt:true,currentRevision:true,customAvatarPath:true,discoveryDetail:true}});
     if(!row)throw new NotFoundException('技能不可用');
     return {kind:'skill' as const,id:row.id,key:row.key,name:row.name,summary:displaySummary(row.key,row.summary),avatarUrl:uploadedCatalogIconUrl(row.customAvatarPath),packageRevision:row.currentRevision,discovery:discoveryOf('skill',row.key),detail:publicDiscoveryDetail(row.discoveryDetail),linkedSkills:[]};
   }
@@ -103,6 +127,7 @@ export class OfficialSkillService {
       query.enabled === 'true' ? true : query.enabled === 'false' ? false : undefined;
     const rows = await this.prisma.officialSkill.findMany({
       where: {
+        deletedAt: null,
         ...(enabled === true ? { enabledAt: { not: null } } : {}),
         ...(enabled === false ? { enabledAt: null } : {}),
         ...(keyword
@@ -131,7 +156,7 @@ export class OfficialSkillService {
 
   async listEnabledOptions() {
     const rows = await this.prisma.officialSkill.findMany({
-      where: { enabledAt: { not: null }, currentRevision: { gt: 0 } },
+      where: { deletedAt: null, enabledAt: { not: null }, currentRevision: { gt: 0 } },
       select: {
         id: true,
         key: true,
@@ -175,29 +200,57 @@ export class OfficialSkillService {
   ) {
     if (!file?.buffer?.length) throw skillPackageError('SKILL_PACKAGE_INVALID', '请选择技能包');
     const parsed = await parseSkillZip(file.buffer);
-    await this.assertKeyAvailable(parsed.manifest.key);
-    this.applyOverrides(parsed, overrides);
-    return this.persistNewSkill(actor, parsed, file.buffer);
+    if (parsed.keyDerived) {
+      retargetPackageKey(parsed, await this.allocateKey(undefined, parsed.manifest.name));
+    } else {
+      await this.assertKeyAvailable(parsed.manifest.key);
+    }
+    const display = this.displayFromOverrides(parsed, overrides);
+    this.applyCategory(parsed, overrides.category);
+    return this.persistNewSkill(actor, parsed, file.buffer, display);
   }
 
   async createFromForm(
     actor: User,
     body: {
-      key: string;
+      key?: string;
       name: string;
-      summary: string;
+      summary?: string;
       category?: string | null;
-      instruction: string;
+      instruction?: string;
     },
   ) {
+    const name = assertSkillDisplayName(body.name);
+    const summary = assertSkillSummary(body.summary ?? '');
+    const category = this.normalizeCategory(body.category);
+    const key = await this.allocateKey(body.key, name);
+    const instruction = String(body.instruction ?? '');
+    if (!instruction.trim()) {
+      const created = await this.prisma.officialSkill.create({
+        data: {
+          key,
+          name,
+          summary,
+          category,
+          enabledAt: null,
+          currentRevision: 0,
+          sourceName: name,
+          sourceSummary: summary,
+          displayProvenance: 'manual',
+          displayLocale: 'zh-Hans',
+          displaySourceHash: displaySourceHash(name, summary),
+        },
+      });
+      await this.audit(actor.id, 'admin_create_official_skill', { skillId: created.id, key, revision: 0 });
+      return this.adminDetail(created.id, { includeInstruction: true });
+    }
     const parsed = buildSkillPackageFromForm({
-      key: body.key,
-      name: body.name,
-      summary: body.summary,
-      category: body.category && isOfficialSkillCategory(body.category) ? body.category : null,
-      instruction: body.instruction,
+      key,
+      name,
+      summary,
+      category,
+      instruction,
     });
-    await this.assertKeyAvailable(parsed.manifest.key);
     return this.persistNewSkill(actor, parsed);
   }
 
@@ -209,10 +262,12 @@ export class OfficialSkillService {
       summary?: string;
       category?: string | null;
       instruction?: string;
+      expectedUpdatedAt?: string;
       linkedOnly?: boolean;
     },
   ) {
     const row = await this.requireSkill(id);
+    assertFreshStamp(row.updatedAt.toISOString(), body.expectedUpdatedAt);
     const data: Prisma.OfficialSkillUpdateInput = {};
     if (body.name !== undefined) data.name = assertSkillDisplayName(body.name);
     if (body.summary !== undefined) data.summary = assertSkillSummary(body.summary);
@@ -222,43 +277,51 @@ export class OfficialSkillService {
       if (!row.sourceSummary) data.sourceSummary = row.summary;
     }
     if (body.category !== undefined) {
-      if (body.category === null || body.category === '') data.category = null;
-      else if (!isOfficialSkillCategory(body.category)) {
-        throw new BadRequestException('分类不在允许范围内');
-      } else data.category = body.category;
+      data.category = this.normalizeCategory(body.category);
     }
 
+    const instructionProvided = body.instruction !== undefined;
+    const instructionText = String(body.instruction ?? '');
+    if (instructionProvided && !instructionText.trim() && row.currentPackageId) {
+      throw new BadRequestException('技能指令不能为空');
+    }
     let rebuilt: ParsedSkillPackage | null = null;
-    if (body.instruction !== undefined) {
+    if (instructionProvided && instructionText.trim()) {
       const name = body.name !== undefined ? assertSkillDisplayName(body.name) : row.name;
       const summary = body.summary !== undefined ? assertSkillSummary(body.summary) : row.summary;
-      const category =
-        body.category !== undefined
-          ? body.category && isOfficialSkillCategory(body.category)
-            ? body.category
-            : null
-          : row.category;
-      rebuilt = buildSkillPackageFromForm({
-        key: row.key,
-        name,
-        summary,
-        category,
-        instruction: body.instruction,
-      });
+      const category = body.category !== undefined ? this.normalizeCategory(body.category) : row.category;
+      rebuilt = buildSkillPackageFromForm({ key: row.key, name, summary, category, instruction: instructionText });
     }
+    await this.assertEnabledStillComplete(row, {
+      name: body.name !== undefined ? String(data.name) : row.name,
+      summary: body.summary !== undefined ? String(data.summary) : row.summary,
+      instruction: instructionProvided ? instructionText : await this.readInstructionIfAny(row),
+      hasPackage: Boolean(rebuilt || (row.currentPackageId && !(instructionProvided && !instructionText.trim()))),
+    });
 
     if (!Object.keys(data).length && !rebuilt) {
       throw new BadRequestException('没有可保存的修改');
     }
 
     if (rebuilt) {
-      await this.replacePackage(actor, row, rebuilt);
-      if (Object.keys(data).length) {
-        await this.prisma.officialSkill.update({ where: { id }, data });
-      }
+      const built = rebuilt;
+      await this.mutateSkill(id, body.expectedUpdatedAt, async (tx, locked) => {
+        await this.assertEnabledStillComplete(locked, {
+          name: body.name !== undefined ? String(data.name ?? locked.name) : locked.name,
+          summary: body.summary !== undefined ? String(data.summary ?? locked.summary) : locked.summary,
+          instruction: built.instruction,
+          hasPackage: true,
+        });
+        await this.replacePackage(tx, locked, built, undefined, data);
+        await this.auditTx(tx, actor.id, 'admin_update_official_skill', {
+          skillId: id,
+          fields: [...Object.keys(data), 'instruction', 'package'],
+        });
+      });
+      return this.adminDetail(id, { includeInstruction: true });
     } else {
-      await this.prisma.officialSkill.update({ where: { id }, data });
-      // Keep manifest display fields in sync when only meta changes (no instruction rebuild).
+      const updated = await this.prisma.officialSkill.updateMany({ where: { id, updatedAt: row.updatedAt }, data });
+      if (updated.count !== 1) throw new ConflictException('技能已更新，请重新打开后保存');
       if (row.currentPackageId && (body.name !== undefined || body.summary !== undefined || body.category !== undefined)) {
         await this.syncCurrentManifestMeta(id);
       }
@@ -266,10 +329,7 @@ export class OfficialSkillService {
 
     await this.audit(actor.id, 'admin_update_official_skill', {
       skillId: id,
-      fields: [
-        ...Object.keys(data),
-        ...(rebuilt ? ['instruction', 'package'] : []),
-      ],
+      fields: [...Object.keys(data), ...(rebuilt ? ['instruction', 'package'] : [])],
     });
     return this.adminDetail(id, { includeInstruction: true });
   }
@@ -278,36 +338,57 @@ export class OfficialSkillService {
     actor: User,
     id: string,
     file: { buffer: Buffer; originalname?: string } | undefined,
-    overrides: { name?: string; summary?: string; category?: string | null },
+    overrides: { name?: string; summary?: string; category?: string | null; expectedUpdatedAt?: string },
   ) {
     if (!file?.buffer?.length) throw skillPackageError('SKILL_PACKAGE_INVALID', '请选择技能包');
-    const row = await this.requireSkill(id);
     const parsed = await parseSkillZip(file.buffer);
-    if (parsed.manifest.key !== row.key) {
-      throw skillPackageError(
-        'SKILL_PACKAGE_INVALID',
-        '技能包标识与当前技能不一致，请使用编辑入口替换同标识内容',
-      );
-    }
-    this.applyOverrides(parsed, overrides);
-    await this.replacePackage(actor, row, parsed, file.buffer);
-    await this.audit(actor.id, 'admin_replace_official_skill_package', {
-      skillId: id,
-      key: row.key,
-      revision: row.currentRevision + 1,
+    await this.mutateSkill(id, overrides.expectedUpdatedAt, async (tx, row) => {
+      const decision = zipReplaceDecision(row.key, { key: parsed.manifest.key, keyDerived: parsed.keyDerived });
+      if (!decision.ok) throw skillPackageError('SKILL_PACKAGE_INVALID', decision.message);
+      if (parsed.manifest.key !== decision.key) retargetPackageKey(parsed, decision.key);
+      const display = this.displayFromOverrides(parsed, overrides, row);
+      this.applyCategory(parsed, overrides.category);
+      await this.assertEnabledStillComplete(row, {
+        name: display.name,
+        summary: display.summary,
+        instruction: parsed.instruction,
+        hasPackage: true,
+      });
+      await this.replacePackage(tx, row, parsed, file.buffer, {
+        name: display.name,
+        summary: display.summary,
+        category: parsed.manifest.category ?? null,
+        displayProvenance: display.provenance,
+      });
+      await this.auditTx(tx, actor.id, 'admin_replace_official_skill_package', {
+        skillId: id,
+        key: row.key,
+        revision: row.currentRevision + 1,
+      });
     });
     return this.adminDetail(id, { includeInstruction: true });
   }
 
   async enable(actor: User, id: string) {
-    const row = await this.requireSkill(id);
-    await this.assertPackageReady(row);
-    if (row.enabledAt) return this.presentAdmin(await this.requireSkill(id));
-    await this.prisma.officialSkill.update({
-      where: { id },
-      data: { enabledAt: new Date() },
+    await this.mutateSkill(id, undefined, async (tx, row) => {
+      if (row.enabledAt) return;
+      const instruction = await this.readInstructionIfAny(row);
+      const gaps = skillEnableGaps({
+        name: row.name,
+        summary: row.summary,
+        instruction,
+        hasPackage: Boolean(row.currentPackageId && row.currentRevision >= 1 && row.currentPackage),
+      });
+      if (gaps.length) {
+        throw new BadRequestException({
+          code: 'SKILL_ENABLE_INCOMPLETE',
+          message: skillEnableMessage(gaps),
+          missing: gaps,
+        });
+      }
+      await tx.officialSkill.update({ where: { id }, data: { enabledAt: new Date() } });
+      await this.auditTx(tx, actor.id, 'admin_enable_official_skill', { skillId: id, key: row.key });
     });
-    await this.audit(actor.id, 'admin_enable_official_skill', { skillId: id, key: row.key });
     return this.presentAdmin(await this.requireSkill(id));
   }
 
@@ -327,16 +408,34 @@ export class OfficialSkillService {
   }
 
   async remove(actor: User, id: string) {
-    const row = await this.requireSkill(id);
-    if (row.agentLinks.length) {
-      throw new ConflictException('技能仍被专家关联，只能停用，不能删除');
-    }
-    if (row.enabledAt) {
-      throw new ConflictException('已启用过的技能请先停用；被引用内容仅可停用');
-    }
-    await this.prisma.officialSkill.delete({ where: { id } });
-    await this.audit(actor.id, 'admin_delete_official_skill', { skillId: id, key: row.key });
-    return { ok: true };
+    const row = await this.prisma.officialSkill.findUnique({ where: { id }, include: skillInclude });
+    if (!row || row.deletedAt) throw new NotFoundException('官方技能不存在');
+    const plan = planSkillDelete({ enabled: Boolean(row.enabledAt), linkedAgentCount: row.agentLinks.length });
+    await this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM official_skill WHERE id = ${id} FOR UPDATE
+      `;
+      if (!locked.length) throw new NotFoundException('官方技能不存在');
+      const fresh = await tx.officialSkill.findUnique({ where: { id }, select: { deletedAt: true } });
+      if (!fresh || fresh.deletedAt) throw new NotFoundException('官方技能不存在');
+      await tx.officialSkill.update({ where: { id }, data: skillDeletePatch(new Date()) });
+      if (plan.hideFromNewUse) {
+        await tx.officialCatalogPreference.deleteMany({ where: { kind: 'skill', resourceId: id } });
+      }
+      await this.auditTx(tx, actor.id, 'admin_delete_official_skill', {
+        skillId: id,
+        key: row.key,
+        name: row.name,
+        enabled: Boolean(row.enabledAt),
+        linkedAgentCount: row.agentLinks.length,
+        retained: [
+          ...(plan.retainPackages ? ['packages' as const] : []),
+          ...(plan.retainAgentLinks ? ['agentLinks' as const] : []),
+          ...(plan.retainUserHistory ? ['userHistory' as const] : []),
+        ],
+      });
+    });
+    return { ok: true as const, id: row.id, key: row.key, name: row.name };
   }
 
   /** Public enabled directory for both clients. */
@@ -346,6 +445,7 @@ export class OfficialSkillService {
       query.category && isOfficialSkillCategory(query.category) ? query.category : undefined;
     const rows = await this.prisma.officialSkill.findMany({
       where: {
+        deletedAt: null,
         enabledAt: { not: null },
         currentRevision: { gt: 0 },
         ...(category ? { category } : {}),
@@ -385,10 +485,12 @@ export class OfficialSkillService {
     if (!row) {
       throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
     }
-    // Directory/new sessions still require enabled; frozen Host sessions may pin a revision after disable.
-    if (!row.enabledAt && revision === undefined) {
-      throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
-    }
+    const decision = skillReadDecision({
+      deleted: Boolean(row.deletedAt),
+      enabled: Boolean(row.enabledAt),
+      pinnedRevision: revision,
+    });
+    if (!decision.ok) throw skillPackageError(decision.code, decision.message, 403);
     const targetRevision = revision ?? row.currentRevision;
     const pkg =
       row.packages.find((item) => item.revision === targetRevision) ??
@@ -422,9 +524,12 @@ export class OfficialSkillService {
     if (!row) {
       throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
     }
-    if (!row.enabledAt && revision === undefined) {
-      throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
-    }
+    const decision = skillReadDecision({
+      deleted: Boolean(row.deletedAt),
+      enabled: Boolean(row.enabledAt),
+      pinnedRevision: revision,
+    });
+    if (!decision.ok) throw skillPackageError(decision.code, decision.message, 403);
     const safe = String(resourcePath || '')
       .replace(/\\/g, '/')
       .replace(/^\/+/, '');
@@ -460,13 +565,24 @@ export class OfficialSkillService {
    */
   async beginSession(user: User, id: string, expectedRevision?: number) {
     this.requireActiveAccount(user);
-    const row = await this.prisma.officialSkill.findUnique({ where: { id } });
-    if (!row || !row.enabledAt || row.currentRevision < 1) {
-      throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
-    }
-    if (expectedRevision != null && expectedRevision !== row.currentRevision) {
-      throw skillPackageError('SKILL_REVISION_UNAVAILABLE', '技能包版本已更新，请刷新后重试', 409);
-    }
+    const row = await this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM official_skill WHERE id = ${id} FOR UPDATE
+      `;
+      if (!locked.length) throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
+      const fresh = await tx.officialSkill.findUnique({ where: { id } });
+      if (!fresh) throw skillPackageError('OFFICIAL_CONTENT_DISABLED', '该技能暂不可用', 403);
+      const decision = skillStartDecision({
+        deleted: Boolean(fresh.deletedAt),
+        enabled: Boolean(fresh.enabledAt),
+        revision: fresh.currentRevision,
+      });
+      if (!decision.ok) throw skillPackageError(decision.code, decision.message, 403);
+      if (expectedRevision != null && expectedRevision !== fresh.currentRevision) {
+        throw skillPackageError('SKILL_REVISION_UNAVAILABLE', '技能包版本已更新，请刷新后重试', 409);
+      }
+      return fresh;
+    });
     return {
       sessionSource: {
         type: 'skill' as const,
@@ -474,6 +590,9 @@ export class OfficialSkillService {
         key: row.key,
         name: row.name,
         packageRevision: row.currentRevision,
+        ...(uploadedCatalogIconUrl(row.customAvatarPath)
+          ? { avatarUrl: uploadedCatalogIconUrl(row.customAvatarPath) }
+          : {}),
       },
       skill: this.publicCard(row),
       /** Host should keep standard mode capabilities; Ground does not expand tool registry here. */
@@ -495,6 +614,7 @@ export class OfficialSkillService {
     const rows = await (tx ?? this.prisma).officialSkill.findMany({
       where: {
         id: { in: skillIds },
+        deletedAt: null,
         enabledAt: { not: null },
         currentRevision: { gt: 0 },
       },
@@ -559,29 +679,83 @@ export class OfficialSkillService {
     return this.summarizeEnabledSkills(ids, tx);
   }
 
-  private async persistNewSkill(actor: User, parsed: ParsedSkillPackage, sourceZip?: Buffer) {
+  private async persistNewSkill(
+    actor: User,
+    parsed: ParsedSkillPackage,
+    sourceZip?: Buffer,
+    display?: { name: string; summary: string; provenance: 'manual' | 'source' },
+  ) {
+    const name = display?.name ?? parsed.manifest.name;
+    const summary = display?.summary ?? parsed.manifest.description;
     // Create skill row first to get id for storage path; then package + point current.
-    const created = await this.prisma.officialSkill.create({
-      data: {
-        key: parsed.manifest.key,
-        name: parsed.manifest.name,
-        summary: parsed.manifest.description,
-        category: parsed.manifest.category ?? null,
-        enabledAt: null,
-        currentRevision: 0,
-        sourceName: parsed.manifest.name,
-        sourceSummary: parsed.manifest.description,
-        displayProvenance: 'source',
-        displayLocale: 'zh-Hans',
-        displaySourceHash: displaySourceHash(parsed.manifest.name, parsed.manifest.description),
-      },
-    });
-    try {
-      const revision = 1;
-      const written = await writeSkillPackageToDisk(created.id, revision, parsed, sourceZip);
-      const pkg = await this.prisma.officialSkillPackage.create({
+    const createdId = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.officialSkill.create({
         data: {
+          key: parsed.manifest.key,
+          name,
+          summary,
+          category: parsed.manifest.category ?? null,
+          enabledAt: null,
+          currentRevision: 0,
+          sourceName: parsed.manifest.name,
+          sourceSummary: parsed.manifest.description,
+          displayProvenance: display?.provenance ?? 'source',
+          displayLocale: 'zh-Hans',
+          displaySourceHash: displaySourceHash(parsed.manifest.name, parsed.manifest.description),
+        },
+      });
+      const revision = 1;
+      const rel = officialSkillPackageRelDir(created.id, revision);
+      try {
+        const written = await writeSkillPackageToDisk(created.id, revision, parsed, sourceZip);
+        const pkg = await tx.officialSkillPackage.create({
+          data: {
+            skillId: created.id,
+            revision,
+            storagePath: written.storagePath,
+            manifest: parsed.manifest as unknown as Prisma.InputJsonValue,
+            instructionBytes: Buffer.byteLength(parsed.instruction, 'utf8'),
+            resourceCount: parsed.resourceCount,
+            sourceZipPath: written.sourceZipPath,
+          },
+        });
+        await tx.officialSkill.update({
+          where: { id: created.id },
+          data: { currentRevision: revision, currentPackageId: pkg.id },
+        });
+        await this.auditTx(tx, actor.id, 'admin_create_official_skill', {
           skillId: created.id,
+          key: created.key,
+          revision: 1,
+        });
+        return created.id;
+      } catch (error) {
+        await rm(absoluteUploadPath(rel), { recursive: true, force: true }).catch(() => undefined);
+        throw error;
+      }
+    }, { timeout: 20000 });
+    return this.adminDetail(createdId, { includeInstruction: true });
+  }
+
+  private async replacePackage(
+    tx: Prisma.TransactionClient,
+    row: SkillRow,
+    parsed: ParsedSkillPackage,
+    sourceZip: Buffer | undefined,
+    extra: Prisma.OfficialSkillUpdateInput = {},
+  ) {
+    const { revision } = packageWriteClaim(
+      { updatedAt: row.updatedAt.toISOString(), revision: row.currentRevision },
+      row.updatedAt.toISOString(),
+    );
+    const rel = officialSkillPackageRelDir(row.id, revision);
+    const sourceName = row.sourceName?.trim() || parsed.manifest.name;
+    const sourceSummary = row.sourceSummary?.trim() || parsed.manifest.description;
+    try {
+      const written = await writeSkillPackageToDisk(row.id, revision, parsed, sourceZip);
+      const pkg = await tx.officialSkillPackage.create({
+        data: {
+          skillId: row.id,
           revision,
           storagePath: written.storagePath,
           manifest: parsed.manifest as unknown as Prisma.InputJsonValue,
@@ -590,83 +764,59 @@ export class OfficialSkillService {
           sourceZipPath: written.sourceZipPath,
         },
       });
-      await this.prisma.officialSkill.update({
-        where: { id: created.id },
+      await tx.officialSkill.update({
+        where: { id: row.id },
         data: {
           currentRevision: revision,
           currentPackageId: pkg.id,
-          name: parsed.manifest.name,
-          summary: parsed.manifest.description,
           category: parsed.manifest.category ?? null,
-        },
+          ...(!row.sourceName?.trim() ? { sourceName: parsed.manifest.name } : {}),
+          ...(!row.sourceSummary?.trim() ? { sourceSummary: parsed.manifest.description } : {}),
+          displaySourceHash: displaySourceHash(sourceName, sourceSummary),
+          ...extra,
+        } as Prisma.OfficialSkillUncheckedUpdateInput,
       });
     } catch (error) {
-      await this.prisma.officialSkill.delete({ where: { id: created.id } }).catch(() => undefined);
+      await rm(absoluteUploadPath(rel), { recursive: true, force: true }).catch(() => undefined);
       throw error;
     }
-    await this.audit(actor.id, 'admin_create_official_skill', {
-      skillId: created.id,
-      key: created.key,
-      revision: 1,
-    });
-    return this.adminDetail(created.id, { includeInstruction: true });
   }
 
-  private async replacePackage(
-    actor: User,
-    row: SkillRow,
-    parsed: ParsedSkillPackage,
-    sourceZip?: Buffer,
-  ) {
-    const revision = row.currentRevision + 1;
-    const written = await writeSkillPackageToDisk(row.id, revision, parsed, sourceZip);
-    const pkg = await this.prisma.officialSkillPackage.create({
-      data: {
-        skillId: row.id,
-        revision,
-        storagePath: written.storagePath,
-        manifest: parsed.manifest as unknown as Prisma.InputJsonValue,
-        instructionBytes: Buffer.byteLength(parsed.instruction, 'utf8'),
-        resourceCount: parsed.resourceCount,
-        sourceZipPath: written.sourceZipPath,
-      },
-    });
-    const keepManual = row.displayProvenance === 'manual';
-    await this.prisma.officialSkill.update({
-      where: { id: row.id },
-      data: {
-        currentRevision: revision,
-        currentPackageId: pkg.id,
-        category: parsed.manifest.category ?? null,
-        sourceName: parsed.manifest.name,
-        sourceSummary: parsed.manifest.description,
-        displaySourceHash: displaySourceHash(parsed.manifest.name, parsed.manifest.description),
-        ...(keepManual
-          ? {}
-          : {
-              name: parsed.manifest.name,
-              summary: parsed.manifest.description,
-              displayProvenance: 'source',
-              displayTranslatedAt: null,
-              displayModelRef: null,
-            }),
-      },
-    });
-    void actor;
+  /** Lock the skill row, then run the write. The stamp is checked on the locked row, not on an earlier read. */
+  private async mutateSkill<T>(
+    id: string,
+    expectedUpdatedAt: string | undefined,
+    run: (tx: Prisma.TransactionClient, row: SkillRow) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM official_skill WHERE id = ${id} FOR UPDATE
+      `;
+      if (!locked.length) throw new NotFoundException('官方技能不存在');
+      const row = await tx.officialSkill.findUnique({ where: { id }, include: skillInclude });
+      if (!row || row.deletedAt) throw new NotFoundException('官方技能不存在');
+      assertFreshStamp(row.updatedAt.toISOString(), expectedUpdatedAt);
+      return run(tx, row);
+    }, { timeout: 20000 });
+  }
+
+  private async auditTx(tx: Prisma.TransactionClient, actorUserId: string, action: string, meta: Prisma.InputJsonObject) {
+    await tx.auditLog.create({ data: { userId: actorUserId, action, tenantId: null, meta } });
   }
 
   private async syncCurrentManifestMeta(skillId: string) {
     const row = await this.requireSkill(skillId);
     if (!row.currentPackage) return;
     const prev = (row.currentPackage.manifest ?? {}) as Record<string, unknown>;
-    const next = {
+    const next: Record<string, unknown> = {
       ...prev,
       key: row.key,
       name: row.sourceName?.trim() || row.name,
       description: (row.sourceSummary || row.summary || '').trim(),
       entry: 'SKILL.md',
-      ...(row.category ? { category: row.category } : {}),
     };
+    if (row.category) next.category = row.category;
+    else delete next.category;
     await this.prisma.officialSkillPackage.update({
       where: { id: row.currentPackage.id },
       data: { manifest: next as Prisma.InputJsonValue },
@@ -681,40 +831,69 @@ export class OfficialSkillService {
     }
   }
 
-  private applyOverrides(
+  private displayFromOverrides(
     parsed: ParsedSkillPackage,
-    overrides: { name?: string; summary?: string; category?: string | null },
+    overrides: { name?: string; summary?: string },
+    row?: { name: string; summary: string },
   ) {
-    if (overrides.name !== undefined && String(overrides.name).trim()) {
-      parsed.manifest.name = assertSkillDisplayName(overrides.name);
+    const name =
+      overrides.name !== undefined && String(overrides.name).trim()
+        ? assertSkillDisplayName(overrides.name)
+        : (row?.name ?? parsed.manifest.name);
+    const summary =
+      overrides.summary !== undefined
+        ? assertSkillSummary(overrides.summary)
+        : (row?.summary ?? parsed.manifest.description);
+    const provenance: 'manual' | 'source' =
+      name !== parsed.manifest.name || summary !== parsed.manifest.description ? 'manual' : 'source';
+    return { name, summary, provenance };
+  }
+
+  private applyCategory(parsed: ParsedSkillPackage, category: string | null | undefined) {
+    if (category === undefined) return;
+    const next = this.normalizeCategory(category);
+    if (next) parsed.manifest.category = next;
+    else delete parsed.manifest.category;
+    retargetPackageKey(parsed, parsed.manifest.key);
+  }
+
+  private normalizeCategory(category?: string | null): OfficialSkillCategoryKey | null {
+    if (category === undefined || category === null || category === '') return null;
+    if (!isOfficialSkillCategory(category)) throw new BadRequestException('分类不在允许范围内');
+    return category;
+  }
+
+  private async allocateKey(requested: string | undefined, name: string) {
+    const explicit = String(requested ?? '').trim();
+    if (explicit) {
+      const key = assertSkillKey(explicit);
+      await this.assertKeyAvailable(key);
+      return key;
     }
-    if (overrides.summary !== undefined && String(overrides.summary).trim()) {
-      parsed.manifest.description = assertSkillSummary(overrides.summary);
+    const entropy = Array.from({ length: 6 }, () => randomBytes(3).toString('hex'));
+    for (const key of candidateSkillKeys(name, entropy)) {
+      const existing = await this.prisma.officialSkill.findUnique({ where: { key }, select: { id: true } });
+      if (!existing) return key;
     }
-    if (overrides.category !== undefined) {
-      if (!overrides.category) parsed.manifest.category = undefined;
-      else if (!isOfficialSkillCategory(overrides.category)) {
-        throw new BadRequestException('分类不在允许范围内');
-      } else parsed.manifest.category = overrides.category;
+    throw new ConflictException('暂时无法生成唯一标识，请重试');
+  }
+
+  private async readInstructionIfAny(row: SkillRow) {
+    if (!row.currentPackage) return '';
+    try {
+      return await this.readInstructionFromPath(row.currentPackage.storagePath);
+    } catch {
+      return '';
     }
-    parsed.files.set(
-      'skill.json',
-      Buffer.from(
-        JSON.stringify(
-          {
-            key: parsed.manifest.key,
-            name: parsed.manifest.name,
-            description: parsed.manifest.description,
-            entry: 'SKILL.md',
-            ...(parsed.manifest.category ? { category: parsed.manifest.category } : {}),
-            ...(parsed.manifest.references ? { references: parsed.manifest.references } : {}),
-          },
-          null,
-          2,
-        ),
-        'utf8',
-      ),
-    );
+  }
+
+  private async assertEnabledStillComplete(
+    row: SkillRow,
+    next: { name: string; summary: string; instruction: string; hasPackage: boolean },
+  ) {
+    if (!row.enabledAt) return;
+    const gaps = skillEnableGaps(next);
+    if (gaps.length) throw new BadRequestException(skillEnableMessage(gaps, 'save'));
   }
 
   private async assertKeyAvailable(key: string) {
@@ -740,7 +919,7 @@ export class OfficialSkillService {
       where: { id },
       include: skillInclude,
     });
-    if (!row) throw new NotFoundException('官方技能不存在');
+    if (!row || row.deletedAt) throw new NotFoundException('官方技能不存在');
     return row;
   }
 
@@ -755,6 +934,7 @@ export class OfficialSkillService {
       enabledAt: row.enabledAt?.toISOString() ?? null,
       enabled: Boolean(row.enabledAt),
       packageRevision: row.currentRevision,
+      contentSource: !row.currentPackage ? 'none' : row.currentPackage.sourceZipPath ? 'zip' : 'form',
       resourceCount: row.currentPackage?.resourceCount ?? 0,
       instructionBytes: row.currentPackage?.instructionBytes ?? 0,
       discoveryDetail: publicDiscoveryDetail(row.discoveryDetail),

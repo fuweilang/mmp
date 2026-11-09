@@ -1129,6 +1129,7 @@ export type OfficialSkillRow = {
   enabledAt: string | null;
   enabled: boolean;
   packageRevision: number;
+  contentSource?: 'zip' | 'form' | 'none';
   resourceCount: number;
   instructionBytes: number;
   linkedAgents: Array<{ id: string; key: string; name: string }>;
@@ -1158,6 +1159,7 @@ export type OfficialSkillZipPreview = {
   instructionBytes: number;
   keyConflict: boolean;
   existingId: string | null;
+  keyDerived?: boolean;
 };
 
 export const adminOfficialSkillApi = {
@@ -1175,20 +1177,20 @@ export const adminOfficialSkillApi = {
   createFromZip: (body: FormData) =>
     adminHttp<OfficialSkillRow>('/official-skills/from-zip', { method: 'POST', body }),
   createFromForm: (body: {
-    key: string;
+    key?: string;
     name: string;
-    summary: string;
+    summary?: string;
     category?: OfficialSkillCategory;
-    instruction: string;
+    instruction?: string;
   }) => adminHttp<OfficialSkillRow>('/official-skills/from-form', { method: 'POST', body: JSON.stringify(body) }),
   update: (
     id: string,
-    body: Partial<{ name: string; summary: string; category: OfficialSkillCategory | ''; instruction: string }>,
+    body: Partial<{ name: string; summary: string; category: OfficialSkillCategory | ''; instruction: string; expectedUpdatedAt: string }>,
   ) => adminHttp<OfficialSkillRow>(`/official-skills/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   replaceZip: (id: string, body: FormData) =>
     adminHttp<OfficialSkillRow>(`/official-skills/${id}/replace-zip`, { method: 'POST', body }),
   uploadIcon: (id:string,body:FormData) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/icon`,{method:'POST',body}),
-  removeIcon: (id:string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/icon`,{method:'DELETE'}),
+  removeIcon: (id:string, expectedUpdatedAt?: string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/icon${expectedUpdatedAt ? `?expectedUpdatedAt=${encodeURIComponent(expectedUpdatedAt)}` : ''}`,{method:'DELETE'}),
   enable: (id: string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/enable`, { method: 'POST' }),
   disable: (id: string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/disable`, { method: 'POST' }),
   remove: (id: string) => adminHttp<{ ok: boolean }>(`/official-skills/${id}`, { method: 'DELETE' }),

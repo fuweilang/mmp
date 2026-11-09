@@ -132,6 +132,7 @@ export type OfficialGallerySource =
     readonly key: string
     readonly name: string
     readonly packageRevision: number
+    readonly avatarUrl?: string | null
   }
 
 /** Host-only skill session freeze: source + load policy, never the instruction body. */
@@ -142,6 +143,7 @@ export interface OfficialSkillBinding {
     readonly key: string
     readonly name: string
     readonly packageRevision: number
+    readonly avatarUrl?: string | null
   }
   readonly skill: OfficialSkillCard
   readonly standardCapabilities: {

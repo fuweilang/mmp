@@ -329,6 +329,8 @@ model OfficialSkill {
   category         OfficialSkillCategory?
   /// null = 停用/未启用；非空 = 启用时间（全员可见目录）。
   enabledAt        DateTime?              @map("enabled_at")
+  /// 非空 = 已从管理列表和新使用入口移除；包、专家关联和历史读取仍保留。
+  deletedAt        DateTime?              @map("deleted_at")
   currentRevision  Int                    @default(0) @map("current_revision")
   currentPackageId String?                @unique @map("current_package_id")
   currentPackage   OfficialSkillPackage?  @relation("CurrentPackage", fields: [currentPackageId], references: [id], onDelete: SetNull)
@@ -338,6 +340,7 @@ model OfficialSkill {
   updatedAt        DateTime               @updatedAt @map("updated_at")
 
   @@index([enabledAt])
+  @@index([deletedAt])
   @@index([category])
   @@map("official_skill")
   customAvatarPath String? @map("custom_avatar_path")

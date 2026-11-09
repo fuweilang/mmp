@@ -23,7 +23,7 @@ export class AdminOfficialSkillsService {
     private skills: OfficialSkillService,
   ) {}
 
-  async icon(actor:User,id:string,file?:UploadedFile){await this.support.adminScope(actor);return this.skills.setIcon(id,file,actor.id);}
+  async icon(actor:User,id:string,file?:UploadedFile,expectedUpdatedAt?:string){await this.support.adminScope(actor);return this.skills.setIcon(id,file,actor.id,expectedUpdatedAt);}
 
   async discovery(actor:User,id:string){await this.support.adminScope(actor);return this.skills.discovery(id);}
 
@@ -89,6 +89,7 @@ export class AdminOfficialSkillsService {
 
   async remove(actor: User, id: string) {
     await this.support.adminScope(actor);
+    await this.support.assertPlatformOperator(actor, '删除技能');
     return this.skills.remove(actor, id);
   }
 

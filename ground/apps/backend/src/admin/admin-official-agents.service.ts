@@ -265,7 +265,7 @@ export class AdminOfficialAgentsService {
       if (!existing) {
         const created = await this.prisma.$transaction(async (tx) => {
           const skills = asset.linkedSkillKeys.length ? await tx.officialSkill.findMany({
-            where: { key: { in: asset.linkedSkillKeys }, enabledAt: { not: null }, currentRevision: { gt: 0 } }, select: { id: true },
+            where: { key: { in: asset.linkedSkillKeys }, deletedAt: null, enabledAt: { not: null }, currentRevision: { gt: 0 } }, select: { id: true },
           }) : [];
           if (skills.length !== asset.linkedSkillKeys.length) throw new BadRequestException(`专家 ${asset.key} 依赖的技能未启用或不存在`);
           const row = await tx.officialAgent.create({ data: {

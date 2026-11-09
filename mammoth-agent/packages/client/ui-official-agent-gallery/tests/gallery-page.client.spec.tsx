@@ -258,8 +258,8 @@ describe('GalleryPage', () => {
     expect(document.querySelector('[class*="artwork"] svg')).toBeTruthy()
   })
 
-  it('skill tab surfaces pending bind contract without claiming a Host session', async () => {
-    const requestSkill = vi.fn<GalleryFace['requestSkill']>(async () => 'pending')
+  it('skill use binds the real skill and does not prefill or announce a pending session', async () => {
+    const requestSkill = vi.fn<GalleryFace['requestSkill']>(async () => undefined)
     mount(
       vi.fn(async () => [general]),
       vi.fn(async () => undefined),
@@ -275,8 +275,9 @@ describe('GalleryPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '使用技能 简报整理' }))
     await waitFor(() => {
       expect(requestSkill).toHaveBeenCalledExactlyOnceWith('skill-1', undefined)
-      expect(screen.getByText(/skillId:\s*skill-1/)).toBeTruthy()
     })
+    expect(screen.queryByText(/skillId:\s*skill-1/)).toBeNull()
+    expect(screen.queryByText(/即将上线/)).toBeNull()
   })
 
   it('debounces search input and ignores stale catalog responses', async () => {
@@ -507,5 +508,64 @@ describe('expert detail dialog layout (t86)', () => {
       expect(startAgent).toHaveBeenCalledExactlyOnceWith('general', longStarter)
       expect(screen.queryByRole('dialog')).toBeNull()
     })
+  })
+})
+
+describe('skill detail dialog', () => {
+  const question = '请根据附件整理一份不超过十行的项目简报，并列出还缺的资料。'
+  const skill: OfficialSkillCard = {
+    id: 'skill-1', key: 'brief', name: '简报整理', summary: '把材料整理成简报',
+    category: 'common', enabledAt: '2026-11-06T00:00:00.000Z', packageRevision: 2,
+    avatarUrl: 'https://example.test/skill.png',
+  }
+
+  beforeEach(() => {
+    if (typeof HTMLDialogElement !== 'undefined') {
+      HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) { this.setAttribute('open', '') }
+      HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) { this.removeAttribute('open') }
+    }
+  })
+
+  function skillDetail(starters: Array<{ text: string; label?: string }> = [{ text: question, label: '短标签' }]): CatalogDetail {
+    return {
+      kind: 'skill', id: skill.id, key: skill.key, name: skill.name, summary: skill.summary,
+      avatarUrl: skill.avatarUrl ?? null, linkedSkills: [],
+      detail: {
+        schemaVersion: 1, displayRevision: 1, introduction: '',
+        outputs: [], materials: [], boundaries: [], starters,
+      },
+    }
+  }
+
+  it('shows the full question, a primary use button, and no short label or extra hint', async () => {
+    const requestSkill = vi.fn<GalleryFace['requestSkill']>(async () => undefined)
+    const catalogDetail = vi.fn(async () => skillDetail())
+    mount(vi.fn(async () => []), undefined, vi.fn(async () => [skill]), requestSkill, catalogDetail)
+    fireEvent.click(screen.getByRole('tab', { name: '技能' }))
+    await waitFor(() => { expect(screen.getByRole('button', { name: '查看详情 简报整理' })).toBeTruthy() })
+    fireEvent.click(screen.getByRole('button', { name: '查看详情 简报整理' }))
+    const dialog = await waitFor(() => screen.getByRole('dialog'))
+    expect(within(dialog).getByText(question)).toBeTruthy()
+    expect(within(dialog).queryByText('短标签')).toBeNull()
+    expect(within(dialog).queryByText('开场白')).toBeNull()
+    expect(within(dialog).queryByText(/点击一条后关闭详情/)).toBeNull()
+    expect(within(dialog).queryByText(/已开放任务上传文本/)).toBeNull()
+    expect(within(dialog).queryByText('更多说明')).toBeNull()
+    const use = within(dialog).getByRole('button', { name: '使用技能' })
+    expect(use.className).toMatch(/primary/)
+    fireEvent.click(within(dialog).getByText(question))
+    await waitFor(() => { expect(requestSkill).toHaveBeenCalledExactlyOnceWith(skill.id, question) })
+  })
+
+  it('use skill binds without a prefilled question when there are no examples', async () => {
+    const requestSkill = vi.fn<GalleryFace['requestSkill']>(async () => undefined)
+    mount(vi.fn(async () => []), undefined, vi.fn(async () => [skill]), requestSkill, vi.fn(async () => skillDetail([])))
+    fireEvent.click(screen.getByRole('tab', { name: '技能' }))
+    await waitFor(() => { expect(screen.getByRole('button', { name: '查看详情 简报整理' })).toBeTruthy() })
+    fireEvent.click(screen.getByRole('button', { name: '查看详情 简报整理' }))
+    const dialog = await waitFor(() => screen.getByRole('dialog'))
+    expect(within(dialog).queryByText('试试这样用')).toBeNull()
+    fireEvent.click(within(dialog).getByRole('button', { name: '使用技能' }))
+    await waitFor(() => { expect(requestSkill).toHaveBeenCalledExactlyOnceWith(skill.id, undefined) })
   })
 })

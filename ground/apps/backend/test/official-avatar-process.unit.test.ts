@@ -81,6 +81,17 @@ describe('official avatar processing', () => {
       '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script><image href="https://evil.example/x.png"/></svg>',
     );
     assert.throws(() => assertSafeSvgAvatar(evil), /脚本|外链/);
+    assert.throws(
+      () => assertSafeSvgAvatar(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><image href="secret.png"/></svg>')),
+      /外链或本地引用/,
+    );
+    assert.throws(
+      () => assertSafeSvgAvatar(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><rect style="fill:url(https://evil.example/a.png)"/></svg>')),
+      /外部样式/,
+    );
+    assert.doesNotThrow(() => assertSafeSvgAvatar(Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g"><stop offset="0" stop-color="#fff"/></linearGradient></defs><rect fill="url(#g)"/></svg>',
+    )));
   });
 
   it('rejects corrupt buffers / mime mismatches and maps pixel-limit errors to Chinese', async () => {

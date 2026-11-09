@@ -518,6 +518,17 @@ describe('draft documents in the input shell', () => {
     expect(shell.draftSnapshot).toEqual({ text: 'fresh', references: [] })
   })
 
+  it('prefills an empty new task and does not touch another session draft', () => {
+    const previous = makeShell()
+    previous.setDraft('旧任务草稿')
+    const created = makeShell()
+    expect(created.requestDraftInitialization({ prompt: '完整示例问题', whenDraftExists: 'keep' })).toBe('applied')
+    expect(created.snapshot.draft).toBe('完整示例问题')
+    expect(previous.snapshot.draft).toBe('旧任务草稿')
+    expect(created.requestDraftInitialization({ whenDraftExists: 'keep' })).toBe('preserved')
+    expect(created.snapshot.draft).toBe('完整示例问题')
+  })
+
   it('appends to an attachment-only draft as its whole text', () => {
     const shell = makeShell()
     const attachment = 'draft-image' as DraftAttachmentId

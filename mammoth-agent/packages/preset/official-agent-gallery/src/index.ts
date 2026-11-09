@@ -1,3 +1,4 @@
+import { skillStepAccess } from './skill-availability.ts'
 import { parseSelection, catalogHash, attemptForMessage, attemptForRequest, type CatalogAttempt } from './task-composition.ts'
 import type { AgentHandle } from '@mammoth-ai/mmp-agent'
 import {ManagedDocuments,managedRuntimeProjection,compositionOf,sha,type ManagedComposition,type GalleryReceipt} from './managed-runtime.ts'
@@ -213,6 +214,10 @@ export default class OfficialAgentGallery extends TypertRemoteService {
   @Remote
   catalogDetail(kind:'expert'|'skill',id:string):Promise<CatalogDetail>{return this.ground.catalogDetail(kind,id)}
 
+  /** Name and deleted flag for an existing tag. Does not make a deleted skill selectable. */
+  @Remote
+  skillAvailability(id: string) { return this.ground.skillAvailability(id) }
+
   /** Read20 visible experts with a stable server cursor. */
   @Remote
   pageExperts(query:CatalogQuery):Promise<ExpertCatalogPage>{return this.ground.pageExperts(query)}
@@ -309,6 +314,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       key: binding.sessionSource.key,
       name: binding.sessionSource.name,
       packageRevision: binding.sessionSource.packageRevision,
+      ...(binding.sessionSource.avatarUrl ? { avatarUrl: binding.sessionSource.avatarUrl } : {}),
     }
     const handle = await this.ctx.agents.create({
       sessionId,
@@ -410,7 +416,6 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       if(selection.skillRef){skill=await this.ground.beginSkillSession(selection.skillRef.id,selection.skillRef.revision);if(skill.sessionSource.id!==selection.skillRef.id||skill.sessionSource.packageRevision!==selection.skillRef.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision);if(content.id!==selection.skillRef.id||content.key!==skill.sessionSource.key||content.packageRevision!==selection.skillRef.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');skillHash=sha(content.instruction)}
     }
     if(expert)await this.ground.resolve(expert.agentId,expert.versionId)
-    if(skill)await this.ground.catalogDetail('skill',skill.sessionSource.id)
     const latest=attemptForRequest(agent.session,request.requestId)
     if(latest&&(latest.selectionHash!==selectionHash||latest.inputHash!==inputHash))throw new Error('TASK_IDEMPOTENCY_COMPOSITION_CONFLICT')
     if(this.ctx.agents.get(agent.id)!==agent)throw new Error('TASK_DISPOSED_DURING_PREPARATION')
@@ -428,7 +433,15 @@ export default class OfficialAgentGallery extends TypertRemoteService {
   private async authorize(agent:Agent,signal?:AbortSignal):Promise<void>{
     signal?.throwIfAborted();const active=this.runtimes.get(agent.id)?.active;if(active&&!active.expert&&!active.skill)return;if(active){const scope=await this.ground.currentScope();if(scope.userId!==active.authScope.userId||scope.scope!==active.authScope.scope)throw new Error('TASK_AUTH_SCOPE_CHANGED')}const binding=this.bindingFor(agent.session),selected=this.skillBindingFor(agent.session)
     if(binding)await this.ground.resolve(binding.agentId,binding.versionId,signal)
-    if(selected){await this.ground.catalogDetail('skill',selected.sessionSource.id);const active=this.runtimes.get(agent.id)?.active;if(active?.skillHash){const content=await this.ground.fetchSkillContent(selected.sessionSource.id,selected.sessionSource.packageRevision,signal);if(sha(content.instruction)!==active.skillHash)throw new Error('TASK_SKILL_SNAPSHOT_CHANGED')}}
+    if(selected){
+      const active=this.runtimes.get(agent.id)?.active
+      const frozen=skillStepAccess(Boolean(active?.skill))==='snapshot'
+      if(frozen){
+        if(active?.skillHash){const content=await this.ground.fetchSkillContent(selected.sessionSource.id,selected.sessionSource.packageRevision,signal);if(sha(content.instruction)!==active.skillHash)throw new Error('TASK_SKILL_SNAPSHOT_CHANGED')}
+      }else{
+        await this.ground.beginSkillSession(selected.sessionSource.id,selected.sessionSource.packageRevision,signal)
+      }
+    }
     if(active){const scope=await this.ground.currentScope();if(scope.userId!==active.authScope.userId||scope.scope!==active.authScope.scope)throw new Error('TASK_AUTH_SCOPE_CHANGED')}
     signal?.throwIfAborted()
   }

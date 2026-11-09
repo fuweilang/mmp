@@ -32,6 +32,8 @@ export const zh = {
   materialsLabel: "所需材料",
   boundariesLabel: "适用边界",
   startersLabel: "开场白",
+  skillTryLabel: "试试这样用",
+  skillMoreLabel: "更多说明",
   expertIntroductionLabel: "专家介绍",
   expertOutputsLabel: "交付内容",
   expertMaterialsLabel: "准备资料",
@@ -154,6 +156,7 @@ export const zh = {
   workspaceRequired: '请先创建一个工作区，再开始对话',
   sourceExpert: '专家 · {name}',
   sourceSkill: '技能 · {name}',
+  skillDeletedMark: '{name} 已删除',
   sourceHint: '本任务来源；不会改写旧对话',
 } as const
 
@@ -194,6 +197,8 @@ export const en = {
   materialsLabel: "Materials",
   boundariesLabel: "Boundaries",
   startersLabel: "Conversation starters",
+  skillTryLabel: "Try it like this",
+  skillMoreLabel: "More details",
   expertIntroductionLabel: "About this expert",
   expertOutputsLabel: "Deliverables",
   expertMaterialsLabel: "Materials to prepare",
@@ -316,6 +321,7 @@ export const en = {
   workspaceRequired: 'Create a workspace before starting a chat.',
   sourceExpert: 'Expert · {name}',
   sourceSkill: 'Skill · {name}',
+  skillDeletedMark: '{name} deleted',
   sourceHint: 'Task origin; older chats stay unchanged',
 } satisfies Record<OfficialAgentGalleryLocaleKey, string>
 
