@@ -125,12 +125,20 @@ function Frame({ renderSlot }: PropsRenderSlots<Seats>) {
 
 async function bench(
   language: 'en' | 'zh' = 'en',
-  { analytics = true, navigation = true, platformAdmin = true }: { analytics?: boolean; navigation?: boolean; platformAdmin?: boolean } = {},
+  { analytics = true, navigation = true, ground = false, platformAdmin = true }: {
+    analytics?: boolean
+    navigation?: boolean
+    /** A signed-in Ground session. Plugin rows stay hidden for every role. */
+    ground?: boolean
+    platformAdmin?: boolean
+  } = {},
 ) {
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(
-    JSON.stringify({ user: { isPlatformAdmin: platformAdmin } }),
-    { status: 200, headers: { 'content-type': 'application/json' } },
-  )))
+  vi.stubGlobal('fetch', vi.fn(async () => ground
+    ? new Response(
+      JSON.stringify({ user: { isPlatformAdmin: platformAdmin } }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )
+    : new Response(null, { status: 404 })))
   const runtime = await SlotTestRuntime.create()
   runtimes.add(runtime)
   const openList = vi.fn(), startSession = vi.fn(), track = vi.fn<TrackProductEvent>()
@@ -153,7 +161,7 @@ async function bench(
   }, Frame)
   const plugin = await runtime.mount({ inject: [...inject], apply })
   const view = runtime.renderRoot()
-  if (platformAdmin) {
+  if (!ground) {
     await act(async () => { await vi.waitFor(() => {
       expect(within(view.getByRole('menu', { name: 'sidebar.panellist.actions' })).getAllByRole('menuitem').length).toBeGreaterThan(0)
     }) })
@@ -162,11 +170,14 @@ async function bench(
 }
 
 describe('More menu registrations', () => {
-  it('hides the sidebar More menu for an enterprise user', async () => {
-    const b = await bench('en', { platformAdmin: false })
+  it.each([true, false])('hides plugin rows on Ground when platform admin is %s', async (platformAdmin) => {
+    const b = await bench('en', { ground: true, platformAdmin })
     await act(async () => { await vi.waitFor(() => { expect(fetch).toHaveBeenCalled() }) })
     expect(b.runtime.slots.entries('sidebar.panellist.actions')).toEqual([])
     expect(within(b.view.getByRole('menu', { name: 'conversation.session.header.views.actions' })).queryByRole('menuitem')).toBeNull()
+    const rightbar = within(b.view.getByRole('menu', { name: 'sidebar.right.tab.guide.actions' }))
+    expect(rightbar.queryByRole('menuitem', { name: 'Browse other plugins' })).toBeNull()
+    expect(rightbar.queryByRole('menuitem', { name: 'Create your plugin' })).toBeNull()
   })
 
   it('shows plugin discovery only while the Plugins page navigation is present', async () => {

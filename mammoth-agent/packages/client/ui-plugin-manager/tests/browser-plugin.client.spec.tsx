@@ -230,6 +230,20 @@ describe('ui-plugin-manager browser plugin', () => {
     await vi.waitFor(() => { expect(b.list).toHaveBeenCalledTimes(2) })
   })
 
+  it('keeps the sidebar entry and plugin navigation off on Ground, including a platform admin', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ user: { isPlatformAdmin: true } }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )))
+    const b = await bench()
+    declare(b.slots)
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    await vi.waitFor(() => { expect(fetch).toHaveBeenCalled() })
+    await Promise.resolve()
+    expect(b.slots.entries('sidebar.panellist')).toEqual([])
+    expect(b.ctx.get('pluginNavigation')).toBeUndefined()
+  })
+
   it('contributes the entry, page, and navigation only while the current Peer may list bundles, and observes changes either way', async () => {
     const allows = vi.fn(() => false)
     const b = await bench(allows)
