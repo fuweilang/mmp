@@ -83,6 +83,9 @@ GitHub代码备份已完成；CI路线仍需另行批准并补齐单仓workflow�
 6. **下载指针一致性**：manifest 的 `file` 必须是本次产物；两个固定别名必须同步替换，否则页面显示新版本、用户下到旧包。
 7. **nginx 白名单**：新增 Ground 公共路径（如 `official-agents`）要同步进 `/api/(...)` 代理正则，否则头像/静态资源 401。
 8. **目录数据行数**：后台专家/技能/知识库页面先查 `official_*` 行数，空表是数据问题不是代码问题。
+9. **仓库不得有数据导出**：`git ls-files | grep -E '\.(sql|dump)$'` 必须为空（3.1 曾把 2.2MB 的 `_backups/*.sql` 连同 `public."user"` 推到 GitHub）。
+10. **API 产物路径**：构建后 `test -f ground/apps/backend/dist/main.js`。新增 `apps/backend/scripts/` 后 Nest 共同根会上移，输出变成 `dist/src/main.js`，容器直接 `MODULE_NOT_FOUND`。
+11. **签名能力**：`security find-identity -v -p codesigning` 为 0 时只能出 unsigned，manifest 必须保持 `signed:false`、`automatic_updates:false`，并在验收里写明"首次打开需右键"。
 
 **本次结果基线**：`3.0.0-20261108-1930`；api `mmp-api:3.0.0-20261108-1930`、web `mmp-web:3.0.0-20261108-r6`；迁移 45/45（发布前 30/45）；arm64 `532040d0…93b000` 268030061B、x64 `2557015f…1e90c9` 289439357B；`state.json` 落在 `release/3.0.0-20261108-1930/`。验收缺口只有"登录后业务验收"（凭据过期）与"真 Intel 实机"。
 
@@ -669,6 +672,80 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 4. 部署顺序固定：API 健康 → Web 起来 → nginx reload → 快速 smoke → 全量 smoke。
 5. 每次收尾把新坑补进 4E/4G，并在 0B 增加对应门禁；不复盘等于白踩。
 6. 发布结束写 `state.json` + `release/last-release.json`，下一个会话先读基线再决定构建范围。
+
+## 4I. 2026-11-10 3.1 实发复盘：52 分钟、7 个坑、可落地的提速项
+
+> 本轮范围：Ground API/Admin/Console + mammoth-agent Web 镜像 + mac-arm64 / mac-x64 unsigned DMG（Windows 不发）。
+> 结果：52 分钟上线，历史 2–3 小时。其中**返工约 16 分钟**，其余为必要耗时。
+
+### 4I.1 实测耗时（决定优化优先级）
+
+| 节点 | 实测 | 是否关键路径 |
+|---|---|---|
+| 门禁（首跑失败 + 修 5 个测试类型错误 + 重跑） | ~6 min | 返工 |
+| 版本 bump + 磁盘清理 + PG 备份/恢复演练 | ~4 min | 返工（本应前移） |
+| 桌面 mac-arm64 打包 | 7.3 min | 否（与中台并行） |
+| 服务器 web 镜像 | 首次 6 min 失败 + 重建 **10.4 min** | **是** |
+| API 镜像 | 3.5 min（冷）/ 0.5 min（改 tsconfig 后重建） | 否 |
+| 桌面 mac-x64 打包 | **17 min** | **是** |
+| 部署 + 迁移 | 2 min（失败一次后重部署 +2 min） | 是 |
+| nginx reload | 1 s | — |
+| smoke（含双包真实 GET + sha） | 3 min | 是 |
+| DMG 上传 532MB + 公网 sha 校验 | ~5 min | 是 |
+| **合计** | **52 min** | 关键路径 ≈ max(17, 10) + 10 |
+
+### 4I.2 本轮踩的 7 个坑
+
+| # | 现象 | 根因 | 损失 | 处理 / 以后规避 |
+|---|---|---|---|---|
+| 1 | 客户端类型门禁 5 个 TS 错误（`.client.spec`） | 测试仍用旧契约：`{ok:true}`、Lexical 未收窄、`CatalogDetail` 缺 `kind`、`retain(string)` | ~5 min | 修测试类型（`kind:'success'`、`$isElementNode`、`kind:'expert'`、`SessionId(id)`），不删测试 |
+| 2 | web 镜像 `TS18003 No inputs: tsconfig.ground-library.json` | 镜像 build context 只有 `mammoth-agent/`，Ground 源码不存在 | 6 min + 重建 10 min | `release.sh` 镜像内 `sed -i '/tsconfig.ground-library.json/d' tsconfig.client.json` 并删除两个引用 Ground 的 spec |
+| 3 | API 容器 `Cannot find module '/app/apps/backend/dist/main.js'` | 新增 `apps/backend/scripts/` 未排除 → 共同根上移 → 输出 `dist/src/main.js` | ~4 min | `tsconfig.build.json` exclude 加 `scripts`；门禁 10 断言 `dist/main.js` |
+| 4 | 服务器磁盘 98%（仅 11G free） | 历史镜像 + build cache 堆积（reclaimable 72G） | ~4 min，且清缓存拖慢后续 web 构建 | 排期前保证 ≥40G；保留当前+上一版镜像；`docker builder prune --filter until=72h` |
+| 5 | `_backups/mammoth_core_*.sql`（2.2MB，含 `public."user"`）已提交并 push | 本地导库后误提交 | ~1 min | `git rm --cached` + `.gitignore` 加 `_backups/`；门禁 9 扫描 `.sql/.dump` |
+| 6 | 超管登录 401 | `release-private/admin-credentials.txt`（11-05）已过期 | 阻塞登录后业务验收 | 门禁 3 必须真实登录 200；凭据过期就换 |
+| 7 | 桌面日志打印 `deepseek-harness-0.3.1-*.dmg`，实际产物是 `mammoth-ai-0.3.1-*.dmg` | 日志路径来自打包器内部命名，产物名由 electron-builder 配置决定 | 0（脚本扫描兜住） | 取包只认目录扫描（版本+架构匹配），不信日志路径 |
+
+### 4I.3 优化清单（按收益排序）
+
+| 优先级 | 优化 | 预计省 | 落地方式 | 状态 |
+|---|---|---|---|---|
+| P0 | 门禁提前到发版前 24h 跑完整版（客户端 tsc + `ground verify`） | **10–15 min** | 窗口内只做构建/部署/验收，任何代码修复另开一次发布 | 流程，未固化 |
+| P0 | 两处构建补丁固化：web 镜像剔除 ground-library、`tsconfig.build` 排除 `scripts` | **9 min** | 已改 `release.sh` / `tsconfig.build.json` | ✅ 已落地（仅 3.1 分支） |
+| P0 | 磁盘门禁 + 预清理 | **4 min** 且避免缓存变冷 | 预检先查 ≥40G；只留当前+上一版镜像；`docker builder prune --filter until=72h` | 部分（0B 第 4 条） |
+| P0 | API 产物断言 `dist/main.js` | **4 min**（省一次部署失败） | 构建后、打镜像前断言；已写入门禁 10 | ✅ 文档已固化 |
+| P1 | **web 镜像分层 + pnpm store cache mount** | **6–8 min**（10.4 → 2–3 min） | `COPY package.json → pnpm install` 独立层；`RUN --mount=type=cache,target=/pnpm-store` | 待做（下一轮最大收益） |
+| P1 | 桌面 x64 自检瘦身：跳过 DOCX→PDF 的 LibreOffice 转换 | **3–5 min** | 出包只验启动/版本/原生模块；文档转换放到上传后异步 | 待做 |
+| P1 | `smoke.sh --quick`（30s）+ 全量 hash 异步 | **2.5 min** | 切流后 30s 先放行路由/健康/别名长度 | 待做 |
+| P1 | 桌面产物"出一个传一个" | 2–3 min | 版本化文件名先落盘，manifest/别名最后原子切 | 可选（本轮按用户要求等齐再传） |
+| P2 | `release/last-release.json` 基线 + `git diff` 裁剪步骤 | 15–35 min（单侧改动时） | 记录 commit/镜像 tag/产物 sha；下次自动决定跳过哪些构建 | 待做 |
+| P2 | 长期验收账号 | 解锁登录后验收 | `release-private/` 维护有效凭据，不进仓库/聊天 | 待做 |
+| P2 | 时间戳统一 ISO 带时区 | 0 | `state.json` 避免 UTC/本地混写 | 待做 |
+
+### 4I.4 下次发版照此执行
+
+1. **T-24h**：跑门禁 1–11（含 `build --profile local`、`ground verify`、登录 200、`.sql` 扫描、`dist/main.js`、磁盘 ≥40G）。
+2. **T-10min**：定版本（Ground minor / 桌面家族 patch），本地 commit；确认 4I.3 的 P0 补丁在分支上（4.0 需先 cherry-pick 或重做）。
+3. **T0**：桌面 arm64 后台开跑；同时 PG 备份 + 隔离恢复演练。
+4. **T+2**：`release.sh` 前端 + API 镜像；服务器 web 镜像（已固化补丁）。
+5. arm64 出包后立刻开 x64（**禁止双开**）。
+6. **T+~30**：部署 + 迁移 → API 健康 → nginx reload → `smoke --quick` 放行。
+7. DMG 两个齐了再传（或按批准改为出一个传一个）；**manifest 与固定别名最后切**，`curl -sI` 验 `no-store`。
+8. 全量 smoke（双架构真实 GET + sha256）→ 登录后业务验收（专家广场/技能/资料库）。
+9. 收尾：解锁、写 `state.json`（注意清掉旧 `exit=1` 残留）、清 `/tmp`、只留当前+上一版镜像。
+
+### 4I.5 本轮基线（3.1.0-20261110-0005）
+
+| 项 | 值 |
+|---|---|
+| 源码 | base `97de4358`；release `cd7137d4`；桌面家族 `0.3.1` |
+| 镜像 | api `mmp-api:3.1.0-20261110-0005`、web `mmp-web:3.1.0-20261110-0005`；上一版 api `3.0.0-20261108-2155`、web `3.0.0-20261108-r8` |
+| DB | 备份 `/www/mmp-prod/backups/20261110-000511/mammoth_core.dump`；演练 45 表/45 迁移/9 用户/46 专家/115 技能；发布后 49/49 |
+| 桌面 | arm64 268383853B `cb086f90…28962c`；x64 289841213B `81b7c070…cf1f2d`；unsigned；别名与 manifest 最后切，公网 GET + sha256 已验 |
+| 下载备份 | `downloads/*.prev-20261110-004244` |
+| 回滚注意 | `categories` 迁移删除了 `official_skill.category`，**只回滚镜像会挂**，必须先恢复备份再切旧镜像 |
+
+> 分支提醒：4I.3 的两个 P0 补丁（`release.sh` web 镜像剔除、`tsconfig.build` 排除 scripts）目前只在 3.1 的本地提交里；4.0 若要发版需先 cherry-pick 或重做。
 
 ## 5. 网络与下载（最容易吃掉几小时）
 
