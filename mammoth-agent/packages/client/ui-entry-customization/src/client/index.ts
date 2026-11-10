@@ -9,6 +9,7 @@ import type {} from '@mammoth-ai/mmp-client-ui-conversation/client'
 import type {} from '@mammoth-ai/mmp-client-ui-sidebar-right/client'
 import type {} from '@mammoth-ai/mmp-client-ui-plugin-manager/client'
 import type {} from '@mammoth-ai/mmp-client-ui-workspace/client'
+import { canShowPluginEntries } from './role-access.ts'
 import { EntryMenuContent, type EntryMenuInjected, type EntryRegion } from './EntryMenuContent.tsx'
 import { en, ja, es, fr, de, ru, pt, zh } from './locales.ts'
 
@@ -31,6 +32,8 @@ export function apply(ctx: Context): void {
   const t = ctx.locale.bind('entryCustomization')
   // The Plugins page provides its navigation only while the current Peer may use it.
   const pluginNavigation = createSnapshotStore(false)
+  const pluginSurfaces = createSnapshotStore(false)
+  void canShowPluginEntries().then((allowed) => { pluginSurfaces.set(allowed) })
   ctx.inject(['pluginNavigation'], (scope: Context) => {
     scope.effect(() => {
       pluginNavigation.set(true)
@@ -39,7 +42,7 @@ export function apply(ctx: Context): void {
   })
   const injected = (region: EntryRegion): EntryMenuInjected => ({
     region,
-    hooks: { pluginNavigation },
+    hooks: { pluginNavigation, pluginSurfaces },
     browsePlugins: () => {
       ctx.get('productAnalytics')?.track('more_menu_item_click', { region, action: 'browse_plugins' })
       ctx.get('pluginNavigation')?.openList()
@@ -51,10 +54,22 @@ export function apply(ctx: Context): void {
       })
     },
   })
-  ctx.slots.inject('sidebar.panellist.actions', () => ctx.slots.register({
-    name: 'sidebar.panellist.actions', id: 'entry-customization', locale: 'entryCustomization',
-    inject: () => injected('sidebar'),
-  }, EntryMenuContent))
+  ctx.effect(() => {
+    let dispose: (() => void) | undefined
+    let stopped = false
+    const sync = (): void => {
+      dispose?.()
+      dispose = undefined
+      if (stopped || !pluginSurfaces.getSnapshot()) return
+      dispose = ctx.slots.inject('sidebar.panellist.actions', () => ctx.slots.register({
+        name: 'sidebar.panellist.actions', id: 'entry-customization', locale: 'entryCustomization',
+        inject: () => injected('sidebar'),
+      }, EntryMenuContent))
+    }
+    const stop = pluginSurfaces.subscribe(sync)
+    sync()
+    return () => { stopped = true; stop(); dispose?.() }
+  }, 'entry-customization: sidebar more')
   ctx.slots.inject('conversation.session.header.views.actions', () => ctx.slots.register({
     name: 'conversation.session.header.views.actions', id: 'entry-customization', locale: 'entryCustomization',
     inject: () => injected('conversation'),

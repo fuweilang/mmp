@@ -24,6 +24,7 @@ import { AdminOfficialSkillsService } from './admin-official-skills.service';
 import {
   CreateOfficialSkillFormDto,
   ListAdminOfficialSkillsDto,
+  OfficialSkillIconDto,
   OfficialSkillZipMetaDto,
   UpdateOfficialSkillDto,
 } from './dto/official-skill.dto';
@@ -51,6 +52,15 @@ export class AdminOfficialSkillsController {
   @Header('Cache-Control', 'private, no-store')
   enabledOptions(@CurrentUser() actor: User) {
     return this.skills.enabledOptions(actor);
+  }
+
+  @Post('translate-display')
+  @HttpCode(200)
+  translateDisplay(
+    @CurrentUser() actor: User,
+    @Body() body: { dryRun?: boolean; limit?: number; keys?: string[]; maxAttempts?: number },
+  ) {
+    return this.skills.translateDisplay(actor, body ?? {});
   }
 
   @Get(':id')
@@ -89,12 +99,20 @@ export class AdminOfficialSkillsController {
   }
 
   @Post(':id/icon')
-  @UseInterceptors(FileInterceptor('file',{limits:{fileSize:2*1024*1024}}))
-  icon(@CurrentUser() actor:User,@Param('id') id:string,@UploadedFile() file:{originalname:string;mimetype:string;size:number;buffer:Buffer}|undefined){
-    if(!file) throw new BadRequestException('请选择图片');return this.skills.icon(actor,id,file);
+  @UseInterceptors(FileInterceptor('file',{limits:{fileSize:5*1024*1024}}))
+  icon(
+    @CurrentUser() actor:User,
+    @Param('id') id:string,
+    @UploadedFile() file:{originalname:string;mimetype:string;size:number;buffer:Buffer}|undefined,
+    @Body() body: OfficialSkillIconDto,
+  ){
+    if(!file) throw new BadRequestException('请选择图片');
+    return this.skills.icon(actor,id,file,body?.expectedUpdatedAt);
   }
   @Delete(':id/icon')
-  removeIcon(@CurrentUser() actor:User,@Param('id') id:string){return this.skills.icon(actor,id);}
+  removeIcon(@CurrentUser() actor:User,@Param('id') id:string,@Query('expectedUpdatedAt') expectedUpdatedAt?:string){
+    return this.skills.icon(actor,id,undefined,expectedUpdatedAt);
+  }
 
   @Patch(':id')
   update(

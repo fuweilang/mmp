@@ -1,7 +1,7 @@
 /** Next-send selectors on the existing + menu; selected metadata never edits input text. */
 import type { Context } from '@mammoth-ai/cordis'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { Button, Modal } from '@mammoth-ai/mmp-client-ui-primitives'
+import { Button, IconCloseOutlineRegular, Modal } from '@mammoth-ai/mmp-client-ui-primitives'
 import { createSnapshotStore } from '@mammoth-ai/mmp-client-store'
 import type { PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import type { CatalogDraftSelection } from '@mammoth-ai/mmp-client-ui-conversation/client'
@@ -9,16 +9,18 @@ import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import type { OfficialAgentCard, OfficialSkillCard, CatalogDetail } from '@mammoth-ai/mmp-official-agent-gallery/types'
 import type { CommandUiContract } from '@mammoth-ai/mmp-client-ui-commands/client'
 import { CatalogIcon } from './CatalogIcon.tsx'
+import { resolveCardAvatarSrc } from './official-avatars.ts'
 import css from './task-catalog.module.css'
 
 type Kind='expert'|'skill'
 type Pick={id:string;key:string;name:string;summary:string;icon:string|null;versionId?:string|undefined;revision?:number|undefined;starter?:string|undefined;available?:boolean}
 type Target={sessionId:SessionId;kind:Kind}
 function empty():CatalogDraftSelection{return {protocol:1,selectionVersion:0,expertRef:null,skillRef:null}}
+function portrait(key:string,avatarUrl:string|null|undefined):string|null{return resolveCardAvatarSrc(key,avatarUrl)??null}
 function fromCard(card:OfficialAgentCard|OfficialSkillCard):Pick {
- return {id:card.id,key:card.key,name:card.name,summary:card.summary,icon:card.avatarUrl??null,...'versionId'in card?{versionId:card.versionId,starter:card.openingQuestions[0],available:card.executionGranted}:{revision:card.packageRevision}}
+ return {id:card.id,key:card.key,name:card.name,summary:card.summary,icon:portrait(card.key,card.avatarUrl),...'versionId'in card?{versionId:card.versionId,starter:card.openingQuestions[0],available:card.executionGranted}:{revision:card.packageRevision}}
 }
-function fromDetail(detail:CatalogDetail):Pick{return {id:detail.id,key:detail.key,name:detail.name,summary:detail.summary,icon:detail.avatarUrl??null,...detail.packageRevision?{revision:detail.packageRevision}:{},...(detail.detail.starters[0]?{starter:detail.detail.starters[0].text}:{})}}
+function fromDetail(detail:CatalogDetail):Pick{return {id:detail.id,key:detail.key,name:detail.name,summary:detail.summary,icon:portrait(detail.key,detail.avatarUrl),...detail.packageRevision?{revision:detail.packageRevision}:{},...(detail.detail.starters[0]?{starter:detail.detail.starters[0].text}:{})}}
 export function installTaskCatalog(ctx:Context):void {
  const t=ctx.locale.bind('officialAgentGallery')
  const target=createSnapshotStore<Target|null>(null),canCompose=createSnapshotStore(false)
@@ -28,7 +30,7 @@ export function installTaskCatalog(ctx:Context):void {
   const source=ctx.sessions.list.getSnapshot().byId[id]?.projectionValues?.officialGallerySource
   const value=empty()
   if(source?.type==='expert'&&source.versionId)return {...value,expertRef:{id:source.id,versionId:source.versionId,name:source.name}}
-  if(source?.type==='skill'&&source.packageRevision)return {...value,skillRef:{id:source.id,revision:source.packageRevision,key:source.key,name:source.name}}
+  if(source?.type==='skill'&&source.packageRevision)return {...value,skillRef:{id:source.id,revision:source.packageRevision,key:source.key,name:source.name,icon:portrait(source.key,source.avatarUrl)}}
   return value
  }
  ctx.inject(['commandUi','conversation','sessions'],scope=>{
@@ -36,18 +38,34 @@ export function installTaskCatalog(ctx:Context):void {
   const registry:CommandUiContract=scope.commandUi
   for(const kind of ['expert','skill'] as const)scope.effect(()=>registry.register({name:`catalog-${kind}`,label:()=>t(kind==='expert'?'selectorExpert':'selectorSkill'),available:session=>{const input=inputFor(session.sessionId),state=ctx.sessions.binding(session.sessionId)?.session.getSnapshot();return canCompose.getSnapshot()&&!!input&&state!==undefined&&!state.removed&&state.subagent===null&&input.state.getSnapshot().phase==='plain'},ui:{kind:'action',preserveDraftOnMenu:true,run:session=>{if(canCompose.getSnapshot())target.set({kind,sessionId:session.sessionId})}}}),`gallery: ${kind} next-send selector`)
  })
- function Tags({sessionId,useInput,inputActions,useSession}:PropsRuntime<'conversation.input.left'>){
+ function Tags({sessionId,useInput,inputActions,useSessions}:PropsRuntime<'conversation.input.left'>){
   const allowed=useSyncExternalStore(canCompose.subscribe,canCompose.getSnapshot)
-  const input=useInput(value=>value),running=useSession(value=>value.running)??false
+  const input=useInput(value=>value)
   const value=input?.catalogSelection??initial(sessionId)
+  const [portraitUrl,setPortraitUrl]=useState<string|null>(null)
+  const source=useSessions(state=>state.byId[sessionId]?.projectionValues?.officialGallerySource)
+  const origin=source&&typeof source==='object'&&(source.type==='expert'||source.type==='skill')&&typeof source.id==='string'&&typeof source.key==='string'?source:undefined
+  useEffect(()=>{
+    const id=value.expertRef?.id
+    const stored=value.expertRef?.icon
+    if(!id||(typeof stored==='string'&&stored.trim()!=='')){setPortraitUrl(null);return}
+    let alive=true
+    void ctx.remote.officialAgentGallery.expertCard(id).then(result=>{
+      if(alive&&result.ok)setPortraitUrl(portrait(result.value.key,result.value.avatarUrl))
+    }).catch(()=>{})
+    return()=>{alive=false}
+  },[value.expertRef?.id,value.expertRef?.icon])
   useEffect(()=>{if(allowed&&input?.catalogSelection===undefined&&(value.expertRef||value.skillRef))inputActions?.setCatalogSelection?.(value,true)},[allowed,sessionId,input?.catalogSelection,value.expertRef?.id,value.skillRef?.id])
-  const remove=(kind:Kind)=>{const live=inputFor(sessionId),current=live?.state.getSnapshot().catalogSelection??initial(sessionId);live?.setCatalogSelection?.({...current,selectionVersion:current.selectionVersion+1,...kind==='expert'?{expertRef:null}:{skillRef:null}});live?.focus()}
-  if(!allowed)return null
-  return <span className={css.tags} title={t('selectorNextSend')}>
-    {(['expert','skill'] as const).map(kind=>{const ref=kind==='expert'?value.expertRef:value.skillRef;return ref?<span className={css.tag} key={kind}>
-      <span className={css.smallIcon}><CatalogIcon catalogKey={ref.id} kind={kind==='expert'?'people':'plan'} src={ref.icon}/></span><span className={css.name}>{ref.name}</span>
-      <button type="button" className={css.remove} disabled={input?.phase!=='plain'} aria-label={t(kind==='expert'?'selectorRemoveExpert':'selectorRemoveSkill')} onMouseDown={event=>event.preventDefault()} onClick={()=>remove(kind)}>×</button>
-    </span>:null})}{running&&(value.expertRef||value.skillRef)?<small className={css.next}>{t('selectorNextSend')}</small>:null}
+  const remove=()=>{const live=inputFor(sessionId),current=live?.state.getSnapshot().catalogSelection??initial(sessionId);live?.setCatalogSelection?.({...current,selectionVersion:current.selectionVersion+1,expertRef:null});live?.focus()}
+  const ref=value.expertRef
+  if(!allowed||!ref)return null
+  const bundled=origin?.type==='expert'&&origin.id===ref.id?portrait(origin.key,null):null
+  const stored=typeof ref.icon==='string'&&ref.icon.trim()!==''?ref.icon:null
+  return <span className={css.tags}>
+    <span className={css.tag}>
+      <span className={css.smallIcon}><CatalogIcon catalogKey={ref.id} kind="people" src={stored??portraitUrl??bundled}/></span><span className={css.name}>{ref.name}</span>
+      <button type="button" className={css.remove} disabled={input?.phase!=='plain'} aria-label={t('selectorRemoveExpert')} onMouseDown={event=>event.preventDefault()} onClick={remove}><IconCloseOutlineRegular size={14}/></button>
+    </span>
   </span>
  }
  ctx.slots.inject('conversation.input.left',()=>ctx.slots.register({name:'conversation.input.left',id:'task-catalog-selection',order:-10},Tags))

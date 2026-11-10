@@ -213,6 +213,8 @@ model OfficialAgentVersion {
   openingQuestions Json                      @default("[]") @map("opening_questions")
   systemPrompt     String                    @default("") @map("system_prompt") @db.Text
   toolScope        Json                      @default("[]") @map("tool_scope")
+  /// Frozen Admin custom avatar path at publish time; terminal reads this, not draft parent.
+  customAvatarPath String?                   @map("custom_avatar_path")
   publishedByUserId String?                  @map("published_by_user_id")
   publishedAt      DateTime                  @default(now()) @map("published_at")
   agent            OfficialAgent             @relation("AgentVersions", fields: [agentId], references: [id], onDelete: Cascade)
@@ -324,9 +326,11 @@ model OfficialSkill {
   key              String                 @unique
   name             String
   summary          String                 @default("") @db.Text
-  category         OfficialSkillCategory?
+  categories       OfficialSkillCategory[] @default([])
   /// null = 停用/未启用；非空 = 启用时间（全员可见目录）。
   enabledAt        DateTime?              @map("enabled_at")
+  /// 非空 = 已从管理列表和新使用入口移除；包、专家关联和历史读取仍保留。
+  deletedAt        DateTime?              @map("deleted_at")
   currentRevision  Int                    @default(0) @map("current_revision")
   currentPackageId String?                @unique @map("current_package_id")
   currentPackage   OfficialSkillPackage?  @relation("CurrentPackage", fields: [currentPackageId], references: [id], onDelete: SetNull)
@@ -336,11 +340,22 @@ model OfficialSkill {
   updatedAt        DateTime               @updatedAt @map("updated_at")
 
   @@index([enabledAt])
-  @@index([category])
+  @@index([deletedAt])
+  @@index([categories], type: Gin)
   @@map("official_skill")
   customAvatarPath String? @map("custom_avatar_path")
   /// Independent public discovery text; never package instructions or permissions.
   discoveryDetail Json @default("{}") @map("discovery_detail")
+  /// Immutable crawl/import original for display rollback; never execution prompt.
+  sourceName String? @map("source_name")
+  sourceSummary String @default("") @map("source_summary") @db.Text
+  /// source=as-imported, machine=LLM display fill, manual=admin edited display (do not overwrite).
+  displayProvenance String @default("source") @map("display_provenance")
+  displayLocale String @default("zh-Hans") @map("display_locale")
+  displayTranslatedAt DateTime? @map("display_translated_at")
+  displayModelRef String? @map("display_model_ref")
+  /// sha256 of sourceName + "\n" + sourceSummary; skip machine rewrite when unchanged.
+  displaySourceHash String? @map("display_source_hash")
 
 }
 

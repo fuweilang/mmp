@@ -24,6 +24,72 @@ const ALLOWED_RESOURCE_EXT = new Set([
 
 export const OFFICIAL_SKILL_CATEGORIES = ['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle'] as const;
 export type OfficialSkillCategoryKey = (typeof OFFICIAL_SKILL_CATEGORIES)[number];
+export const MAX_SKILL_CATEGORIES = 3;
+
+export function primarySkillCategory(categories: readonly OfficialSkillCategoryKey[]): OfficialSkillCategoryKey | null {
+  return categories[0] ?? null;
+}
+
+function categoryTokens(input: unknown): unknown[] {
+  if (input == null || input === '') return [];
+  if (Array.isArray(input)) return input;
+  if (typeof input === 'string') {
+    const text = input.trim();
+    if (!text) return [];
+    if (text.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(text) as unknown;
+        return Array.isArray(parsed) ? parsed : [text];
+      } catch {
+        throw skillPackageError('SKILL_PACKAGE_INVALID', '分类不在允许范围内');
+      }
+    }
+    return text.split(',').map((item) => item.trim()).filter(Boolean);
+  }
+  return [input];
+}
+
+/** Unique categories, max 3. Accepts a string, JSON array, comma list, or string[]. */
+export function parseSkillCategories(input: unknown): OfficialSkillCategoryKey[] {
+  const out: OfficialSkillCategoryKey[] = [];
+  const seen = new Set<OfficialSkillCategoryKey>();
+  for (const token of categoryTokens(input)) {
+    if (token == null || token === '') continue;
+    if (!isOfficialSkillCategory(token)) {
+      throw skillPackageError('SKILL_PACKAGE_INVALID', '分类不在允许范围内');
+    }
+    if (seen.has(token)) continue;
+    seen.add(token);
+    out.push(token);
+  }
+  if (out.length > MAX_SKILL_CATEGORIES) {
+    throw skillPackageError('SKILL_PACKAGE_INVALID', '分类最多 3 个');
+  }
+  return out;
+}
+
+export function categoriesFromManifest(obj: Record<string, unknown>): OfficialSkillCategoryKey[] {
+  return parseSkillCategories([
+    ...(obj.category !== undefined && obj.category !== null && String(obj.category).trim() ? [obj.category] : []),
+    ...categoryTokens(obj.categories),
+  ]);
+}
+
+export function assignManifestCategories(manifest: SkillManifest, categories: OfficialSkillCategoryKey[]) {
+  const next = parseSkillCategories(categories);
+  if (next.length) {
+    manifest.category = next[0];
+    if (next.length > 1) manifest.categories = next;
+    else delete manifest.categories;
+  } else {
+    delete manifest.category;
+    delete manifest.categories;
+  }
+}
+
+export function storedCategories(manifest: SkillManifest): OfficialSkillCategoryKey[] {
+  return parseSkillCategories(manifest.categories?.length ? manifest.categories : (manifest.category ?? []));
+}
 
 /** Keep pre-industry Host bundles usable; industry-aware directories opt in explicitly. */
 export function legacySkillCategory(category: string | null): 'common' | 'content' | 'business' | 'expertise' | null {
@@ -43,6 +109,10 @@ export type SkillManifest = {
   description: string;
   entry: 'SKILL.md';
   category?: OfficialSkillCategoryKey;
+  categories?: OfficialSkillCategoryKey[];
+  /** Preserved import metadata. Not execution content. */
+  license?: string;
+  source?: string;
   references?: SkillReference[];
 };
 
@@ -52,6 +122,8 @@ export type ParsedSkillPackage = {
   /** relative paths under package root → file bytes */
   files: Map<string, Buffer>;
   resourceCount: number;
+  /** True when the package had no explicit skill.json key. */
+  keyDerived: boolean;
 };
 
 export function isOfficialSkillCategory(value: unknown): value is OfficialSkillCategoryKey {
@@ -87,18 +159,107 @@ export function assertSkillDisplayName(name: string) {
 export function assertSkillSummary(summary: string) {
   const text = String(summary || '').trim();
   if ([...text].length > SKILL_SUMMARY_MAX_CHARS) {
-    throw skillPackageError('SKILL_PACKAGE_INVALID', `用途不能超过 ${SKILL_SUMMARY_MAX_CHARS} 个字符`);
+    throw skillPackageError('SKILL_PACKAGE_INVALID', `一句话介绍不能超过 ${SKILL_SUMMARY_MAX_CHARS} 个字符`);
   }
   return text;
 }
 
+/** ASCII slug for an auto key. Chinese and other non-latin names return null. */
+export function slugSkillKey(input: string): string | null {
+  const ascii = String(input || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 48);
+  if (!ascii || !/^[a-z]/.test(ascii)) return null;
+  const key = ascii.length === 1 ? `${ascii}x` : ascii;
+  return KEY_RE.test(key) ? key : null;
+}
+
+const IGNORED_ZIP_DIRS = new Set(['__MACOSX', '.git', '.svn', '.hg']);
+
+/** Finder and archive junk that must not become a second package root. */
+export function isIgnorableZipPath(path: string): boolean {
+  const parts = String(path || '').split('/');
+  const base = parts[parts.length - 1] || '';
+  if (parts.some((part) => IGNORED_ZIP_DIRS.has(part))) return true;
+  if (base === '.DS_Store' || base === 'Thumbs.db' || base === 'desktop.ini') return true;
+  if (base.startsWith('._')) return true;
+  return false;
+}
+
 function normalizeZipPath(raw: string): string | null {
   const replaced = String(raw || '').replace(/\\/g, '/').trim();
-  if (!replaced || replaced.endsWith('/')) return null;
+  if (!replaced || replaced.endsWith('/') || replaced.includes('\0')) return null;
   if (replaced.startsWith('/') || /^[a-zA-Z]:/.test(replaced)) return null;
   const parts = replaced.split('/').filter((part) => part.length > 0);
   if (parts.some((part) => part === '.' || part === '..')) return null;
   return parts.join('/');
+}
+
+function clipChars(value: string, max: number) {
+  return [...String(value || '').trim()].slice(0, max).join('');
+}
+
+/** Read only flat `key: value` frontmatter. Does not evaluate YAML. */
+export function readSkillFrontmatter(markdown: string): {
+  name?: string;
+  description?: string;
+  license?: string;
+} {
+  const text = String(markdown || '').replace(/^\uFEFF/, '');
+  const found: { name?: string; description?: string; license?: string } = {};
+  const licenseComment = /License:\s*([A-Za-z0-9.+-]{1,80})/.exec(text.slice(0, 800));
+  if (licenseComment?.[1]) found.license = licenseComment[1];
+  if (!text.startsWith('---')) return found;
+  const end = text.indexOf('\n---', 3);
+  if (end < 0) return found;
+  const block = text.slice(3, end);
+  for (const line of block.split(/\r?\n/)) {
+    const match = /^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/.exec(line.trim());
+    if (!match) continue;
+    let value = match[2].trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1).trim();
+    }
+    if (!value) continue;
+    const key = match[1].toLowerCase();
+    if (key === 'name') found.name = value;
+    if (key === 'description') found.description = value;
+    if (key === 'license') found.license = value;
+  }
+  return found;
+}
+
+function manifestRecord(manifest: SkillManifest): Record<string, unknown> {
+  return {
+    key: manifest.key,
+    name: manifest.name,
+    description: manifest.description,
+    entry: 'SKILL.md',
+    ...(manifest.category ? { category: manifest.category } : {}),
+    ...(manifest.categories && manifest.categories.length > 1 ? { categories: manifest.categories } : {}),
+    ...(manifest.license ? { license: manifest.license } : {}),
+    ...(manifest.source ? { source: manifest.source } : {}),
+    ...(manifest.references?.length ? { references: manifest.references } : {}),
+  };
+}
+
+function writeManifestFile(files: Map<string, Buffer>, manifest: SkillManifest) {
+  files.set('skill.json', Buffer.from(JSON.stringify(manifestRecord(manifest), null, 2), 'utf8'));
+}
+
+/** Point a derived package at the skill key that will actually be stored. */
+export function retargetPackageKey(parsed: ParsedSkillPackage, key: string) {
+  parsed.manifest.key = assertSkillKey(key);
+  parsed.keyDerived = false;
+  writeManifestFile(parsed.files, parsed.manifest);
 }
 
 function extOf(path: string) {
@@ -108,25 +269,21 @@ function extOf(path: string) {
   return base.slice(idx).toLowerCase();
 }
 
-function detectPackageRoot(paths: string[]): { rootPrefix: string; files: string[] } {
-  const normalized = paths.map((p) => normalizeZipPath(p)).filter((p): p is string => Boolean(p));
-  if (!normalized.length) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
-
-  const hasFlat = normalized.some((p) => p === 'skill.json' || p === 'SKILL.md');
-  if (hasFlat) {
-    return { rootPrefix: '', files: normalized };
+/** Directory that contains the single executable SKILL.md, after junk is ignored. */
+export function locateSkillPackageRoot(paths: string[]): string {
+  const skillMds = paths.filter((path) => path === 'SKILL.md' || path.endsWith('/SKILL.md'));
+  const primary = skillMds.filter((path) => !/(^|\/)(references|resources)\//.test(path));
+  if (!primary.length) {
+    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包缺少 SKILL.md');
   }
-
-  const tops = [...new Set(normalized.map((p) => p.split('/')[0]))];
-  if (tops.length !== 1) {
-    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
+  if (primary.length > 1) {
+    throw skillPackageError(
+      'SKILL_PACKAGE_INVALID',
+      '技能包有多个 SKILL.md 入口，无法确定使用哪一个',
+    );
   }
-  const root = tops[0];
-  const files = normalized
-    .filter((p) => p.startsWith(`${root}/`))
-    .map((p) => p.slice(root.length + 1))
-    .filter(Boolean);
-  return { rootPrefix: root, files };
+  const only = primary[0]!;
+  return only === 'SKILL.md' ? '' : only.slice(0, -'/SKILL.md'.length);
 }
 
 async function readZipEntries(buffer: Buffer) {
@@ -134,22 +291,22 @@ async function readZipEntries(buffer: Buffer) {
   try {
     archive = await JSZip.loadAsync(buffer, { createFolders: false });
   } catch {
-    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
+    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包已损坏，无法解压');
   }
   const entries: Array<{ path: string; file: JSZip.JSZipObject }> = [];
-  let uncompressed = 0;
   archive.forEach((relativePath, file) => {
     if (file.dir) return;
-    // JSZip does not materialize symlinks as special; reject absolute / traversal via path rules.
     const path = normalizeZipPath(relativePath);
     if (!path) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
+      throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包包含不安全路径');
     }
-    entries.push({ path: relativePath.replace(/\\/g, '/'), file });
+    if (isIgnorableZipPath(path)) return;
+    entries.push({ path, file });
   });
   if (entries.length > SKILL_PACKAGE_MAX_FILES) {
     throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包文件数量超过限制');
   }
+  let uncompressed = 0;
   const files = new Map<string, Buffer>();
   for (const entry of entries) {
     const data = Buffer.from(await entry.file.async('nodebuffer'));
@@ -157,12 +314,10 @@ async function readZipEntries(buffer: Buffer) {
     if (uncompressed > SKILL_PACKAGE_MAX_UNCOMPRESSED) {
       throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包解压后超过 10MB 限制');
     }
-    const path = normalizeZipPath(entry.path);
-    if (!path) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
-    if (files.has(path)) {
+    if (files.has(entry.path)) {
       throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包存在重复文件');
     }
-    files.set(path, data);
+    files.set(entry.path, data);
   }
   return files;
 }
@@ -172,26 +327,25 @@ function parseManifest(raw: Buffer): SkillManifest {
   try {
     json = JSON.parse(raw.toString('utf8'));
   } catch {
-    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
+    throw skillPackageError('SKILL_PACKAGE_INVALID', 'skill.json 无法解析');
   }
   if (!json || typeof json !== 'object' || Array.isArray(json)) {
-    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
+    throw skillPackageError('SKILL_PACKAGE_INVALID', 'skill.json 无法解析');
   }
   const obj = json as Record<string, unknown>;
-  const key = assertSkillKey(String(obj.key ?? ''));
+  let key: string;
+  try {
+    key = assertSkillKey(String(obj.key ?? ''));
+  } catch {
+    throw skillPackageError('SKILL_PACKAGE_INVALID', 'skill.json 的标识无效');
+  }
   const name = assertSkillDisplayName(String(obj.name ?? ''));
   const description = assertSkillSummary(String(obj.description ?? obj.summary ?? ''));
   const entry = String(obj.entry ?? 'SKILL.md').trim();
   if (entry !== 'SKILL.md') {
-    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
+    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包入口必须是 SKILL.md');
   }
-  let category: OfficialSkillCategoryKey | undefined;
-  if (obj.category !== undefined && obj.category !== null && String(obj.category).trim()) {
-    if (!isOfficialSkillCategory(obj.category)) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '分类不在允许范围内');
-    }
-    category = obj.category;
-  }
+  const categories = categoriesFromManifest(obj);
   const references: SkillReference[] = [];
   if (obj.references !== undefined) {
     if (!Array.isArray(obj.references)) {
@@ -203,12 +357,30 @@ function parseManifest(raw: Buffer): SkillManifest {
       }
       const path = normalizeZipPath(String((item as { path?: unknown }).path ?? ''));
       if (!path || !path.startsWith('references/')) {
-        throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
+        throw skillPackageError('SKILL_PACKAGE_INVALID', 'skill.json 引用了不存在的 references 路径');
       }
       references.push({ path });
     }
   }
-  return { key, name, description, entry: 'SKILL.md', category, references: references.length ? references : undefined };
+  const license = optionalMeta(obj.license, 80);
+  const source = optionalMeta(obj.source, 200);
+  return {
+    key,
+    name,
+    description,
+    entry: 'SKILL.md',
+    ...(categories[0] ? { category: categories[0] } : {}),
+    ...(categories.length > 1 ? { categories } : {}),
+    ...(license ? { license } : {}),
+    ...(source ? { source } : {}),
+    references: references.length ? references : undefined,
+  };
+}
+
+function optionalMeta(value: unknown, max: number) {
+  if (typeof value !== 'string') return undefined;
+  const text = clipChars(value, max);
+  return text || undefined;
 }
 
 /**
@@ -219,44 +391,54 @@ function parseManifest(raw: Buffer): SkillManifest {
 export async function parseSkillZip(buffer: Buffer): Promise<ParsedSkillPackage> {
   if (!buffer?.length) throw skillPackageError('SKILL_PACKAGE_INVALID', '请选择技能包');
   const rawFiles = await readZipEntries(buffer);
-  const { rootPrefix } = detectPackageRoot([...rawFiles.keys()]);
+  const rootPrefix = locateSkillPackageRoot([...rawFiles.keys()]);
   const rooted = new Map<string, Buffer>();
-  for (const [rawPath, data] of rawFiles) {
-    const norm = normalizeZipPath(rawPath);
-    if (!norm) continue;
-    let rel = norm;
-    if (rootPrefix) {
-      if (norm === rootPrefix) continue;
-      if (!norm.startsWith(`${rootPrefix}/`)) continue;
-      rel = norm.slice(rootPrefix.length + 1);
+  for (const [norm, data] of rawFiles) {
+    if (!rootPrefix) {
+      rooted.set(norm, data);
+      continue;
     }
-    rooted.set(rel, data);
-  }
-
-  const manifestBuf = rooted.get('skill.json');
-  if (!manifestBuf) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
-  const manifest = parseManifest(manifestBuf);
-  if (rootPrefix && rootPrefix !== manifest.key) {
-    // Spec: optional single top dir named as key; other single dirs still accepted if package valid.
+    if (norm === rootPrefix) continue;
+    if (!norm.startsWith(`${rootPrefix}/`)) {
+      throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包包含技能目录以外的文件');
+    }
+    rooted.set(norm.slice(rootPrefix.length + 1), data);
   }
 
   const skillMd = rooted.get('SKILL.md');
-  if (!skillMd) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
+  if (!skillMd) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包缺少 SKILL.md');
   if (skillMd.length > SKILL_MD_MAX_BYTES) {
-    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能说明文件过大');
+    throw skillPackageError('SKILL_PACKAGE_INVALID', 'SKILL.md 超过 100KB');
   }
   const instruction = skillMd.toString('utf8');
-  if (!instruction.trim()) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能说明不能为空');
+  if (!instruction.trim()) throw skillPackageError('SKILL_PACKAGE_INVALID', 'SKILL.md 内容为空');
+
+  const frontmatter = readSkillFrontmatter(instruction);
+  const manifestBuf = rooted.get('skill.json');
+  let manifest: SkillManifest;
+  let keyDerived = false;
+  if (manifestBuf) {
+    manifest = parseManifest(manifestBuf);
+  } else {
+    keyDerived = true;
+    const folder = rootPrefix.split('/').filter(Boolean).pop() || '';
+    const heading = /^#\s+(.+)$/m.exec(instruction)?.[1]?.trim() || '';
+    const name = clipChars(frontmatter.name || heading || folder || '未命名技能', SKILL_NAME_MAX_CHARS);
+    const description = clipChars(frontmatter.description || '', SKILL_SUMMARY_MAX_CHARS);
+    const key = slugSkillKey(frontmatter.name || folder || name) || 'skill-import';
+    manifest = {
+      key,
+      name: assertSkillDisplayName(name),
+      description: assertSkillSummary(description),
+      entry: 'SKILL.md',
+      ...(frontmatter.license ? { license: clipChars(frontmatter.license, 80) } : {}),
+    };
+  }
+  if (!manifest.license && frontmatter.license) {
+    manifest = { ...manifest, license: clipChars(frontmatter.license, 80) };
+  }
 
   const outFiles = new Map<string, Buffer>();
-  outFiles.set('skill.json', Buffer.from(JSON.stringify({
-    key: manifest.key,
-    name: manifest.name,
-    description: manifest.description,
-    entry: 'SKILL.md',
-    ...(manifest.category ? { category: manifest.category } : {}),
-    ...(manifest.references?.length ? { references: manifest.references } : {}),
-  }, null, 2), 'utf8'));
   outFiles.set('SKILL.md', skillMd);
 
   // Collect resources/ → references/
@@ -266,7 +448,7 @@ export async function parseSkillZip(buffer: Buffer): Promise<ParsedSkillPackage>
     if (rel.startsWith('resources/')) {
       const rest = rel.slice('resources/'.length);
       if (!rest || rest.includes('..')) {
-        throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
+        throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包包含不安全路径');
       }
       resourceFiles.push({ rel: `references/${rest}`, data });
       continue;
@@ -275,7 +457,7 @@ export async function parseSkillZip(buffer: Buffer): Promise<ParsedSkillPackage>
       resourceFiles.push({ rel, data });
       continue;
     }
-    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
+    throw skillPackageError('SKILL_PACKAGE_INVALID', `技能包包含无法识别的文件：${rel}`);
   }
 
   const declared = new Set((manifest.references ?? []).map((r) => r.path));
@@ -290,7 +472,7 @@ export async function parseSkillZip(buffer: Buffer): Promise<ParsedSkillPackage>
     }
     const ext = extOf(item.rel);
     if (!ALLOWED_RESOURCE_EXT.has(ext)) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包包含不支持的文件类型');
+      throw skillPackageError('SKILL_PACKAGE_INVALID', `技能包包含不支持的文件类型：${item.rel}`);
     }
     outFiles.set(item.rel, item.data);
   }
@@ -298,7 +480,7 @@ export async function parseSkillZip(buffer: Buffer): Promise<ParsedSkillPackage>
   // If manifest declares references, every declared path must exist; undeclared resources are allowed and folded into manifest.
   for (const path of declared) {
     if (!outFiles.has(path)) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
+      throw skillPackageError('SKILL_PACKAGE_INVALID', `技能包声明的文件不存在：${path}`);
     }
   }
   const references = [...outFiles.keys()]
@@ -309,30 +491,14 @@ export async function parseSkillZip(buffer: Buffer): Promise<ParsedSkillPackage>
     ...manifest,
     references: references.length ? references : undefined,
   };
-  outFiles.set(
-    'skill.json',
-    Buffer.from(
-      JSON.stringify(
-        {
-          key: finalManifest.key,
-          name: finalManifest.name,
-          description: finalManifest.description,
-          entry: 'SKILL.md',
-          ...(finalManifest.category ? { category: finalManifest.category } : {}),
-          ...(finalManifest.references ? { references: finalManifest.references } : {}),
-        },
-        null,
-        2,
-      ),
-      'utf8',
-    ),
-  );
+  writeManifestFile(outFiles, finalManifest);
 
   return {
     manifest: finalManifest,
     instruction,
     files: outFiles,
     resourceCount: references.length,
+    keyDerived,
   };
 }
 
@@ -342,51 +508,32 @@ export function buildSkillPackageFromForm(input: {
   name: string;
   summary: string;
   category?: OfficialSkillCategoryKey | null;
+  categories?: OfficialSkillCategoryKey[] | null;
   instruction: string;
 }): ParsedSkillPackage {
   const key = assertSkillKey(input.key);
   const name = assertSkillDisplayName(input.name);
   const description = assertSkillSummary(input.summary);
   const instruction = String(input.instruction || '');
-  if (!instruction.trim()) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能说明不能为空');
+  if (!instruction.trim()) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能指令不能为空');
   const instructionBuf = Buffer.from(instruction, 'utf8');
   if (instructionBuf.length > SKILL_MD_MAX_BYTES) {
     throw skillPackageError('SKILL_PACKAGE_INVALID', '技能说明文件过大');
   }
-  let category: OfficialSkillCategoryKey | undefined;
-  if (input.category) {
-    if (!isOfficialSkillCategory(input.category)) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '分类不在允许范围内');
-    }
-    category = input.category;
-  }
+  const categories = parseSkillCategories(
+    input.categories !== undefined && input.categories !== null ? input.categories : (input.category ?? []),
+  );
   const manifest: SkillManifest = {
     key,
     name,
     description,
     entry: 'SKILL.md',
-    category,
   };
+  assignManifestCategories(manifest, categories);
   const files = new Map<string, Buffer>();
-  files.set(
-    'skill.json',
-    Buffer.from(
-      JSON.stringify(
-        {
-          key,
-          name,
-          description,
-          entry: 'SKILL.md',
-          ...(category ? { category } : {}),
-        },
-        null,
-        2,
-      ),
-      'utf8',
-    ),
-  );
   files.set('SKILL.md', instructionBuf);
-  return { manifest, instruction, files, resourceCount: 0 };
+  writeManifestFile(files, manifest);
+  return { manifest, instruction, files, resourceCount: 0, keyDerived: false };
 }
 
 /** Persist parsed package under uploads/; returns relative storagePath (directory). */
@@ -425,7 +572,11 @@ export function packagePreview(parsed: ParsedSkillPackage) {
     name: parsed.manifest.name,
     summary: parsed.manifest.description,
     category: parsed.manifest.category ?? null,
+    categories: storedCategories(parsed.manifest),
     resourceCount: parsed.resourceCount,
     instructionBytes: Buffer.byteLength(parsed.instruction, 'utf8'),
+    keyDerived: parsed.keyDerived,
+    license: parsed.manifest.license ?? null,
+    source: parsed.manifest.source ?? null,
   };
 }

@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h2>猛犸知识库</h2>
-        <p>管理官方专家专属资料。与企业知识库隔离；有官方资料时检索只走官方库。</p>
+        <p>管理官方专家专属资料。</p>
       </div>
       <el-button type="primary" @click="openUpload">上传资料</el-button>
     </div>
@@ -30,12 +30,13 @@
         <el-option label="处理中" value="PENDING" />
         <el-option label="失败" value="FAILED" />
       </el-select>
-      <el-checkbox v-model="includeInactive" @change="reload">含未生效暂存</el-checkbox>
-      <el-button @click="onSearchNow">搜索</el-button>
+      <el-checkbox v-model="includeInactive" class="toolbar-check" @change="reload">含未生效暂存</el-checkbox>
+      <el-button type="primary" @click="onSearchNow">搜索</el-button>
       <el-button @click="onReset">重置</el-button>
     </div>
 
-    <el-table v-loading="loading" :data="rows" border class="kb-table">
+    <div class="kb-table-wrap">
+    <el-table v-loading="loading" :data="rows" border class="kb-table" empty-text="暂无官方资料">
       <el-table-column label="资料名称" min-width="180" show-overflow-tooltip>
         <template #default="{ row }">
           <div class="name-cell">
@@ -59,19 +60,23 @@
       <el-table-column label="分段" width="80" prop="chunkCount" />
       <el-table-column label="索引状态" min-width="150">
         <template #default="{ row }">
-          <el-tag size="small" :type="statusType(row)">{{ statusLabel(row) }}</el-tag>
-          <div v-if="row.indexError" class="error-text">{{ row.indexError }}</div>
+          <div class="status-cell">
+            <el-tag size="small" effect="light" :type="statusType(row)">{{ statusLabel(row) }}</el-tag>
+            <div v-if="row.indexError" class="error-text" :title="row.indexError">{{ row.indexError }}</div>
+          </div>
         </template>
       </el-table-column>
-      <el-table-column label="生效版本" width="110">
+      <el-table-column label="生效版本" width="100" align="center">
         <template #default="{ row }">
           {{ row.effectiveVersion ? `v${row.effectiveVersion.version}` : '—' }}
         </template>
       </el-table-column>
-      <el-table-column label="更新时间" width="170">
-        <template #default="{ row }">{{ formatTime(row.updatedAt) }}</template>
+      <el-table-column label="更新时间" width="168" align="center">
+        <template #default="{ row }">
+          <span class="time-text">{{ formatTime(row.updatedAt) }}</span>
+        </template>
       </el-table-column>
-      <el-table-column label="操作" width="260" fixed="right" align="center">
+      <el-table-column label="操作" width="280" fixed="right" align="center" class-name="kb-ops-col" label-class-name="kb-ops-col">
         <template #default="{ row }">
           <div class="operation-buttons">
             <el-button text type="primary" @click="openViewer(row)">查看</el-button>
@@ -87,6 +92,7 @@
         </el-empty>
       </template>
     </el-table>
+    </div>
 
     <el-dialog
       v-model="viewerOpen"
@@ -96,6 +102,7 @@
       append-to-body
       destroy-on-close
       class="library-modal official-kb-dialog official-kb-viewer"
+      :close-on-click-modal="false"
     >
       <div v-loading="viewerLoading" class="viewer-body">
         <template v-if="viewerRow">
@@ -114,7 +121,7 @@
             </el-descriptions-item>
           </el-descriptions>
 
-          <div class="viewer-section-title">原文预览（安全源码，非 HTML 渲染）</div>
+          <div class="viewer-section-title">原文预览</div>
           <el-alert
             v-if="contentError"
             type="warning"
@@ -126,7 +133,7 @@
           <div v-if="contentTruncated" class="muted">正文过长，已截断预览；可下载完整文件。</div>
 
           <el-collapse class="chunks-collapse">
-            <el-collapse-item title="分段明细（技术排查）" name="chunks">
+            <el-collapse-item title="分段明细" name="chunks">
               <el-button size="small" :loading="chunksLoading" @click="loadChunks">加载分段</el-button>
               <el-table v-if="chunks.length" :data="chunks" size="small" border class="chunks-table">
                 <el-table-column prop="ordinal" label="#" width="60" />
@@ -143,7 +150,7 @@
       </template>
     </el-dialog>
 
-    <LibraryUploadDialog v-if="uploadOpen" :title="replaceTarget ? '替换官方知识资料' : '上传官方知识资料'" :multiple="!replaceTarget" accept=".md,.markdown,.txt,.pdf,.docx,.pptx" hint="仅官方知识资料：Markdown/TXT/PDF/DOCX/PPTX，单文件20MB；先索引成功再生效，失败保留旧知识。不会自动修改企业私人资料的分享范围。" :load-limits="officialUploadLimits" :prepare="prepareOfficialUpload" :upload-file="uploadOfficialFile" @close="uploadOpen = false; resetUploadForm()" @complete="officialUploaded">
+    <LibraryUploadDialog v-if="uploadOpen" :title="replaceTarget ? '替换官方知识资料' : '上传官方知识资料'" :multiple="!replaceTarget" accept=".md,.markdown,.txt,.pdf,.docx,.pptx" hint="支持 Markdown / TXT / PDF / DOCX / PPTX，单文件 ≤20MB；索引成功后生效，失败保留旧知识。" :load-limits="officialUploadLimits" :prepare="prepareOfficialUpload" :upload-file="uploadOfficialFile" @close="uploadOpen = false; resetUploadForm()" @complete="officialUploaded">
       <template #default="{ busy, count }">
         <el-form label-position="top" :disabled="busy">
           <el-form-item v-if="!replaceTarget" label="所属官方专家" required><el-select v-model="uploadAgentId" filterable placeholder="仅列出可绑定官方知识库的专家" style="width:100%"><el-option v-for="agent in agents" :key="agent.id" :label="`${agent.name}（${agent.key}）`" :value="agent.id" /></el-select></el-form-item>
@@ -354,63 +361,150 @@ onMounted(async () => {
 
 <style scoped>
 .official-kb-page {
-  padding: 4px 2px 24px;
+  background: #fff;
+  padding: 15px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  min-height: calc(100vh - 120px);
 }
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .page-header h2 {
   margin: 0 0 6px;
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333946;
+  line-height: 26px;
 }
 .page-header p {
   margin: 0;
-  color: var(--el-text-color-secondary);
+  color: #667085;
   font-size: 13px;
+  line-height: 20px;
 }
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   margin-bottom: 14px;
 }
 .toolbar-search {
-  width: 220px;
+  width: 240px;
+  max-width: 100%;
 }
 .toolbar-select {
-  width: 200px;
+  width: 180px;
+  max-width: 100%;
+}
+.toolbar-check {
+  margin-right: 4px;
+}
+.kb-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.kb-table-wrap :deep(.el-table) {
+  width: 100% !important;
+}
+.kb-table-wrap :deep(.el-table__inner-wrapper),
+.kb-table-wrap :deep(.el-table__header-wrapper),
+.kb-table-wrap :deep(.el-table__body-wrapper) {
+  min-width: 0;
+}
+.kb-table-wrap :deep(.el-table__body-wrapper) {
+  overflow-x: auto !important;
+}
+.kb-table :deep(.el-table__header th) {
+  background: #f8fafc;
+  color: #333946;
+  font-weight: 600;
+}
+.kb-table :deep(.el-table__body tr:hover > td) {
+  background: #f8fafc;
+}
+.kb-table {
+  font-size: 13px;
 }
 .name-cell {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+}
+.name-cell strong {
+  font-weight: 600;
+  color: #333946;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .muted {
-  color: var(--el-text-color-secondary);
+  color: #8b909b;
   font-size: 12px;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
 }
 .error-text {
-  margin-top: 4px;
+  max-width: 100%;
   color: var(--el-color-danger);
   font-size: 12px;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.time-text {
+  color: #667085;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .operation-buttons {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0;
+  align-items: center;
+  gap: 4px;
+}
+.operation-buttons :deep(.el-button.is-text) {
+  margin: 0;
+  padding: 4px 6px;
 }
 .operation-buttons :deep(.el-button + .el-button) {
   margin-left: 0;
 }
+.kb-table :deep(.kb-ops-col .cell) {
+  display: flex;
+  justify-content: center;
+}
+.viewer-body {
+  max-height: min(70vh, 640px);
+  overflow: auto;
+  padding-right: 2px;
+}
 .viewer-section-title {
   margin: 16px 0 8px;
+  font-size: 13px;
   font-weight: 600;
+  color: #333946;
 }
 .viewer-alert {
   margin-bottom: 8px;
@@ -422,10 +516,12 @@ onMounted(async () => {
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
-  background: var(--el-fill-color-light);
+  background: #f8fafc;
+  border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
   font-size: 12px;
   line-height: 1.5;
+  color: #333946;
 }
 .chunks-collapse {
   margin-top: 12px;
@@ -438,5 +534,20 @@ onMounted(async () => {
 }
 .official-kb-dialog :deep(.el-dialog__body) {
   padding-top: 8px;
+}
+.official-kb-dialog :deep(.el-dialog__footer) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+@media (max-width: 900px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar-search,
+  .toolbar-select {
+    width: 100%;
+  }
 }
 </style>

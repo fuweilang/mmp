@@ -811,6 +811,8 @@ export type OfficialAgentVersion = {
   systemPrompt: string;
   toolScope: string[];
   publishedByUserId: string | null;
+  /** Real operator display name when the user still exists; null if unknown/missing. */
+  publishedByName?: string | null;
   publishedAt: string;
   expertDefinition?: ExpertDefinition;
   linkedSkillSummaries?: OfficialAgentLinkedSkill[];
@@ -852,6 +854,8 @@ export type OfficialAgentRow = {
   category: OfficialAgentCategory | null;
   capabilities: string[];
   status: OfficialAgentStatus;
+  /** True when a published online version exists and pending config differs. Not a 4th status. */
+  hasUnpublishedChanges?: boolean;
   /** Public branding URL when an avatar file exists; null → first-character fallback. */
   avatarUrl: string | null;
   linkedSkillIds?: string[];
@@ -915,6 +919,18 @@ export type OfficialAgentImportResult = {
   };
 };
 
+export type OfficialAgentStatusCounts = {
+  all: number;
+  DRAFT: number;
+  PUBLISHED: number;
+  OFFLINE: number;
+};
+
+export type OfficialAgentListResult = {
+  items: OfficialAgentRow[];
+  statusCounts: OfficialAgentStatusCounts;
+};
+
 export type OfficialAgentBulkOfflineResult = {
   results: Array<{
     id: string;
@@ -959,7 +975,7 @@ export const adminOfficialAgentApi = {
     if (params.keyword) query.set('keyword', params.keyword);
     if (params.status) query.set('status', params.status);
     const suffix = query.toString() ? `?${query.toString()}` : '';
-    return adminHttp<OfficialAgentRow[]>(`/official-agents${suffix}`);
+    return adminHttp<OfficialAgentListResult>(`/official-agents${suffix}`);
   },
   detail: (id: string) => adminHttp<OfficialAgentRow>(`/official-agents/${id}`),
   assetCatalog: () => adminHttp<OfficialAgentAssetCatalogItem[]>('/official-agents/asset-catalog'),
@@ -976,10 +992,27 @@ export const adminOfficialAgentApi = {
   uploadAvatar: (id: string, body: FormData) =>
     adminHttp<OfficialAgentRow>(`/official-agents/${id}/avatar`, { method: 'POST', body }),
   removeAvatar: (id:string) => adminHttp<OfficialAgentRow>(`/official-agents/${id}/avatar`,{method:'DELETE'}),
+  discovery: (id: string) =>
+    adminHttp<{
+      id: string;
+      name: string;
+      updatedAt: string;
+      discoveryDetail: {
+        introduction: string;
+        outputs: string[];
+        materials: string[];
+        boundaries: string[];
+        starters: Array<{ text: string; label?: string }>;
+      };
+    }>(`/official-agents/${id}/discovery`),
   publish: (id: string) =>
     adminHttp<OfficialAgentRow>(`/official-agents/${id}/publish`, { method: 'POST' }),
   offline: (id: string) =>
     adminHttp<OfficialAgentRow>(`/official-agents/${id}/offline`, { method: 'POST' }),
+  remove: (id: string) =>
+    adminHttp<{ ok: true; id: string; key: string; name: string }>(`/official-agents/${id}`, {
+      method: 'DELETE',
+    }),
   bulkOffline: (ids: string[]) =>
     adminHttp<OfficialAgentBulkOfflineResult>('/official-agents/bulk-offline', {
       method: 'POST',
@@ -1093,9 +1126,11 @@ export type OfficialSkillRow = {
   name: string;
   summary: string;
   category: OfficialSkillCategory | null;
+  categories?: OfficialSkillCategory[];
   enabledAt: string | null;
   enabled: boolean;
   packageRevision: number;
+  contentSource?: 'zip' | 'form' | 'none';
   resourceCount: number;
   instructionBytes: number;
   linkedAgents: Array<{ id: string; key: string; name: string }>;
@@ -1112,6 +1147,7 @@ export type OfficialSkillOption = {
   name: string;
   summary: string;
   category: OfficialSkillCategory | null;
+  categories?: OfficialSkillCategory[];
   packageRevision: number;
   enabledAt: string | null;
 };
@@ -1121,10 +1157,12 @@ export type OfficialSkillZipPreview = {
   name: string;
   summary: string;
   category: OfficialSkillCategory | null;
+  categories?: OfficialSkillCategory[];
   resourceCount: number;
   instructionBytes: number;
   keyConflict: boolean;
   existingId: string | null;
+  keyDerived?: boolean;
 };
 
 export const adminOfficialSkillApi = {
@@ -1142,20 +1180,21 @@ export const adminOfficialSkillApi = {
   createFromZip: (body: FormData) =>
     adminHttp<OfficialSkillRow>('/official-skills/from-zip', { method: 'POST', body }),
   createFromForm: (body: {
-    key: string;
+    key?: string;
     name: string;
-    summary: string;
+    summary?: string;
     category?: OfficialSkillCategory;
-    instruction: string;
+    categories?: OfficialSkillCategory[];
+    instruction?: string;
   }) => adminHttp<OfficialSkillRow>('/official-skills/from-form', { method: 'POST', body: JSON.stringify(body) }),
   update: (
     id: string,
-    body: Partial<{ name: string; summary: string; category: OfficialSkillCategory | ''; instruction: string }>,
+    body: Partial<{ name: string; summary: string; category: OfficialSkillCategory | ''; categories: OfficialSkillCategory[]; instruction: string; expectedUpdatedAt: string }>,
   ) => adminHttp<OfficialSkillRow>(`/official-skills/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   replaceZip: (id: string, body: FormData) =>
     adminHttp<OfficialSkillRow>(`/official-skills/${id}/replace-zip`, { method: 'POST', body }),
   uploadIcon: (id:string,body:FormData) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/icon`,{method:'POST',body}),
-  removeIcon: (id:string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/icon`,{method:'DELETE'}),
+  removeIcon: (id:string, expectedUpdatedAt?: string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/icon${expectedUpdatedAt ? `?expectedUpdatedAt=${encodeURIComponent(expectedUpdatedAt)}` : ''}`,{method:'DELETE'}),
   enable: (id: string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/enable`, { method: 'POST' }),
   disable: (id: string) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/disable`, { method: 'POST' }),
   remove: (id: string) => adminHttp<{ ok: boolean }>(`/official-skills/${id}`, { method: 'DELETE' }),

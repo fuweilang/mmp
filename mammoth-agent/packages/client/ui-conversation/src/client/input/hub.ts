@@ -131,6 +131,7 @@ export class InputHub implements SessionInputResolver {
       defaultSink: (text, attachmentIds, mode, signal, accept, enterpriseKnowledge, catalogSelection) =>
         this.sink(session, text, attachmentIds, mode, signal, accept, enterpriseKnowledge, catalogSelection),
       quoteRemoveLabel: () => this.t('quote.remove'),
+      skillRemoveLabel: () => this.t('skill.remove'),
       quoteInsertionAllowed: () => {
         const state = session.getSnapshot()
         return !state.removed && (state.subagent === null

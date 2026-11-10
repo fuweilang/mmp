@@ -1,6 +1,12 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import css from './GalleryPage.module.css';
-/** Local, controlled artwork. Uploaded/legacy URLs win; failures fall back once, never retry. */
+
+/**
+ * Local, controlled artwork.
+ * - With a loadable `src`: show only the image (never stack the default SVG underneath —
+ *   transparent logos must not reveal the glyph).
+ * - No `src`, or load failure: show the kind glyph once; URL changes clear the failed state.
+ */
 export function CatalogIcon({ catalogKey, kind, src }: {
     readonly catalogKey: string;
     readonly kind: string;
@@ -21,8 +27,34 @@ export function CatalogIcon({ catalogKey, kind, src }: {
         people: <><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 4v2"/></>,
         scales: <><path d="M12 3v18M5 21h14M4 7h16M6 7l-4 8h8zm12 0-4 8h8z"/></>,
     };
-    return <span className={css.artwork} data-tone={tone} aria-hidden="true">
-    <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">{paths[kind] ?? paths.plan}</svg>
-    {src && failed !== src ? <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(src)}/> : null}
-  </span>;
+    const imageSrc = typeof src === 'string' && src.trim() ? src.trim() : '';
+    const showImage = Boolean(imageSrc && failed !== imageSrc);
+
+    useEffect(() => {
+        // New URL must not inherit a previous failure for a different src.
+        setFailed(null);
+    }, [imageSrc]);
+
+    return (
+      <span
+        className={css.artwork}
+        data-tone={tone}
+        data-has-image={showImage ? 'true' : undefined}
+        aria-hidden="true"
+      >
+        {showImage ? (
+          <img
+            src={imageSrc}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onError={() => setFailed(imageSrc)}
+          />
+        ) : (
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            {paths[kind] ?? paths.plan}
+          </svg>
+        )}
+      </span>
+    );
 }

@@ -19,6 +19,11 @@ import { registerReferenceActivation } from './reference-activation.ts'
 import { ReferenceChipNode, $createReferenceChipNode } from './chip-node.tsx'
 import { CommandChipNode, $createCommandChipNode, registerCommandChipSeat } from './command-chip-node.tsx'
 import { registerCommandChipSelection } from './command-chip-selection.ts'
+import {
+  $isSkillChipNode, $skillChipBesideCaret, $skillChips, $syncSkillChip, REMOVE_SKILL_CHIP_COMMAND, SkillChipNode,
+  sameSkill,
+} from './skill-chip-node.tsx'
+import type { SkillChipData, SkillChipLabels } from './skill-chip-node.tsx'
 import { registerTextRefDecoration, rescanTextRefs, TextRefNode } from './text-ref.ts'
 import type { EditorProjection } from './projection.ts'
 import { $composerLayout, $projectComposer, detectOffsetOfClipboardOffset } from './projection.ts'
@@ -31,6 +36,7 @@ type Lexicon = ReadonlyMap<'/' | '@', readonly string[]>
 interface DraftEditorRuntimeDeps {
   readonly onUpdate: () => void
   readonly quoteLabels: () => QuoteNodeLabels
+  readonly skillLabels: () => SkillChipLabels
   readonly openReference: (source: string | undefined, reference: Pick<ReferenceInsert, 'ref' | 'appearance'>) => boolean
   readonly lexicon: () => Lexicon
   readonly resolveLexicon: () => ObservableSnapshot<Lexicon> | undefined
@@ -83,7 +89,7 @@ export class DraftEditorRuntime {
   constructor(private readonly deps: DraftEditorRuntimeDeps) {
     this.editor = createEditor({
       namespace: 'mmp-composer',
-      nodes: [ReferenceChipNode, CommandChipNode, TextRefNode, QuoteNode],
+      nodes: [ReferenceChipNode, CommandChipNode, SkillChipNode, TextRefNode, QuoteNode],
       onError: (error) => { throw error },
     })
   }
@@ -104,9 +110,11 @@ export class DraftEditorRuntime {
     const unregister = mergeRegister(
       registerPlainText(this.editor),
       this.editor.registerNodeTransform(QuoteNode, (node) => { node.setLabels(this.deps.quoteLabels()) }),
+      this.editor.registerNodeTransform(SkillChipNode, (node) => { node.setLabels(this.deps.skillLabels()) }),
       this.editor.registerCommand(REMOVE_QUOTE_COMMAND, key => this.removeQuote(key), COMMAND_PRIORITY_CRITICAL),
-      this.editor.registerCommand(KEY_BACKSPACE_COMMAND, event => this.deleteAdjacentQuote(event, true), COMMAND_PRIORITY_BEFORE_CRITICAL),
-      this.editor.registerCommand(KEY_DELETE_COMMAND, event => this.deleteAdjacentQuote(event, false), COMMAND_PRIORITY_BEFORE_CRITICAL),
+      this.editor.registerCommand(REMOVE_SKILL_CHIP_COMMAND, key => this.removeSkillChip(key), COMMAND_PRIORITY_CRITICAL),
+      this.editor.registerCommand(KEY_BACKSPACE_COMMAND, event => this.deleteAdjacentQuote(event, true) || this.deleteAdjacentSkill(event, true), COMMAND_PRIORITY_BEFORE_CRITICAL),
+      this.editor.registerCommand(KEY_DELETE_COMMAND, event => this.deleteAdjacentQuote(event, false) || this.deleteAdjacentSkill(event, false), COMMAND_PRIORITY_BEFORE_CRITICAL),
       this.editor.registerCommand(BLUR_COMMAND, () => {
         // Finish this batch before an explicit focus can restore its updated selection.
         this.editor.update(preserveExternalSelection, { discrete: true })
@@ -196,6 +204,24 @@ export class DraftEditorRuntime {
    * end. Merged into history so a seed is not an undoable step of its own.
    * @param text - the full next draft.
    */
+  /**
+   * Show `data` as the draft's skill chip, or remove every skill chip.
+   * An existing chip stays where it is. A missing one is inserted at the start.
+   * @param data - the skill to show, or null.
+   */
+  syncSkillChip(data: SkillChipData | null): void {
+    const current = this.editor.getEditorState().read(() => $skillChips()[0]?.getData() ?? null)
+    const extras = this.editor.getEditorState().read(() => $skillChips().length)
+    // current is SkillChipData | null; extras>0 does not narrow it for TS, so compare via sameSkill.
+    if (data === null ? extras === 0 : extras > 0 && sameSkill(current, data)) return
+    this.editor.update(() => { $syncSkillChip(data) }, { discrete: true, tag: HISTORY_MERGE_TAG })
+  }
+
+  /** The first skill chip in the draft, or null. */
+  skillChip(): SkillChipData | null {
+    return this.editor.getEditorState().read(() => $skillChips()[0]?.getData() ?? null)
+  }
+
   setDraft(text: string): void {
     const clean = text.replace(REFERENCE_PLACEHOLDER_RE, '')
     if (clean === this.projection.clipboardText && this.projection.occurrences.length === 0 && this.projection.quotes.length === 0) return
@@ -396,6 +422,26 @@ export class DraftEditorRuntime {
     if (!$isQuoteNode(adjacent)) return false
     event.preventDefault()
     return this.removeQuote(adjacent.getKey())
+  }
+
+  /** Remove one skill chip and leave the caret where it stood. */
+  private removeSkillChip(key: NodeKey): boolean {
+    const node = $getNodeByKey(key)
+    if (!$isSkillChipNode(node)) return false
+    const parent = node.getParent()
+    const offset = node.getIndexWithinParent()
+    node.remove()
+    const caret = Math.min(offset, parent?.getChildrenSize() ?? 0)
+    parent?.select(caret, caret)
+    return true
+  }
+
+  /** Delete the skill chip immediately beside one collapsed caret. */
+  private deleteAdjacentSkill(event: KeyboardEvent, backward: boolean): boolean {
+    const chip = $skillChipBesideCaret(backward)
+    if (chip === null) return false
+    event.preventDefault()
+    return this.removeSkillChip(chip.getKey())
   }
 
   /**

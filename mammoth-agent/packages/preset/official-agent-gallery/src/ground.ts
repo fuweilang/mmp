@@ -32,7 +32,7 @@ const catalogDetailSchema=z.object({
  kind:z.enum(['expert','skill']),id:z.string().min(1),key:z.string().min(1),name:z.string(),summary:z.string(),avatarUrl:z.string().nullable(),
  versionId:z.string().optional(),packageRevision:z.number().int().positive().optional(),
  discovery:z.object({capability:z.string(),industries:z.array(z.string())}).strict().optional(),
- detail:z.object({schemaVersion:z.literal(1),displayRevision:z.number().int().nonnegative(),introduction:z.string().max(2000),outputs:z.array(z.string().max(300)).max(5),materials:z.array(z.string().max(300)).max(5),boundaries:z.array(z.string().max(300)).max(5),starters:z.array(z.object({label:z.string().max(40),text:z.string().max(500)}).strict()).max(3)}).strict(),
+ detail:z.object({schemaVersion:z.literal(1),displayRevision:z.number().int().nonnegative(),introduction:z.string().max(2000),outputs:z.array(z.string().max(300)).max(5),materials:z.array(z.string().max(300)).max(5),boundaries:z.array(z.string().max(300)).max(5),starters:z.array(z.object({text:z.string().max(500),label:z.string().max(40).optional()}).strict().transform(({text,label})=>({text,...(label?{label}:{})}))).max(3)}).strict(),
  linkedSkills:z.array(z.object({id:z.string(),name:z.string(),summary:z.string()}).strict()),
 }).strict()
 
@@ -43,6 +43,7 @@ const skillSessionBindingSchema = z.object({
     key: z.string().min(1),
     name: z.string().min(1),
     packageRevision: z.number().int().nonnegative(),
+    avatarUrl: z.string().nullable().optional(),
   }).strict(),
   skill: skillCardSchema,
   standardCapabilities: z.object({
@@ -345,6 +346,15 @@ export class GroundOfficialAgentClient {
   }
 
 
+  /** Deleted flag for an existing tag. Does not admit a new execution. */
+  async skillAvailability(skillId: string, signal?: AbortSignal) {
+    return this.request(
+      `/api/official-skills/${encodeURIComponent(skillId)}/availability`,
+      z.object({ id: z.string().min(1), name: z.string(), deleted: z.boolean(), selectable: z.boolean() }).strict(),
+      { ...signal === undefined ? {} : { signal } },
+    )
+  }
+
   /**
    * Validate an enabled skill and return Host freeze payload. Does not create a Host Session.
    * @param skillId - public official skill identity.
@@ -422,9 +432,19 @@ export class GroundOfficialAgentClient {
       },
     })
     if (!response.ok) {
-      await response.body?.cancel()
+      const text = await response.text().catch(() => '')
       if (response.status === 401) throw new Error('猛犸登录已失效，请重新登录。')
-      throw new Error(`Ground official Expert request failed with HTTP ${response.status}`)
+      let code = ''
+      let message = ''
+      try {
+        const body = JSON.parse(text) as { code?: unknown; message?: unknown }
+        code = typeof body.code === 'string' ? body.code : ''
+        message = typeof body.message === 'string' ? body.message : ''
+      } catch {
+        code = ''
+      }
+      if (code === 'OFFICIAL_SKILL_DELETED') throw new Error(message || '技能已删除，请重新选择')
+      throw new Error(message || `Ground official Expert request failed with HTTP ${response.status}`)
     }
     return schema.parse(await response.json()) as z.infer<Schema>
   }

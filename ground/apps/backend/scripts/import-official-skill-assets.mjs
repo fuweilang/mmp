@@ -95,12 +95,12 @@ async function upsert(pkg, actorUserId) {
   const key = pkg.key;
   const name = String(pkg.manifest.name || key).trim();
   const summary = String(pkg.manifest.description || '').trim();
-  const category = pkg.manifest.category || null;
+  const categories = pkg.manifest.category ? [pkg.manifest.category] : [];
   const existing = await prisma.officialSkill.findUnique({ where: { key } });
 
   if (!existing) {
     const created = await prisma.officialSkill.create({
-      data: { key, name, summary, category, enabledAt: null, currentRevision: 0 },
+      data: { key, name, summary, categories, enabledAt: null, currentRevision: 0 },
     });
     const storagePath = writePackageFiles(created.id, 1, pkg);
     const packageRow = await prisma.officialSkillPackage.create({
@@ -115,7 +115,7 @@ async function upsert(pkg, actorUserId) {
     });
     await prisma.officialSkill.update({
       where: { id: created.id },
-      data: { currentRevision: 1, currentPackageId: packageRow.id, name, summary, category },
+      data: { currentRevision: 1, currentPackageId: packageRow.id, name, summary, categories },
     });
     await prisma.auditLog.create({
       data: {
@@ -153,7 +153,7 @@ async function upsert(pkg, actorUserId) {
       currentPackageId: packageRow.id,
       name,
       summary,
-      category,
+      categories,
     },
   });
   await prisma.auditLog.create({
@@ -198,12 +198,12 @@ async function main() {
     for (const id of ids) await enableSkill(id, actor);
   }
   const all = await prisma.officialSkill.findMany({
-    select: { key: true, name: true, category: true, enabledAt: true, currentRevision: true },
+    select: { key: true, name: true, categories: true, enabledAt: true, currentRevision: true },
     orderBy: { key: 'asc' },
   });
   console.log('DB skills', all.length);
   for (const s of all) {
-    console.log('-', s.key, s.name, s.category || '-', s.enabledAt ? 'ENABLED' : 'disabled', 'r' + s.currentRevision);
+    console.log('-', s.key, s.name, (s.categories && s.categories[0]) || '-', s.enabledAt ? 'ENABLED' : 'disabled', 'r' + s.currentRevision);
   }
 }
 

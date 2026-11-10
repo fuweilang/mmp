@@ -34,6 +34,6 @@ describe('viewer endpoint classification', () => {
 })
 
 it('t168 classifies new account catalog/private preferences/artifact/create/delete endpoints owner-only, not blanket global-read',()=>{
- const endpoints=['officialAgentGallery/catalogDetail','officialAgentGallery/createSkill','officialAgentGallery/downloadArtifact','officialAgentGallery/expertCard','officialAgentGallery/expertFacets','officialAgentGallery/favourite','officialAgentGallery/listSkillFacets','officialAgentGallery/listSkills','officialAgentGallery/pageExperts','officialAgentGallery/pageSkills','officialAgentGallery/preferences','officialAgentGallery/skillFacets','session/deleteTask'] as const
+ const endpoints=['officialAgentGallery/catalogDetail','officialAgentGallery/createSkill','officialAgentGallery/downloadArtifact','officialAgentGallery/expertCard','officialAgentGallery/expertFacets','officialAgentGallery/favourite','officialAgentGallery/listSkillFacets','officialAgentGallery/listSkills','officialAgentGallery/pageExperts','officialAgentGallery/pageSkills','officialAgentGallery/preferences','officialAgentGallery/skillFacets','officialAgentGallery/skillAvailability','session/deleteTask'] as const
  for(const endpoint of endpoints)expect(VIEWER_ENDPOINT_CLASSES[endpoint]).toBe('owner-only')
 })

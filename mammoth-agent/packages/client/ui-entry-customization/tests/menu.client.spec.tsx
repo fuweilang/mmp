@@ -34,6 +34,7 @@ function content(overrides: Partial<ContentProps> = {}) {
     entries: [{ id: 'notes', label: 'Notes', pinned: true }, { id: 'tasks', label: 'Tasks', pinned: false }],
     region: 'sidebar', t: makeTranslate(en),
     usePluginNavigation: <T,>(select: (present: boolean) => T): T => select(true),
+    usePluginSurfaces: <T,>(select: (allowed: boolean) => T): T => select(true),
     usePanelInfo: unused, useSessions: unused, useSessionStatus: unused, useSessionRetainInfo: unused,
     useResource: unused, useWorkspaces: unused,
     ...callbacks,
@@ -89,6 +90,11 @@ describe('More menu rows', () => {
     expect(b.view.queryByRole('separator')).toBeNull()
   })
 
+  it('hides discovery and creation when plugin surfaces are closed', () => {
+    const b = content({ usePluginSurfaces: select => select(false) })
+    expect(b.view.queryByRole('menuitem')).toBeNull()
+  })
+
   it.each(['sidebar', 'rightbar'] as const)('keeps only creation in %s without plugin navigation', (region) => {
     const b = content({ region, usePluginNavigation: select => select(false) })
     expect(b.view.getAllByRole('menuitem').map(row => row.textContent)).toEqual(['Create your plugin'])
@@ -119,8 +125,20 @@ function Frame({ renderSlot }: PropsRenderSlots<Seats>) {
 
 async function bench(
   language: 'en' | 'zh' = 'en',
-  { analytics = true, navigation = true }: { analytics?: boolean; navigation?: boolean } = {},
+  { analytics = true, navigation = true, ground = false, platformAdmin = true }: {
+    analytics?: boolean
+    navigation?: boolean
+    /** A signed-in Ground session. Plugin rows stay hidden for every role. */
+    ground?: boolean
+    platformAdmin?: boolean
+  } = {},
 ) {
+  vi.stubGlobal('fetch', vi.fn(async () => ground
+    ? new Response(
+      JSON.stringify({ user: { isPlatformAdmin: platformAdmin } }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )
+    : new Response(null, { status: 404 })))
   const runtime = await SlotTestRuntime.create()
   runtimes.add(runtime)
   const openList = vi.fn(), startSession = vi.fn(), track = vi.fn<TrackProductEvent>()
@@ -143,10 +161,25 @@ async function bench(
   }, Frame)
   const plugin = await runtime.mount({ inject: [...inject], apply })
   const view = runtime.renderRoot()
+  if (!ground) {
+    await act(async () => { await vi.waitFor(() => {
+      expect(within(view.getByRole('menu', { name: 'sidebar.panellist.actions' })).getAllByRole('menuitem').length).toBeGreaterThan(0)
+    }) })
+  }
   return { runtime, openList, startSession, track, plugin, view }
 }
 
 describe('More menu registrations', () => {
+  it.each([true, false])('hides plugin rows on Ground when platform admin is %s', async (platformAdmin) => {
+    const b = await bench('en', { ground: true, platformAdmin })
+    await act(async () => { await vi.waitFor(() => { expect(fetch).toHaveBeenCalled() }) })
+    expect(b.runtime.slots.entries('sidebar.panellist.actions')).toEqual([])
+    expect(within(b.view.getByRole('menu', { name: 'conversation.session.header.views.actions' })).queryByRole('menuitem')).toBeNull()
+    const rightbar = within(b.view.getByRole('menu', { name: 'sidebar.right.tab.guide.actions' }))
+    expect(rightbar.queryByRole('menuitem', { name: 'Browse other plugins' })).toBeNull()
+    expect(rightbar.queryByRole('menuitem', { name: 'Create your plugin' })).toBeNull()
+  })
+
   it('shows plugin discovery only while the Plugins page navigation is present', async () => {
     const b = await bench('en', { navigation: false })
     const sidebar = () => within(b.view.getByRole('menu', { name: 'sidebar.panellist.actions' }))
@@ -191,7 +224,7 @@ describe('More menu registrations', () => {
     ['en', 'conversation.session.header.views.actions', 'Create a MMP conversation view plugin.'],
     ['en', 'sidebar.right.tab.guide.actions', 'Create a MMP plugin with a right sidebar entry.'],
     ['zh', 'sidebar.panellist.actions', '创建一个带左侧栏入口的 MMP 插件。'],
-    ['zh', 'conversation.session.header.views.actions', '创建一个 MMP 会话视图插件。'],
+    ['zh', 'conversation.session.header.views.actions', '创建一个 MMP 任务视图插件。'],
     ['zh', 'sidebar.right.tab.guide.actions', '创建一个带右侧栏入口的 MMP 插件。'],
   ] as const)('starts an unsent %s Creator draft from %s', async (language, seat, prompt) => {
     const b = await bench(language)

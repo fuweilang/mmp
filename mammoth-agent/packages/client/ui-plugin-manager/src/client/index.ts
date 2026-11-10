@@ -32,6 +32,7 @@ import { tabLedgerSource } from './tab-ledger.ts'
 import { PluginManagerController } from './manager-store.ts'
 import { en, ja, es, fr, de, ru, pt, zh, type PluginManagerLocaleKey } from './locales.ts'
 import { createNavigationStore } from './navigation-store.ts'
+import { canShowPluginEntries } from './role-access.ts'
 import type {} from './slot-contract.ts'
 
 declare module '@mammoth-ai/cordis' {
@@ -150,7 +151,7 @@ export function apply(ctx: ClientContext): void {
       yield ctx.layout.panelInfo.subscribe(() => {
         if (ctx.layout.panelInfo.getSnapshot().activePanelId !== PANEL_ID) instance.actions.setView({ kind: 'list' })
       })
-      const disposeNavigation = ctx.reflect.provide('pluginNavigation', {
+      const navigation = {
         openList: () => {
           ctx.layout.selectPanel(PANEL_ID)
           instance.actions.setTab('installed')
@@ -161,15 +162,27 @@ export function apply(ctx: ClientContext): void {
           instance.actions.setTab('installed')
           instance.actions.setView({ kind: 'package', name: packageName })
         },
+      }
+      let disposeNavigation: (() => void) | undefined
+      let navigationStopped = false
+      void canShowPluginEntries().then((allowed) => {
+        if (navigationStopped || !allowed) return
+        disposeNavigation = ctx.reflect.provide('pluginNavigation', navigation)
       })
-      yield () => { void disposeNavigation() }
+      yield () => { navigationStopped = true; void disposeNavigation?.() }
     })
-    yield ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
-      name: 'sidebar.panellist',
-      id: PANEL_ID,
-      order: 0,
-      label: () => t('panel'),
-      locale: NS,
-    }, PluginsPanelIcon))
+    let disposeSidebar: (() => void) | undefined
+    let sidebarStopped = false
+    void canShowPluginEntries().then((allowed) => {
+      if (sidebarStopped || !allowed) return
+      disposeSidebar = ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
+        name: 'sidebar.panellist',
+        id: PANEL_ID,
+        order: 0,
+        label: () => t('panel'),
+        locale: NS,
+      }, PluginsPanelIcon))
+    })
+    yield () => { sidebarStopped = true; disposeSidebar?.() }
   })
 }

@@ -16,6 +16,7 @@
     "dev:ground": "pnpm --dir ground run dev",
     "dev:agent": "pnpm --dir mammoth-agent run dev:web",
     "dev:desktop": "pnpm --dir mammoth-agent run dev:desktop",
+    "dev:desktop:watch": "pnpm --dir mammoth-agent run dev:web -- --skip-build --no-serve",
     "build": "node scripts/project-command.mjs build",
     "build:ground": "pnpm --dir ground run build",
     "build:agent": "pnpm --dir mammoth-agent run build",

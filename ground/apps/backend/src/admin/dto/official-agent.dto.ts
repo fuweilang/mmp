@@ -37,7 +37,6 @@ export class CreateOfficialAgentDto {
   openingQuestions!: string[];
 
   @IsString()
-  @MinLength(1)
   @MaxLength(50000)
   systemPrompt!: string;
 
@@ -92,7 +91,6 @@ export class UpdateOfficialAgentDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(50000)
   systemPrompt?: string;
 

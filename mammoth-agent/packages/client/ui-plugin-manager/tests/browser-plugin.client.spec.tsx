@@ -19,7 +19,10 @@ import type { PluginManagerFace } from '../src/client/manager-store.ts'
 import type { createNavigationStore } from '../src/client/navigation-store.ts'
 
 usePinnedBrowserLanguages('zh-CN')
-beforeEach(() => { localStorage.clear() })
+beforeEach(() => {
+  localStorage.clear()
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })))
+})
 afterEach(cleanup)
 
 type AccessEffect = (() => void) | Iterable<() => void>
@@ -97,6 +100,10 @@ async function bench(allows: ((action: string) => boolean) | 'switchable' = () =
   return { ctx, slots: ctx.get('slots') as SlotRegistry, locale, list, remote, selectPanel, panelInfo, access }
 }
 
+async function untilPluginEntries(ctx: Context): Promise<void> {
+  await vi.waitFor(() => { expect(ctx.get('pluginNavigation')).toBeDefined() })
+}
+
 function declare(slots: SlotRegistry): () => void {
   return slots.register({
     name: 'root',
@@ -113,6 +120,7 @@ describe('ui-plugin-manager browser plugin', () => {
     const b = await bench()
     const removeRoot = declare(b.slots)
     await b.ctx.plugin({ inject: [...inject], apply }).await()
+    await untilPluginEntries(b.ctx)
     const entry = b.slots.entries('main')[0]!
     assert(entry.store && 'create' in entry.store)
     const navigation = entry.store.create()
@@ -138,6 +146,7 @@ describe('ui-plugin-manager browser plugin', () => {
     const b = await bench()
     declare(b.slots)
     await b.ctx.plugin({ inject: [...inject], apply }).await()
+    await untilPluginEntries(b.ctx)
     const entry = b.slots.entries('main')[0]!
     assert(entry.store && 'create' in entry.store)
     const navigation = entry.store.create() as ReturnType<ReturnType<typeof createNavigationStore>['create']>
@@ -221,6 +230,20 @@ describe('ui-plugin-manager browser plugin', () => {
     await vi.waitFor(() => { expect(b.list).toHaveBeenCalledTimes(2) })
   })
 
+  it('keeps the sidebar entry and plugin navigation off on Ground, including a platform admin', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ user: { isPlatformAdmin: true } }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )))
+    const b = await bench()
+    declare(b.slots)
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    await vi.waitFor(() => { expect(fetch).toHaveBeenCalled() })
+    await Promise.resolve()
+    expect(b.slots.entries('sidebar.panellist')).toEqual([])
+    expect(b.ctx.get('pluginNavigation')).toBeUndefined()
+  })
+
   it('contributes the entry, page, and navigation only while the current Peer may list bundles, and observes changes either way', async () => {
     const allows = vi.fn(() => false)
     const b = await bench(allows)
@@ -239,6 +262,8 @@ describe('ui-plugin-manager browser plugin', () => {
     declare(b.slots)
     const fiber = b.ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
+    await untilPluginEntries(b.ctx)
+    await vi.waitFor(() => { expect(b.slots.entries('sidebar.panellist')).toHaveLength(1) })
 
     b.ctx.pluginNavigation.openBundle('mmp-navigation-test')
     expect(b.selectPanel).toHaveBeenCalledWith(PANEL_ID)

@@ -16,6 +16,8 @@ export interface EntryMenuInjected {
   readonly hooks: {
     /** Whether the Plugins page navigation service is present; the discovery row shows only while it is. */
     readonly pluginNavigation: HostObservable<boolean>
+    /** Platform-admin (or non-Ground) gate for discovery and creation rows. */
+    readonly pluginSurfaces: HostObservable<boolean>
   }
   /** Open the Plugins main list. */
   readonly browsePlugins: () => void
@@ -33,10 +35,11 @@ type EntryMenuContentProps = PropsRuntime<'sidebar.panellist.actions'>
  * @returns Menu rows for the region's More menu.
  */
 export function EntryMenuContent({
-  entries, onOpen, region, onDismiss, usePluginNavigation, browsePlugins, createPlugin, t,
+  entries, onOpen, region, onDismiss, usePluginNavigation, usePluginSurfaces, browsePlugins, createPlugin, t,
 }: EntryMenuContentProps) {
   const moreEntries = region === 'conversation' ? entries : []
-  const browsable = usePluginNavigation(present => present)
+  const surfaces = usePluginSurfaces(allowed => allowed)
+  const browsable = surfaces && usePluginNavigation(present => present)
   return <>
     {moreEntries.map(entry => <MenuItemButton key={entry.id} current={entry.active === true}
       onSelect={() => { onDismiss(); onOpen(entry.id) }}>
@@ -49,9 +52,9 @@ export function EntryMenuContent({
       onSelect={() => { onDismiss(); browsePlugins() }}>
       {t('install')}
     </MenuItemButton>}
-    <MenuItemButton icon={<IconPlusOutlineRegular size={16} />} separatorBefore={!browsable && moreEntries.length > 0}
+    {surfaces && <MenuItemButton icon={<IconPlusOutlineRegular size={16} />} separatorBefore={!browsable && moreEntries.length > 0}
       onSelect={() => { onDismiss(); createPlugin() }}>
       {t('create')}
-    </MenuItemButton>
+    </MenuItemButton>}
   </>
 }

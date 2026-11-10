@@ -55,9 +55,28 @@ console.log(p)' "$TMP/feed-$arch.yml" > "$TMP/feedpath-$arch" || exit 1
       echo "feed check ok: mac-$arch"
     fi
   done
+  # Fixed aliases must serve the same artifact as the manifest. Compares size only (cheap, catches the
+  # "page shows the new version but the alias still holds the previous package" drift).
+  for pair in "darwin-arm64:mammoth-agent-mac-arm64.dmg" "darwin-amd64:mammoth-agent-mac-x64.dmg" "windows-amd64:mammoth-agent-win.exe"; do
+    key="${pair%%:*}"; alias_file="${pair#*:}"
+    want="$(node -e 'const m=require(process.argv[1]);const p=m.platforms?.[process.argv[2]];if(p&&p.bytes!=null)console.log(p.bytes)' "$TMP/mammoth-latest.json" "$key")"
+    [[ -n "$want" ]] || continue
+    got="$(curl -sI --max-time 30 "$ORIGIN/downloads/$alias_file" | tr -d '\r' | awk 'tolower($1)=="content-length:"{print $2; exit}')"
+    if [[ -z "$got" ]]; then
+      echo "alias /downloads/$alias_file is missing (manifest declares $key)" >&2; exit 1
+    fi
+    [[ "$got" == "$want" ]] || { echo "alias $alias_file serves $got bytes, manifest declares $want for $key" >&2; exit 1; }
+    echo "alias check ok: $alias_file ($got bytes)"
+  done
 else
   echo 'No client installer published this round; skipping download checks'
 fi
+  # Ground public asset families must reach the API, not the agent RPC bridge (which answers 401).
+  for probe in /api/official-agents/avatars/boss.jpg /api/official-agents/avatars/copy.jpg; do
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$ORIGIN$probe")"
+    [[ "$code" == 200 ]] || { echo "Ground asset $probe returned $code (nginx API whitelist?)" >&2; exit 1; }
+  done
+  echo "Ground asset route check ok"
 # Anonymous Web must land at the shared login, not return the old marketing site.
 curl --fail --silent --show-error --location "$ORIGIN/" | grep -q '猛犸'
 echo 'Public route/download smoke passed; authenticated two-account and desktop tests remain operator checks.'

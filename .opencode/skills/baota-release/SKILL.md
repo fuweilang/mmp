@@ -637,6 +637,39 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 6. 校验（全部必须为 0）：在线版本↔专家、版本↔专家、文档↔专家、分块↔文档、授权↔租户、缺失文件数。
 7. 导入前后各做一次 `pg_dump` 备份，并记录路径。
 
+## 4H. 2026-11-09 复盘：把坑固化成门禁（下一轮直接照此优化）
+
+### 4H.1 已落地（本轮已改代码，下次自动生效）
+
+| 改动 | 防住的坑 |
+|---|---|
+| `smoke.sh` 增加**别名大小校验**：固定别名 `content-length` 必须等于 manifest 的 `bytes` | "页面显示新版本、实际下到旧包" |
+| `smoke.sh` 增加**Ground 资产路由校验**：`/api/official-agents/avatars/*` 必须 200 | nginx 白名单漏配导致头像 401 |
+| 下载页按 manifest `file` 解析，不再写死别名 | 别名漂移 |
+| manifest 与两个别名 `no-store`（精确 `location =`） | 指针/别名被缓存 |
+| 平台超管可在资料库面板内选择企业并切换 | 平台账号 NO_TENANT 死路 |
+
+### 4H.2 建议补的自动化（按收益排序）
+
+| 优先级 | 项 | 做法 | 收益 |
+|---|---|---|---|
+| P0 | 一键门禁 `scripts/preflight-release.mjs` | 一条命令检查：git 干净且 SHA 固定、家族版本全等、`build --profile local` 10/10、nginx `/api` 白名单覆盖前端用到的前缀、downloads 别名=manifest、`official_*` 行数、磁盘≥40G、无 `.release.lock` | 把 6 类坑挡在排期前，省 30 min+ |
+| P0 | 发版基线文件 `release/last-release.json` | 记录 commit、manifest sha、镜像 tag、产物 sha；下次 `git diff <sha>..HEAD -- <目录>` 自动决定跳过哪些构建（4F.4） | 无客户端改动时省 30–35 min |
+| P1 | 单脚本时间线（4F 的 T 表） | arm64 先开 → api/web 并行 → 每包即传 → x64 → 部署 → 全量 smoke，脚本内固定参数（镜像名只传 tag） | 少手工失误（本轮 deploy 传参就挂过一次） |
+| P1 | `smoke.sh --quick` | 仅路由/健康/版本/别名大小，约 30 秒；切流前跑；全量下载 hash 放切流后 | 切流提前 3–4 min |
+| P1 | 桌面成品自检自动重试 | `smoke-packaged-runtime.ts` 对 LibreOffice 超时重试 1 次，仍失败才报错 | 避免因 1 次超时重打 20 min |
+| P2 | 发布验收账号 | `release-private/` 维护一个企业验收账号（不进仓库、不进聊天） | 登录后验收不再被凭据阻塞 |
+| P2 | nginx 白名单自动对齐 | 从后端 Controller 前缀生成待代理清单，与 nginx regex 比对 | 结构性防止 401 类问题 |
+
+### 4H.3 流程层（不写代码也能省时间）
+
+1. **发布前 24 小时**先跑一遍完整门禁，不要在发布窗口里修类型/版本问题（本轮 31 min 就这么花的）。
+2. 窗口内只做"构建 → 部署 → 验收"；任何代码修复都另开一次发布。
+3. 客户端产物**每出一个就传一个**，不要等两个都打完（尾部省 2–3 min）。
+4. 部署顺序固定：API 健康 → Web 起来 → nginx reload → 快速 smoke → 全量 smoke。
+5. 每次收尾把新坑补进 4E/4G，并在 0B 增加对应门禁；不复盘等于白踩。
+6. 发布结束写 `state.json` + `release/last-release.json`，下一个会话先读基线再决定构建范围。
+
 ## 5. 网络与下载（最容易吃掉几小时）
 
 > 2026-11-04 这次发版，10h47m 里至少 3h 花在“拉文件”：GitHub 0 字节、Docker Hub 超时、
