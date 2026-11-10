@@ -39,6 +39,7 @@
   "license": "MIT",
   "dependencies": {
     "@mammoth-ai/mmp-session-format": "workspace:*",
+    "@mammoth-ai/mmp-llm": "workspace:*",
     "@mammoth-ai/schemastery": "workspace:~",
     "fflate": "^0.8.2",
     "@mammoth-ai/mmp-brand": "workspace:*"

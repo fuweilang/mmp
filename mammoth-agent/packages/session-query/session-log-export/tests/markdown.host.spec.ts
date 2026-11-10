@@ -533,6 +533,19 @@ describe('formatSessionMarkdown', () => {
     expect(markdown.endsWith('</details>\n\nFinished\n')).toBe(true)
   })
 
+  it('exports saved library links and the original prompt while keeping model excerpts private', () => {
+    const reference = { source: 'library', nodeId: 'node/1', versionId: 'version 1', name: 'Same.md' } as const
+    const markdown = formatSessionMarkdown([userBlocks(1, [
+      { type: 'text', text: 'PRIVATE SOURCE EXCERPT', reference },
+      { type: 'text', text: 'OTHER PRIVATE EXCERPT', reference: { ...reference, nodeId: 'node/2' } },
+      { type: 'text', text: 'Compare the selected files.' },
+    ])])
+    expect(markdown).toContain('> [Same.md](/ground-library/nodes/node%2F1/source?versionId=version%201)')
+    expect(markdown).toContain('> [Same.md](/ground-library/nodes/node%2F2/source?versionId=version%201)')
+    expect(markdown).toContain('> Compare the selected files.')
+    expect(markdown).not.toContain('PRIVATE')
+  })
+
   it('labels attachments and omits reasoning, system prompts, and injected context', () => {
     const markdown = renderWithTitle({
       title: 'Hidden input',

@@ -34,6 +34,10 @@ getPlatformSession 仅在已存授权的 issuer 与 platformOrigin 一致时导�
 <a id="use-this-package"></a>
 ## 使用此包
 
+Ground 资料提示词引用通过捕获的账号凭证授权，以准确的节点/版本和 `purpose: prepare` 请求 `POST /api/library/open`。版本被拒绝或摘录无效会在附件准入前拒绝提交。最终的 `session/validate-library-references` 检查在交付前拒绝凭证变更、混合账号凭证或提供方已释放的情况。每段已接受摘录在独立的模型可见文本块中记录权威名称、真实定位和截断状态；日志不记录凭证或浏览器提供的来源正文。
+
+Host 专用的资料库渲染路由通过可选的 Office-to-PDF 服务转换明确选定的 doc/docx/ppt/pptx 版本。Ground 在转换排队前授权确切版本，格式校验使用该版本不可变的原始文件名（旧服务端未提供此新增字段时才回退到返回的展示名），仅在服务准入后通过普通受保护下载读取原始字节。账号切换会丢弃结果，断开连接、超时或服务卸载会取消读取。PDF 响应禁止缓存，并通过 URI 编码的头部返回缺失字体；服务不可用时返回可操作的拒绝，不暴露引擎细节或凭据。
+
 本地退出登录期间拒绝解析 token。本地授权成功删除后，先发布 `deepseek-account/signed-out`，再返回已退出的状态快照；远程撤销独立执行。
 
 账号资料投影将 `id_profile.picture` 映射为 `avatarUrl`，没有配置头像时返回 null。

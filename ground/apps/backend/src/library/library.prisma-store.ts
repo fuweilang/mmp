@@ -42,7 +42,14 @@ export class PrismaLibraryStore implements LibraryStore {
 
   /** Reuse the caller's Prisma transaction for platform operations; ordinary calls keep their original transaction. */
   private transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
-    return '$transaction' in this.prisma ? this.prisma.$transaction(work) : work(this.prisma);
+    return '$transaction' in this.prisma ? this.prisma.$transaction(work, { maxWait: 10_000, timeout: 60_000 }) : work(this.prisma);
+  }
+
+  async withTenantWrite<T>(tenantId: string, work: (store: LibraryStore) => Promise<T>): Promise<T> {
+    return this.transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-tree:' + tenantId}))`;
+      return work(new PrismaLibraryStore(tx));
+    });
   }
 
   createId(): string {

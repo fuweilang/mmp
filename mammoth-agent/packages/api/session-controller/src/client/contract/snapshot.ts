@@ -1,5 +1,6 @@
 /** Session-owned observable state excluding Conversation target data. */
 import type { FileAttachmentRef } from '@mammoth-ai/mmp-attachment'
+import type { LibrarySourceReference } from '@mammoth-ai/mmp-attachment/types'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import type { SubagentAddress } from '@mammoth-ai/mmp-subagent/client'
 import type { RemoteFailure } from '@mammoth-ai/mmp-typert-protocol'
@@ -54,6 +55,8 @@ export interface PendingSubmission {
   readonly text: string
   /** Ordered image previews and durable file metadata matching the prompt attachments. */
   readonly attachments: readonly PendingSubmissionAttachment[]
+  /** Library identities shown while the Host resolves the selected versions. */
+  readonly libraryReferences?: readonly LibrarySourceReference[]
 }
 
 /** History-open lifecycle of a Session event window. */

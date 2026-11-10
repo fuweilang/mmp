@@ -49,6 +49,9 @@
     },
     {
       "path": "../../core/session"
+    },
+    {
+      "path": "../ui-sidebar-documentpreview/tsconfig.client.json"
     }
   ]
 }

@@ -1,0 +1,175 @@
+- button "新建任务":
+  - generic: 猛犸AI
+  - generic: 0.3.0-d5cce57-dirty
+- button "收起侧边栏":
+- button "新建任务":
+  - generic: 新任务
+  - generic: ⌥
+  - generic: ⌘
+  - generic: "N"
+- navigation "全局面板":
+  - button "插件":
+    - generic: 插件
+  - button "自动化任务":
+    - generic: 自动化任务
+  - button "资料库":
+    - generic: 资料库
+  - button "专家广场":
+    - generic: 专家广场
+  - button "更多":
+    - generic: 更多
+- generic: 工作区
+- button "搜索任务":
+- textbox "搜索任务名称"
+- button "视图选项":
+- button "添加工作区":
+- tree "任务":
+  - treeitem "默认工作区" [expanded]:
+    - generic: 默认工作区
+  - treeitem "Slogan大师文档内容介绍 49分钟":
+    - generic: Slogan大师文档内容介绍
+    - generic: 49分钟
+  - treeitem "3080验收资料口令与窗口查询 18小时":
+    - generic: 3080验收资料口令与窗口查询
+    - generic: 18小时
+- button "获取猛犸专家":
+  - generic: 获取猛犸专家
+- link "打开猛犸专家":
+  - /url: mmp-dev://open
+  - generic: 已安装？直接打开
+  - generic: ↗
+- button "账号菜单":
+  - generic: 企业管理员
+  - generic "演示企业"
+- complementary:
+  - heading "资料库" [level=2]
+  - button "新建":
+    - text: 新建
+  - button "上传文件":
+    - text: 上传文件
+  - searchbox "搜索资料": Slogan
+  - button "筛选解析状态":
+    - generic: 全部状态
+  - button "刷新"
+  - navigation "资料库分类":
+    - button "最近使用":
+      - generic: 最近使用
+    - button "我的资料" [expanded]:
+      - generic: 我的资料
+    - list "我的资料":
+      - button "展开或收起我的资料树 · 已有目录转共享验收-1109":
+      - button "已有目录转共享验收-1109":
+        - generic: 已有目录转共享验收-1109
+      - button "更多操作 · 已有目录转共享验收-1109":
+        - generic: ⋯
+      - button "展开或收起我的资料树 · 保持私有对照验收-1109":
+      - button "保持私有对照验收-1109":
+        - generic: 保持私有对照验收-1109
+      - button "更多操作 · 保持私有对照验收-1109":
+        - generic: ⋯
+      - button "展开或收起我的资料树 · 企业共享验收-1109-原工作区":
+      - button "企业共享验收-1109-原工作区":
+        - generic: 企业共享验收-1109-原工作区
+      - button "更多操作 · 企业共享验收-1109-原工作区":
+        - generic: ⋯
+      - button "展开或收起我的资料树 · 测试共享":
+      - button "测试共享":
+        - generic: 测试共享
+      - button "更多操作 · 测试共享":
+        - generic: ⋯
+      - button "共享根目录上传验收.md":
+        - generic: 共享根目录上传验收.md
+      - checkbox "选择 共享根目录上传验收.md"
+      - button "更多操作 · 共享根目录上传验收.md":
+        - generic: ⋯
+      - button "P0-桌面-辅助来源-B.md":
+        - generic: P0-桌面-辅助来源-B.md
+      - checkbox "选择 P0-桌面-辅助来源-B.md"
+      - button "更多操作 · P0-桌面-辅助来源-B.md":
+        - generic: ⋯
+      - button "P0-3080-闭环-A.md":
+        - generic: P0-3080-闭环-A.md
+      - checkbox "选择 P0-3080-闭环-A.md"
+      - button "更多操作 · P0-3080-闭环-A.md":
+        - generic: ⋯
+      - button "P0-3080-闭环-B.md":
+        - generic: P0-3080-闭环-B.md
+      - checkbox "选择 P0-3080-闭环-B.md"
+      - button "更多操作 · P0-3080-闭环-B.md":
+        - generic: ⋯
+      - button "P0-不支持编码.webm":
+        - generic: P0-不支持编码.webm
+      - checkbox "选择 P0-不支持编码.webm" [disabled]
+      - button "更多操作 · P0-不支持编码.webm":
+        - generic: ⋯
+      - button "P0-Admin-验收.md":
+        - generic: P0-Admin-验收.md
+      - checkbox "选择 P0-Admin-验收.md"
+      - button "更多操作 · P0-Admin-验收.md":
+        - generic: ⋯
+      - button "P0-图片验收-有效.png":
+        - generic: P0-图片验收-有效.png
+      - checkbox "选择 P0-图片验收-有效.png" [disabled]
+      - button "更多操作 · P0-图片验收-有效.png":
+        - generic: ⋯
+      - button "P0-长文件名验收-资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_.md":
+        - generic: P0-长文件名验收-资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_.md
+      - checkbox "选择 P0-长文件名验收-资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_.md"
+      - button "更多操作 · P0-长文件名验收-资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_资料_.md":
+        - generic: ⋯
+      - button "P0-视频验收.webm":
+        - generic: P0-视频验收.webm
+      - checkbox "选择 P0-视频验收.webm" [disabled]
+      - button "更多操作 · P0-视频验收.webm":
+        - generic: ⋯
+      - button "P0-图片验收.png":
+        - generic: P0-图片验收.png
+      - checkbox "选择 P0-图片验收.png" [disabled]
+      - button "更多操作 · P0-图片验收.png":
+        - generic: ⋯
+      - button "P0-来源验收-B.md":
+        - generic: P0-来源验收-B.md
+      - checkbox "选择 P0-来源验收-B.md"
+      - button "更多操作 · P0-来源验收-B.md":
+        - generic: ⋯
+      - button "P0-来源验收-A.md":
+        - generic: P0-来源验收-A.md
+      - checkbox "选择 P0-来源验收-A.md"
+      - button "更多操作 · P0-来源验收-A.md":
+        - generic: ⋯
+    - button "企业共享" [expanded]:
+      - generic: 企业共享
+    - button "Slogan大师.docx" [active]:
+      - generic: Slogan大师.docx
+    - checkbox "选择 Slogan大师.docx"
+    - button "更多操作 · Slogan大师.docx":
+      - generic: ⋯
+    - button "回收站":
+      - generic: 回收站
+  - navigation "根目录":
+    - generic: 保存到： 企业共享
+  - paragraph: 本地文件在明确保存之前不会进入资料库。
+- separator "调整资料库目录宽度"
+- main "查看原文":
+  - heading "Slogan大师.docx" [level=2]
+  - paragraph: v1
+  - text: 4.6KB
+  - button "更多操作 · Slogan大师.docx":
+    - generic: ⋯
+  - button "下载"
+  - button "关闭":
+  - note:
+    - strong: 缺失的字体
+    - paragraph: 本次预览无法使用以下字体，预览中的文字和排版可能与原文档不同。
+    - list:
+      - listitem: 微软雅黑
+  - img "PDF 第 1 页"
+  - generic: 猛犸战略部 · 由猛犸 AI 生成 · 1 Slogan 大师 猛犸战略部 2026 年 10 月 10 日
+  - img "PDF 第 2 页"
+  - generic: 猛犸战略部 · 由猛犸 AI 生成 · 2 Slogan 大师 用户 我们新品牌想句响亮口号，怎么起？ 猛犸 AI 新品牌起口号，最忌讳上来就"头脑风暴"—— 好 Slogan 是算出来的，不是憋出来的 。 在动笔之前，我需要先搞清楚三件事。不用长篇大论，你选一下就行： ① 品牌叫什么名字？做什么的？ 比如："瞬潮 CHRONOVA，快时尚服饰"或"某智能硬件品牌，做 XX"——一句话说清就行。 ② 目标客户是谁？ • A. 年轻人（Z 世代/学生/刚工作） • B. 家庭用户（宝妈/有娃家庭） • C. 职场人群（白领/管理者） • D. 其他（简单描述） ③ 这句口号最想达到什么效果？ • A. 让人记住"我是谁"（建立认知） • B. 让人觉得"跟别人不一样"（差异化突围） • C. 让人产生情感共鸣（建立好感） • D. 让人想马上行动（激发购买/使用） > 补充信息（不说也行，我能推断）：品牌大概在什么阶段（刚起步/已有一定用户/成熟转型）、 主要竞品有哪些、口号主要用在什么场景（包装/广告/社交媒体）。
+  - toolbar "缩放控件":
+    - button "缩小":
+    - button "选择缩放比例":
+      - generic: 100%
+    - button "放大":
+- document

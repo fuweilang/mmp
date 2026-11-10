@@ -19,7 +19,7 @@ import type { ModelSelectionProjection } from '@mammoth-ai/mmp-agent/types'
 import type { ObservableSnapshot } from '@mammoth-ai/mmp-client-store'
 import type {
   DraftAttachmentId, DraftAttachmentSerializationResult, DraftInitializationOptions, DraftInitializationResult, InputTriggerController,
-  SessionInputResolver, SessionInput, SubmitOutcome,
+  SessionInputResolver, SessionInput, SubmitOutcome, SerializedDraftPrompt,
 } from '../contract/input.ts'
 import type { ComposerKeyboard } from '../contract/draft-editor.ts'
 import type { ComposerBlocks } from '../contract/composer-blocks.ts'
@@ -46,7 +46,7 @@ interface ConversationAttachmentFace {
   readonly blocks: ComposerBlocks
   sendSession(
     session: SessionFace,
-    text: string,
+    text: SerializedDraftPrompt,
     attachmentIds: readonly DraftAttachmentId[],
     mode: InputSubmitMode,
     signal?: AbortSignal,
@@ -128,7 +128,8 @@ export class InputHub implements SessionInputResolver {
       inputTriggers: () => this.controller(actx),
       popup: () => this.popup(actx),
       inbox: session.projections.faceOf('inbox') as ObservableSnapshot<InboxState | undefined>,
-      defaultSink: (text, attachmentIds, mode, signal, accept, enterpriseKnowledge, catalogSelection) => this.sink(session, text, attachmentIds, mode, signal, accept, enterpriseKnowledge, catalogSelection),
+      defaultSink: (text, attachmentIds, mode, signal, accept, enterpriseKnowledge, catalogSelection) =>
+        this.sink(session, text, attachmentIds, mode, signal, accept, enterpriseKnowledge, catalogSelection),
       quoteRemoveLabel: () => this.t('quote.remove'),
       quoteInsertionAllowed: () => {
         const state = session.getSnapshot()
@@ -248,7 +249,7 @@ export class InputHub implements SessionInputResolver {
    */
   private async sink(
     session: SessionFace,
-    text: string,
+    text: SerializedDraftPrompt,
     attachmentIds: readonly DraftAttachmentId[],
     mode: InputSubmitMode,
     signal: AbortSignal,
@@ -256,12 +257,15 @@ export class InputHub implements SessionInputResolver {
     enterpriseKnowledge = false,
     catalogSelection?: CatalogDraftSelection,
   ): Promise<SubmitOutcome> {
-    if (text === '' && attachmentIds.length === 0) return { kind: 'success' }
+    if ((text === '' || (typeof text !== 'string' && text.length === 0)) && attachmentIds.length === 0) return { kind: 'success' }
     if (enterpriseKnowledge) {
-      const question = text.trim()
+      const question = (typeof text === 'string' ? text : text.filter(part => part.type === 'text').map(part => part.text).join('')).trim()
       if (question === '') return { kind: 'error', text: '请输入要查询企业知识库的问题' }
       try {
-        text = await enterpriseKnowledgePrompt(question, signal)
+        const knowledge = await enterpriseKnowledgePrompt(question, signal)
+        text = typeof text === 'string' ? knowledge : [
+          ...text.filter(part => part.type === 'library'), { type: 'text', text: knowledge },
+        ]
         signal.throwIfAborted()
       } catch (error) {
         return { kind: 'error', text: error instanceof Error ? error.message : '企业知识库检索失败' }

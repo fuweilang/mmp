@@ -150,6 +150,26 @@ function imageRow(id: string, refId: string, text = ''): UserMessage {
 }
 
 describe('QueueDock', () => {
+  it('shows library filenames while keeping the model excerpt out of preview and question editing', async () => {
+    const library = { source: 'library' as const, nodeId: 'n1', versionId: 'v1', name: '资料.docx' }
+    const snap = snapshotWith([{ ...row('library-row', ''), content: [
+      { type: 'text', text: 'PRIVATE_SOURCE_BODY', reference: library },
+      { type: 'text', text: '请分析这份资料' },
+    ] }])
+    const source = liveSession(snap)
+    const props = kitFor(snap)
+    const view = render(<QueueDock {...props} useSession={source.useSession} useProjection={source.useProjection} />)
+    expect(view.getByText('资料.docx')).toBeTruthy()
+    expect(view.container.textContent).not.toContain('PRIVATE_SOURCE_BODY')
+    fireEvent.click(view.getByLabelText('编辑排队消息'))
+    expect(view.getByLabelText('编辑排队消息')).toHaveProperty('value', '请分析这份资料')
+    fireEvent.change(view.getByLabelText('编辑排队消息'), { target: { value: '改为比较条款' } })
+    fireEvent.click(view.getByLabelText('保存排队消息'))
+    await waitFor(() => expect(props.updateQueue).toHaveBeenCalledWith(iid('library-row'), {
+      kind: 'edit', content: [{ type: 'text', text: '改为比较条款' }],
+    }))
+  })
+
   it('keeps the same quote preview when a queued echo hands off to Host content', () => {
     const requestId = 'quote-handoff' as SessionSnapshot['pendingSubmissions'][number]['requestId']
     const content = [{ type: 'text' as const, text: '> @literal /review' }]

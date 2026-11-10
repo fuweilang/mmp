@@ -4,8 +4,9 @@ import type { LibraryKey } from './locales.ts'
 import css from './LibraryPanel.module.css'
 
 type Row = { id: string; file: File; status: 'queued' | 'uploading' | 'success' | 'failed'; error?: string | undefined }
-export function LibraryUploadDialog({ t, accept, single, maxFileBytes, loadLimits, uploadFile, onSaved, onClose }: {
+export function LibraryUploadDialog({ t, accept, single, maxFileBytes, hint, loadLimits, uploadFile, onSaved, onClose }: {
   t: (key: LibraryKey) => string; accept: string; single: boolean; maxFileBytes?: number | undefined
+  hint?: string | undefined
   loadLimits: () => Promise<{ maxFileBytes: number; allowedExtensions: readonly string[] }>
   uploadFile: (file: File) => Promise<void>; onSaved: () => void; onClose: () => void
 }) {
@@ -41,6 +42,7 @@ export function LibraryUploadDialog({ t, accept, single, maxFileBytes, loadLimit
     finally { active.current = false; if (mounted.current) { if (saved) onSaved(); setRunning(false) } }
   }
   return <Modal headless open title={t(single ? 'replace' : 'upload')} onClose={close} className={css.uploadDialog ?? ''}>
+    {hint && <p className={css.uploadHint}>{hint}</p>}
     <header className={css.uploadHeader}><h2>{t(single ? 'replace' : 'upload')}</h2><Button aria-label={t('close')} disabled={running} onClick={close}>×</Button></header>
     <div className={css.uploadBody}>
       <div className={css.uploadDrop} onDragOver={event => { event.preventDefault() }} onDrop={event => {

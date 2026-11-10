@@ -1,0 +1,20 @@
+[
+  "packages/api/session-controller/tests/client-contract.client.spec.ts",
+  "packages/api/session-controller/tests/commands-queue-attachment.host.spec.ts",
+  "packages/api/session-controller/tests/commands-upload-file.host.spec.ts",
+  "packages/api/session-controller/tests/remote-access.host.spec.ts",
+  "packages/attachment/attachment/tests/admission.spec.ts",
+  "packages/client/ui-chat/tests/chat-apply.client.spec.tsx",
+  "packages/client/ui-chat/tests/conversation-node-definitions.client.spec.ts",
+  "packages/client/ui-chat/tests/user-content.client.spec.tsx",
+  "packages/client/ui-chat/tests/user-origin-slot.client.spec.tsx",
+  "packages/client/ui-conversation/tests/queue-dock.client.spec.tsx",
+  "packages/client/ui-conversation/tests/service-orchestration.client.spec.ts",
+  "packages/client/ui-enterprise-library/tests/apply.client.spec.ts",
+  "packages/client/ui-enterprise-library/tests/draft-send.client.spec.ts",
+  "packages/client/ui-enterprise-library/tests/panel.client.spec.tsx",
+  "packages/credentials/deepseek-account-platform/tests/ground-library.spec.ts",
+  "packages/session-query/session-log-export/tests/markdown.host.spec.ts",
+  "packages/session/session-turn-outline/tests/projection.spec.ts",
+  "packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts"
+]

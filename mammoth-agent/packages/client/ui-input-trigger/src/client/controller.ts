@@ -10,7 +10,7 @@
 import type { Context as ClientContext } from '@mammoth-ai/cordis'
 import { createSnapshotStore, type SnapshotStore } from '@mammoth-ai/mmp-client-store'
 import type {
-  ArbitrateKey, ArbitrateOutcome, CommandClaim, PickOutcome, ReferenceInsert,
+  ArbitrateKey, ArbitrateOutcome, CommandClaim, PickOutcome, ReferenceInsert, SerializedReference,
 } from '@mammoth-ai/mmp-client-ui-conversation/client'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import { detectTrigger } from '../core/detect.ts'
@@ -343,7 +343,7 @@ export class InputTriggerController {
    * @param signal - the submit attempt's abort signal.
    * @returns the model representation (e.g. `<skill>name</skill>`).
    */
-  serializeReference(source: string, ref: string, signal: AbortSignal): Promise<string> {
+  serializeReference(source: string, ref: string, signal: AbortSignal): Promise<SerializedReference> {
     const owner = this.deps.roster.all().find(s => s.name === source)
     if (owner?.codec === undefined) {
       return Promise.reject(new Error(`slash: no serializer for reference source "${source}"`))

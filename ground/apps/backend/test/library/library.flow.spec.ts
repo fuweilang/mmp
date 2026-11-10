@@ -105,7 +105,7 @@ async function upload(service: LibraryService, actor: Actor, name: string, bytes
 }
 
 describe('enterprise library', () => {
-  it('keeps one private copy, rejects cross-tenant and admin reads, and does not share on departure or move', async () => {
+  it('keeps one private copy, rejects cross-tenant and admin reads, and does not share on departure or unconfirmed move', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');
     const mate = actor('mate', 'ta');
@@ -132,7 +132,7 @@ describe('enterprise library', () => {
     assert.equal((await store.getNode(item.id))?.scope, 'PRIVATE');
     const folder = await service.createFolder(owner, '共享夹');
     await service.setScope(owner, folder.id, 'ENTERPRISE', true);
-    await service.move(owner, item.id, folder.id);
+    await assert.rejects(service.move(owner, item.id, folder.id), { code: 'CONFIRM_SHARE' });
     assert.equal((await store.getNode(item.id))?.scope, 'PRIVATE');
     assert.equal((await service.list(mate, 'shared', folder.id)).items.some((row) => row.id === item.id), false);
     const same = await upload(service, owner, '秘密.md', Buffer.from('另一份'));
@@ -154,6 +154,34 @@ describe('enterprise library', () => {
     const gone = code(await service.download(mate, item.id).catch((error: unknown) => error));
     assert.equal(gone.status, 404);
     assert.equal(gone.message.includes('制度'), false);
+  });
+
+  it('keeps preview format metadata bound to each immutable version after rename and replacement', async () => {
+    const { service, actor } = world();
+    const owner = actor('owner', 'ta');
+    const wordMime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const item = await service.upload(owner, {
+      originalName: '原始文件.docx', mimeType: wordMime,
+      bytes: zipStored('word/document.xml', Buffer.from('<w:document><w:t>原始正文</w:t></w:document>')),
+    });
+    const first = item.currentVersion!.id;
+    await service.rename(owner, item.id, '没有扩展名的展示标题');
+    const renamed = await service.preview(owner, item.id, first);
+    assert.equal(renamed.name, '没有扩展名的展示标题');
+    assert.equal(renamed.originalName, '原始文件.docx');
+    assert.equal(renamed.mimeType, wordMime);
+    const replaced = await service.replaceVersion(owner, item.id, '替换版本.pdf', 'application/pdf', textPdf('Replacement document'));
+    const second = replaced.currentVersion!.id;
+    await service.rename(owner, item.id, '误导标题.xlsx');
+    const current = await service.preview(owner, item.id, second);
+    assert.equal(current.name, '误导标题.xlsx');
+    assert.equal(current.originalName, '替换版本.pdf');
+    assert.equal(current.mimeType, 'application/pdf');
+    const historical = await service.preview(owner, item.id, first);
+    assert.equal(historical.name, '误导标题.xlsx');
+    assert.equal(historical.versionId, first);
+    assert.equal(historical.originalName, '原始文件.docx');
+    assert.equal(historical.mimeType, wordMime);
   });
 
   it('keeps version citations, blocks recycle, restores the same ids, and does not retarget after purge', async () => {
@@ -526,10 +554,12 @@ describe('t191 Console flat mine management', () => {
     for (const who of [actor('mate', 'ta'), actor('admin', 'ta', { isOrgAdmin: true }), actor('platform', 'ta', { isPlatformAdmin: true }), actor('other', 'tb')]) assert.equal((await service.list(who, 'mine', null, '', true, 1, 20)).total, 0);
   });
   it('omits hidden ancestor labels and preserves recorded MIME despite a misleading renamed title', async () => {
-    const { service, actor } = world(); const owner = actor('owner', 'ta'); const mate = actor('mate', 'ta');
+    const { service, store, actor } = world(); const owner = actor('owner', 'ta'); const mate = actor('mate', 'ta');
     const hidden = await service.createFolder(mate, '不得泄漏上级名称'); await service.setScope(mate, hidden.id, 'ENTERPRISE', true);
     const file = await service.upload(owner, { originalName: 'valid.txt', mimeType: 'text/plain', bytes: Buffer.from('isolated fixture'), parentId: hidden.id });
-    await service.rename(owner, file.id, '误导名称.png'); await service.setScope(mate, hidden.id, 'PRIVATE');
+    await service.rename(owner, file.id, '误导名称.png');
+    // Legacy mixed-visibility trees remain readable without disclosing a hidden ancestor.
+    await store.updateNode(hidden.id, { scope: 'PRIVATE' });
     const row = (await service.list(owner, 'mine', null, '', true, 1, 20)).items[0]!;
     assert.equal(row.parentHidden, true); assert.equal(row.parentName, null); assert.deepEqual(row.parentPath, []);
     assert.equal(row.currentVersion?.mimeType, 'text/plain'); assert.ok(!JSON.stringify(row).includes('不得泄漏上级名称'));

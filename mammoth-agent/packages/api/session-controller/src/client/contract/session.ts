@@ -15,6 +15,7 @@ import type { RemoteResult } from '@mammoth-ai/mmp-typert-protocol'
 import type { ObservableSnapshot } from '@mammoth-ai/mmp-client-store'
 import type { PromptContentPart, QueueAction, SessionRequestId } from '../../types.ts'
 import type { PendingSubmissionAttachment, SessionSnapshot } from './snapshot.ts'
+import type { LibrarySourceReference } from '@mammoth-ai/mmp-attachment/types'
 
 /**
  * Why a local submission echo left the snapshot: `observed` when its durable
@@ -37,6 +38,8 @@ export interface BeginSubmissionInput {
   readonly text: string
   /** Ordered image previews and durable file metadata matching the upcoming prompt attachments. */
   readonly attachments: readonly PendingSubmissionAttachment[]
+  /** Display-only library identities; Host admission replaces names with authorized source metadata. */
+  readonly libraryReferences?: readonly LibrarySourceReference[]
   /**
    * Called once when the Host accepted the prompt, in the same update that
    * publishes the echo, whether the receipt or an Inbox row showed it first.

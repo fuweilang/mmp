@@ -8,7 +8,7 @@ import { PrismaLibraryStore } from './library.prisma-store';
 import { libraryLimitsFromEnv } from './library.limits';
 import { matchingCustody } from './library.policy';
 import type { Actor, NodeRecord, CustodyRecord } from './library.types';
-import type { AdminLibraryQuery, AdminLibraryCreate, AdminLibraryCommand, AdminLibraryContext } from './library.admin.dto';
+import type { AdminLibraryQuery, AdminLibraryCreate, AdminLibraryCommand, AdminLibraryContext, AdminLibraryScopeImpactQuery } from './library.admin.dto';
 type Platform = Pick<User, 'id'|'isPlatformAdmin'>;
 type Upload = { originalname: string; mimetype: string; buffer: Buffer };
 const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
@@ -61,6 +61,16 @@ export class LibraryAdminService {
   const audit=await this.prisma.auditLog.findMany({where:{tenantId,action:'library_admin_result',meta:{path:['nodeId'],equals:nodeId}},orderBy:{createdAt:'desc'},take:30,select:{id:true,userId:true,meta:true,createdAt:true}});
   return {versions:versions.map(brief),versionCount:total,versionsTruncated:total>versions.length,audit};
  }
+ async scopeImpact(user: Platform, tenantId: string, nodeId: string, query: AdminLibraryScopeImpactQuery) {
+  this.platform(user);
+  return this.prisma.$transaction(async tx => {
+   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-tree:' + tenantId}))`;
+   await this.tenant(tx,tenantId,true);
+   for (const id of [...new Set([query.grantId,query.targetGrantId])].sort()) await this.lockGrant(tx,user,tenantId,id,true);
+   const domain = new LibraryService(new PrismaLibraryStore(tx));
+   return domain.scopeImpact({...this.actor(user,tenantId,query.grantId),targetCustodyId:query.targetGrantId},nodeId,query.scope);
+  },{maxWait:10000,timeout:60000});
+ }
  private async lockGrant(tx: Prisma.TransactionClient, user: Platform, tenantId: string, grantId: string, write=false) {
   if(typeof grantId!=='string'||!grantId)throw new LibraryError(403,'缺少有效代管授权','FORBIDDEN');
   await tx.$queryRaw`SELECT id FROM library_custody WHERE id=${grantId} FOR UPDATE`;
@@ -75,7 +85,7 @@ export class LibraryAdminService {
  private async operation(user: Platform, tenantId: string, input: AdminLibraryContext, action: string, nodeId: string|null, payload: object, work:(tx:Prisma.TransactionClient,domain:LibraryService,actor:Actor,grant:LibraryCustody)=>Promise<{nodeId:string;versionId?:string|null}>) {
   this.platform(user);await this.tenant(this.prisma,tenantId);if(input.reason.trim().length<4)throw new LibraryError(400,'请填写至少4个字的管理原因','BAD_REASON');const requestHash=hash(JSON.stringify({action,nodeId,payload}));
   try {return await this.prisma.$transaction(async tx=>{
-   await this.tenant(tx,tenantId,true);await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-admin-request:'+user.id+':'+tenantId+':'+input.requestId}))`;
+   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-tree:' + tenantId}))`;await this.tenant(tx,tenantId,true);await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-admin-request:'+user.id+':'+tenantId+':'+input.requestId}))`;
    const grantIds=[...new Set([input.grantId,...('targetGrantId' in payload&&typeof payload.targetGrantId==='string'&&payload.targetGrantId?[payload.targetGrantId]:[])])].sort();
    for(const id of grantIds)await this.lockGrant(tx,user,tenantId,id,true);
    const grant=await this.lockGrant(tx,user,tenantId,input.grantId,true);
@@ -106,8 +116,8 @@ export class LibraryAdminService {
    if(!['restore','purge'].includes(input.action)&&node.state!=='ACTIVE')throw new LibraryError(409,'资料不在使用中','BAD_STATE');
    if(['replace','recycle','purge','retry'].includes(input.action))await this.busy(tx,node);
    if(input.action==='rename')await domain.rename(actor,node.id,input.name??'');
-   else if(input.action==='move'){await this.parent(tx,user,tenantId,input.parentId,grant,node.ownerUserId);await domain.move(actor,node.id,input.parentId||null);}
-   else if(input.action==='scope') {if(!input.scope)throw new LibraryError(400,'缺少目标可见范围','BAD_SCOPE');if(input.scope!==node.scope){const targetGrant=await this.lockGrant(tx,user,tenantId,input.targetGrantId??'',true);if(!this.covers(user,{...node,scope:input.scope},targetGrant))throw new LibraryError(403,'需要目标可见范围的管理授权','FORBIDDEN');}await domain.setScope(actor,node.id,input.scope,input.confirmShare);}
+   else if(input.action==='move'){const parentGrant=input.targetGrantId?await this.lockGrant(tx,user,tenantId,input.targetGrantId,true):grant;await this.parent(tx,user,tenantId,input.parentId,parentGrant,node.ownerUserId);await domain.move({...actor,targetCustodyId:input.targetGrantId},node.id,input.parentId||null,{confirmShare:input.confirmShare,expectedTreeRevision:input.expectedTreeRevision});}
+   else if(input.action==='scope') {if(!input.scope)throw new LibraryError(400,'缺少目标可见范围','BAD_SCOPE');if(input.scope!==node.scope){const targetGrant=await this.lockGrant(tx,user,tenantId,input.targetGrantId??'',true);if(!this.covers(user,{...node,scope:input.scope},targetGrant))throw new LibraryError(403,'需要目标可见范围的管理授权','FORBIDDEN');}await domain.setScope({...actor,targetCustodyId:input.targetGrantId},node.id,input.scope,input.confirmShare,{confirmUnshare:input.confirmUnshare,expectedTreeRevision:input.expectedTreeRevision});}
    else if(input.action==='recycle')await domain.recycle(actor,node.id);
    else if(input.action==='restore'){if(node.parentId){const parent=await tx.libraryNode.findUnique({where:{id:node.parentId}});if((!parent||parent.state==='PURGED')&&input.confirmMissingParent!==true)throw new LibraryError(409,'原目录已不存在，请明确确认恢复到当前企业根目录','CONFIRM_RESTORE');}await domain.restore(actor,node.id);}
    else if(input.action==='purge'){if(input.confirmPurge!==true)throw new LibraryError(400,'请确认永久删除','CONFIRM_PURGE');if(node.kind==='FILE')throw new LibraryError(409,'无法核实任务活动使用，文件暂不开放彻底删除；可先回收','REFERENCE_UNVERIFIED');await domain.purge(actor,node.id);}

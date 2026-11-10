@@ -18,6 +18,7 @@ import { createGroundWebIdentity, GroundWebIdentityConflict, groundWebTokenClaim
 import type {} from '@mammoth-ai/mmp-client-connection'
 import { installGroundBilling } from './ground-billing.ts'
 import { installGroundLibrary } from './ground-library.ts'
+import { installGroundLibraryPrompt } from './ground-library-prompt.ts'
 import { buildAuthorizeUrl, exchangeGroundCode, fetchGroundSessionMe, fetchGroundUserinfo, groundBrowserLogoutUrl, groundOidcDoneHtml, groundOidcEndpoints, groundSessionToken, groundSessionProfile } from './ground-oidc.ts'
 
 const KEY = credentialKey('deepseek-account-platform', 'default')
@@ -196,6 +197,7 @@ export class PlatformAccount extends DeepSeekAccount {
       // Same-origin recharge proxy for the client RechargeDialog (Ground JWT stays on the Host).
       installGroundBilling(ctx, this.origin, () => this.groundSessionJwt(), token => this.rejectToken(token))
       installGroundLibrary(ctx, this.origin, () => this.groundSessionJwt(), token => this.rejectToken(token), this.requestTimeout)
+      installGroundLibraryPrompt(ctx, this.origin, () => this.groundSessionJwt(), token => this.rejectToken(token), this.requestTimeout)
       if (resolved.historySync) installGroundHistory(ctx, { origin: this.origin, account: this,
         intervalMs: resolved.historySyncIntervalMs, batchSize: resolved.historyBatchSize, requestTimeoutMs: this.requestTimeout,
         clientKind: resolved.desktopPlatform === null ? 'web' : 'desktop' })

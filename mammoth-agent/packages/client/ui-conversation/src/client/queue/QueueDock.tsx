@@ -1,6 +1,8 @@
 import type { Context } from '@mammoth-ai/cordis'
 import { useEffect, useId, useMemo, useState } from 'react'
 import type { FileAttachmentRef, ImageAttachmentRef } from '@mammoth-ai/mmp-attachment'
+import type { LibrarySourceReference } from '@mammoth-ai/mmp-attachment/types'
+import { isLibrarySourceReference } from '@mammoth-ai/mmp-llm/user-content'
 import type { PropsLocale, PropsRenderFactories, PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import {
@@ -23,7 +25,7 @@ const QUEUE_TEXT_FACTS: Readonly<Partial<UserTextFacts>> = {
 
 function textOf(content: InboxState['next-turn'][number]['content']): string | null {
   if (!content.every(block => block.type === 'text')) return null
-  return content.map(block => block.text).join('')
+  return content.filter(block => !isLibrarySourceReference(block.reference)).map(block => block.text).join('')
 }
 
 /** Queue operations injected by the session-scoped registration. */
@@ -44,12 +46,17 @@ export interface QueueDockInjected {
 function queueAttachments(content: InboxState['next-turn'][number]['content']): Array<
   | { readonly type: 'image'; readonly attachment: ImageAttachmentRef }
   | { readonly type: 'file'; readonly attachment: FileAttachmentRef }
+  | { readonly type: 'library'; readonly reference: LibrarySourceReference }
 > {
   const attachments: Array<
     | { readonly type: 'image'; readonly attachment: ImageAttachmentRef }
     | { readonly type: 'file'; readonly attachment: FileAttachmentRef }
+    | { readonly type: 'library'; readonly reference: LibrarySourceReference }
   > = []
   for (const block of content) {
+    if (block.type === 'text' && isLibrarySourceReference(block.reference)) {
+      attachments.push({ type: 'library', reference: block.reference })
+    }
     if (block.type === 'image') {
       const { attachment } = block as { attachment?: ImageAttachmentRef }
       if (attachment !== undefined) attachments.push({ type: 'image', attachment })
@@ -71,6 +78,14 @@ function QueueFile({ attachment, label }: { attachment: FileAttachmentRef; label
       <span className={css.fileSize}>{fileSizeText(attachment.bytes)}</span>
     </span>
   )
+}
+
+/** A queued library reference keeps its identity while question edits leave the saved excerpt unchanged. */
+function QueueLibrary({ reference, label }: { reference: LibrarySourceReference; label: string }) {
+  return <span className={css.file} aria-label={label} title={reference.name}>
+    <span className={css.fileIcon} aria-hidden><FileTypeIcon path={reference.name} size={16} /></span>
+    <span className={css.fileName}>{reference.name}</span>
+  </span>
 }
 
 /** One durable queued image as a fixed-size thumbnail; a load failure keeps the empty placeholder. */
@@ -218,7 +233,10 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
                                 label={t('queue.image')}
                               />
                             )
-                            : (
+                            : item.type === 'library' ? (
+                              <QueueLibrary key={`${item.reference.nodeId}:${item.reference.versionId}:${index}`}
+                                reference={item.reference} label={t('queue.file', { name: item.reference.name })} />
+                            ) : (
                               <QueueFile
                                 key={`${item.attachment.attachmentId}:${item.attachment.name}:${index}`}
                                 attachment={item.attachment}
@@ -228,7 +246,7 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
                         </span>
                       )}
                       <span className={css.preview}>{renderFactorySlot('conversation.user.text', {
-                        text: row.content.filter(block => block.type === 'text').map(block => block.text).join(''),
+                        text: row.content.flatMap(block => block.type === 'text' && !isLibrarySourceReference(block.reference) ? [block.text] : []).join(''),
                         facts: QUEUE_TEXT_FACTS,
                         interactive: false, ellipsis: true,
                       })}</span>
@@ -325,7 +343,7 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
             return (
               <li key={submission.requestId} className={`${css.row} ${css.pendingRow}`} data-submission-echo="">
                 {rowCount === 1 && <span className={css.lead} aria-hidden><IconQueueOutlineRegular /></span>}
-                {submission.attachments.length > 0 && (
+                {(submission.attachments.length > 0 || (submission.libraryReferences?.length ?? 0) > 0) && (
                   <span className={css.attachments}>
                     {submission.attachments.map((attachment, index) => attachment.type === 'image'
                       ? (
@@ -343,6 +361,8 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
                           label={t('queue.file', { name: attachment.value.name })}
                         />
                       ))}
+                    {submission.libraryReferences?.map(reference => <QueueLibrary key={`${reference.nodeId}:${reference.versionId}`}
+                      reference={reference} label={t('queue.file', { name: reference.name })} />)}
                   </span>
                 )}
                 <span className={css.preview}>{renderFactorySlot('conversation.user.text', {

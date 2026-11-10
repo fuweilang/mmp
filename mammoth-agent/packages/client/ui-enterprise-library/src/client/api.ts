@@ -162,7 +162,7 @@ export async function libraryRequest(origin: string, path: string, method: strin
   return payload
 }
 
-export type LibraryPage = { items: LibraryChoice[]; total: number; breadcrumb: { id: string; name: string }[] };
+export type LibraryPage = { items: LibraryChoice[]; total: number; breadcrumb: { id: string; name: string }[]; parentScope?: 'PRIVATE' | 'ENTERPRISE' };
 /** A single authorized page; paging is explicit so old flat pickers keep all their candidates. */
 export async function fetchLibraryPage(origin: string, view: LibraryView, q: string, fetchImpl: LibraryFetch, signal?: AbortSignal, parentId?: string | null, page = 1, status = 'all'): Promise<LibraryPage> {
   const url = libraryItemsUrl(origin, view, q, parentId) + `&page=${page}&pageSize=20&status=${encodeURIComponent(status)}`;
@@ -170,8 +170,23 @@ export async function fetchLibraryPage(origin: string, view: LibraryView, q: str
   if (!response.ok) throw await failure(response, 'library list');
   const payload: unknown = await response.json();
   const items = readLibraryItems(payload);
-  const raw = payload as { total?: unknown; breadcrumb?: { id: string; name: string }[] };
-  return { items, total: typeof raw.total === 'number' ? raw.total : items.length, breadcrumb: Array.isArray(raw.breadcrumb) ? raw.breadcrumb : [] };
+  const raw = payload as { total?: unknown; breadcrumb?: { id: string; name: string }[]; parentScope?: unknown };
+  return { items, total: typeof raw.total === 'number' ? raw.total : items.length, breadcrumb: Array.isArray(raw.breadcrumb) ? raw.breadcrumb : [], ...(raw.parentScope === 'PRIVATE' || raw.parentScope === 'ENTERPRISE' ? { parentScope: raw.parentScope } : {}) };
+}
+
+/** Read the authorized recursive count and revision before changing visibility.
+ * @param origin - account transport origin.
+ * @param id - node whose whole subtree is affected.
+ * @param scope - requested visibility.
+ * @param fetchImpl - authenticated account transport.
+ * @returns Server-confirmed count and revision; malformed responses cannot authorize a mutation.
+ */
+export async function fetchLibraryScopeImpact(origin: string, id: string, scope: 'PRIVATE' | 'ENTERPRISE', fetchImpl: LibraryFetch): Promise<{ total: number; changed: number; treeRevision: string }> {
+  const result = await libraryRequest(origin, `nodes/${encodeURIComponent(id)}/scope-impact?scope=${scope}`, 'GET', undefined, fetchImpl)
+  if (!result || typeof result !== 'object' || !('total' in result) || typeof result.total !== 'number' || !Number.isSafeInteger(result.total) || result.total < 1
+    || !('changed' in result) || typeof result.changed !== 'number' || !Number.isSafeInteger(result.changed) || result.changed < 0 || result.changed > result.total
+    || !('treeRevision' in result) || typeof result.treeRevision !== 'string' || !/^[a-f0-9]{64}$/.test(result.treeRevision)) throw new Error('Invalid library scope impact response')
+  return { total: result.total, changed: result.changed, treeRevision: result.treeRevision }
 }
 /** Fetch protected media bytes through the same account-bound Host; never mint a public URL. */
 export async function fetchLibraryMedia(origin: string, nodeId: string, versionId: string, fetchImpl: LibraryFetch, signal?: AbortSignal): Promise<Blob> {
@@ -179,4 +194,39 @@ export async function fetchLibraryMedia(origin: string, nodeId: string, versionI
   if (!response.ok) throw await failure(response, 'library media');
   if (!/^(image\/(png|jpeg|gif|webp|avif)|video\/(mp4|webm|quicktime))$/.test(response.headers.get('content-type') ?? '')) throw new Error('unsupported media response');
   return response.blob();
+}
+
+/**
+ * Read complete bytes of one authorized immutable library version for format-aware preview.
+ * @param origin - account Host origin.
+ * @param nodeId - selected file node.
+ * @param versionId - exact selected version; current-version fallback is forbidden.
+ * @param name - immutable original name of the selected version, used only to choose Office conversion.
+ * @param fetchImpl - authenticated same-origin transport.
+ * @param signal - selection lifetime; cancellation discards even a completed buffered response.
+ * @returns owned complete bytes, response MIME type, and conversion font diagnostics.
+ */
+export async function fetchLibraryPreviewBytes(
+  origin: string, nodeId: string, versionId: string, name: string, fetchImpl: LibraryFetch, signal?: AbortSignal,
+): Promise<{ bytes: Uint8Array<ArrayBuffer>; mimeType: string; missingFonts: readonly string[] }> {
+  signal?.throwIfAborted()
+  if (!versionId) throw new Error('library preview requires an exact version')
+  const extension = /\.([^.]+)$/.exec(name)?.[1]?.toLowerCase() ?? ''
+  const office = /^(doc|docx|ppt|pptx)$/.test(extension)
+  const query = new URLSearchParams({ versionId })
+  if (office) query.set('extension', extension)
+  const response = await fetchImpl(`${origin.replace(/\/$/, '')}/ground-library/nodes/${encodeURIComponent(nodeId)}/${office ? 'render' : 'download'}?${query}`, { credentials: 'include', ...(signal ? { signal } : {}) })
+  signal?.throwIfAborted()
+  if (!response.ok) throw await failure(response, 'library preview')
+  const mimeType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() || 'application/octet-stream'
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  signal?.throwIfAborted()
+  let missingFonts: readonly string[] = []
+  if (office) {
+    if (mimeType !== 'application/pdf' || new TextDecoder().decode(bytes.subarray(0, 5)) !== '%PDF-') throw new Error('Office preview did not return a PDF')
+    const fonts: unknown = JSON.parse(decodeURIComponent(response.headers.get('x-mmp-missing-fonts') ?? '[]'))
+    if (!Array.isArray(fonts) || !fonts.every((font): font is string => typeof font === 'string')) throw new Error('Office preview returned invalid missing fonts')
+    missingFonts = fonts
+  }
+  return { bytes, mimeType, missingFonts }
 }

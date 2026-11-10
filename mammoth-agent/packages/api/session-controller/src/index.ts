@@ -492,6 +492,9 @@ export class SessionController extends TypertRemoteService {
     // The caller is recorded only when it is not the owner, so owner messages keep their exact source.
     const principal = principalOf(this.ctx.invocation)
     if(principal!==undefined&&request.catalogSelection!==undefined)throw new RemoteError('gateway/bad-request','Expert/skill selection requires the owning account',{})
+    if (principal !== undefined && request.content.some(part => part.type === 'library')) {
+      throw new RemoteError('gateway/bad-request', 'Library references require the owning account', {})
+    }
     const source: MessageSource = {
       kind: 'user',
       rpcId: request.requestId,

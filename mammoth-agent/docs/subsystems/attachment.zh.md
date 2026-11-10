@@ -8,6 +8,8 @@
 
 来源：[`packages/attachment/attachment/src/types.ts`](../../packages/attachment/attachment/src/types.ts)
 
+`LibrarySourceReference` 通过 `source: library`、`nodeId`、`versionId` 和权威 `name` 标识 Host 已授权的资料版本；`versionNo` 与 `bytes` 是可选展示元数据。`TextBlock.reference` 将它与准确的模型可见摘录共同存储。浏览器提示词文本不能提供这些元数据；附件准入仅在 Host 解析后保留它。
+
 ## 标识与经过校验的元数据
 
 `AttachmentId` 是带类型标记的不透明字符串。本地后端目前生成 `sha256:<digest>`，但消费方既不能解析这种表示，也不能据此派生文件系统路径。消费方可以通过 `imageHostPath()` 询问附件提供方所持对象的位置，然后必须由当前执行文件系统判断模型工具能否读取该宿主路径。
@@ -87,7 +89,8 @@ type PromptContentPart =
  * `encodedBytes` holding the byte length of that upload.
  */
 type AttachmentAdmissionPart =
-  | PromptContentPart
+  | Exclude<PromptContentPart, { readonly type: 'text' }>
+  | { readonly type: 'text'; readonly text: string; readonly reference?: LibrarySourceReference }
   | { readonly type: 'file'; readonly attachment: FileAttachmentRef }
   | { readonly type: 'image'; readonly attachment: ImageAttachmentRef; readonly encodedBytes: number }
 ```
@@ -95,7 +98,7 @@ type AttachmentAdmissionPart =
 ```ts type-equiv
 /** Host-admitted prompt content with every attachment represented by its durable reference. */
 type AdmittedPromptContentPart =
-  | { readonly type: 'text'; readonly text: string }
+  | { readonly type: 'text'; readonly text: string; readonly reference?: LibrarySourceReference }
   | { readonly type: 'image'; readonly attachment: ImageAttachmentRef }
   | { readonly type: 'file'; readonly attachment: FileAttachmentRef }
 ```

@@ -40,10 +40,13 @@ import { apply as registerCode } from './code/index.ts'
 import { apply as registerOffice } from './office/index.ts'
 import { apply as registerExcel } from './excel/index.ts'
 import { Config } from '../config.ts'
+import { apply as registerBytes } from './bytes/index.tsx'
+import type {} from './bytes/contract.ts'
 
 // Values stay package-private unless another package needs them; the plugin
 // surface is `apply`, `inject`, and the store factory another registration may
 // share, plus the types a consumer of the seat or the store names.
+export type { BytesPreviewOwner } from './bytes/contract.ts'
 export type { SidebarDocumentPreviewKey } from './locales.ts'
 export type { TextPreviewProps } from './TextPreview.tsx'
 export type { TextInjected } from './face.ts'
@@ -129,4 +132,5 @@ export function apply(ctx: ClientContext): void {
   registerOffice(ctx, config.office)
   registerExcel(ctx, config.excel)
   registerCode(ctx)
+  registerBytes(ctx, config.excel)
 }

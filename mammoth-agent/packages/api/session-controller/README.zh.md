@@ -72,7 +72,7 @@ Fork 将 `atSeq` 选定的含边界事件前缀（包括开放轮次内的截点
 
 Client 的首次 `follow`、重连首屏与 `loadOlder()` 至少请求 50 条以 append 方式追加的 `user/message` 和 `assistant/message` 事件，并向前跨过至少两个 `turn/start`，其中包含已加载窗口开头尚未补齐的轮次。Host 在首次同时满足两个下限的轮次开头停止；若先达到 500 条计数消息或历史已耗尽，则立即返回。Steering 不增加轮次分界。区间内的其他事件随页返回，但不计入消息预算。分页和 follow 请求可选的 `turnWindow` 在 `maxMessages` 上限内指定这两个下限。`loadThrough()` 复用相同规则，仅将每页消息数下限设为 200；500 条上限不限制整次跳转。不带 `turnWindow` 的请求保留按消息对齐的分页方式。
 
-队列编辑仅允许用非空文本替换待处理内容。
+资料提示词部分仅携带节点/版本标识和仅供展示的浏览器名称。串行 `session/resolve-library-reference` 提供方在附件准入前授权每个来源；缺少提供方或来源被拒绝时，整个提示词失败。最终的 `session/validate-library-references` 检查在交付前校验所有捕获的账号凭证；缺少校验方也会拒绝提示词。接受的来源文本和权威元数据保留为独立日志块。队列编辑接受不含来源元数据的非空普通文本，替换问题，并原样保留已经准入的资料摘录块。
 
 `session.attachment` 接收 `{ sessionId, attachment: ImageAttachmentRef }`，并把完整引用交给 `AttachmentStore.readImage()`，不读取或遍历 Session 历史。Client 通过 `session.readAttachment(ref)` 传入消息中的引用。连接身份认证和 Gateway 权限检查仍然适用；`sessionId` 为该接口的权限检查指定 Session 资源。授权通过后，处理函数不检查该 Session 是否存在，也不会仅因其不存在而返回 `session/not-found`。获准调用的身份可以读取同一存储中的任意图片，包括仅被其他 Session 引用或未被任何 Session 引用的图片。响应在把 ID、媒体类型、字节数、宽度和高度与存储字节校验后，保留传入的引用。可选的 `name` 和 `originalDimensions` 作为调用方提交的显示信息原样返回，不根据文件校验。对象缺失或无效时返回明确的附件失败。Client 的历史图片缓存按 Session 和附件 ID 保留一份结果与浏览器 URL。
 
@@ -108,7 +108,7 @@ GUI 模型选择要求确切提供方／模型对出现在可用目录中；不�
 
 -----
 
-Blockquote 作为普通 prompt 文本传递，不携带 quote 元数据。本地提交回显与持久消息使用同一文本渲染规则；队列编辑替换 content，同时保留 prompt 关联信息。
+Blockquote 作为普通 prompt 文本传递，不携带 quote 元数据。本地提交回显与持久消息使用同一文本渲染规则；队列编辑替换问题，同时保留已经准入的资料摘录和 prompt 关联信息。
 
 <a id="model-experience"></a>
 ## 模型体验

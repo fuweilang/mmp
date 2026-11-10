@@ -29,6 +29,8 @@ export type ReplacementCommit = {
 };
 
 export interface LibraryStore {
+  /** Serialize directory-tree writes for one tenant and roll back every database change on failure. */
+  withTenantWrite<T>(tenantId: string, work: (store: LibraryStore) => Promise<T>): Promise<T>;
   createId(): string;
   listNodes(tenantId: string): Promise<NodeRecord[]>;
   getNode(id: string): Promise<NodeRecord | null>;
@@ -71,6 +73,25 @@ export class MemoryLibraryStore implements LibraryStore {
   readonly users = new Map<string, string>();
   readonly tenants = new Map<string, string>();
   private seq = 0;
+  private writeTail: Promise<void> = Promise.resolve();
+
+  async withTenantWrite<T>(_tenantId: string, work: (store: LibraryStore) => Promise<T>): Promise<T> {
+    const previous = this.writeTail;
+    let release!: () => void;
+    this.writeTail = new Promise<void>(resolve => { release = resolve; });
+    await previous;
+    const snapshot = this.snapshot();
+    const auditLength = this.audits.length;
+    try {
+      return await work(this);
+    } catch (error) {
+      this.restore(snapshot);
+      this.audits.length = auditLength;
+      throw error;
+    } finally {
+      release();
+    }
+  }
   /** 每个版本 replaceChunks 的调用次数，用来确认重试不是追加。 */
   readonly chunkWrites: number[] = [];
 
@@ -157,9 +178,9 @@ export class MemoryLibraryStore implements LibraryStore {
 
   private snapshot() {
     return {
-      nodes: new Map(this.nodes),
-      versions: new Map(this.versions),
-      chunks: new Map(this.chunks),
+      nodes: structuredClone(this.nodes),
+      versions: structuredClone(this.versions),
+      chunks: structuredClone(this.chunks),
     };
   }
 

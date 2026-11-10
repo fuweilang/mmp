@@ -14,6 +14,7 @@ Preview files in the right Sidebar and choose among registered renderers. Markdo
 ## Table of Contents
 
 - [What it registers](#what-it-registers)
+- [Standalone byte preview](#standalone-byte-preview)
 - [Addresses](#addresses)
 - [How it reads](#how-it-reads)
 - [Excel preview](#excel-preview)
@@ -37,6 +38,15 @@ Image drag actions arrive through the image entry’s inject face from [ui-file-
 Document implementations register metadata with `ctx.documentPreviews.register({ id, extensions, binaryExtensions?, priority, title, loading, wrap?, sourceLines? })` and a body under the same `id` in the keyed, Session-scoped `sidebar.right.tab.document` child slot. `binaryExtensions` lists suffixes in `extensions` that cannot be read as text and omit the plain-text option. `sourceLines` declares that a `text-pages` body exposes source-line anchors for [navigation](#navigation). Own both registrations with effects and wait for the child slot through `ctx.slots.inject`. Bodies receive `resourceAddress`, `content`, `wrap`, `scrollportRef`, `addResource`, `setResources`, and the standard `useTabInfo`/`useResource` hooks. Dependency membership belongs to a tab-owned `ResourceGroup`; replacing dependencies always retains the root Resource. An inner scrolling element attaches `scrollportRef`; unmounting restores the shared body as scroll owner. The registry retains all matching alternatives: `extension` (the default) ranks above `builtin`, then longer suffixes rank first, then registration order. The dropdown preserves a selected implementation while it remains available. HTML, SVG, and unmatched extensions retain the plain-text fallback independently of loading mode.
 
 `loading: 'text-pages'` and `'bytes-complete'` use the shared file reader. With `'renderer'`, the selected body mounts before any bytes are read and receives `content: { kind: 'renderer', revision, loaded, failed, reload }`. Its injected face owns content loading, errors, store updates, and cancellation. `loaded(version)` records the displayed source version and ends loading. `failed()` ends loading without recording a successful version, allowing a later file change to retry; reports from replaced revisions are ignored. `reload()` increments the revision, which the body observes to cancel and replace its request. The body also cancels on unmount and tab closure, retains settled content in its declared tab store, and releases that state when the tab ends. [Office previews](#office-preview) use this mode without putting converted bytes or font metadata in the shared file store.
+
+<a id="standalone-byte-preview"></a>
+## Standalone byte preview
+
+The root-scoped `document.preview.bytes` Factory renders already-authorized complete bytes without a Session, tab, or resource address. Consumers type-import this package’s `/client` entry to obtain the Factory declaration, then call `renderFactorySlot('document.preview.bytes', { name, bytes, mimeType, missingFonts? })`. `bytes` is a borrowed read-only `Uint8Array<ArrayBuffer>`; owners retain authorization, version selection, loading/error state, and download actions. Do not persist these buffers in layout or Session JSON. Library PDF/Office byte previews use white, edge-to-edge pages that fill the available width without outer paper padding, page gaps or shadows. Missing-font metadata is retained but does not add a banner in this Factory; tab-specific Office font controls are unchanged.
+
+The Factory renders Markdown structure, UTF-8 text and highlighted source, selectable PDF pages through the existing PDF reader, read-only XLSX/XLS/CSV/TSV through the existing spreadsheet engine and configured parser limits, zoomable images, and browser-supported audio/video. PDF response MIME takes precedence over the original filename, so authorized Word/PowerPoint conversions keep their original names while displaying PDF pages. Missing conversion fonts appear as a visible notice. Unknown binary formats, invalid UTF-8/NUL text, and unsupported media report an explanation instead of decoding binary content as text; HTML uses the existing script-free basic renderer inside a sandboxed frame with network restrictions.
+
+The lightweight Factory and its image/HTML chrome remain in the main client bundle. Standalone and Sidebar PDF/spreadsheet bodies defer the same engine chunks; no client chunk synchronously requires a sibling chunk. Replacing bytes or unmounting releases object URLs, parser workers, PDF workers, and page render tasks. PDF view state is local to the mounted occurrence; the existing Sidebar wrapper retains its tab-owned viewing preferences. Markdown relative images have no Library authorization resolver and are not treated as workspace paths.
 
 <a id="addresses"></a>
 ## Addresses

@@ -6,6 +6,8 @@ it('allows explicit library paths, never admin, traversal or arbitrary upstream 
  expect(libraryProxyTarget('POST', '/ground-library/files')).toBe('/api/library/files')
  expect(libraryProxyTarget('POST', '/ground-library/used')).toBe('/api/library/used')
  expect(libraryProxyTarget('GET', '/ground-library/used')).toBeUndefined()
+ expect(libraryProxyTarget('GET', '/ground-library/nodes/abc/scope-impact?scope=ENTERPRISE')).toBe('/api/library/nodes/abc/scope-impact?scope=ENTERPRISE')
+ expect(libraryProxyTarget('POST', '/ground-library/nodes/abc/scope-impact')).toBeUndefined()
  expect(libraryProxyTarget('GET', '/ground-library/nodes/abc/download?versionId=v&inline=1')).toBe('/api/library/nodes/abc/download?versionId=v&inline=1')
  expect(libraryProxyTarget('GET', '/ground-library/nodes/abc/download?versionId=v')).toContain('/api/library/nodes/abc/download')
  for(const path of ['/ground-library/admin/stats', '/ground-library/../admin', '/ground-library/nodes/a%2fb/download', '/api/library/items', '//evil.test/items']) expect(libraryProxyTarget('GET', path)).toBeUndefined()

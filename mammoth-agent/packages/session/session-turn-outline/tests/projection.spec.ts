@@ -72,7 +72,7 @@ describe('turn outline projection unit', () => {
     const { ctx, session } = await harness(true)
     expect(outlineOf(ctx, session)).toEqual([])
     expect(ctx.sessionProjections.checkpoint(session).turnOutline)
-      .toEqual({ ver: 2, seq: -1, val: { turns: [], draft: '' } })
+      .toEqual({ ver: 3, seq: -1, val: { turns: [], draft: '' } })
   })
 
   it('folds each turn with its boundary seq, first prompt, and turn-end response', async () => {
@@ -116,6 +116,34 @@ describe('turn outline projection unit', () => {
     expect(entry?.prompt).toHaveLength(50)
     expect(entry?.response).toMatch(/^answer a+…$/)
     expect(entry?.response).toHaveLength(120)
+  })
+
+  it('prefers original prompt text after a large library excerpt and falls back to saved file names', async () => {
+    const { ctx, session } = await harness(true)
+    const reference = { source: 'library', nodeId: 'node-1', versionId: 'v1', name: 'Plan.md' } as const
+    session.append('turn/start', { turn: 1 })
+    session.append('user/message', createUserMessage({
+      source: { kind: 'user' },
+      content: [
+        { type: 'text', text: `PRIVATE SOURCE ${'x'.repeat(500_000)}`, reference },
+        { type: 'text', text: 'Compare this document.' },
+      ],
+    }), { surfaceOp: 'append' })
+    expect(outlineOf(ctx, session)[0]?.prompt).toBe('Compare this document.')
+    session.append('turn/start', { turn: 2 })
+    session.append('user/message', createUserMessage({
+      source: { kind: 'user' }, content: [{ type: 'text', text: 'PRIVATE SOURCE', reference }],
+    }), { surfaceOp: 'append' })
+    expect(outlineOf(ctx, session)[1]?.prompt).toBe('Plan.md')
+  })
+
+  it('discards older preview caches that can contain source excerpts', async () => {
+    const { ctx, session } = await harness(true)
+    const restored = ctx.sessionProjections.restore({
+      turnOutline: { ver: 2, seq: -1, val: { turns: [{ turn: 1, seq: 0, prompt: 'PRIVATE SOURCE', response: '' }], draft: '' } },
+    }, [], SessionLogOffset(0), session.header, session.inheritedEventCount)
+    expect(restored.snapshot.values.turnOutline).toEqual([])
+    expect(restored.checkpoint.turnOutline?.ver).toBe(3)
   })
 
   it('collapses whitespace and caps previews at their card budgets with an ellipsis', async () => {

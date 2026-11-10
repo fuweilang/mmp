@@ -66,6 +66,25 @@ test('admin full single-tenant library workflow, real authorization/DB/version/a
    assert.equal((await command(await row(file.id),'recycle')).status,201);const trash=(await request('platform',`${base}/items?state=RECYCLED`)).body.items.find(n=>n.id===file.id);const impact=await request('platform',`${base}/nodes/${file.id}/impact`);assert.equal(impact.body.referenceStatus,'UNVERIFIED');assert.equal(impact.body.canPurge,false);deny(await command(trash,'purge',{confirmPurge:true}));
    assert.equal((await command(trash,'restore')).status,201);assert.equal((await row(file.id)).currentVersion.versionNo,2);
   });
+  await t.test('platform recursive scope impact and changes require both grants for every descendant',async()=>{
+   const impact=await request('platform',`${base}/nodes/${folder.id}/scope-impact?scope=ENTERPRISE&grantId=${privateGrant}&targetGrantId=${sharedGrant}`);
+   assert.equal(impact.status,200);assert.ok(impact.body.total>=2);assert.equal(impact.body.treeRevision.length,64);
+   deny(await request('platform',`${base}/nodes/${folder.id}/scope-impact?scope=ENTERPRISE&grantId=${readGrant}&targetGrantId=${sharedGrant}`));
+   assert.equal((await command(await row(folder.id),'scope',{scope:'ENTERPRISE',confirmShare:true,targetGrantId:sharedGrant,expectedTreeRevision:impact.body.treeRevision})).status,201);
+   const child=await prisma.libraryNode.findFirst({where:{tenantId:tenant,parentId:folder.id,state:'ACTIVE'}});assert.equal(child.scope,'ENTERPRISE');
+   const revoke=await request('platform',`${base}/nodes/${folder.id}/scope-impact?scope=PRIVATE&grantId=${sharedGrant}&targetGrantId=${privateGrant}`);assert.equal(revoke.status,200);
+   deny(await command(await row(folder.id),'scope',{grantId:sharedGrant,scope:'PRIVATE',targetGrantId:privateGrant}));
+   assert.equal((await command(await row(folder.id),'scope',{grantId:sharedGrant,scope:'PRIVATE',targetGrantId:privateGrant,confirmUnshare:true,expectedTreeRevision:revoke.body.treeRevision})).status,201);
+   assert.equal((await prisma.libraryNode.findUnique({where:{id:child.id}})).scope,'PRIVATE');
+  });
+  await t.test('platform moves private trees using the explicit destination grant',async()=>{
+   const created=await request('platform',`${base}/folders`,'POST',{...context(),grantId:sharedGrant,ownerUserId:owner,scope:'ENTERPRISE',confirmShare:true,name:'共享移动目标'});assert.equal(created.status,201);
+   const destination=created.body.nodeId;
+   const impact=await request('platform',`${base}/nodes/${folder.id}/scope-impact?scope=ENTERPRISE&grantId=${privateGrant}&targetGrantId=${sharedGrant}`);assert.equal(impact.status,200);
+   deny(await command(await row(folder.id),'move',{parentId:destination,confirmShare:true}));
+   assert.equal((await command(await row(folder.id),'move',{parentId:destination,targetGrantId:sharedGrant,confirmShare:true,expectedTreeRevision:impact.body.treeRevision})).status,201);
+   const moved=await prisma.libraryNode.findUnique({where:{id:folder.id}});assert.equal(moved.parentId,destination);assert.equal(moved.scope,'ENTERPRISE');
+  });
   await t.test('legacy missing-parent restore requires explicit same-enterprise root confirmation',async()=>{
    const parent=(await request('platform',`${base}/folders`,'POST',{...context(),ownerUserId:owner,scope:'PRIVATE',name:'legacy parent fixture'})).body.nodeId;
    const child=(await request('platform',`${base}/folders`,'POST',{...context(),ownerUserId:owner,scope:'PRIVATE',parentId:parent,name:'legacy child fixture'})).body.nodeId;

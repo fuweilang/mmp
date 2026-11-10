@@ -1,0 +1,1687 @@
+diff --git a/ground/apps/backend/package.json b/ground/apps/backend/package.json
+index e4424c2b..bb6c6447 100644
+--- a/ground/apps/backend/package.json
++++ b/ground/apps/backend/package.json
+@@ -9,11 +9,11 @@
+     "prisma:generate": "prisma generate",
+     "prisma:migrate": "prisma migrate dev",
+     "prisma:seed": "tsx prisma/seed.ts",
+-    "test:library": "node --import tsx --test test/library/library.flow.spec.ts test/library/library.custody.spec.ts test/tenant/effective-permissions.unit.test.ts",
++    "test:library": "node --import tsx --test test/library/library.flow.spec.ts test/library/library.sharing.spec.ts test/library/library.custody.spec.ts test/tenant/effective-permissions.unit.test.ts",
+     "test:library:db": "node --import tsx --test test/library/library.postgres.spec.ts",
+     "postinstall": "prisma generate",
+     "test:library:custody": "node --import tsx --test test/library/library.custody.spec.ts",
+-    "test:library:http": "node --test test/library/library.http.test.cjs"
++    "test:library:http": "node --test test/library/library.http.test.cjs test/library/library.sharing.http.test.cjs test/library/library.admin.http.test.cjs"
+   },
+   "prisma": {
+     "seed": "tsx prisma/seed.ts"
+diff --git a/ground/apps/backend/src/library/library.admin.controller.ts b/ground/apps/backend/src/library/library.admin.controller.ts
+index 36d4f360..e689b2b6 100644
+--- a/ground/apps/backend/src/library/library.admin.controller.ts
++++ b/ground/apps/backend/src/library/library.admin.controller.ts
+@@ -5,7 +5,7 @@ import type { Response } from 'express';
+ import { JwtGuard } from '../auth/jwt.guard';
+ import { CurrentUser } from '../auth/current-user';
+ import { LibraryAdminService } from './library.admin.service';
+-import { AdminLibraryCommand, AdminLibraryCreate, AdminLibraryQuery } from './library.admin.dto';
++import { AdminLibraryCommand, AdminLibraryCreate, AdminLibraryQuery, AdminLibraryScopeImpactQuery } from './library.admin.dto';
+ import { libraryUploadLimit } from './library.dto';
+ import { LibraryError } from './library.errors';
+ import { HttpException } from '@nestjs/common';
+@@ -21,6 +21,7 @@ export class LibraryAdminController {
+  @Get('tenants/:tenantId/items') items(@CurrentUser() user:User,@Param('tenantId') id:string,@Query() query:AdminLibraryQuery){return this.run(()=>this.admin.items(user,id,query));}
+  @Get('tenants/:tenantId/nodes/:id') detail(@CurrentUser() user:User,@Param('tenantId') tenant:string,@Param('id') id:string){return this.run(()=>this.admin.detail(user,tenant,id));}
+  @Get('tenants/:tenantId/nodes/:id/impact') impact(@CurrentUser() user:User,@Param('tenantId') tenant:string,@Param('id') id:string){return this.run(()=>this.admin.impact(user,tenant,id));}
++ @Get('tenants/:tenantId/nodes/:id/scope-impact') scopeImpact(@CurrentUser() user:User,@Param('tenantId') tenant:string,@Param('id') id:string,@Query() query:AdminLibraryScopeImpactQuery){return this.run(()=>this.admin.scopeImpact(user,tenant,id,query));}
+  @Get('tenants/:tenantId/nodes/:id/preview') preview(@CurrentUser() user:User,@Param('tenantId') tenant:string,@Param('id') id:string,@Query('grantId') grant:string,@Query('versionId') version?:string){return this.run(()=>this.admin.content(user,tenant,id,grant,version));}
+  @Get('tenants/:tenantId/nodes/:id/download') async download(@CurrentUser() user:User,@Param('tenantId') tenant:string,@Param('id') id:string,@Query('grantId') grant:string,@Res() res:Response,@Query('versionId') version?:string,@Query('inline') inline?:string){const file=await this.run(()=>this.admin.content(user,tenant,id,grant,version,true,inline==='1'));if(!('bytes' in file))throw new BadRequestException('无文件可下载');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','private, no-store');res.setHeader('Content-Security-Policy',"default-src 'none'; sandbox");res.setHeader('Content-Type',file.contentType);res.setHeader('Content-Disposition',`${inline==='1'?'inline':'attachment'}; filename*=UTF-8''${encodeURIComponent(file.filename)}`);res.send(file.bytes);}
+  @Post('tenants/:tenantId/folders') folder(@CurrentUser() user:User,@Param('tenantId') id:string,@Body() body:AdminLibraryCreate){return this.run(()=>this.admin.create(user,id,body));}
+diff --git a/ground/apps/backend/src/library/library.admin.dto.ts b/ground/apps/backend/src/library/library.admin.dto.ts
+index a3f5fa76..b8365556 100644
+--- a/ground/apps/backend/src/library/library.admin.dto.ts
++++ b/ground/apps/backend/src/library/library.admin.dto.ts
+@@ -16,6 +16,11 @@ export class AdminLibraryContext {
+  @IsString() @MinLength(8) @MaxLength(100) requestId!: string;
+  @IsString() @MinLength(4) @MaxLength(500) reason!: string;
+ }
++export class AdminLibraryScopeImpactQuery {
++ @IsString() @MinLength(1) grantId!: string;
++ @IsString() @MinLength(1) targetGrantId!: string;
++ @IsIn(['PRIVATE','ENTERPRISE']) scope!: 'PRIVATE' | 'ENTERPRISE';
++}
+ export class AdminLibraryCreate extends AdminLibraryContext {
+  @IsString() @MinLength(1) ownerUserId!: string;
+  @IsIn(['PRIVATE','ENTERPRISE']) scope!: 'PRIVATE' | 'ENTERPRISE';
+@@ -33,6 +38,8 @@ export class AdminLibraryCommand extends AdminLibraryContext {
+  @IsOptional() @IsIn(['PRIVATE','ENTERPRISE']) scope?: 'PRIVATE' | 'ENTERPRISE';
+  @IsOptional() @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value) @IsBoolean() confirmShare?: boolean;
+  @IsOptional() @IsString() targetGrantId?: string;
++ @IsOptional() @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value) @IsBoolean() confirmUnshare?: boolean;
++ @IsOptional() @IsString() @MaxLength(64) expectedTreeRevision?: string;
+  @IsOptional() @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value) @IsBoolean() confirmPurge?: boolean;
+  @IsOptional() @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value) @IsBoolean() confirmMissingParent?: boolean;
+ }
+diff --git a/ground/apps/backend/src/library/library.admin.service.ts b/ground/apps/backend/src/library/library.admin.service.ts
+index 89e637c0..44680e72 100644
+--- a/ground/apps/backend/src/library/library.admin.service.ts
++++ b/ground/apps/backend/src/library/library.admin.service.ts
+@@ -8,7 +8,7 @@ import { PrismaLibraryStore } from './library.prisma-store';
+ import { libraryLimitsFromEnv } from './library.limits';
+ import { matchingCustody } from './library.policy';
+ import type { Actor, NodeRecord, CustodyRecord } from './library.types';
+-import type { AdminLibraryQuery, AdminLibraryCreate, AdminLibraryCommand, AdminLibraryContext } from './library.admin.dto';
++import type { AdminLibraryQuery, AdminLibraryCreate, AdminLibraryCommand, AdminLibraryContext, AdminLibraryScopeImpactQuery } from './library.admin.dto';
+ type Platform = Pick<User, 'id'|'isPlatformAdmin'>;
+ type Upload = { originalname: string; mimetype: string; buffer: Buffer };
+ const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
+@@ -61,6 +61,16 @@ export class LibraryAdminService {
+   const audit=await this.prisma.auditLog.findMany({where:{tenantId,action:'library_admin_result',meta:{path:['nodeId'],equals:nodeId}},orderBy:{createdAt:'desc'},take:30,select:{id:true,userId:true,meta:true,createdAt:true}});
+   return {versions:versions.map(brief),versionCount:total,versionsTruncated:total>versions.length,audit};
+  }
++ async scopeImpact(user: Platform, tenantId: string, nodeId: string, query: AdminLibraryScopeImpactQuery) {
++  this.platform(user);
++  return this.prisma.$transaction(async tx => {
++   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-tree:' + tenantId}))`;
++   await this.tenant(tx,tenantId,true);
++   for (const id of [...new Set([query.grantId,query.targetGrantId])].sort()) await this.lockGrant(tx,user,tenantId,id,true);
++   const domain = new LibraryService(new PrismaLibraryStore(tx));
++   return domain.scopeImpact({...this.actor(user,tenantId,query.grantId),targetCustodyId:query.targetGrantId},nodeId,query.scope);
++  },{maxWait:10000,timeout:60000});
++ }
+  private async lockGrant(tx: Prisma.TransactionClient, user: Platform, tenantId: string, grantId: string, write=false) {
+   if(typeof grantId!=='string'||!grantId)throw new LibraryError(403,'缺少有效代管授权','FORBIDDEN');
+   await tx.$queryRaw`SELECT id FROM library_custody WHERE id=${grantId} FOR UPDATE`;
+@@ -75,7 +85,7 @@ export class LibraryAdminService {
+  private async operation(user: Platform, tenantId: string, input: AdminLibraryContext, action: string, nodeId: string|null, payload: object, work:(tx:Prisma.TransactionClient,domain:LibraryService,actor:Actor,grant:LibraryCustody)=>Promise<{nodeId:string;versionId?:string|null}>) {
+   this.platform(user);await this.tenant(this.prisma,tenantId);if(input.reason.trim().length<4)throw new LibraryError(400,'请填写至少4个字的管理原因','BAD_REASON');const requestHash=hash(JSON.stringify({action,nodeId,payload}));
+   try {return await this.prisma.$transaction(async tx=>{
+-   await this.tenant(tx,tenantId,true);await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-admin-request:'+user.id+':'+tenantId+':'+input.requestId}))`;
++   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-tree:' + tenantId}))`;await this.tenant(tx,tenantId,true);await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-admin-request:'+user.id+':'+tenantId+':'+input.requestId}))`;
+    const grantIds=[...new Set([input.grantId,...('targetGrantId' in payload&&typeof payload.targetGrantId==='string'&&payload.targetGrantId?[payload.targetGrantId]:[])])].sort();
+    for(const id of grantIds)await this.lockGrant(tx,user,tenantId,id,true);
+    const grant=await this.lockGrant(tx,user,tenantId,input.grantId,true);
+@@ -106,8 +116,8 @@ export class LibraryAdminService {
+    if(!['restore','purge'].includes(input.action)&&node.state!=='ACTIVE')throw new LibraryError(409,'资料不在使用中','BAD_STATE');
+    if(['replace','recycle','purge','retry'].includes(input.action))await this.busy(tx,node);
+    if(input.action==='rename')await domain.rename(actor,node.id,input.name??'');
+-   else if(input.action==='move'){await this.parent(tx,user,tenantId,input.parentId,grant,node.ownerUserId);await domain.move(actor,node.id,input.parentId||null);}
+-   else if(input.action==='scope') {if(!input.scope)throw new LibraryError(400,'缺少目标可见范围','BAD_SCOPE');if(input.scope!==node.scope){const targetGrant=await this.lockGrant(tx,user,tenantId,input.targetGrantId??'',true);if(!this.covers(user,{...node,scope:input.scope},targetGrant))throw new LibraryError(403,'需要目标可见范围的管理授权','FORBIDDEN');}await domain.setScope(actor,node.id,input.scope,input.confirmShare);}
++   else if(input.action==='move'){const parentGrant=input.targetGrantId?await this.lockGrant(tx,user,tenantId,input.targetGrantId,true):grant;await this.parent(tx,user,tenantId,input.parentId,parentGrant,node.ownerUserId);await domain.move({...actor,targetCustodyId:input.targetGrantId},node.id,input.parentId||null,{confirmShare:input.confirmShare,expectedTreeRevision:input.expectedTreeRevision});}
++   else if(input.action==='scope') {if(!input.scope)throw new LibraryError(400,'缺少目标可见范围','BAD_SCOPE');if(input.scope!==node.scope){const targetGrant=await this.lockGrant(tx,user,tenantId,input.targetGrantId??'',true);if(!this.covers(user,{...node,scope:input.scope},targetGrant))throw new LibraryError(403,'需要目标可见范围的管理授权','FORBIDDEN');}await domain.setScope({...actor,targetCustodyId:input.targetGrantId},node.id,input.scope,input.confirmShare,{confirmUnshare:input.confirmUnshare,expectedTreeRevision:input.expectedTreeRevision});}
+    else if(input.action==='recycle')await domain.recycle(actor,node.id);
+    else if(input.action==='restore'){if(node.parentId){const parent=await tx.libraryNode.findUnique({where:{id:node.parentId}});if((!parent||parent.state==='PURGED')&&input.confirmMissingParent!==true)throw new LibraryError(409,'原目录已不存在，请明确确认恢复到当前企业根目录','CONFIRM_RESTORE');}await domain.restore(actor,node.id);}
+    else if(input.action==='purge'){if(input.confirmPurge!==true)throw new LibraryError(400,'请确认永久删除','CONFIRM_PURGE');if(node.kind==='FILE')throw new LibraryError(409,'无法核实任务活动使用，文件暂不开放彻底删除；可先回收','REFERENCE_UNVERIFIED');await domain.purge(actor,node.id);}
+diff --git a/ground/apps/backend/src/library/library.controller.ts b/ground/apps/backend/src/library/library.controller.ts
+index 947915db..07add4be 100644
+--- a/ground/apps/backend/src/library/library.controller.ts
++++ b/ground/apps/backend/src/library/library.controller.ts
+@@ -36,6 +36,8 @@ import {
+   OpenCitationDto,
+   RenameNodeDto,
+   ScopeNodeDto,
++  ScopeImpactQuery,
++  UploadFilesDto,
+ } from './library.dto';
+ import { LibraryError } from './library.errors';
+ import { LibraryService } from './library.service';
+@@ -82,7 +84,7 @@ export class LibraryController {
+     @CurrentTenantId() tenantId: string | null,
+     @Body() dto: CreateFolderDto,
+   ) {
+-    return this.run(async () => this.library.createFolder(await this.actor(user, tenantId), dto.name, dto.parentId));
++    return this.run(async () => this.library.createFolder(await this.actor(user, tenantId), dto.name, dto.parentId, dto));
+   }
+ 
+   @Post('links')
+@@ -91,7 +93,7 @@ export class LibraryController {
+     @CurrentTenantId() tenantId: string | null,
+     @Body() dto: CreateLinkDto,
+   ) {
+-    return this.run(async () => this.library.createLink(await this.actor(user, tenantId), dto.name, dto.url, dto.parentId));
++    return this.run(async () => this.library.createLink(await this.actor(user, tenantId), dto.name, dto.url, dto.parentId, dto));
+   }
+ 
+   @Post('files')
+@@ -100,7 +102,7 @@ export class LibraryController {
+     @CurrentUser() user: User,
+     @CurrentTenantId() tenantId: string | null,
+     @UploadedFiles() files: UploadFile[] | undefined,
+-    @Body('parentId') parentId?: string,
++    @Body() dto: UploadFilesDto,
+   ) {
+     const actor = await this.actor(user, tenantId);
+     const items = [];
+@@ -111,7 +113,9 @@ export class LibraryController {
+           originalName: uploadedName(file.originalname),
+           mimeType: file.mimetype,
+           bytes: file.buffer,
+-          parentId: parentId || null,
++          parentId: dto.parentId || null,
++          scope: dto.scope,
++          confirmShare: dto.confirmShare,
+         }));
+       } catch (error) {
+         failed.push({
+@@ -160,7 +164,12 @@ export class LibraryController {
+     @Param('id') id: string,
+     @Body() dto: MoveNodeDto,
+   ) {
+-    return this.run(async () => this.library.move(await this.actor(user, tenantId), id, dto.parentId));
++    return this.run(async () => this.library.move(await this.actor(user, tenantId), id, dto.parentId, dto));
++  }
++
++  @Get('nodes/:id/scope-impact')
++  async scopeImpact(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null, @Param('id') id: string, @Query() query: ScopeImpactQuery) {
++    return this.run(async () => this.library.scopeImpact(await this.actor(user, tenantId), id, query.scope));
+   }
+ 
+   @Post('nodes/:id/scope')
+@@ -170,7 +179,7 @@ export class LibraryController {
+     @Param('id') id: string,
+     @Body() dto: ScopeNodeDto,
+   ) {
+-    return this.run(async () => this.library.setScope(await this.actor(user, tenantId), id, dto.scope, dto.confirmShare));
++    return this.run(async () => this.library.setScope(await this.actor(user, tenantId), id, dto.scope, dto.confirmShare, dto));
+   }
+ 
+   @Post('nodes/:id/recycle')
+diff --git a/ground/apps/backend/src/library/library.dto.ts b/ground/apps/backend/src/library/library.dto.ts
+index a2525959..45621778 100644
+--- a/ground/apps/backend/src/library/library.dto.ts
++++ b/ground/apps/backend/src/library/library.dto.ts
+@@ -11,10 +11,27 @@ import {
+   MinLength,
+   ValidateIf,
+ } from 'class-validator';
+-import { Type } from 'class-transformer';
++import { Transform, Type } from 'class-transformer';
+ import { libraryLimitsFromEnv } from './library.limits';
+ 
+-export class CreateFolderDto {
++export class CreationScopeDto {
++  @IsOptional()
++  @IsIn(['PRIVATE', 'ENTERPRISE'])
++  scope?: 'PRIVATE' | 'ENTERPRISE';
++
++  @IsOptional()
++  @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value)
++  @IsBoolean()
++  confirmShare?: boolean;
++}
++
++export class UploadFilesDto extends CreationScopeDto {
++  @IsOptional()
++  @IsString()
++  parentId?: string;
++}
++
++export class CreateFolderDto extends UploadFilesDto {
+   @IsString()
+   @MinLength(1)
+   @MaxLength(180)
+@@ -25,7 +42,7 @@ export class CreateFolderDto {
+   parentId?: string;
+ }
+ 
+-export class CreateLinkDto {
++export class CreateLinkDto extends CreationScopeDto {
+   @IsString()
+   @MinLength(1)
+   @MaxLength(180)
+@@ -52,6 +69,9 @@ export class MoveNodeDto {
+   @ValidateIf((_obj, value) => value !== null)
+   @IsString()
+   parentId!: string | null;
++
++  @IsOptional() @IsBoolean() confirmShare?: boolean;
++  @IsOptional() @IsString() @MaxLength(64) expectedTreeRevision?: string;
+ }
+ 
+ export class ScopeNodeDto {
+@@ -61,6 +81,14 @@ export class ScopeNodeDto {
+   @IsOptional()
+   @IsBoolean()
+   confirmShare?: boolean;
++
++  @IsOptional() @IsBoolean() confirmUnshare?: boolean;
++  @IsOptional() @IsString() @MaxLength(64) expectedTreeRevision?: string;
++}
++
++export class ScopeImpactQuery {
++  @IsIn(['PRIVATE', 'ENTERPRISE'])
++  scope!: 'PRIVATE' | 'ENTERPRISE';
+ }
+ 
+ export class AskDto {
+diff --git a/ground/apps/backend/src/library/library.prisma-store.ts b/ground/apps/backend/src/library/library.prisma-store.ts
+index 5c4a38ba..a1f5dae4 100644
+--- a/ground/apps/backend/src/library/library.prisma-store.ts
++++ b/ground/apps/backend/src/library/library.prisma-store.ts
+@@ -42,7 +42,14 @@ export class PrismaLibraryStore implements LibraryStore {
+ 
+   /** Reuse the caller's Prisma transaction for platform operations; ordinary calls keep their original transaction. */
+   private transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+-    return '$transaction' in this.prisma ? this.prisma.$transaction(work) : work(this.prisma);
++    return '$transaction' in this.prisma ? this.prisma.$transaction(work, { maxWait: 10_000, timeout: 60_000 }) : work(this.prisma);
++  }
++
++  async withTenantWrite<T>(tenantId: string, work: (store: LibraryStore) => Promise<T>): Promise<T> {
++    return this.transaction(async tx => {
++      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-tree:' + tenantId}))`;
++      return work(new PrismaLibraryStore(tx));
++    });
+   }
+ 
+   createId(): string {
+diff --git a/ground/apps/backend/src/library/library.service.ts b/ground/apps/backend/src/library/library.service.ts
+index b306c7c3..bb0f545e 100644
+--- a/ground/apps/backend/src/library/library.service.ts
++++ b/ground/apps/backend/src/library/library.service.ts
+@@ -41,6 +41,11 @@ type UploadInput = {
+   confirmShare?: boolean;
+ };
+ 
++type CreationOptions = { scope?: LibraryScope; confirmShare?: boolean };
++type ScopeOptions = { confirmUnshare?: boolean; expectedTreeRevision?: string };
++type MoveOptions = { confirmShare?: boolean; expectedTreeRevision?: string };
++type ScopeImpact = { total: number; changed: number; files: number; folders: number; links: number; treeRevision: string };
++
+ /** Chat opens a version without a locator, so the excerpt keeps every stored paragraph inside the existing character budget. */
+ function joinedExcerpt(
+   chunks: { locator: string; locatorKind: string; content: string }[],
+@@ -92,8 +97,14 @@ export class LibraryService {
+     private readonly store: LibraryStore,
+     private readonly limits: LibraryLimits = libraryLimitsFromEnv(),
+     private readonly now: () => number = () => Date.now(),
++    private readonly writing = false,
+   ) {}
+ 
++  private write<T>(actor: Actor, work: (service: LibraryService) => Promise<T>): Promise<T> {
++    this.requireTenantActor(actor);
++    return this.store.withTenantWrite(actor.tenantId, store => work(new LibraryService(store, this.limits, this.now, true)));
++  }
++
+   limitsView() {
+     return {
+       maxFileBytes: this.limits.maxFileBytes,
+@@ -125,9 +136,11 @@ export class LibraryService {
+     await this.sweep(actor.tenantId);
+     const custodies = await this.custodiesFor(actor);
+     const nodes = await this.store.listNodes(actor.tenantId);
++    let parentScope: LibraryScope | null = null;
+     if (parentId) {
+       const parent = nodes.find((row) => row.id === parentId) ?? await this.store.getNode(parentId);
+       if (!parent || parent.kind !== 'FOLDER' || parent.state !== 'ACTIVE' || !canSee(actor, parent, custodies, this.now())) throw libraryNotFound();
++      parentScope = parent.scope;
+     }
+     const recent = view === 'recent' ? await this.store.listRecent(actor.userId, actor.tenantId) : [];
+     const recentAt = new Map(recent.map((row) => [row.nodeId, row.accessedAt]));
+@@ -166,19 +179,21 @@ export class LibraryService {
+       if (actor.custodyId) await this.auditCustodyRead(actor, node);
+     }
+     const breadcrumb = parentId ? await this.breadcrumb(actor, parentId, custodies) : [];
+-    return { items, breadcrumb, total, page, pageSize: pageSize ?? total };
++    return { items, breadcrumb, parentScope, total, page, pageSize: pageSize ?? total };
+   }
+ 
+-  async createFolder(actor: Actor, name: string, parentId?: string | null) {
++  async createFolder(actor: Actor, name: string, parentId?: string | null, options: CreationOptions = {}) {
+     this.requireMember(actor);
+-    return this.createOwnedFolder(actor, actor.userId, name, parentId);
++    if (!parentId) this.scopeOrThrow(options.scope, options.confirmShare);
++    return this.createOwnedFolder(actor, actor.userId, name, parentId, options.scope);
+   }
+ 
+   /** Explicitly authorized platform creation keeps the real actor separate from the target owner. */
+-  async createOwnedFolder(actor: Actor, ownerUserId: string, name: string, parentId?: string | null, scope: LibraryScope = 'PRIVATE') {
++  async createOwnedFolder(actor: Actor, ownerUserId: string, name: string, parentId?: string | null, requestedScope?: LibraryScope): Promise<LibraryItem> {
++    if (!this.writing) return this.write(actor, service => service.createOwnedFolder(actor, ownerUserId, name, parentId, requestedScope));
++    const { scope } = await this.creationTarget(actor, parentId, requestedScope);
+     await this.assertCreation(actor, ownerUserId, scope);
+     await this.sweep(actor.tenantId);
+-    if (parentId) await this.requireVisibleFolder(actor, parentId);
+     const now = this.now();
+     const node = { ...this.blankNode(actor, 'FOLDER', safeNodeName(name), parentId ?? null, now), ownerUserId, scope };
+     await this.store.insertNode(node);
+@@ -186,12 +201,15 @@ export class LibraryService {
+     return this.toItem(actor, node, await this.custodiesFor(actor), null);
+   }
+ 
+-  async createLink(actor: Actor, name: string, url: string, parentId?: string | null) {
++  async createLink(actor: Actor, name: string, url: string, parentId?: string | null, options: CreationOptions = {}): Promise<LibraryItem> {
+     this.requireMember(actor);
++    if (!this.writing) return this.write(actor, service => service.createLink(actor, name, url, parentId, options));
++    if (!parentId) this.scopeOrThrow(options.scope, options.confirmShare);
+     await this.sweep(actor.tenantId);
+-    if (parentId) await this.requireVisibleFolder(actor, parentId);
++    const { scope } = await this.creationTarget(actor, parentId, options.scope);
+     const now = this.now();
+     const node = this.blankNode(actor, 'LINK', safeNodeName(name), parentId ?? null, now);
++    node.scope = scope;
+     node.linkUrl = safeLinkUrl(url);
+     await this.store.insertNode(node);
+     await this.writeAudit(actor, 'library_link', { nodeId: node.id });
+@@ -204,10 +222,11 @@ export class LibraryService {
+   }
+ 
+   async uploadOwned(actor: Actor, ownerUserId: string, input: UploadInput) {
+-    await this.assertCreation(actor, ownerUserId, this.scopeOrThrow(input.scope, input.confirmShare));
++    if (!input.parentId) this.scopeOrThrow(input.scope, input.confirmShare);
++    const target = await this.creationTarget(actor, input.parentId, input.scope);
++    await this.assertCreation(actor, ownerUserId, target.scope);
+     await this.sweep(actor.tenantId);
+-    const scope = this.scopeOrThrow(input.scope, input.confirmShare);
+-    if (input.parentId) await this.requireVisibleFolder(actor, input.parentId);
++    const scope = target.scope;
+     const name = safeDisplayName(input.originalName);
+     const ext = assertAllowedUpload(name, input.bytes, this.limits);
+     await this.assertQuota(actor.tenantId, input.bytes.length);
+@@ -217,17 +236,24 @@ export class LibraryService {
+     const prepared = await this.prepareVersion(actor, node, name, input.mimeType || 'application/octet-stream', input.bytes, ext, 1, now);
+     node.currentVersionId = prepared.version.id;
+     try {
+-      await this.store.commitNewFile({ node, version: prepared.version, chunks: prepared.chunks, tenantQuotaBytes: this.limits.tenantQuotaBytes });
++      return await this.write(actor, async service => {
++        const current = await service.creationTarget(actor, input.parentId, input.scope);
++        if (current.scope !== scope || current.parentRevision !== target.parentRevision) {
++          throw new LibraryError(409, '目标目录已变化，请确认保存位置后重试', 'SCOPE_CONFLICT');
++        }
++        await service.assertCreation(actor, ownerUserId, scope);
++        await service.store.commitNewFile({ node, version: prepared.version, chunks: prepared.chunks, tenantQuotaBytes: this.limits.tenantQuotaBytes });
++        await service.writeAudit(actor, 'library_upload', { nodeId: node.id, versionId: prepared.version.id, scope });
++        return service.toItem(actor, node, await service.custodiesFor(actor), null);
++      });
+     } catch (error) {
+       await this.store.deleteBlob(prepared.version.storageKey);
+       throw error;
+     }
+-    await this.writeAudit(actor, 'library_upload', { nodeId: node.id, versionId: prepared.version.id, scope });
+-    return this.toItem(actor, node, await this.custodiesFor(actor), null);
+   }
+ 
+-  async replaceVersion(actor: Actor, nodeId: string, originalName: string, mimeType: string, bytes: Buffer) {
+-    const node = await this.requireManage(actor, nodeId);
++  async replaceVersion(actor: Actor, nodeId: string, originalName: string, mimeType: string, bytes: Buffer): Promise<LibraryItem> {
++    const node = { ...await this.requireManage(actor, nodeId) };
+     if (node.kind !== 'FILE' || node.state !== 'ACTIVE') throw new LibraryError(400, '只有使用中的文件可以替换版本', 'BAD_STATE');
+     const name = safeDisplayName(originalName);
+     const ext = assertAllowedUpload(name, bytes, this.limits);
+@@ -237,24 +263,30 @@ export class LibraryService {
+     const updatedAt = this.now();
+     const prepared = await this.prepareVersion(actor, node, name, mimeType || 'application/octet-stream', bytes, ext, versionNo, updatedAt);
+     try {
+-      await this.store.commitReplacement({
+-        tenantQuotaBytes: this.limits.tenantQuotaBytes,
+-        nodeId: node.id,
+-        version: prepared.version,
+-        chunks: prepared.chunks,
+-        updatedAt,
++      return await this.write(actor, async service => {
++        const current = await service.requireManage(actor, nodeId);
++        if (current.state !== 'ACTIVE' || current.currentVersionId !== node.currentVersionId
++          || current.scope !== node.scope || current.parentId !== node.parentId || current.updatedAt !== node.updatedAt) {
++          throw new LibraryError(409, '资料已变化，请刷新后重试替换', 'VERSION_CONFLICT');
++        }
++        await service.store.commitReplacement({
++          tenantQuotaBytes: this.limits.tenantQuotaBytes,
++          nodeId: node.id,
++          version: prepared.version,
++          chunks: prepared.chunks,
++          updatedAt,
++        });
++        await service.writeAudit(actor, 'library_replace', { nodeId: node.id, versionId: prepared.version.id, versionNo });
++        return service.toItem(actor, { ...current, currentVersionId: prepared.version.id, updatedAt }, await service.custodiesFor(actor), null);
+       });
+     } catch (error) {
+       await this.store.deleteBlob(prepared.version.storageKey);
+       throw error;
+     }
+-    node.currentVersionId = prepared.version.id;
+-    node.updatedAt = updatedAt;
+-    await this.writeAudit(actor, 'library_replace', { nodeId: node.id, versionId: prepared.version.id, versionNo });
+-    return this.toItem(actor, node, await this.custodiesFor(actor), null);
+   }
+ 
+-  async rename(actor: Actor, nodeId: string, name: string) {
++  async rename(actor: Actor, nodeId: string, name: string): Promise<LibraryItem> {
++    if (!this.writing) return this.write(actor, service => service.rename(actor, nodeId, name));
+     const node = await this.requireManage(actor, nodeId);
+     node.name = safeNodeName(name);
+     node.updatedAt = this.now();
+@@ -263,13 +295,28 @@ export class LibraryService {
+     return this.toItem(actor, node, await this.custodiesFor(actor), null);
+   }
+ 
+-  async move(actor: Actor, nodeId: string, parentId: string | null) {
++  async move(actor: Actor, nodeId: string, parentId: string | null, options: MoveOptions = {}): Promise<LibraryItem> {
++    if (!this.writing) return this.write(actor, service => service.move(actor, nodeId, parentId, options));
+     const node = await this.requireManage(actor, nodeId);
+     if (parentId) {
+-      const parent = await this.requireVisibleFolder(actor, parentId);
++      const destinationActor = actor.targetCustodyId ? { ...actor, custodyId: actor.targetCustodyId } : actor;
++      const parent = await this.requireVisibleFolder(destinationActor, parentId);
++      if (actor.isPlatformAdmin && !actor.activeMember
++        && matchingCustody(destinationActor, parent, await this.custodiesFor(destinationActor), this.now())?.powers !== 'CRUD') {
++        throw libraryNotFound();
++      }
+       if (parent.id === node.id || await this.isDescendant(node.id, parent.id)) {
+         throw new LibraryError(400, '不能移动到自己的子目录', 'BAD_PARENT');
+       }
++      if (parent.scope === 'ENTERPRISE') {
++        const tree = await this.scopeTree(actor, node, 'ENTERPRISE');
++        this.checkTreeRevision(tree, 'ENTERPRISE', options.expectedTreeRevision);
++        if (tree.some(row => row.scope !== 'ENTERPRISE')) {
++          if (options.confirmShare !== true) throw new LibraryError(400, '移入共享目录会共享该资料及全部子项，请确认', 'CONFIRM_SHARE');
++          await this.applyScope(tree, 'ENTERPRISE');
++          node.scope = 'ENTERPRISE';
++        }
++      }
+     }
+     const previousScope = node.scope;
+     node.parentId = parentId;
+@@ -283,20 +330,43 @@ export class LibraryService {
+     return this.toItem(actor, stored, await this.custodiesFor(actor), null);
+   }
+ 
+-  async setScope(actor: Actor, nodeId: string, scope: LibraryScope, confirmShare?: boolean) {
++  async scopeImpact(actor: Actor, nodeId: string, scope: LibraryScope): Promise<ScopeImpact> {
++    if (!this.writing) return this.write(actor, service => service.scopeImpact(actor, nodeId, scope));
++    const node = await this.requireManage(actor, nodeId);
++    const tree = await this.scopeTree(actor, node, scope);
++    return {
++      total: tree.length,
++      changed: tree.filter(row => row.scope !== scope).length,
++      files: tree.filter(row => row.kind === 'FILE').length,
++      folders: tree.filter(row => row.kind === 'FOLDER').length,
++      links: tree.filter(row => row.kind === 'LINK').length,
++      treeRevision: this.treeRevision(tree, scope),
++    };
++  }
++
++  async setScope(actor: Actor, nodeId: string, scope: LibraryScope, confirmShare?: boolean, options: ScopeOptions = {}): Promise<LibraryItem> {
++    if (!this.writing) return this.write(actor, service => service.setScope(actor, nodeId, scope, confirmShare, options));
+     const node = await this.requireManage(actor, nodeId);
+-    if (scope === node.scope) return this.toItem(actor, node, await this.custodiesFor(actor), null);
++    const tree = await this.scopeTree(actor, node, scope);
++    this.checkTreeRevision(tree, scope, options.expectedTreeRevision);
++    if (scope === 'PRIVATE' && node.parentId) {
++      const parent = await this.store.getNode(node.parentId);
++      if (parent?.scope === 'ENTERPRISE' && parent.state !== 'PURGED') throw new LibraryError(409, '共享目录内的资料不能单独改为私有，请先移出目录', 'SHARED_PARENT');
++    }
++    if (!tree.some(row => row.scope !== scope)) return this.toItem(actor, node, await this.custodiesFor(actor), null);
+     if (scope === 'ENTERPRISE' && confirmShare !== true) {
+       throw new LibraryError(400, '变为企业共享需要明确确认', 'CONFIRM_SHARE');
+     }
+-    node.scope = scope;
+-    node.updatedAt = this.now();
+-    await this.store.updateNode(node.id, { scope, updatedAt: node.updatedAt });
+-    await this.writeAudit(actor, 'library_share', { nodeId: node.id, scope });
+-    return this.toItem(actor, node, await this.custodiesFor(actor), null);
++    if (scope === 'PRIVATE' && tree.length > 1 && options.confirmUnshare !== true) {
++      throw new LibraryError(400, '取消共享会影响全部子项，请确认', 'CONFIRM_UNSHARE');
++    }
++    await this.applyScope(tree, scope);
++    await this.writeAudit(actor, 'library_share', { nodeId: node.id, scope, affectedCount: tree.length });
++    return this.toItem(actor, { ...node, scope, updatedAt: this.now() }, await this.custodiesFor(actor), null);
+   }
+ 
+-  async recycle(actor: Actor, nodeId: string) {
++  async recycle(actor: Actor, nodeId: string): Promise<{ ok: boolean }> {
++    if (!this.writing) return this.write(actor, service => service.recycle(actor, nodeId));
+     const node = await this.requireManage(actor, nodeId);
+     // 已在回收站的子项不阻止父目录回收，恢复时再按父子顺序处理。
+     await this.assertNoLiveChildren(actor.tenantId, node.id, { allowRecycled: true });
+@@ -308,7 +378,8 @@ export class LibraryService {
+     return { ok: true };
+   }
+ 
+-  async restore(actor: Actor, nodeId: string) {
++  async restore(actor: Actor, nodeId: string): Promise<LibraryItem> {
++    if (!this.writing) return this.write(actor, service => service.restore(actor, nodeId));
+     const node = await this.requireManage(actor, nodeId);
+     if (node.state !== 'RECYCLED') throw new LibraryError(400, '资料不在回收站', 'BAD_STATE');
+     if (node.parentId) {
+@@ -332,7 +403,7 @@ export class LibraryService {
+     return this.toItem(actor, node, await this.custodiesFor(actor), null);
+   }
+ 
+-  async purge(actor: Actor, nodeId: string) {
++  async purge(actor: Actor, nodeId: string): Promise<{ ok: boolean; code: 'SOURCE_GONE' }> {
+     const node = await this.requireManage(actor, nodeId);
+     if (node.state !== 'RECYCLED') {
+       throw new LibraryError(400, '请先回收到回收站再彻底删除', 'BAD_STATE');
+@@ -834,6 +905,68 @@ export class LibraryService {
+     }));
+   }
+ 
++  private async creationTarget(actor: Actor, parentId?: string | null, requestedScope?: LibraryScope) {
++    this.requireTenantActor(actor);
++    if (!parentId) return { scope: requestedScope ?? 'PRIVATE' as LibraryScope, parentRevision: null };
++    const parent = await this.requireVisibleFolder(actor, parentId);
++    if (requestedScope !== undefined && requestedScope !== parent.scope) {
++      throw new LibraryError(409, '目标目录可见范围已变化，请刷新后重试', 'SCOPE_CONFLICT');
++    }
++    return { scope: parent.scope, parentRevision: JSON.stringify([parent.id, parent.parentId, parent.scope, parent.updatedAt]) };
++  }
++
++  private async scopeTree(actor: Actor, root: NodeRecord, scope: LibraryScope): Promise<NodeRecord[]> {
++    const tree = [root];
++    if (root.kind === 'FOLDER') {
++      const children = new Map<string, NodeRecord[]>();
++      for (const node of await this.store.listNodes(actor.tenantId)) {
++        if (node.parentId && node.state !== 'PURGED') {
++          const siblings = children.get(node.parentId) ?? [];
++          siblings.push(node);
++          children.set(node.parentId, siblings);
++        }
++      }
++      const seen = new Set([root.id]);
++      for (let i = 0; i < tree.length; i++) {
++        for (const child of children.get(tree[i]!.id) ?? []) {
++          if (seen.has(child.id)) throw new LibraryError(409, '目录关系异常，请先处理目录结构', 'BAD_PARENT');
++          seen.add(child.id);
++          tree.push(child);
++        }
++      }
++    }
++    const custodies = await this.custodiesFor(actor);
++    for (const node of tree) {
++      if (node.scope === scope) continue;
++      if (!canManage(actor, node, custodies, this.now())) throw new LibraryError(403, '目录包含无权修改的资料，整次操作未执行', 'FORBIDDEN');
++      if (actor.isPlatformAdmin && !actor.activeMember) {
++        const grant = actor.targetCustodyId ? await this.store.getCustody(actor.targetCustodyId) : null;
++        const target = { ...node, scope };
++        if (!grant || matchingCustody(actor, target, [grant], this.now())?.powers !== 'CRUD') {
++          throw new LibraryError(403, '需要全部待变更资料的目标范围管理授权', 'FORBIDDEN');
++        }
++      }
++    }
++    return tree;
++  }
++
++  private treeRevision(tree: NodeRecord[], scope: LibraryScope) {
++    const rows = tree.map(row => [row.id, row.parentId, row.ownerUserId, row.scope, row.state, row.updatedAt]);
++    rows.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
++    return createHash('sha256').update(JSON.stringify([scope, rows])).digest('hex');
++  }
++
++  private checkTreeRevision(tree: NodeRecord[], scope: LibraryScope, expected?: string) {
++    if (expected && expected !== this.treeRevision(tree, scope)) throw new LibraryError(409, '目录内容已变化，请重新确认影响范围', 'TREE_CONFLICT');
++  }
++
++  private async applyScope(tree: NodeRecord[], scope: LibraryScope) {
++    const updatedAt = this.now();
++    for (const node of tree) {
++      if (node.scope !== scope) await this.store.updateNode(node.id, { scope, updatedAt });
++    }
++  }
++
+   private async assertCreation(actor: Actor, ownerUserId: string, scope: LibraryScope) {
+     if (actor.activeMember && actor.userId === ownerUserId) return;
+     if (!actor.isPlatformAdmin || !actor.custodyId) throw new LibraryError(403, '需要明确的企业代管管理授权', 'FORBIDDEN');
+diff --git a/ground/apps/backend/src/library/library.store.ts b/ground/apps/backend/src/library/library.store.ts
+index d49dea38..79361dd6 100644
+--- a/ground/apps/backend/src/library/library.store.ts
++++ b/ground/apps/backend/src/library/library.store.ts
+@@ -29,6 +29,8 @@ export type ReplacementCommit = {
+ };
+ 
+ export interface LibraryStore {
++  /** Serialize directory-tree writes for one tenant and roll back every database change on failure. */
++  withTenantWrite<T>(tenantId: string, work: (store: LibraryStore) => Promise<T>): Promise<T>;
+   createId(): string;
+   listNodes(tenantId: string): Promise<NodeRecord[]>;
+   getNode(id: string): Promise<NodeRecord | null>;
+@@ -71,6 +73,25 @@ export class MemoryLibraryStore implements LibraryStore {
+   readonly users = new Map<string, string>();
+   readonly tenants = new Map<string, string>();
+   private seq = 0;
++  private writeTail: Promise<void> = Promise.resolve();
++
++  async withTenantWrite<T>(_tenantId: string, work: (store: LibraryStore) => Promise<T>): Promise<T> {
++    const previous = this.writeTail;
++    let release!: () => void;
++    this.writeTail = new Promise<void>(resolve => { release = resolve; });
++    await previous;
++    const snapshot = this.snapshot();
++    const auditLength = this.audits.length;
++    try {
++      return await work(this);
++    } catch (error) {
++      this.restore(snapshot);
++      this.audits.length = auditLength;
++      throw error;
++    } finally {
++      release();
++    }
++  }
+   /** 每个版本 replaceChunks 的调用次数，用来确认重试不是追加。 */
+   readonly chunkWrites: number[] = [];
+ 
+@@ -157,9 +178,9 @@ export class MemoryLibraryStore implements LibraryStore {
+ 
+   private snapshot() {
+     return {
+-      nodes: new Map(this.nodes),
+-      versions: new Map(this.versions),
+-      chunks: new Map(this.chunks),
++      nodes: structuredClone(this.nodes),
++      versions: structuredClone(this.versions),
++      chunks: structuredClone(this.chunks),
+     };
+   }
+ 
+diff --git a/ground/apps/backend/src/library/library.types.ts b/ground/apps/backend/src/library/library.types.ts
+index 61725aa6..26df024c 100644
+--- a/ground/apps/backend/src/library/library.types.ts
++++ b/ground/apps/backend/src/library/library.types.ts
+@@ -18,6 +18,8 @@ export type LibraryView = 'recent' | 'mine' | 'shared' | 'trash' | 'managed';
+ export type Actor = {
+   /** Server-derived single-grant context; never accepted from request bodies. */
+   custodyId?: string;
++  /** Explicit server-validated destination grant for a platform scope change. */
++  targetCustodyId?: string;
+   userId: string;
+   /** 登录态里的当前企业。 */
+   tenantId: string;
+diff --git a/ground/apps/backend/test/library/library.admin.http.test.cjs b/ground/apps/backend/test/library/library.admin.http.test.cjs
+index 1a5ac868..efd7e4e0 100644
+--- a/ground/apps/backend/test/library/library.admin.http.test.cjs
++++ b/ground/apps/backend/test/library/library.admin.http.test.cjs
+@@ -66,6 +66,25 @@ test('admin full single-tenant library workflow, real authorization/DB/version/a
+    assert.equal((await command(await row(file.id),'recycle')).status,201);const trash=(await request('platform',`${base}/items?state=RECYCLED`)).body.items.find(n=>n.id===file.id);const impact=await request('platform',`${base}/nodes/${file.id}/impact`);assert.equal(impact.body.referenceStatus,'UNVERIFIED');assert.equal(impact.body.canPurge,false);deny(await command(trash,'purge',{confirmPurge:true}));
+    assert.equal((await command(trash,'restore')).status,201);assert.equal((await row(file.id)).currentVersion.versionNo,2);
+   });
++  await t.test('platform recursive scope impact and changes require both grants for every descendant',async()=>{
++   const impact=await request('platform',`${base}/nodes/${folder.id}/scope-impact?scope=ENTERPRISE&grantId=${privateGrant}&targetGrantId=${sharedGrant}`);
++   assert.equal(impact.status,200);assert.ok(impact.body.total>=2);assert.equal(impact.body.treeRevision.length,64);
++   deny(await request('platform',`${base}/nodes/${folder.id}/scope-impact?scope=ENTERPRISE&grantId=${readGrant}&targetGrantId=${sharedGrant}`));
++   assert.equal((await command(await row(folder.id),'scope',{scope:'ENTERPRISE',confirmShare:true,targetGrantId:sharedGrant,expectedTreeRevision:impact.body.treeRevision})).status,201);
++   const child=await prisma.libraryNode.findFirst({where:{tenantId:tenant,parentId:folder.id,state:'ACTIVE'}});assert.equal(child.scope,'ENTERPRISE');
++   const revoke=await request('platform',`${base}/nodes/${folder.id}/scope-impact?scope=PRIVATE&grantId=${sharedGrant}&targetGrantId=${privateGrant}`);assert.equal(revoke.status,200);
++   deny(await command(await row(folder.id),'scope',{grantId:sharedGrant,scope:'PRIVATE',targetGrantId:privateGrant}));
++   assert.equal((await command(await row(folder.id),'scope',{grantId:sharedGrant,scope:'PRIVATE',targetGrantId:privateGrant,confirmUnshare:true,expectedTreeRevision:revoke.body.treeRevision})).status,201);
++   assert.equal((await prisma.libraryNode.findUnique({where:{id:child.id}})).scope,'PRIVATE');
++  });
++  await t.test('platform moves private trees using the explicit destination grant',async()=>{
++   const created=await request('platform',`${base}/folders`,'POST',{...context(),grantId:sharedGrant,ownerUserId:owner,scope:'ENTERPRISE',confirmShare:true,name:'共享移动目标'});assert.equal(created.status,201);
++   const destination=created.body.nodeId;
++   const impact=await request('platform',`${base}/nodes/${folder.id}/scope-impact?scope=ENTERPRISE&grantId=${privateGrant}&targetGrantId=${sharedGrant}`);assert.equal(impact.status,200);
++   deny(await command(await row(folder.id),'move',{parentId:destination,confirmShare:true}));
++   assert.equal((await command(await row(folder.id),'move',{parentId:destination,targetGrantId:sharedGrant,confirmShare:true,expectedTreeRevision:impact.body.treeRevision})).status,201);
++   const moved=await prisma.libraryNode.findUnique({where:{id:folder.id}});assert.equal(moved.parentId,destination);assert.equal(moved.scope,'ENTERPRISE');
++  });
+   await t.test('legacy missing-parent restore requires explicit same-enterprise root confirmation',async()=>{
+    const parent=(await request('platform',`${base}/folders`,'POST',{...context(),ownerUserId:owner,scope:'PRIVATE',name:'legacy parent fixture'})).body.nodeId;
+    const child=(await request('platform',`${base}/folders`,'POST',{...context(),ownerUserId:owner,scope:'PRIVATE',parentId:parent,name:'legacy child fixture'})).body.nodeId;
+diff --git a/ground/apps/backend/test/library/library.flow.spec.ts b/ground/apps/backend/test/library/library.flow.spec.ts
+index c3ebb3ff..28c9bd56 100644
+--- a/ground/apps/backend/test/library/library.flow.spec.ts
++++ b/ground/apps/backend/test/library/library.flow.spec.ts
+@@ -105,7 +105,7 @@ async function upload(service: LibraryService, actor: Actor, name: string, bytes
+ }
+ 
+ describe('enterprise library', () => {
+-  it('keeps one private copy, rejects cross-tenant and admin reads, and does not share on departure or move', async () => {
++  it('keeps one private copy, rejects cross-tenant and admin reads, and does not share on departure or unconfirmed move', async () => {
+     const { service, store, actor } = world();
+     const owner = actor('owner', 'ta');
+     const mate = actor('mate', 'ta');
+@@ -132,7 +132,7 @@ describe('enterprise library', () => {
+     assert.equal((await store.getNode(item.id))?.scope, 'PRIVATE');
+     const folder = await service.createFolder(owner, '共享夹');
+     await service.setScope(owner, folder.id, 'ENTERPRISE', true);
+-    await service.move(owner, item.id, folder.id);
++    await assert.rejects(service.move(owner, item.id, folder.id), { code: 'CONFIRM_SHARE' });
+     assert.equal((await store.getNode(item.id))?.scope, 'PRIVATE');
+     assert.equal((await service.list(mate, 'shared', folder.id)).items.some((row) => row.id === item.id), false);
+     const same = await upload(service, owner, '秘密.md', Buffer.from('另一份'));
+@@ -526,10 +526,12 @@ describe('t191 Console flat mine management', () => {
+     for (const who of [actor('mate', 'ta'), actor('admin', 'ta', { isOrgAdmin: true }), actor('platform', 'ta', { isPlatformAdmin: true }), actor('other', 'tb')]) assert.equal((await service.list(who, 'mine', null, '', true, 1, 20)).total, 0);
+   });
+   it('omits hidden ancestor labels and preserves recorded MIME despite a misleading renamed title', async () => {
+-    const { service, actor } = world(); const owner = actor('owner', 'ta'); const mate = actor('mate', 'ta');
++    const { service, store, actor } = world(); const owner = actor('owner', 'ta'); const mate = actor('mate', 'ta');
+     const hidden = await service.createFolder(mate, '不得泄漏上级名称'); await service.setScope(mate, hidden.id, 'ENTERPRISE', true);
+     const file = await service.upload(owner, { originalName: 'valid.txt', mimeType: 'text/plain', bytes: Buffer.from('isolated fixture'), parentId: hidden.id });
+-    await service.rename(owner, file.id, '误导名称.png'); await service.setScope(mate, hidden.id, 'PRIVATE');
++    await service.rename(owner, file.id, '误导名称.png');
++    // Legacy mixed-visibility trees remain readable without disclosing a hidden ancestor.
++    await store.updateNode(hidden.id, { scope: 'PRIVATE' });
+     const row = (await service.list(owner, 'mine', null, '', true, 1, 20)).items[0]!;
+     assert.equal(row.parentHidden, true); assert.equal(row.parentName, null); assert.deepEqual(row.parentPath, []);
+     assert.equal(row.currentVersion?.mimeType, 'text/plain'); assert.ok(!JSON.stringify(row).includes('不得泄漏上级名称'));
+diff --git a/ground/apps/backend/test/library/library.postgres.spec.ts b/ground/apps/backend/test/library/library.postgres.spec.ts
+index fa613c85..ececc0a3 100644
+--- a/ground/apps/backend/test/library/library.postgres.spec.ts
++++ b/ground/apps/backend/test/library/library.postgres.spec.ts
+@@ -164,9 +164,11 @@ describe('library postgres', () => {
+     const beforeNodes = await prisma.libraryNode.count({ where: { tenantId: tenantA } });
+     const beforeVersions = await prisma.libraryVersion.count({ where: { tenantId: tenantA } });
+     const beforeFiles = (await filesUnder(libraryDir)).length;
+-    store.commitNewFile = async () => {
+-      throw new Error('forced commit failure');
+-    };
++    const write = store.withTenantWrite.bind(store);
++    store.withTenantWrite = (tenantId, work) => write(tenantId, transactionStore => {
++      transactionStore.commitNewFile = async () => { throw new Error('forced commit failure'); };
++      return work(transactionStore);
++    });
+     const service = new LibraryService(store);
+     const error = await service.upload(actor(ownerId, tenantA), {
+       originalName: 'orphan.md',
+@@ -231,6 +233,47 @@ describe('library postgres', () => {
+     assert.equal(await prisma.libraryVersion.findUnique({ where: { id: version } }), null);
+     assert.equal(await prisma.libraryChunk.count({ where: { versionId: version } }), 0);
+   });
++  it('persists shared roots, inherited uploads, recursive scope and concurrent tree writes', async () => {
++    const first = new LibraryService(new PrismaLibraryStore(prisma as never));
++    const second = new LibraryService(new PrismaLibraryStore(prisma as never));
++    const owner = actor(ownerId, tenantA);
++    const mate = actor(mateId, tenantA);
++    const root = await first.createFolder(owner, '共享根', null, { scope: 'ENTERPRISE', confirmShare: true });
++    const nested = await first.createFolder(mate, '同事目录', root.id);
++    const file = await first.upload(owner, { parentId: nested.id, originalName: 'inherited.md', mimeType: 'text/markdown', bytes: Buffer.from('真实共享内容') });
++    assert.equal(file.scope, 'ENTERPRISE');
++    assert.equal((await prisma.libraryNode.findUnique({ where: { id: nested.id } }))?.ownerUserId, mateId);
++    assert.match((await second.preview(mate, file.id)).text ?? '', /真实共享内容/);
++    const privateRoot = await first.createFolder(owner, '递归目录');
++    await Promise.all([
++      first.createFolder(owner, '并发子目录', privateRoot.id),
++      second.setScope(owner, privateRoot.id, 'ENTERPRISE', true),
++    ]);
++    const rows = await prisma.libraryNode.findMany({ where: { OR: [{ id: privateRoot.id }, { parentId: privateRoot.id }] } });
++    assert.equal(rows.length, 2);
++    assert.ok(rows.every(row => row.scope === 'ENTERPRISE'));
++  });
++
++  it('rolls back every recursive update and audit when Postgres rejects a descendant write', async () => {
++    const service = new LibraryService(new PrismaLibraryStore(prisma as never));
++    const owner = actor(ownerId, tenantA);
++    const root = await service.createFolder(owner, '回滚根');
++    const child = await service.createFolder(owner, '回滚子项', root.id);
++    const name = 'library_share_fail_' + stamp;
++    // All identifiers and UUIDs are generated by this isolated fixture, never external input.
++    await prisma.$executeRawUnsafe(`CREATE FUNCTION ${name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.id = '${child.id}' AND NEW.scope = 'ENTERPRISE' THEN RAISE EXCEPTION 'recursive sharing failure fixture'; END IF; RETURN NEW; END $$`);
++    await prisma.$executeRawUnsafe(`CREATE TRIGGER ${name} BEFORE UPDATE ON library_node FOR EACH ROW EXECUTE FUNCTION ${name}()`);
++    try {
++      await assert.rejects(service.setScope(owner, root.id, 'ENTERPRISE', true), /recursive sharing failure fixture/);
++      const rows = await prisma.libraryNode.findMany({ where: { id: { in: [root.id, child.id] } } });
++      assert.ok(rows.every(row => row.scope === 'PRIVATE'));
++      assert.equal(await prisma.auditLog.count({ where: { tenantId: tenantA, action: 'library_share', meta: { path: ['nodeId'], equals: root.id } } }), 0);
++    } finally {
++      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${name} ON library_node`);
++      await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${name}()`);
++    }
++  });
++
+   it('serializes concurrent tenant quota admissions and removes the rejected blob', async () => {
+     const aggregate = await prisma.libraryVersion.aggregate({ where: { tenantId: tenantB, node: { state: { not: 'PURGED' } } }, _sum: { sizeBytes: true } });
+     const store = new PrismaLibraryStore(prisma as never);
+diff --git a/ground/apps/frontend/src/api/library.ts b/ground/apps/frontend/src/api/library.ts
+index 07747084..d25f4091 100644
+--- a/ground/apps/frontend/src/api/library.ts
++++ b/ground/apps/frontend/src/api/library.ts
+@@ -34,6 +34,7 @@ export type LibraryItem = {
+ };
+ 
+ export type LibraryList = {
++  parentScope?: 'PRIVATE' | 'ENTERPRISE' | null;
+   items: LibraryItem[];
+   breadcrumb: { id: string; name: string }[];
+   total: number;
+@@ -91,17 +92,24 @@ export function listLibrary(view: LibraryView, parentId: string | null, q: strin
+   return http<LibraryList>(`/api/library/items?${params.toString()}`);
+ }
+ 
+-export function createLibraryFolder(name: string, parentId: string | null) {
++export type LibraryCreationScope = { scope?: 'PRIVATE' | 'ENTERPRISE'; confirmShare?: boolean };
++export type LibraryScopeImpact = { total: number; changed: number; files: number; folders: number; links: number; treeRevision: string };
++
++export function libraryScopeImpact(id: string, scope: 'PRIVATE' | 'ENTERPRISE') {
++  return http<LibraryScopeImpact>(`/api/library/nodes/${encodeURIComponent(id)}/scope-impact?scope=${scope}`);
++}
++
++export function createLibraryFolder(name: string, parentId: string | null, options: LibraryCreationScope = {}) {
+   return http<LibraryItem>('/api/library/folders', {
+     method: 'POST',
+-    body: JSON.stringify({ name, parentId: parentId ?? undefined }),
++    body: JSON.stringify({ name, parentId: parentId ?? undefined, ...options }),
+   });
+ }
+ 
+-export function createLibraryLink(name: string, url: string, parentId: string | null) {
++export function createLibraryLink(name: string, url: string, parentId: string | null, options: LibraryCreationScope = {}) {
+   return http<LibraryItem>('/api/library/links', {
+     method: 'POST',
+-    body: JSON.stringify({ name, url, parentId: parentId ?? undefined }),
++    body: JSON.stringify({ name, url, parentId: parentId ?? undefined, ...options }),
+   });
+ }
+ 
+@@ -109,17 +117,17 @@ export function renameLibrary(id: string, name: string) {
+   return http<LibraryItem>(`/api/library/nodes/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) });
+ }
+ 
+-export function moveLibrary(id: string, parentId: string | null) {
++export function moveLibrary(id: string, parentId: string | null, options: { confirmShare?: boolean; expectedTreeRevision?: string } = {}) {
+   return http<LibraryItem>(`/api/library/nodes/${id}/move`, {
+     method: 'POST',
+-    body: JSON.stringify({ parentId }),
++    body: JSON.stringify({ parentId, ...options }),
+   });
+ }
+ 
+-export function shareLibrary(id: string, scope: 'PRIVATE' | 'ENTERPRISE', confirmShare: boolean) {
++export function shareLibrary(id: string, scope: 'PRIVATE' | 'ENTERPRISE', confirmShare: boolean, options: { confirmUnshare?: boolean; expectedTreeRevision?: string } = {}) {
+   return http<LibraryItem>(`/api/library/nodes/${id}/scope`, {
+     method: 'POST',
+-    body: JSON.stringify({ scope, confirmShare }),
++    body: JSON.stringify({ scope, confirmShare, ...options }),
+   });
+ }
+ 
+@@ -200,11 +208,14 @@ export function uploadLibraryFiles(
+   files: File[],
+   parentId: string | null,
+   onProgress: (ratio: number) => void,
++  options: LibraryCreationScope = {},
+ ): Promise<UploadOutcome> {
+   return new Promise((resolve, reject) => {
+     const body = new FormData();
+     for (const file of files) body.append('files', file);
+     if (parentId) body.append('parentId', parentId);
++    if (options.scope) body.append('scope', options.scope);
++    if (options.confirmShare !== undefined) body.append('confirmShare', String(options.confirmShare));
+     const xhr = new XMLHttpRequest();
+     xhr.open('POST', apiUrl('/api/library/files'));
+     xhr.withCredentials = true;
+diff --git a/ground/apps/frontend/src/api/libraryAdmin.ts b/ground/apps/frontend/src/api/libraryAdmin.ts
+index 72be1a87..1fcfd3c0 100644
+--- a/ground/apps/frontend/src/api/libraryAdmin.ts
++++ b/ground/apps/frontend/src/api/libraryAdmin.ts
+@@ -1,5 +1,5 @@
+ import { http, apiUrl, ApiError } from './http';
+-import type { LibraryPreview, LibraryVersion } from './library';
++import type { LibraryPreview, LibraryVersion, LibraryScopeImpact } from './library';
+ export type AdminVersion=Pick<LibraryVersion,'id'|'versionNo'|'mimeType'|'sizeBytes'|'parseStatus'|'parseReason'|'originalName'|'createdAt'>&{createdByUserId:string};
+ export type AdminTenant={id:string;name:string;status:string;activeFiles:number;folderCount:number;linkCount:number;recycledCount:number;usedBytes:number;failed:number};
+ export type AdminPage<T>={items:T[];total:number;page:number;pageSize:number};
+@@ -9,7 +9,7 @@ export type AdminOptions={tenant:Pick<AdminTenant,'id'|'name'|'status'>;limits:{
+ export type AdminItem={id:string;name:string;kind:'FILE'|'FOLDER'|'LINK';scope:'PRIVATE'|'ENTERPRISE';state:'ACTIVE'|'RECYCLED';parentId:string|null;parentPath:string[];ownerUserId:string;ownerName:string|null;updatedAt:string;currentVersion:AdminVersion|null;fileType:string;readGrantId:string|null;writeGrantId:string|null;targetScopeGrantId:string|null;purgeBlockedReason:string|null};
+ export type AdminTarget={ownerUserId:string;scope:'PRIVATE'|'ENTERPRISE';parentId:string;grantId:string;reason:string;confirmShare:boolean};
+ export type AdminContext={grantId:string;requestId:string;reason:string};
+-export type AdminCommand=AdminContext&{nodeId:string;action:'rename'|'move'|'scope'|'recycle'|'restore'|'purge'|'retry'|'replace';expectedUpdatedAt:string;expectedVersionId?:string;name?:string;parentId?:string;scope?:'PRIVATE'|'ENTERPRISE';targetGrantId?:string;confirmShare?:boolean;confirmPurge?:boolean;confirmMissingParent?:boolean};
++export type AdminCommand=AdminContext&{nodeId:string;action:'rename'|'move'|'scope'|'recycle'|'restore'|'purge'|'retry'|'replace';expectedUpdatedAt:string;expectedVersionId?:string;name?:string;parentId?:string;scope?:'PRIVATE'|'ENTERPRISE';targetGrantId?:string;confirmShare?:boolean;confirmUnshare?:boolean;expectedTreeRevision?:string;confirmPurge?:boolean;confirmMissingParent?:boolean};
+ export type AdminResult={nodeId:string;versionId:string|null;replayed:boolean};
+ export type AdminDetail={versions:AdminVersion[];versionCount:number;versionsTruncated:boolean;audit:{id:string;userId:string|null;createdAt:string;meta:{operation:string;success:boolean;reason:string;code?:string;before?:unknown;after?:unknown;grantId?:string}}[]};
+ export type AdminImpact={nodeId:string;versionCount:number;bytes:number;children:number;referenceStatus:'UNVERIFIED';activeUseStatus:'UNVERIFIED';canPurge:boolean;blockedReason:string|null};
+@@ -20,6 +20,7 @@ export const adminLibraryOptions=(tenant:string)=>http<AdminOptions>(base(tenant
+ export const adminLibraryItems=(tenant:string,values:Record<string,string|number|undefined>)=>http<AdminPage<AdminItem>>(base(tenant)+'/items?'+query(values));
+ export const adminLibraryDetail=(tenant:string,id:string)=>http<AdminDetail>(base(tenant)+'/nodes/'+encodeURIComponent(id));
+ export const adminLibraryImpact=(tenant:string,id:string)=>http<AdminImpact>(base(tenant)+'/nodes/'+encodeURIComponent(id)+'/impact');
++export const adminLibraryScopeImpact=(tenant:string,item:AdminItem,scope:'PRIVATE'|'ENTERPRISE',targetGrantId=item.targetScopeGrantId)=>http<LibraryScopeImpact>(base(tenant)+'/nodes/'+encodeURIComponent(item.id)+'/scope-impact?'+query({grantId:item.writeGrantId??'',targetGrantId:targetGrantId??'',scope}));
+ export const adminLibraryPreview=(tenant:string,item:AdminItem,versionId?:string)=>http<LibraryPreview>(base(tenant)+'/nodes/'+encodeURIComponent(item.id)+'/preview?'+query({grantId:item.readGrantId??'',versionId:versionId??item.currentVersion?.id}));
+ export const adminLibraryDownload=(tenant:string,item:AdminItem,versionId?:string,inline=false)=>apiUrl(base(tenant)+'/nodes/'+encodeURIComponent(item.id)+'/download?'+query({grantId:item.readGrantId??'',versionId:versionId??item.currentVersion?.id,...(inline?{inline:'1'}:{})}));
+ export const adminLibraryFolder=(tenant:string,body:AdminTarget&{name:string;requestId:string})=>http<AdminResult>(base(tenant)+'/folders',{method:'POST',body:JSON.stringify({...body,parentId:body.parentId||undefined})});
+diff --git a/ground/apps/frontend/src/views/Library.vue b/ground/apps/frontend/src/views/Library.vue
+index c8882570..b982c3c5 100644
+--- a/ground/apps/frontend/src/views/Library.vue
++++ b/ground/apps/frontend/src/views/Library.vue
+@@ -1,7 +1,7 @@
+ <template>
+   <section class="library-page">
+     <div class="page-header">
+-      <div><h2>{{ viewLabel }}</h2><p>保存原文件与版本，资料默认私人；明确共享后才对企业成员可见。</p></div>
++      <div><h2>{{ viewLabel }}</h2><p>保存原文件与版本；企业共享中新建默认全员可见，目录内新增内容继承可见范围。</p></div>
+       <LibraryCustodyApproval />
+     </div>
+     <div class="library-shell">
+@@ -24,11 +24,11 @@
+         />
+         <el-button @click="commitKeyword()">搜索</el-button>
+         <el-button v-if="keyword" @click="keyword = ''">清除搜索</el-button>
+-        <el-dropdown trigger="click" :disabled="view === 'trash'">
+-          <el-button :disabled="view === 'trash'">新建 <ChevronDown :size="16" /></el-button>
+-          <template #dropdown><el-dropdown-menu><el-dropdown-item @click="folderOpen = true">新建文件夹</el-dropdown-item><el-dropdown-item @click="linkOpen = true">保存链接</el-dropdown-item></el-dropdown-menu></template>
++        <el-dropdown trigger="click" :disabled="view === 'trash' || loading">
++          <el-button :disabled="view === 'trash' || loading">新建 <ChevronDown :size="16" /></el-button>
++          <template #dropdown><el-dropdown-menu><el-dropdown-item @click="openCreate('folder')">新建文件夹</el-dropdown-item><el-dropdown-item @click="openCreate('link')">保存链接</el-dropdown-item></el-dropdown-menu></template>
+         </el-dropdown>
+-        <el-button type="primary" :disabled="view === 'trash'" @click="pickUpload">上传文件</el-button>
++        <el-button type="primary" :disabled="view === 'trash' || loading" @click="pickUpload">上传文件</el-button>
+       </header>
+ 
+       <p class="library-muted">支持文档、PNG/JPEG/GIF/WebP/AVIF、MP4/WebM/MOV；{{ uploadLimit ? `单文件上限 ${formatBytes(uploadLimit.maxFileBytes)}` : '上传前检查当前大小限制' }}。图片视频仅保存，不代表 AI 可读。</p>
+@@ -105,9 +105,9 @@
+     </section>
+ 
+     </div>
+-    <LibraryUploadDialog v-if="uploadOpen" :title="replaceTarget ? '替换资料版本' : '上传资料'" :multiple="!replaceTarget" :accept="accept" hint="新资料默认仅自己可见；图片视频仅保存，不代表AI可读。" :load-limits="libraryConfig" :upload-file="uploadOne" @close="uploadOpen = false" @complete="onUploadComplete" />
++    <LibraryUploadDialog v-if="uploadOpen" :title="replaceTarget ? '替换资料版本' : '上传资料'" :multiple="!replaceTarget" :accept="accept" :hint="replaceTarget ? '沿用原文件的可见范围。' : targetHint(uploadTarget)" :load-limits="libraryConfig" :upload-file="uploadOne" @close="uploadOpen = false" @complete="onUploadComplete" />
+     <el-dialog v-model="moveOpen" title="移动资料" width="420px" align-center append-to-body class="library-modal">
+-      <p>移动不改变私人或共享范围。</p>
++      <p>移入共享目录时需确认共享该资料及全部子项；移出后保留当前可见范围。</p>
+       <el-select v-model="moveParent" clearable placeholder="根目录">
+         <el-option v-for="folder in moveFolders" :key="folder.id" :label="folder.name" :value="folder.id" />
+       </el-select>
+@@ -115,7 +115,7 @@
+     </el-dialog>
+     <el-dialog v-model="folderOpen" title="新建文件夹" width="420px" align-center append-to-body class="library-modal">
+       <el-input v-model="folderName" placeholder="文件夹名称" />
+-      <p class="library-muted">新建文件夹默认私人。移动它不会改变里面资料的可见性。</p>
++      <p class="library-muted">{{ targetHint(createTarget) }}</p>
+       <template #footer>
+         <el-button @click="folderOpen = false">取消</el-button>
+         <el-button type="primary" @click="createFolder">创建</el-button>
+@@ -124,7 +124,7 @@
+     <el-dialog v-model="linkOpen" title="新建链接" width="420px" align-center append-to-body class="library-modal">
+       <el-input v-model="linkName" placeholder="名称" />
+       <el-input v-model="linkUrl" placeholder="https://" />
+-      <p class="library-muted">只保存网址，不会抓取网页，也不是匿名公开链。</p>
++      <p class="library-muted">{{ targetHint(createTarget) }} 只保存网址，不抓取网页。</p>
+       <template #footer>
+         <el-button @click="linkOpen = false">取消</el-button>
+         <el-button type="primary" @click="createLink">保存</el-button>
+@@ -161,7 +161,7 @@ import {
+ } from '@mammoth/shared';
+ import { formatBytes, formatDateTime } from '../utils/format';
+ import {
+-  libraryConfig, libraryMediaUrl,
++  libraryConfig, libraryMediaUrl, libraryScopeImpact,
+   batchLibrary,
+   createLibraryFolder,
+   createLibraryLink,
+@@ -193,6 +193,13 @@ const parentId = computed<string | null>({
+   set: value => { void router.replace({ query: { ...route.query, folder: value || undefined, parentId: undefined } }); },
+ });
+ const breadcrumb = ref<{ id: string; name: string }[]>([]);
++const parentScope = ref<'PRIVATE' | 'ENTERPRISE' | null>(null);
++type SaveTarget = { parentId: string | null; scope: 'PRIVATE' | 'ENTERPRISE'; name: string };
++const createTarget = ref<SaveTarget>({ parentId: null, scope: 'PRIVATE', name: '我的资料' });
++const uploadTarget = ref<SaveTarget>({ ...createTarget.value });
++function captureTarget(): SaveTarget { return { parentId: parentId.value, scope: parentId.value ? parentScope.value ?? (view.value === 'shared' ? 'ENTERPRISE' : 'PRIVATE') : view.value === 'shared' ? 'ENTERPRISE' : 'PRIVATE', name: breadcrumb.value.at(-1)?.name ?? (view.value === 'shared' ? '企业共享' : '我的资料') }; }
++function targetHint(target: SaveTarget) { return `保存到：${target.name}；${target.scope === 'ENTERPRISE' ? '本企业成员可见，新建或上传的内容继承此范围。' : '仅自己可见。'}`; }
++function openCreate(kind: 'folder' | 'link') { createTarget.value = captureTarget(); if (kind === 'folder') folderOpen.value = true; else linkOpen.value = true; }
+ const routeKeyword = computed(() => typeof route.query.q === 'string' ? route.query.q : '');
+ const keyword = ref(routeKeyword.value);
+ let keywordTimer: ReturnType<typeof setTimeout> | null = null;
+@@ -264,6 +271,7 @@ async function reload() {
+     items.value = data.items;
+     total.value = data.total;
+     breadcrumb.value = data.breadcrumb;
++    parentScope.value = data.parentScope ?? null;
+     listError.value = '';
+   } catch (error) {
+     if (sequence !== listSequence) return;
+@@ -277,19 +285,19 @@ function onSelect(rows: LibraryItem[]) {
+   selected.value = rows;
+ }
+ 
+-function pickUpload() { replaceTarget.value = null; uploadParent.value = parentId.value; uploadOpen.value = true; }
++function pickUpload() { replaceTarget.value = null; uploadTarget.value = captureTarget(); uploadParent.value = uploadTarget.value.parentId; uploadOpen.value = true; }
+ async function uploadOne(file: File, progress: (ratio: number) => void) {
+   if (replaceTarget.value) { await replaceLibraryFile(replaceTarget.value, file); return '新版本已保存；处理状态在列表中显示'; }
+-  const result = await uploadLibraryFiles([file], uploadParent.value, progress);
++  const result = await uploadLibraryFiles([file], uploadTarget.value.parentId, progress, { scope: uploadTarget.value.scope, confirmShare: uploadTarget.value.scope === 'ENTERPRISE' });
+   if (result.failed.length || !result.items.length) throw new Error(result.failed.map(row => row.message).join('；') || '未收到保存成功结果');
+-  return '已保存，仅自己可见；处理状态单独显示';
++  return uploadTarget.value.scope === 'ENTERPRISE' ? '已保存，本企业成员可见；处理状态单独显示' : '已保存，仅自己可见；处理状态单独显示';
+ }
+ async function onUploadComplete(successes: number) { if (successes > 0) await revealCreated(); }
+ 
+-/** 新建的私有资料在“最近使用/企业共享”里不可见，切回“我的资料”让创建结果可见。 */
++/** 创建后保留当前目录；最近使用不包含尚未打开的资料，转到我的资料。 */
+ async function revealCreated() {
+   window.dispatchEvent(new Event('mmp:library-changed'));
+-  if (view.value !== 'mine') await router.push({ path: '/console/library/mine' });
++  if (view.value === 'recent') await router.push({ path: '/console/library/mine' });
+   else if (keyword.value) { keyword.value = ''; commitKeyword(''); }
+   page.value = 1;
+   await reload();
+@@ -297,7 +305,7 @@ async function revealCreated() {
+ 
+ async function createFolder() {
+   try {
+-    await createLibraryFolder(folderName.value, parentId.value);
++    await createLibraryFolder(folderName.value, createTarget.value.parentId, { scope: createTarget.value.scope, confirmShare: createTarget.value.scope === 'ENTERPRISE' });
+     folderOpen.value = false;
+     folderName.value = '';
+     await revealCreated();
+@@ -308,7 +316,7 @@ async function createFolder() {
+ 
+ async function createLink() {
+   try {
+-    await createLibraryLink(linkName.value, linkUrl.value, parentId.value);
++    await createLibraryLink(linkName.value, linkUrl.value, createTarget.value.parentId, { scope: createTarget.value.scope, confirmShare: createTarget.value.scope === 'ENTERPRISE' });
+     linkOpen.value = false;
+     linkName.value = '';
+     linkUrl.value = '';
+@@ -337,7 +345,15 @@ async function move(row: LibraryItem) {
+ }
+ async function confirmMove() {
+   if (!moveTarget.value) return;
+-  await act(() => moveLibrary(moveTarget.value!.id, moveParent.value));
++  try {
++    const options: { confirmShare?: boolean; expectedTreeRevision?: string } = {};
++    if (moveFolders.value.find(folder => folder.id === moveParent.value)?.scope === 'ENTERPRISE') {
++      const impact = await libraryScopeImpact(moveTarget.value.id, 'ENTERPRISE');
++      if (impact.changed && !await confirmAction(`移入后该资料及全部子项会企业共享，共涉及 ${impact.total} 项。`, '确认移动并共享')) return;
++      options.confirmShare = true; options.expectedTreeRevision = impact.treeRevision;
++    }
++    await act(() => moveLibrary(moveTarget.value!.id, moveParent.value, options));
++  } catch (error) { actionError.value = error instanceof Error ? error.message : '移动失败'; return; }
+   if (!actionError.value) moveOpen.value = false;
+ }
+ 
+@@ -355,14 +371,18 @@ async function confirmAction(message: string, title: string): Promise<boolean> {
+   }
+ }
+ 
+-async function share(row: LibraryItem) {
+-  if (!await confirmAction('这会变成企业共享，本企业成员都能看到。此操作不会因为移动文件夹而自动发生。', '确认共享')) return;
+-  await act(() => shareLibrary(row.id, 'ENTERPRISE', true));
+-}
+-
+-async function unshare(row: LibraryItem) {
+-  await act(() => shareLibrary(row.id, 'PRIVATE', false));
++async function changeScope(row: LibraryItem, scope: 'PRIVATE' | 'ENTERPRISE') {
++  try {
++    const impact = await libraryScopeImpact(row.id, scope);
++    const message = scope === 'ENTERPRISE'
++      ? `该资料及全部子文件夹和文件会一起共享，本企业成员可见，共涉及 ${impact.total} 项。`
++      : `该资料及全部子文件夹和文件会改为各自所有者私有，共涉及 ${impact.total} 项。`;
++    if (!await confirmAction(message, scope === 'ENTERPRISE' ? '确认共享' : '确认取消共享')) return;
++    await act(() => shareLibrary(row.id, scope, scope === 'ENTERPRISE', { confirmUnshare: scope === 'PRIVATE', expectedTreeRevision: impact.treeRevision }));
++  } catch (error) { actionError.value = error instanceof Error ? error.message : '范围变更失败'; }
+ }
++async function share(row: LibraryItem) { await changeScope(row, 'ENTERPRISE'); }
++async function unshare(row: LibraryItem) { await changeScope(row, 'PRIVATE'); }
+ 
+ async function retry(row: LibraryItem) {
+   await act(() => retryLibraryParse(row.id));
+diff --git a/ground/apps/frontend/src/views/admin/AdminLibrary.vue b/ground/apps/frontend/src/views/admin/AdminLibrary.vue
+index 8b1b3e93..e0ed8302 100644
+--- a/ground/apps/frontend/src/views/admin/AdminLibrary.vue
++++ b/ground/apps/frontend/src/views/admin/AdminLibrary.vue
+@@ -26,7 +26,7 @@
+   </template>
+   <el-dialog v-model="folderOpen" title="新建文件夹" width="600px" align-center append-to-body class="library-modal" :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy"><p>目标企业：{{ options?.tenant.name }}</p><el-form label-position="top"><el-form-item label="文件夹名称"><el-input v-model="folderName" maxlength="180"/></el-form-item></el-form><AdminLibraryTargetForm v-if="options" v-model="target" :options="options" :disabled="busy"/><el-alert v-if="dialogError" :title="dialogError" type="error" :closable="false"/><template #footer><el-button :disabled="busy" @click="folderOpen = false">取消</el-button><el-button type="primary" :loading="busy" @click="saveFolder">创建</el-button></template></el-dialog>
+   <LibraryUploadDialog v-if="uploadOpen && options" :key="uploadKey" :title="replacement ? '替换资料新版本' : '上传企业资料'" :multiple="!replacement" :accept="options.limits.allowedExtensions.join(',')" hint="目标企业和所有者会在开始时锁定，不自动共享。" :load-limits="uploadLimits" :prepare="prepareUpload" :upload-file="uploadOne" @close="uploadOpen = false" @complete="uploaded"><template #default="{busy:locked}"><p>目标企业：{{ options.tenant.name }}</p><p v-if="replacement">{{ replacement.name }} · 所有者：{{ replacement.ownerName || replacement.ownerUserId }}。替换会创建新版本，不覆盖历史引用。</p><el-input v-if="replacement" v-model="replaceReason" :disabled="locked" maxlength="500" placeholder="管理原因，至少4个字"/><AdminLibraryTargetForm v-else v-model="target" :options="options" :disabled="locked"/></template></LibraryUploadDialog>
+-  <el-dialog v-model="operationOpen" :title="operationTitle" width="560px" align-center append-to-body class="library-modal" :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy"><p>企业：{{ options?.tenant.name }}<br/>资料：{{ operationRow?.name }}<br/>所有者：{{ operationRow?.ownerName || operationRow?.ownerUserId }}</p><el-input v-if="operation === 'rename'" v-model="operationName" aria-label="新名称" maxlength="180"/><el-select v-if="operation === 'move'" v-model="operationParent" clearable filterable placeholder="当前所有者在本企业的根目录"><el-option v-for="folder in moveFolders" :key="folder.id" :value="folder.id" :label="folder.name"/></el-select><p v-if="operation === 'scope'">{{ operationRow?.scope === 'PRIVATE' ? '变更后企业成员可见，需要目标共享范围的CRUD授权。' : '取消共享后，企业成员的后续访问和引用可能失效；不会撤回已经生成的内容。' }}</p><p v-if="operation === 'recycle'">资料进入回收站后停止后续下载和检索，可以恢复；不会抹掉已生成的对话。</p><el-checkbox v-if="operation === 'restore'" v-model="confirmMissingParent">原目录已不存在时，我确认恢复到本企业该所有者的根目录</el-checkbox><template v-if="impact"><p>影响：{{ impact.versionCount }}个版本 · {{ formatBytes(impact.bytes) }} · {{ impact.children }}个未清理子项</p><p>任务活动使用/引用影响：未核实，不能当作零引用。</p><el-alert v-if="impact.blockedReason" :title="impact.blockedReason" type="info" :closable="false"/></template><el-checkbox v-if="operation === 'purge'" v-model="confirmPurge">我确认永久删除上述资料，原版本引用会失效，不可恢复</el-checkbox><el-input v-if="operation !== 'impact'" v-model="operationReason" maxlength="500" placeholder="管理原因，至少4个字，请勿粘贴正文或密钥"/><el-alert v-if="dialogError" :title="dialogError" type="error" :closable="false"/><template #footer><el-button :disabled="busy" @click="operationOpen = false">{{ operation === 'impact' ? '关闭' : '取消' }}</el-button><el-button v-if="operation !== 'impact'" :type="operation === 'purge' || operation === 'recycle' ? 'danger' : 'primary'" :loading="busy" :disabled="operation === 'purge' && (!impact?.canPurge || !confirmPurge)" @click="saveOperation">{{ operation === 'purge' ? '永久删除' : '确认' }}</el-button></template></el-dialog>
++  <el-dialog v-model="operationOpen" :title="operationTitle" width="560px" align-center append-to-body class="library-modal" :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy"><p>企业：{{ options?.tenant.name }}<br/>资料：{{ operationRow?.name }}<br/>所有者：{{ operationRow?.ownerName || operationRow?.ownerUserId }}</p><p v-if="operation === 'scope'">此次变更包含全部子文件夹和文件，共涉及 {{ scopeImpact?.total ?? '加载中' }} 项；任一子项授权不足时整次不执行。</p><el-input v-if="operation === 'rename'" v-model="operationName" aria-label="新名称" maxlength="180"/><el-select v-if="operation === 'move'" v-model="operationParent" clearable filterable placeholder="当前所有者在本企业的根目录"><el-option v-for="folder in moveFolders" :key="folder.id" :value="folder.id" :label="folder.name"/></el-select><p v-if="operation === 'scope'">{{ operationRow?.scope === 'PRIVATE' ? '变更后企业成员可见，需要目标共享范围的CRUD授权。' : '取消共享后，企业成员的后续访问和引用可能失效；不会撤回已经生成的内容。' }}</p><p v-if="operation === 'recycle'">资料进入回收站后停止后续下载和检索，可以恢复；不会抹掉已生成的对话。</p><el-checkbox v-if="operation === 'restore'" v-model="confirmMissingParent">原目录已不存在时，我确认恢复到本企业该所有者的根目录</el-checkbox><template v-if="impact"><p>影响：{{ impact.versionCount }}个版本 · {{ formatBytes(impact.bytes) }} · {{ impact.children }}个未清理子项</p><p>任务活动使用/引用影响：未核实，不能当作零引用。</p><el-alert v-if="impact.blockedReason" :title="impact.blockedReason" type="info" :closable="false"/></template><el-checkbox v-if="operation === 'purge'" v-model="confirmPurge">我确认永久删除上述资料，原版本引用会失效，不可恢复</el-checkbox><el-input v-if="operation !== 'impact'" v-model="operationReason" maxlength="500" placeholder="管理原因，至少4个字，请勿粘贴正文或密钥"/><el-alert v-if="dialogError" :title="dialogError" type="error" :closable="false"/><template #footer><el-button :disabled="busy" @click="operationOpen = false">{{ operation === 'impact' ? '关闭' : '取消' }}</el-button><el-button v-if="operation !== 'impact'" :type="operation === 'purge' || operation === 'recycle' ? 'danger' : 'primary'" :loading="busy" :disabled="(operation === 'purge' && (!impact?.canPurge || !confirmPurge)) || (operation === 'scope' && !scopeImpact)" @click="saveOperation">{{ operation === 'purge' ? '永久删除' : '确认' }}</el-button></template></el-dialog>
+   <el-dialog v-model="detailOpen" :title="detailRow?.name || '资料详情'" width="760px" align-center append-to-body class="library-modal"><el-alert v-if="detailError" :title="detailError" type="error" :closable="false"/><div v-loading="detailLoading"><el-tabs v-model="detailTab"><el-tab-pane label="基本信息" name="info"><p>所有者：{{ detailRow?.ownerName || detailRow?.ownerUserId }}（不在此转移归属）</p><p>目录：{{ detailRow?.parentPath.join(' / ') || '根目录' }}</p><p>类型：{{ typeLabels[detailRow?.fileType || 'other'] }} · 可见性：{{ detailRow?.scope === 'PRIVATE' ? '仅所有者' : '企业共享' }}</p><p v-if="detailRow?.currentVersion">{{ detailRow.currentVersion.mimeType }} · {{ formatBytes(detailRow.currentVersion.sizeBytes) }} · {{ statusLabels[detailRow.currentVersion.parseStatus] }}</p><p v-if="detailRow?.currentVersion?.parseReason">{{ detailRow.currentVersion.parseReason }}</p><p v-if="detailRow?.kind === 'FOLDER'">这是文件夹，不作为文件正文预览。</p><el-button v-else :disabled="!detailRow?.readGrantId || detailRow?.state !== 'ACTIVE'" @click="detailRow && previewItem(detailRow)">预览正文</el-button></el-tab-pane><el-tab-pane label="版本" name="versions"><el-table :data="detail?.versions || []"><el-table-column prop="versionNo" label="版本" width="80"/><el-table-column prop="originalName" label="原文件名" min-width="180"/><el-table-column label="大小" width="100"><template #default="{row}">{{ formatBytes(row.sizeBytes) }}</template></el-table-column><el-table-column label="操作" width="150"><template #default="{row}"><el-button text :disabled="!detailRow?.readGrantId || detailRow?.state !== 'ACTIVE'" @click="detailRow && previewItem(detailRow,row.id)">预览</el-button><el-button text :disabled="!detailRow?.readGrantId || detailRow?.state !== 'ACTIVE'" @click="detailRow && download(detailRow,row.id)">下载</el-button></template></el-table-column></el-table><p v-if="detail?.versionsTruncated">仅展示最近100个版本；既有引用仍按原versionId读取。</p></el-tab-pane><el-tab-pane label="操作记录" name="audit"><el-table :data="detail?.audit || []"><el-table-column label="操作 / 结果" width="140"><template #default="{row}">{{ actionLabels[row.meta.operation] || row.meta.operation }} · {{ row.meta.success ? '成功' : '失败' }}</template></el-table-column><el-table-column prop="userId" label="实际操作人" min-width="150"/><el-table-column label="原因 / 结果" min-width="180"><template #default="{row}">{{ row.meta.reason }} {{ row.meta.code || '' }}</template></el-table-column><el-table-column label="时间（北京时间）" min-width="170"><template #default="{row}">{{ time(row.createdAt) }}</template></el-table-column></el-table><p>展示最近30条平台管理结果；不记录正文或token。</p></el-tab-pane></el-tabs></div><template #footer><el-button @click="detailOpen = false">关闭</el-button></template></el-dialog>
+   <el-dialog v-model="previewOpen" :title="preview?.name || '资料预览'" width="760px" align-center append-to-body class="library-modal"><el-alert v-if="previewError" :title="previewError" type="error" :closable="false"/><div v-loading="previewLoading"><p v-if="preview?.parseReason">{{ preview.parseReason }}</p><p v-if="preview?.truncated">{{ preview.truncationNote || '当前预览为截断内容' }}</p><img v-if="preview?.previewKind === 'image'" :src="previewMedia" :alt="preview.name" class="library-media"/><video v-else-if="preview?.previewKind === 'video'" :src="previewMedia" controls preload="metadata" class="library-media"/><pre v-else-if="preview?.text" class="library-pre">{{ preview.text }}</pre><p v-else-if="preview?.previewKind === 'link'">{{ preview.linkUrl }}</p><p v-else-if="preview">暂无可安全预览的正文；如有权限可下载原文件。</p><p v-if="preview?.previewKind === 'image' || preview?.previewKind === 'video'">图片/视频仅保存，不代表AI可读；浏览器不支持编码时请下载原文件。</p></div><template #footer><el-button @click="previewOpen = false">关闭</el-button><el-button v-if="previewRow?.kind === 'FILE' && previewRow?.readGrantId" @click="download(previewRow,preview?.versionId || undefined)">下载原文件</el-button></template></el-dialog>
+   <el-dialog v-model="custodyOpen" title="当前企业代管授权" width="760px" align-center append-to-body class="library-modal"><p>共享范围由企业管理员批准；私人范围由所有者批准。这里不能给平台自行授权。</p><el-table :data="custodies.filter(g=>g.tenantId === tenantId)"><el-table-column label="范围" min-width="140"><template #default="{row}">{{ row.contentScope === 'ENTERPRISE' ? '企业共享' : '私人所有者：'+row.ownerUserId }} · {{ row.powers }}</template></el-table-column><el-table-column prop="granteeUserId" label="被授权人" min-width="150"/><el-table-column label="到期（北京时间）" min-width="170"><template #default="{row}">{{ time(row.expiresAt) }}{{ row.revokedAt ? ' · 已撤销' : '' }}</template></el-table-column><el-table-column label="操作" width="80"><template #default="{row}"><el-button text type="danger" :disabled="!!row.revokedAt" @click="revoke(row.id)">撤销</el-button></template></el-table-column></el-table><template #footer><el-button @click="custodyOpen = false">关闭</el-button></template></el-dialog>
+@@ -41,8 +41,8 @@ import AdminLibraryTargetForm from '../../components/AdminLibraryTargetForm.vue'
+ import LibraryUploadDialog from '../../components/LibraryUploadDialog.vue';
+ import '../../styles/libraryDialogs.css';
+ import { formatBytes } from '../../utils/format';
+-import { libraryCustodies, revokeLibraryCustody, type CustodyRow, type LibraryPreview } from '../../api/library';
+-import { adminLibraryTenants, adminLibraryItems, adminLibraryOptions, adminLibraryDetail, adminLibraryImpact, adminLibraryFolder, adminLibraryCommand, adminLibraryUpload, adminLibraryPreview, adminLibraryDownload, type AdminItem, type AdminTenant, type AdminOptions, type AdminTarget, type AdminCommand, type AdminDetail, type AdminImpact } from '../../api/libraryAdmin';
++import { libraryCustodies, revokeLibraryCustody, type CustodyRow, type LibraryPreview, type LibraryScopeImpact } from '../../api/library';
++import { adminLibraryTenants, adminLibraryItems, adminLibraryOptions, adminLibraryDetail, adminLibraryImpact, adminLibraryScopeImpact, adminLibraryFolder, adminLibraryCommand, adminLibraryUpload, adminLibraryPreview, adminLibraryDownload, type AdminItem, type AdminTenant, type AdminOptions, type AdminTarget, type AdminCommand, type AdminDetail, type AdminImpact } from '../../api/libraryAdmin';
+ const route=useRoute(),router=useRouter();const tenantId=computed(()=>typeof route.query.tenantId === 'string'?route.query.tenantId:'');
+ const tenants=ref<AdminTenant[]>([]),tenantTotal=ref(0),tenantPage=ref(1),tenantSearch=ref('');
+ const options=ref<AdminOptions>(),items=ref<AdminItem[]>([]),total=ref(0),page=ref(1),loading=ref(false),busy=ref(false),error=ref(''),filtersOpen=ref(false);
+@@ -73,13 +73,13 @@ function prepareUpload(){if(uploadPlan)return;if(!options.value)throw new Error(
+ async function uploadLimits(){return uploadPlan?.limits||options.value?.limits||Promise.reject(new Error('无法获取企业上传限制'));}
+ async function uploadOne(file:File,progress:(ratio:number)=>void){if(!uploadPlan)throw new Error('请先确认上传目标');let requestId=uploadIds.get(file);if(!requestId){requestId=crypto.randomUUID();uploadIds.set(file,requestId);}await adminLibraryUpload(uploadPlan.tenant,{...uploadPlan.body,requestId},file,progress,uploadPlan.replace);return '已保存；AI可用性以处理状态为准';}
+ async function uploaded(count:number){if(count>0&&uploadPlan?.epoch===epoch&&alive){ElMessage.success(`${count}个文件已保存`);await loadItems();}}
+-const operationOpen=ref(false),operation=ref<AdminCommand['action']|'impact'>('rename'),operationRow=ref<AdminItem>(),operationName=ref(''),operationParent=ref(''),operationReason=ref(''),confirmPurge=ref(false),confirmMissingParent=ref(false),impact=ref<AdminImpact>();
++const operationOpen=ref(false),operation=ref<AdminCommand['action']|'impact'>('rename'),operationRow=ref<AdminItem>(),operationName=ref(''),operationParent=ref(''),operationReason=ref(''),confirmPurge=ref(false),confirmMissingParent=ref(false),impact=ref<AdminImpact>(),scopeImpact=ref<LibraryScopeImpact>();
+ const operationTitle=computed(()=>operation.value==='impact'?'删除影响':operation.value==='purge'?'永久删除此资料？':actionLabels[operation.value]||'管理资料');
+-const moveFolders=computed(()=>options.value?.folders.filter(f=>f.id!==operationRow.value?.id&&f.ownerUserId===operationRow.value?.ownerUserId&&f.grantIds.includes(operationRow.value?.writeGrantId??''))??[]);
++const moveFolders=computed(()=>options.value?.folders.filter(f=>f.id!==operationRow.value?.id&&f.ownerUserId===operationRow.value?.ownerUserId)??[]);
+ function commandBase(item:AdminItem,action:AdminCommand['action'],reason:string):Omit<AdminCommand,'requestId'>{if(!item.writeGrantId)throw new Error('缺少管理授权');if(reason.trim().length<4)throw new Error('请填写至少4个字的管理原因');return {nodeId:item.id,action,grantId:item.writeGrantId,reason,expectedUpdatedAt:item.updatedAt,...(item.currentVersion?{expectedVersionId:item.currentVersion.id}:{})};}
+-async function openOperation(action:AdminCommand['action']|'impact',item:AdminItem){const seq=++operationSequence;operation.value=action;operationRow.value=structuredClone(toRaw(item));operationName.value=item.name;operationParent.value=item.parentId??'';operationReason.value='';confirmPurge.value=false;confirmMissingParent.value=false;dialogError.value='';impact.value=undefined;operationOpen.value=true;if(['purge','impact','recycle'].includes(action)){const current=epoch;try{const result=await adminLibraryImpact(tenantId.value,item.id);if(alive&&current===epoch&&seq===operationSequence&&operationOpen.value&&operationRow.value?.id===item.id)impact.value=result;}catch(e){if(current===epoch&&seq===operationSequence&&operationOpen.value)dialogError.value=message(e);}}}
++async function openOperation(action:AdminCommand['action']|'impact',item:AdminItem){const seq=++operationSequence;operation.value=action;operationRow.value=structuredClone(toRaw(item));operationName.value=item.name;operationParent.value=item.parentId??'';operationReason.value='';confirmPurge.value=false;confirmMissingParent.value=false;dialogError.value='';impact.value=undefined;scopeImpact.value=undefined;operationOpen.value=true;if(action==='scope'){const current=epoch;try{const result=await adminLibraryScopeImpact(tenantId.value,item,item.scope==='PRIVATE'?'ENTERPRISE':'PRIVATE');if(alive&&current===epoch&&seq===operationSequence&&operationOpen.value&&operationRow.value?.id===item.id)scopeImpact.value=result;}catch(e){if(current===epoch&&seq===operationSequence&&operationOpen.value)dialogError.value=message(e);}}if(['purge','impact','recycle'].includes(action)){const current=epoch;try{const result=await adminLibraryImpact(tenantId.value,item.id);if(alive&&current===epoch&&seq===operationSequence&&operationOpen.value&&operationRow.value?.id===item.id)impact.value=result;}catch(e){if(current===epoch&&seq===operationSequence&&operationOpen.value)dialogError.value=message(e);}}}
+ function openImpact(item:AdminItem){void openOperation('impact',item);}
+-async function saveOperation(){if(busy.value||!operationRow.value||operation.value==='impact')return;const item=operationRow.value,id=tenantId.value,current=epoch;try{const body:AdminCommand={...commandBase(item,operation.value,operationReason.value),requestId:crypto.randomUUID()};if(operation.value==='rename')body.name=operationName.value;if(operation.value==='move')body.parentId=operationParent.value;if(operation.value==='scope'){body.scope=item.scope==='PRIVATE'?'ENTERPRISE':'PRIVATE';body.targetGrantId=item.targetScopeGrantId??undefined;body.confirmShare=true;}if(operation.value==='purge'){if(!confirmPurge.value||!impact.value?.canPurge)throw new Error(impact.value?.blockedReason||'请核实删除影响并确认');body.confirmPurge=true;}if(operation.value==='restore')body.confirmMissingParent=confirmMissingParent.value;busy.value=true;await adminLibraryCommand(id,body);if(current!==epoch||!alive)return;operationOpen.value=false;preview.value=undefined;ElMessage.success(`${actionLabels[body.action]}成功`);await reload();}catch(e){if(current===epoch)dialogError.value=message(e);}finally{if(current===epoch)busy.value=false;}}
++async function saveOperation(){if(busy.value||!operationRow.value||operation.value==='impact')return;const item=operationRow.value,id=tenantId.value,current=epoch;try{const body:AdminCommand={...commandBase(item,operation.value,operationReason.value),requestId:crypto.randomUUID()};if(operation.value==='rename')body.name=operationName.value;if(operation.value==='move'){body.parentId=operationParent.value;const destination=moveFolders.value.find(f=>f.id===operationParent.value);if(destination?.scope==='ENTERPRISE'){const impact=await adminLibraryScopeImpact(id,item,'ENTERPRISE',destination.grantIds[0]??null);if(impact.changed){try{await ElMessageBox.confirm(`移入共享目录会共享该资料及全部子项，共涉及 ${impact.total} 项。`,'确认移动并共享',{customClass:'library-message-box'});}catch{return;}}body.confirmShare=true;body.targetGrantId=destination.grantIds[0];body.expectedTreeRevision=impact.treeRevision;}}if(operation.value==='scope'){body.scope=item.scope==='PRIVATE'?'ENTERPRISE':'PRIVATE';body.targetGrantId=item.targetScopeGrantId??undefined;if(!scopeImpact.value)throw new Error('请等待影响范围加载完成');body.confirmShare=body.scope==='ENTERPRISE';body.confirmUnshare=body.scope==='PRIVATE';body.expectedTreeRevision=scopeImpact.value.treeRevision;}if(operation.value==='purge'){if(!confirmPurge.value||!impact.value?.canPurge)throw new Error(impact.value?.blockedReason||'请核实删除影响并确认');body.confirmPurge=true;}if(operation.value==='restore')body.confirmMissingParent=confirmMissingParent.value;if(current!==epoch||!alive)return;busy.value=true;await adminLibraryCommand(id,body);if(current!==epoch||!alive)return;operationOpen.value=false;preview.value=undefined;ElMessage.success(`${actionLabels[body.action]}成功`);await reload();}catch(e){if(current===epoch)dialogError.value=message(e);}finally{if(current===epoch)busy.value=false;}}
+ const detailOpen=ref(false),detailRow=ref<AdminItem>(),detail=ref<AdminDetail>(),detailTab=ref('info'),detailError=ref(''),detailLoading=ref(false);
+ async function openDetail(item:AdminItem){const id=tenantId.value,seq=++detailSequence;detailRow.value=structuredClone(toRaw(item));detail.value=undefined;detailError.value='';detailTab.value='info';detailOpen.value=true;detailLoading.value=true;try{const value=await adminLibraryDetail(id,item.id);if(alive&&seq===detailSequence&&id===tenantId.value)detail.value=value;}catch(e){if(seq===detailSequence)detailError.value=message(e);}finally{if(seq===detailSequence)detailLoading.value=false;}}
+ const previewOpen=ref(false),preview=ref<LibraryPreview>(),previewRow=ref<AdminItem>(),previewMedia=ref(''),previewError=ref(''),previewLoading=ref(false);
+diff --git a/ground/apps/frontend/tests/library-admin.client.spec.ts b/ground/apps/frontend/tests/library-admin.client.spec.ts
+index 7c6f791a..771e84cb 100644
+--- a/ground/apps/frontend/tests/library-admin.client.spec.ts
++++ b/ground/apps/frontend/tests/library-admin.client.spec.ts
+@@ -6,8 +6,8 @@ import { createMemoryHistory, createRouter, RouterView, type Router } from 'vue-
+ import ElementPlus, { ElMessageBox } from 'element-plus';
+ import AdminLibrary from '@admin-library-fixture';
+ import Custody from '@custody-fixture';
+-const fixture=vi.hoisted(()=>({tenants:vi.fn(),options:vi.fn(),items:vi.fn(),detail:vi.fn(),preview:vi.fn(),folder:vi.fn(),command:vi.fn(),upload:vi.fn(),impact:vi.fn(),grant:vi.fn()}));
+-vi.mock('../src/api/libraryAdmin',async original=>({...await original<typeof import('../src/api/libraryAdmin')>(),adminLibraryTenants:fixture.tenants,adminLibraryOptions:fixture.options,adminLibraryItems:fixture.items,adminLibraryDetail:fixture.detail,adminLibraryPreview:fixture.preview,adminLibraryFolder:fixture.folder,adminLibraryCommand:fixture.command,adminLibraryUpload:fixture.upload,adminLibraryImpact:fixture.impact}));
++const fixture=vi.hoisted(()=>({tenants:vi.fn(),options:vi.fn(),items:vi.fn(),detail:vi.fn(),preview:vi.fn(),folder:vi.fn(),command:vi.fn(),upload:vi.fn(),impact:vi.fn(),grant:vi.fn(),scopeImpact:vi.fn()}));
++vi.mock('../src/api/libraryAdmin',async original=>({...await original<typeof import('../src/api/libraryAdmin')>(),adminLibraryTenants:fixture.tenants,adminLibraryOptions:fixture.options,adminLibraryItems:fixture.items,adminLibraryDetail:fixture.detail,adminLibraryPreview:fixture.preview,adminLibraryFolder:fixture.folder,adminLibraryCommand:fixture.command,adminLibraryUpload:fixture.upload,adminLibraryImpact:fixture.impact,adminLibraryScopeImpact:fixture.scopeImpact}));
+ vi.mock('../src/api/library',async original=>({...await original<typeof import('../src/api/library')>(),libraryCustodies:async()=>[],libraryCustodyOptions:async()=>({tenantId:'a',ownerUserId:'owner-a',canApproveEnterprise:true,grantees:[{id:'platform',name:'授权平台人'}]}),grantLibraryCustody:fixture.grant}));
+ const require=createRequire(import.meta.url);
+ const css=['el-overlay.css','el-dialog.css','el-select.css','el-message-box.css'].map(f=>readFileSync(require.resolve('element-plus/theme-chalk/'+f),'utf8')).join('\n')+'\n'+readFileSync('src/styles/libraryDialogs.css','utf8');
+@@ -34,3 +34,13 @@ it('file purge disabled, unknown references not false zero, cancel does not dele
+ it('existing approval defaults READ, explicit CRUD and actual message-box confirmation submit scoped grant',async()=>{await mount('/admin/library',true);click('代管授权与撤销');const d=await dialog('批准平台代管');await vi.waitFor(()=>expect(d.querySelectorAll('input[type=radio]')).toHaveLength(2));const radios=d.querySelectorAll<HTMLInputElement>('input[type=radio]');expect(radios[0]!.checked).toBe(true);await choose(d,'平台代管人','授权平台人');radios[1]!.click();input(d.querySelector<HTMLInputElement>('input[type=datetime-local]')!,'2099-01-01T12:00');input(d.querySelector<HTMLTextAreaElement>('textarea')!,'隔离明确授权');await nextTick();click('明确批准管理代管',d);await vi.waitFor(()=>expect(document.querySelector('.library-message-box')).toBeTruthy());click('批准',document.querySelector('.library-message-box')!);await vi.waitFor(()=>expect(fixture.grant).toHaveBeenCalledTimes(1));expect(fixture.grant.mock.calls[0]?.[0]).toMatchObject({tenantId:'a',ownerUserId:'owner-a',granteeUserId:'platform',powers:'CRUD',contentScope:'PRIVATE_OWNER'});await vi.waitFor(()=>expect(radios[0]!.checked).toBe(true));});
+ 
+ it('cancelled impact request cannot later pollute a reopened rename dialog for the same node',async()=>{await mount();let reject:(error:Error)=>void=()=>{};fixture.impact.mockImplementationOnce(()=>new Promise((_resolve,r)=>{reject=r;}));await menu('移入回收站');let d=await dialog('回收');click('取消',d);await menu('重命名');d=await dialog('重命名');reject(new Error('stale impact failure fixture'));await new Promise(r=>setTimeout(r,10));expect(d.textContent).not.toContain('stale impact failure fixture');expect(fixture.command).not.toHaveBeenCalled();});
++
++it('admin visibility dialog includes all descendants and submits both grants with the confirmed revision', async () => {
++ fixture.items.mockResolvedValue({items:[{...item(),kind:'FOLDER',currentVersion:null,targetScopeGrantId:'shared-write'}],total:1});
++ fixture.scopeImpact.mockResolvedValue({total:4,changed:4,treeRevision:'c'.repeat(64)});
++ await mount();await menu('设为企业共享');const d=await dialog('修改可见性');
++ await vi.waitFor(()=>expect(d.textContent).toContain('4 项'));
++ input(d.querySelector<HTMLInputElement>('input[placeholder^="管理原因"]')!,'确认目录及全部子项');await nextTick();click('确认',d);
++ await vi.waitFor(()=>expect(fixture.command).toHaveBeenCalledTimes(1));
++ expect(fixture.command.mock.calls[0]?.[1]).toMatchObject({scope:'ENTERPRISE',grantId:'write-a',targetGrantId:'shared-write',confirmShare:true,confirmUnshare:false,expectedTreeRevision:'c'.repeat(64)});
++});
+diff --git a/ground/apps/frontend/tests/library-upload.vitest.config.mjs b/ground/apps/frontend/tests/library-upload.vitest.config.mjs
+index 109c0053..d88ba84d 100644
+--- a/ground/apps/frontend/tests/library-upload.vitest.config.mjs
++++ b/ground/apps/frontend/tests/library-upload.vitest.config.mjs
+@@ -9,5 +9,5 @@ const { default: vue } = await import(pathToFileURL(frontend.resolve('@vitejs/pl
+ export default {
+   root: resolve(here, '..'), plugins: [vue()],
+   resolve: { alias: { '@upload-fixture': resolve(here, '../src/components/LibraryUploadDialog.vue'), '@library-fixture': resolve(here, '../src/views/Library.vue'), '@admin-library-fixture': resolve(here, '../src/views/admin/AdminLibrary.vue'), '@custody-fixture': resolve(here, '../src/components/LibraryCustodyApproval.vue'), '@mammoth/shared': resolve(here, '../../../packages/shared/src/index.ts'), vitest: resolve(dirname(native.resolve('vitest/package.json')), 'dist/index.js') } },
+-  test: { environment: 'jsdom', include: ['tests/library-upload.client.spec.ts', 'tests/library-dialog.client.spec.ts', 'tests/library-admin.client.spec.ts'], globals: false, pool: 'forks', server: { deps: { inline: [/\.vue$/] } } },
++  test: { environment: 'jsdom', include: ['tests/library-upload.client.spec.ts', 'tests/library-dialog.client.spec.ts', 'tests/library-admin.client.spec.ts', 'tests/library-sharing.client.spec.ts'], globals: false, pool: 'forks', server: { deps: { inline: [/\.vue$/] } } },
+ };
+diff --git a/ground/openspec/changes/enterprise-library/design.md b/ground/openspec/changes/enterprise-library/design.md
+index 0cd1ee81..b13cb726 100644
+--- a/ground/openspec/changes/enterprise-library/design.md
++++ b/ground/openspec/changes/enterprise-library/design.md
+@@ -12,7 +12,7 @@
+ 
+ `LibraryNode` 是文件、文件夹或链接。`LibraryVersion` 是文件的一个字节版本。`LibraryChunk` 只属于一个版本。替换版本是新增行，不改旧行的正文。
+ 
+-`scope` 只有 `PRIVATE` 和 `ENTERPRISE`。移动只改 `parentId`。共享只改 `scope`，且请求必须带 `confirmShare=true`。
++`scope` 只有 `PRIVATE` 和 `ENTERPRISE`。个人根目录默认私人，企业共享根目录显式确认后直接创建共享资料；目录内新增资料继承父目录范围。目录共享递归更新全部未彻删子项，先逐项鉴权再原子提交；共享目录内不允许单独设为私人。私有资料移入共享目录需要确认并递归共享，移出保留原范围。取消目录共享需确认全部子项影响。租户目录树写入共用事务锁，上传提交前重新检查父目录范围和修订；目录变化时拒绝提交并清理新原件。
+ 
+ `state`：`ACTIVE`、`RECYCLED`、`PURGED`。回收写 `recycledAt`。超过保留天数后清正文并标 `PURGED`，行还在，用来回答「这份来源没了」。不把引用改到别的 ID。
+ 
+diff --git a/ground/openspec/changes/enterprise-library/specs/library/spec.md b/ground/openspec/changes/enterprise-library/specs/library/spec.md
+index d5adf734..6e7a629f 100644
+--- a/ground/openspec/changes/enterprise-library/specs/library/spec.md
++++ b/ground/openspec/changes/enterprise-library/specs/library/spec.md
+@@ -10,9 +10,13 @@
+ 
+ ## 可见性
+ 
+-新上传、新建文件夹、新建链接默认 `PRIVATE`。变成 `ENTERPRISE` 的操作 MUST 带明确确认，否则拒绝且不改范围。
++个人根目录新上传、新建文件夹、新建链接默认 `PRIVATE`；企业共享根目录显式创建为 `ENTERPRISE`，请求须带共享确认。有父目录时 MUST 继承服务端父目录的范围；客户端显式范围与父目录不一致时拒绝并提示刷新。创建和共享 MUST 一次提交，不能先私有再补共享。
+ 
+-移动 MUST NOT 修改 `scope`。把私人文件移入共享文件夹后，其他成员 MUST NOT 在列表、搜索、下载、预览、问答中看到它的标题或正文。
++文件夹共享 MUST 递归包含全部未彻删子项，包括回收中的资料。先逐项校验待变更资料的管理权限，任一无权或写入失败 MUST 全部回滚，不泄漏隐藏资料的标题。确认前可查询授权后的子树数量与修订；确认后目录变化 MUST 拒绝旧修订。
++
++共享目录内的子项 MUST 先移出才能单独取消共享。取消整个目录共享须确认全部子项的影响并逐项校验权限；各项仍归原所有者。私有资料移入共享目录须明确确认，递归共享与移动 MUST 原子提交；移出目录保留当前范围。
++
++未确认共享时，私有资料移入共享目录 MUST 拒绝且不改变目录和范围；确认后，列表、搜索、下载、预览与问答使用原有的企业范围鉴权。
+ 
+ 私人资料 MUST 只有所有者能读。企业管理员 MUST NOT 因为管理员身份读到他人私人正文。成员离开企业 MUST NOT 把其私人资料改成共享。
+ 
+diff --git a/mammoth-agent/docs/development.i18n.yaml b/mammoth-agent/docs/development.i18n.yaml
+index 9b4391a1..f576ad63 100644
+--- a/mammoth-agent/docs/development.i18n.yaml
++++ b/mammoth-agent/docs/development.i18n.yaml
+@@ -21,8 +21,8 @@
+   en: 3221d1076554001f
+   zh: 29f166be6a5c04d9
+ /development-guide/contributor-reference/typescript-project-layout:
+-  en: 38a5cd17b4fdde16
+-  zh: b3ad54fa3e62047e
++  en: 795e0b908718b385
++  zh: 57e53081f18249ea
+ /development-guide/contributor-reference/environment-variables:
+   en: dba2c72ee6ffa930
+   zh: b65c27fbb9129ec8
+diff --git a/mammoth-agent/docs/development.md b/mammoth-agent/docs/development.md
+index acd13a46..db65f787 100644
+--- a/mammoth-agent/docs/development.md
++++ b/mammoth-agent/docs/development.md
+@@ -104,7 +104,7 @@ Choose the command by what the change needs:
+ 
+ PR artifact builders run `build:artifacts`; required Linux and Windows normal builds and public `typecheck` also check the repository-wide test and script programs. CI benchmark preparation additionally uses `--noCheck` for its disposable library outputs, relying on those required builds for diagnostics; other artifact builders keep package checking ([rationale](../.agents/notes/implemented/process/2026-10-05-pr-artifact-typechecks.md)).
+ 
+-Both tsdown passes match `vendor/*`, `packages/*/*`, and `apps/cli`; the Host pass also matches `apps/desktop-host`. They neither scan build artifacts to discover Client packages nor maintain a Host/Client package filter list. Package-local tsdown configs select entries for the current phase through `MMP_BUILD_FACE`: an ordinary Client plugin produces both its Node loader and browser bundle during the Client phase; `api-remotes` uses `hostPhase: true` to produce its Host entry early and only its browser bundle during the Client phase. Tsdown consumes only the JavaScript emitted to `lib/types` by the preceding tsc phase. Tsdown builds the matched workspace members concurrently, so `apps/desktop`, whose main bundle inlines workspace devDependencies from their `lib/` output, bundles in its own step after the Host pass ([Desktop README](../apps/desktop/README.md#bundled-workspace-dependencies)).
++Both tsdown passes match `vendor/*`, `packages/*/*`, and `apps/cli`; the Host pass also matches `apps/desktop-host`. They neither scan build artifacts to discover Client packages nor maintain a Host/Client package filter list. Package-local tsdown configs select entries for the current phase through `MMP_BUILD_FACE`: an ordinary Client plugin produces both its Node loader and browser bundle during the Client phase; `api-remotes` uses `hostPhase: true` to produce its Host entry early and only its browser bundle during the Client phase. Tsdown consumes only the JavaScript emitted to `lib/types` by the preceding tsc phase. Host-phase packages such as `shortcuts` have direct Host project references so Web builds emit their entries even when Desktop applications are excluded. Tsdown builds the matched workspace members concurrently, so `apps/desktop`, whose main bundle inlines workspace devDependencies from their `lib/` output, bundles in its own step after the Host pass ([Desktop README](../apps/desktop/README.md#bundled-workspace-dependencies)).
+ 
+ Typert analyzes Host types through `tsconfig.host.json` and generates Host reflection and Host-for-Client Remote declarations before package compilation. The source-only [`generate-typert.ts`](../scripts/generate-typert.ts) pass rejects workspace imports that require built output, including metadata dependencies that return to generated declarations. Host tsdown lowers source decorators without generating metadata again; Client tsdown also consumes the existing metadata. `pnpm run typecheck` generates metadata, compiles Host and Client packages in reference order, and checks each aggregate with `tsc -b` after its package compilation. It skips the native addon, bundles, Web, and the client build record. `lint`, `lint:fix`, and `doc-typecheck` prepare metadata and Host package declarations through `compile-referenced-projects.ts host-contracts`; generation failure stops dependent compilation. These declaration-only commands do not update runtime bundles: run `build:artifacts` before launching or testing built output.
+ 
+diff --git a/mammoth-agent/docs/development.zh.md b/mammoth-agent/docs/development.zh.md
+index 5a3b94a5..e8ddb7b9 100644
+--- a/mammoth-agent/docs/development.zh.md
++++ b/mammoth-agent/docs/development.zh.md
+@@ -108,7 +108,7 @@ pnpm run build:web
+ 
+ PR 产物 builder 运行 `build:artifacts`；必需的 Linux 与 Windows 普通构建以及公开 `typecheck` 还检查仓库级测试和脚本 program。CI benchmark 准备阶段还对其临时 library 输出使用 `--noCheck`，由这些必需构建负责诊断；其他产物 builder 保留包检查（[理由](../.agents/notes/implemented/process/2026-10-05-pr-artifact-typechecks.zh.md)）。
+ 
+-两次 tsdown 都匹配 `vendor/*`、`packages/*/*` 与 `apps/cli`，Host 阶段另外匹配 `apps/desktop-host`；两者都不扫描构建产物来发现 Client 包，也不维护 Host/Client 包过滤表。包内 tsdown 配置根据 `MMP_BUILD_FACE` 决定当前阶段的入口：普通 Client 插件在 Client 阶段同时生成 Node loader 与 browser bundle；`api-remotes` 通过 `hostPhase: true` 提前生成 Host 入口，再在 Client 阶段只生成 browser bundle。tsdown 只消费 `lib/types` 中由前置 tsc 发射的 JavaScript。tsdown 并发构建匹配到的 workspace 成员；`apps/desktop` 的主进程 bundle 需要从工作区 devDependencies 的 `lib/` 产物内联这些包，因此在 Host 阶段之后单独一步打 bundle（[Desktop README](../apps/desktop/README.zh.md#bundled-workspace-dependencies)）。
++两次 tsdown 都匹配 `vendor/*`、`packages/*/*` 与 `apps/cli`，Host 阶段另外匹配 `apps/desktop-host`；两者都不扫描构建产物来发现 Client 包，也不维护 Host/Client 包过滤表。包内 tsdown 配置根据 `MMP_BUILD_FACE` 决定当前阶段的入口：普通 Client 插件在 Client 阶段同时生成 Node loader 与 browser bundle；`api-remotes` 通过 `hostPhase: true` 提前生成 Host 入口，再在 Client 阶段只生成 browser bundle。tsdown 只消费 `lib/types` 中由前置 tsc 发射的 JavaScript。 `shortcuts` 等 Host 阶段的包拥有直接的 Host 项目引用，因此 Web 构建排除 Desktop 应用后仍会生成这些包的入口。tsdown 并发构建匹配到的 workspace 成员；`apps/desktop` 的主进程 bundle 需要从工作区 devDependencies 的 `lib/` 产物内联这些包，因此在 Host 阶段之后单独一步打 bundle（[Desktop README](../apps/desktop/README.zh.md#bundled-workspace-dependencies)）。
+ 
+ Typert 通过 `tsconfig.host.json` 分析 Host 类型，在包编译之前生成 Host 反射和 Host-for-Client Remote 声明。仅源码的 [`generate-typert.ts`](../scripts/generate-typert.ts) 阶段拒绝依赖构建产物的工作区导入，包括经由依赖回到生成声明的元数据依赖。Host tsdown 转换源码装饰器，但不重复生成元数据；Client tsdown 同样使用已有元数据。`pnpm run typecheck` 生成元数据，按 reference 顺序编译 Host 与 Client 包，并在每个 aggregate 的包编译完成后以 `tsc -b` 检查它。该命令跳过 native addon、bundle、Web 和 client build record。`lint`、`lint:fix` 与 `doc-typecheck` 通过 `compile-referenced-projects.ts host-contracts` 准备元数据与 Host 包声明；生成失败时不启动依赖它的编译。这些仅生成声明的命令不更新运行时 bundle；启动或测试构建产物之前应运行 `build:artifacts`。
+ 
+diff --git a/mammoth-agent/packages/client/ui-enterprise-library/README.md b/mammoth-agent/packages/client/ui-enterprise-library/README.md
+index e697375d..ef27179b 100644
+--- a/mammoth-agent/packages/client/ui-enterprise-library/README.md
++++ b/mammoth-agent/packages/client/ui-enterprise-library/README.md
+@@ -3,7 +3,7 @@
+ Web and desktop client entry for the single ground library via its connection-protected same-origin `/ground-library/*` Host transport. The Host forwards only allowlisted operations to Ground `/api/library/*`, never exposes its JWT and refuses account switches.
+ The left sidebar opens the library panel. The panel action "用于 AI 对话" and the composer `+` multi-select confirmation popup put a ready version on the current session draft, creating a session only when none is open. The `@` menu inserts the same kind of chip. Nothing sends until the user submits. Submit calls `/api/library/open` through the authenticated account Host and only the node and version ids. One stored chunk is sent as that chunk. A missing, refused, or empty excerpt does not send. `session/prompt` receives the expanded text and does not authorize the library again. Pasted text is not a controlled citation.
+ 
+-The native panel supports explicit multi-file save, folders, URL-only links, rename/move/download, version history/replacement, visibility, recycling, restore, purge and parse retry. Temporary local chat attachments are not uploaded by this package. Saving into the library stays an explicit library action, and new uploads remain private on the server.
++The native panel supports explicit multi-file save, folders, URL-only links, rename/move/download, version history/replacement, visibility, recycling, restore, purge and parse retry. Temporary local chat attachments are not uploaded by this package. Saving into the library stays an explicit library action. New items at the personal root are private; items created at the Shared root or inside a shared folder are enterprise-visible immediately. Nested creation and uploads inherit the server folder visibility. Sharing or unsharing a folder confirms the server-reported count and revision and changes all nested items atomically. Moving private items into a shared folder requires confirmation. Visibility does not grant peers permission to edit another owner's items.
+ 
+ ## Model Experience
+ 
+diff --git a/mammoth-agent/packages/client/ui-enterprise-library/src/client/LibraryPanel.tsx b/mammoth-agent/packages/client/ui-enterprise-library/src/client/LibraryPanel.tsx
+index 3c41a84a..1a1204f7 100644
+--- a/mammoth-agent/packages/client/ui-enterprise-library/src/client/LibraryPanel.tsx
++++ b/mammoth-agent/packages/client/ui-enterprise-library/src/client/LibraryPanel.tsx
+@@ -3,7 +3,7 @@ import { Button, Input, Menu, Modal, Tag, FileTypeIcon, fileSizeText, IconClockO
+ import type { LibraryKey } from './locales.ts'
+ import type { HostObservable, InjectFace, PropsLocale, PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
+ import type {} from '@mammoth-ai/mmp-client-ui-layout/client'
+-import { fetchLibraryItems, fetchLibraryPage, fetchLibraryMedia, fetchLibrarySource, libraryRequest, type LibraryFetch, type LibraryView } from './api.ts'
++import { fetchLibraryItems, fetchLibraryPage, fetchLibraryScopeImpact, fetchLibraryMedia, fetchLibrarySource, libraryRequest, type LibraryFetch, type LibraryView } from './api.ts'
+ import { choiceBlock, type LibraryChoice } from './selection.ts'
+ import { LibraryTree } from './LibraryTree.tsx'
+ import { LibraryUploadDialog } from './LibraryUploadDialog.tsx'
+@@ -21,7 +21,8 @@ export type LibraryPanelInjected = {
+ }
+ export type LibraryPanelProps = PropsRuntime<'main'> & PropsLocale<'enterpriseLibrary'> & InjectFace<LibraryPanelInjected>
+ const VIEWS: readonly LibraryView[] = ['recent', 'mine', 'shared', 'trash']
+-type Edit = { kind: 'folder' | 'link' | 'rename' | 'move'; item?: LibraryChoice }
++type SaveTarget = { parentId: string | null; scope: 'PRIVATE' | 'ENTERPRISE'; name: string }
++type Edit = { kind: 'folder' | 'link' | 'rename' | 'move'; item?: LibraryChoice; target?: SaveTarget }
+ type Source = { nodeId?: string; previewKind?: string; mediaUrl?: string; name?: string; text?: string | null; linkUrl?: string | null; parseReason?: string | null; highlightNote?: string | null; locator?: string | null; versionNo?: number | null; versionId?: string; truncated?: boolean; truncationNote?: string | null; chunks?: readonly { locator: string; text: string }[] }
+ 
+ const ACCEPT = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.md,.markdown,.txt,.csv,.html,.htm,.zip,.png,.jpg,.jpeg,.gif,.webp,.avif,.mp4,.webm,.mov'
+@@ -63,6 +64,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
+   const [total, setTotal] = useState(0)
+   const [limits, setLimits] = useState<{ maxFileBytes: number; allowedExtensions: string[] }>()
+   const [path, setPath] = useState<readonly { id: string; name: string }[]>([])
++  const [parentScope, setParentScope] = useState<'PRIVATE' | 'ENTERPRISE'>()
+   const [items, setItems] = useState<readonly LibraryChoice[]>([])
+   const [selected, setSelected] = useState<readonly string[]>([])
+   const [error, setError] = useState('')
+@@ -75,7 +77,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
+   const [filter, setFilter] = useState('all')
+   const [newOpen, setNewOpen] = useState(false)
+   const [filterOpen, setFilterOpen] = useState(false)
+-  const [uploadTarget, setUploadTarget] = useState<{ parentId: string | null; replacement?: LibraryChoice }>()
++  const [uploadTarget, setUploadTarget] = useState<SaveTarget & { replacement?: LibraryChoice }>()
+   const [revision, setRevision] = useState(0)
+   const [edit, setEdit] = useState<Edit>()
+   const [name, setName] = useState('')
+@@ -83,7 +85,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
+   const [source, setSource] = useState<Source>()
+   const [versions, setVersions] = useState<{ item: LibraryChoice; rows: readonly { id: string; versionNo: number; parseStatus: string }[] }>()
+   const [moveFolders, setMoveFolders] = useState<readonly LibraryChoice[]>([])
+-  const [movePath, setMovePath] = useState<readonly { id: string; name: string }[]>([])
++  const [movePath, setMovePath] = useState<readonly { id: string; name: string; scope?: string | undefined }[]>([])
+   const parentId = path.at(-1)?.id ?? null
+   const refresh = () => { setRevision(n => n + 1) }
+   /** Platform admins have no default enterprise; let them enter one in place. */
+@@ -142,7 +144,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
+     void fetchLibraryPage(origin, view, query, fetchImpl, control.signal, parentId, page, filter).then(next => {
+       if (!control.signal.aborted) {
+         const lastPage = Math.max(1, Math.ceil(next.total / 20)); if (page > lastPage) { setPage(lastPage); return }
+-        setItems(next.items); setTotal(next.total);
++        setItems(next.items); setTotal(next.total); setParentScope(next.parentScope);
+         if (parentId && next.breadcrumb.length) setPath(next.breadcrumb); setSelected([]); setError('') }
+     }).catch(e => { if (!control.signal.aborted) {
+       if (e instanceof Error && /(?:401|403|409)/.test(e.message)) { setItems([]); setSelected([]); setSource(undefined); setVersions(undefined) }
+@@ -183,18 +185,22 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
+   const uploadOne = async (file: File) => {
+     if (!uploadTarget) throw new Error(t('operationFailed'))
+     const form = new FormData(); form.append('files', file)
+-    if (uploadTarget.parentId && !uploadTarget.replacement) form.append('parentId', uploadTarget.parentId)
++    if (!uploadTarget.replacement) {
++      if (uploadTarget.parentId) form.append('parentId', uploadTarget.parentId)
++      form.append('scope', uploadTarget.scope); form.append('confirmShare', String(uploadTarget.scope === 'ENTERPRISE'))
++    }
+     const result = await libraryRequest(origin, uploadTarget.replacement ? `files/${uploadTarget.replacement.nodeId}/versions` : 'files', 'POST', form, fetchImpl)
+     if (uploadTarget.replacement) return
+     if (result && typeof result === 'object' && 'failed' in result && Array.isArray(result.failed) && result.failed.length) throw new Error(result.failed.map(row => String(row && typeof row === 'object' && 'message' in row ? row.message : t('operationFailed'))).join('; '))
+     if (!result || typeof result !== 'object' || !('items' in result) || !Array.isArray(result.items) || !result.items.length) throw new Error(t('operationFailed'))
+   }
+   const revealCreated = () => {
+-    if (view !== 'mine') { setView('mine'); setPath([]) }
++    if (view === 'recent') { setView('mine'); setPath([]) }
+     setQuery(''); setFilter('all'); setPage(1); refresh()
+   }
++  const captureTarget = (): SaveTarget => ({ parentId, scope: parentId ? parentScope ?? (view === 'shared' ? 'ENTERPRISE' : 'PRIVATE') : view === 'shared' ? 'ENTERPRISE' : 'PRIVATE', name: path.at(-1)?.name ?? t(view === 'shared' ? 'shared' : 'mine') })
+   const openEdit = (kind: Edit['kind'], item?: LibraryChoice) => {
+-    setEdit(item ? { kind, item } : { kind }); setName(item?.name ?? ''); setUrl(''); setMovePath([])
++    setEdit(item ? { kind, item } : { kind, target: captureTarget() }); setName(item?.name ?? ''); setUrl(''); setMovePath([])
+   }
+   const useItems = (chosen: readonly LibraryChoice[]) => run(async () => {
+     if (onUseMany) await onUseMany(chosen)
+@@ -226,13 +232,15 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
+     if (action === 'download') { downloadVersion(item); return }
+     if (action === 'preview') { void run(() => openSource(item)); return }
+     if (action === 'rename' || action === 'move') { openEdit(action, item); return }
+-    if (action === 'replace') { setUploadTarget({ parentId, replacement: item }); return }
++    if (action === 'replace') { setUploadTarget({ ...captureTarget(), replacement: item }); return }
+     void run(async () => {
+       if (action === 'versions') {
+         const result = await libraryRequest(origin, `nodes/${id}/versions`, 'GET', undefined, fetchImpl)
+         setVersions({ item, rows: Array.isArray(result) ? result : [] })
+       } else if (action === 'scope') {
+-        if (item.scope === 'ENTERPRISE' || window.confirm(t('confirmShare'))) await mutate(`nodes/${id}/scope`, 'POST', { scope: item.scope === 'ENTERPRISE' ? 'PRIVATE' : 'ENTERPRISE', confirmShare: true })
++        const scope = item.scope === 'ENTERPRISE' ? 'PRIVATE' : 'ENTERPRISE'
++        const impact = await fetchLibraryScopeImpact(origin, item.nodeId, scope, fetchImpl)
++        if (window.confirm(t(scope === 'ENTERPRISE' ? 'confirmShareTree' : 'confirmUnshareTree').replace('{count}', String(impact.total)))) await mutate(`nodes/${id}/scope`, 'POST', { scope, confirmShare: scope === 'ENTERPRISE', confirmUnshare: scope === 'PRIVATE', expectedTreeRevision: impact.treeRevision })
+       } else if (action === 'purge') {
+         if (window.confirm(t('confirmPurge'))) await mutate(`nodes/${id}`, 'DELETE')
+       } else if (action === 'retry') await mutate(`nodes/${id}/retry-parse`, 'POST')
+@@ -240,9 +248,17 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
+     })
+   }
+   const saveEdit = () => { if (edit) void run(async () => {
+-    if (edit.kind === 'move' && edit.item) await mutate(`nodes/${edit.item.nodeId}/move`, 'POST', { parentId: movePath.at(-1)?.id ?? null })
++    if (edit.kind === 'move' && edit.item) {
++      let options: { confirmShare?: boolean; expectedTreeRevision?: string } = {}
++      if (movePath.at(-1)?.scope === 'ENTERPRISE') {
++        const impact = await fetchLibraryScopeImpact(origin, edit.item.nodeId, 'ENTERPRISE', fetchImpl)
++        if (impact.changed && !window.confirm(t('confirmShareTree').replace('{count}', String(impact.total)))) return
++        options = { confirmShare: true, expectedTreeRevision: impact.treeRevision }
++      }
++      await mutate(`nodes/${edit.item.nodeId}/move`, 'POST', { parentId: movePath.at(-1)?.id ?? null, ...options })
++    }
+     else if (edit.kind === 'rename' && edit.item) await mutate(`nodes/${edit.item.nodeId}`, 'PATCH', { name })
+-    else { await mutate(edit.kind === 'folder' ? 'folders' : 'links', 'POST', { name, parentId, ...(edit.kind === 'link' ? { url } : {}) }); revealCreated() }
++    else if (edit.target) { const target = edit.target; await mutate(edit.kind === 'folder' ? 'folders' : 'links', 'POST', { name, parentId: target.parentId, scope: target.scope, confirmShare: target.scope === 'ENTERPRISE', ...(edit.kind === 'link' ? { url } : {}) }); revealCreated() }
+     setEdit(undefined)
+   }) }
+   return <section className={css.page} aria-busy={busy || loading}>
+@@ -257,8 +273,8 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
+       <header className={css.heading}>
+         <div><h2>{t(view)}</h2><p>{t('panelDescription')}</p></div>
+         {view !== 'trash' && <div className={css.headerActions}>
+-          <Menu open={newOpen} onClose={() => { setNewOpen(false) }} portal align="end" items={[{ id: 'folder', label: t('folder'), icon: <IconFolderCloseRegular size={16} /> }, { id: 'link', label: t('link'), icon: <IconLinkOutlineRegular size={16} /> }]} onSelect={id => { setNewOpen(false); openEdit(id as 'folder' | 'link') }} anchor={<Button variant="outline" disabled={busy || blocked !== null} aria-haspopup="menu" aria-expanded={newOpen} onClick={() => { setNewOpen(!newOpen) }}>{t('new')}<IconChevronDownOutlineRegular size={14} /></Button>} />
+-          <Button variant="primary" icon={<UploadIcon />} disabled={busy || blocked !== null} onClick={() => { setUploadTarget({ parentId }) }}>{t('upload')}</Button>
++          <Menu open={newOpen} onClose={() => { setNewOpen(false) }} portal align="end" items={[{ id: 'folder', label: t('folder'), icon: <IconFolderCloseRegular size={16} /> }, { id: 'link', label: t('link'), icon: <IconLinkOutlineRegular size={16} /> }]} onSelect={id => { setNewOpen(false); openEdit(id as 'folder' | 'link') }} anchor={<Button variant="outline" disabled={busy || loading || blocked !== null} aria-haspopup="menu" aria-expanded={newOpen} onClick={() => { setNewOpen(!newOpen) }}>{t('new')}<IconChevronDownOutlineRegular size={14} /></Button>} />
++          <Button variant="primary" icon={<UploadIcon />} disabled={busy || loading || blocked !== null} onClick={() => { setUploadTarget(captureTarget()) }}>{t('upload')}</Button>
+         </div>}
+       </header>
+       <p className={css.uploadHint}>{t('uploadHint')}{limits ? ` · ${fileSizeText(limits.maxFileBytes)}` : ''}</p>
+@@ -290,7 +306,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
+         <div className={css.emptyIcon}><IconFolderCloseRegular size={32} /></div>
+         <h3>{query || filter !== 'all' ? t('noResults') : t('empty')}</h3>
+         <p>{query || filter !== 'all' ? t('searchHint') : view === 'trash' ? t('trashHint') : t('emptyHint')}</p>
+-        {query || filter !== 'all' ? <Button variant="outline" onClick={() => { setQuery(''); setFilter('all') }}>{t('clearFilters')}</Button> : view !== 'trash' && !error && <Button variant="primary" icon={<UploadIcon />} disabled={busy} onClick={() => { setUploadTarget({ parentId }) }}>{t('upload')}</Button>}
++        {query || filter !== 'all' ? <Button variant="outline" onClick={() => { setQuery(''); setFilter('all') }}>{t('clearFilters')}</Button> : view !== 'trash' && !error && <Button variant="primary" icon={<UploadIcon />} disabled={busy} onClick={() => { setUploadTarget(captureTarget()) }}>{t('upload')}</Button>}
+       </div>}
+       {visibleItems.length > 0 && <table className={css.table}>
+         <caption className={css.srOnly}>{t(view)}</caption>
+@@ -313,11 +329,12 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
+       </table>}
+       {total > 20 && <nav className={css.pagination} aria-label={t('browse')}><Button size="sm" disabled={loading || page <= 1} onClick={() => { setPage(n => n - 1) }}>{t('previousPage')}</Button><span>{page} / {Math.ceil(total / 20)}</span><Button size="sm" disabled={loading || page * 20 >= total} onClick={() => { setPage(n => n + 1) }}>{t('nextPage')}</Button></nav>}
+     </main>
+-    {uploadTarget && <LibraryUploadDialog t={t} accept={limits?.allowedExtensions.join(',') ?? ACCEPT} single={!!uploadTarget.replacement} maxFileBytes={limits?.maxFileBytes} loadLimits={loadUploadLimits} uploadFile={uploadOne} onSaved={revealCreated} onClose={() => { setUploadTarget(undefined) }} />}
++    {uploadTarget && <LibraryUploadDialog t={t} accept={limits?.allowedExtensions.join(',') ?? ACCEPT} single={!!uploadTarget.replacement} hint={uploadTarget.replacement ? undefined : `${t('saveTo')} ${uploadTarget.name} · ${t(uploadTarget.scope === 'ENTERPRISE' ? 'sharedSaveHint' : 'privateSaveHint')}`} maxFileBytes={limits?.maxFileBytes} loadLimits={loadUploadLimits} uploadFile={uploadOne} onSaved={revealCreated} onClose={() => { setUploadTarget(undefined) }} />}
+     <Modal open={edit !== undefined} onClose={() => { if (!busy) setEdit(undefined) }} title={edit ? t(edit.kind) : ''} closeLabel={t('cancel')} className={css.dialog ?? ''} contentClassName={css.dialogContent ?? ''} footer={<><Button variant="outline" disabled={busy} onClick={() => { setEdit(undefined) }}>{t('cancel')}</Button><Button variant="primary" disabled={busy || (edit?.kind !== 'move' && !name.trim()) || (edit?.kind === 'link' && !url.trim())} onClick={saveEdit}>{t('save')}</Button></>}>
++      {edit?.target && <><p>{t('saveTo')} {edit.target.name}</p><p>{t(edit.target.scope === 'ENTERPRISE' ? 'sharedSaveHint' : 'privateSaveHint')}</p></>}
+       {edit?.kind === 'move' ? <div className={css.folderPicker}>
+-        <p>{t('root')} / {movePath.map(x => x.name).join(' / ')}</p><Button variant="outline" disabled={!movePath.length || busy} onClick={() => { setMovePath(movePath.slice(0, -1)) }}>{t('back')}</Button>
+-        {moveFolders.map(folder => <Button key={folder.nodeId} icon={<IconFolderCloseRegular size={18} />} onClick={() => { setMovePath([...movePath, { id: folder.nodeId, name: folder.name }]) }}>{folder.name}</Button>)}
++        <p>{t('moveShareHint')}</p><p>{t('root')} / {movePath.map(x => x.name).join(' / ')}</p><Button variant="outline" disabled={!movePath.length || busy} onClick={() => { setMovePath(movePath.slice(0, -1)) }}>{t('back')}</Button>
++        {moveFolders.map(folder => <Button key={folder.nodeId} icon={<IconFolderCloseRegular size={18} />} onClick={() => { setMovePath([...movePath, { id: folder.nodeId, name: folder.name, scope: folder.scope }]) }}>{folder.name}</Button>)}
+       </div> : <div className={css.form}><label>{t('name')}<Input data-modal-autofocus value={name} onChange={e => { setName(e.target.value) }} /></label>{edit?.kind === 'link' && <label>{t('url')}<Input value={url} onChange={e => { setUrl(e.target.value) }} /></label>}</div>}
+       {error && <p role="alert" className={css.error}>{error}</p>}
+     </Modal>
+diff --git a/mammoth-agent/packages/client/ui-enterprise-library/src/client/LibraryUploadDialog.tsx b/mammoth-agent/packages/client/ui-enterprise-library/src/client/LibraryUploadDialog.tsx
+index 67329dbc..51470a14 100644
+--- a/mammoth-agent/packages/client/ui-enterprise-library/src/client/LibraryUploadDialog.tsx
++++ b/mammoth-agent/packages/client/ui-enterprise-library/src/client/LibraryUploadDialog.tsx
+@@ -4,8 +4,9 @@ import type { LibraryKey } from './locales.ts'
+ import css from './LibraryPanel.module.css'
+ 
+ type Row = { id: string; file: File; status: 'queued' | 'uploading' | 'success' | 'failed'; error?: string | undefined }
+-export function LibraryUploadDialog({ t, accept, single, maxFileBytes, loadLimits, uploadFile, onSaved, onClose }: {
++export function LibraryUploadDialog({ t, accept, single, maxFileBytes, hint, loadLimits, uploadFile, onSaved, onClose }: {
+   t: (key: LibraryKey) => string; accept: string; single: boolean; maxFileBytes?: number | undefined
++  hint?: string | undefined
+   loadLimits: () => Promise<{ maxFileBytes: number; allowedExtensions: readonly string[] }>
+   uploadFile: (file: File) => Promise<void>; onSaved: () => void; onClose: () => void
+ }) {
+@@ -41,6 +42,7 @@ export function LibraryUploadDialog({ t, accept, single, maxFileBytes, loadLimit
+     finally { active.current = false; if (mounted.current) { if (saved) onSaved(); setRunning(false) } }
+   }
+   return <Modal headless open title={t(single ? 'replace' : 'upload')} onClose={close} className={css.uploadDialog ?? ''}>
++    {hint && <p className={css.uploadHint}>{hint}</p>}
+     <header className={css.uploadHeader}><h2>{t(single ? 'replace' : 'upload')}</h2><Button aria-label={t('close')} disabled={running} onClick={close}>×</Button></header>
+     <div className={css.uploadBody}>
+       <div className={css.uploadDrop} onDragOver={event => { event.preventDefault() }} onDrop={event => {
+diff --git a/mammoth-agent/packages/client/ui-enterprise-library/src/client/api.ts b/mammoth-agent/packages/client/ui-enterprise-library/src/client/api.ts
+index f4bc57a2..8577869b 100644
+--- a/mammoth-agent/packages/client/ui-enterprise-library/src/client/api.ts
++++ b/mammoth-agent/packages/client/ui-enterprise-library/src/client/api.ts
+@@ -162,7 +162,7 @@ export async function libraryRequest(origin: string, path: string, method: strin
+   return payload
+ }
+ 
+-export type LibraryPage = { items: LibraryChoice[]; total: number; breadcrumb: { id: string; name: string }[] };
++export type LibraryPage = { items: LibraryChoice[]; total: number; breadcrumb: { id: string; name: string }[]; parentScope?: 'PRIVATE' | 'ENTERPRISE' };
+ /** A single authorized page; paging is explicit so old flat pickers keep all their candidates. */
+ export async function fetchLibraryPage(origin: string, view: LibraryView, q: string, fetchImpl: LibraryFetch, signal?: AbortSignal, parentId?: string | null, page = 1, status = 'all'): Promise<LibraryPage> {
+   const url = libraryItemsUrl(origin, view, q, parentId) + `&page=${page}&pageSize=20&status=${encodeURIComponent(status)}`;
+@@ -170,8 +170,23 @@ export async function fetchLibraryPage(origin: string, view: LibraryView, q: str
+   if (!response.ok) throw await failure(response, 'library list');
+   const payload: unknown = await response.json();
+   const items = readLibraryItems(payload);
+-  const raw = payload as { total?: unknown; breadcrumb?: { id: string; name: string }[] };
+-  return { items, total: typeof raw.total === 'number' ? raw.total : items.length, breadcrumb: Array.isArray(raw.breadcrumb) ? raw.breadcrumb : [] };
++  const raw = payload as { total?: unknown; breadcrumb?: { id: string; name: string }[]; parentScope?: unknown };
++  return { items, total: typeof raw.total === 'number' ? raw.total : items.length, breadcrumb: Array.isArray(raw.breadcrumb) ? raw.breadcrumb : [], ...(raw.parentScope === 'PRIVATE' || raw.parentScope === 'ENTERPRISE' ? { parentScope: raw.parentScope } : {}) };
++}
++
++/** Read the authorized recursive count and revision before changing visibility.
++ * @param origin - account transport origin.
++ * @param id - node whose whole subtree is affected.
++ * @param scope - requested visibility.
++ * @param fetchImpl - authenticated account transport.
++ * @returns Server-confirmed count and revision; malformed responses cannot authorize a mutation.
++ */
++export async function fetchLibraryScopeImpact(origin: string, id: string, scope: 'PRIVATE' | 'ENTERPRISE', fetchImpl: LibraryFetch): Promise<{ total: number; changed: number; treeRevision: string }> {
++  const result = await libraryRequest(origin, `nodes/${encodeURIComponent(id)}/scope-impact?scope=${scope}`, 'GET', undefined, fetchImpl)
++  if (!result || typeof result !== 'object' || !('total' in result) || typeof result.total !== 'number' || !Number.isSafeInteger(result.total) || result.total < 1
++    || !('changed' in result) || typeof result.changed !== 'number' || !Number.isSafeInteger(result.changed) || result.changed < 0 || result.changed > result.total
++    || !('treeRevision' in result) || typeof result.treeRevision !== 'string' || !/^[a-f0-9]{64}$/.test(result.treeRevision)) throw new Error('Invalid library scope impact response')
++  return { total: result.total, changed: result.changed, treeRevision: result.treeRevision }
+ }
+ /** Fetch protected media bytes through the same account-bound Host; never mint a public URL. */
+ export async function fetchLibraryMedia(origin: string, nodeId: string, versionId: string, fetchImpl: LibraryFetch, signal?: AbortSignal): Promise<Blob> {
+diff --git a/mammoth-agent/packages/client/ui-enterprise-library/src/client/locales.ts b/mammoth-agent/packages/client/ui-enterprise-library/src/client/locales.ts
+index 70d6246e..46e11186 100644
+--- a/mammoth-agent/packages/client/ui-enterprise-library/src/client/locales.ts
++++ b/mammoth-agent/packages/client/ui-enterprise-library/src/client/locales.ts
+@@ -1,5 +1,11 @@
+ /** Library copy. The English catalog is the key set. */
+ export const en = {
++  saveTo: 'Save to:',
++  sharedSaveHint: 'Visible to enterprise members; new folders and uploads inherit this visibility.',
++  privateSaveHint: 'Visible only to you.',
++  confirmShareTree: 'Share this item and every nested file and folder with enterprise members? {count} items will be included.',
++  confirmUnshareTree: 'Make this item and every nested file and folder private to their respective owners? {count} items will be included.',
++  moveShareHint: 'Moving into a shared folder shares this item and all nested items after confirmation. Moving out keeps their current visibility.',
+   uploadLimit: 'Maximum per file',
+   uploadDrop: 'Drop files here, or choose files',
+   uploadChoose: 'Choose files',
+@@ -15,7 +21,7 @@ export const en = {
+   uploadQueueLimit: 'At most 50 files per batch; folders are not supported.',
+   uploadUncertain: 'Connection interrupted. It may already be saved; refresh and check before retrying.',
+ 
+-  panelDescription: 'Keep original files and versions. New uploads are private until you share them.',
++  panelDescription: 'Keep originals and versions. New items inherit their folder visibility; items created in Shared are visible to enterprise members.',
+   browse: 'Browse library',
+   toggleTree: 'Expand or collapse my files',
+   loadMore: 'Load more',
+@@ -104,6 +110,12 @@ export const en = {
+ export type LibraryKey = keyof typeof en
+ 
+ export const zh: Record<LibraryKey, string> = {
++  saveTo: '保存到：',
++  sharedSaveHint: '本企业成员可见；新建或上传的内容继承此范围。',
++  privateSaveHint: '仅自己可见。',
++  confirmShareTree: '这会将该资料及全部子文件夹和文件一起共享，本企业成员可见，共涉及 {count} 项。确认共享？',
++  confirmUnshareTree: '这会将该资料及全部子文件夹和文件改为各自所有者私有，共涉及 {count} 项。确认取消共享？',
++  moveShareHint: '移入共享目录时需确认共享该资料及全部子项；移出后保留当前可见范围。',
+   uploadLimit: '单文件上限',
+   uploadDrop: '将文件拖到这里，或选择文件',
+   uploadChoose: '选择文件',
+@@ -119,7 +131,7 @@ export const zh: Record<LibraryKey, string> = {
+   uploadQueueLimit: '每批最多50个文件，暂不支持上传文件夹。',
+   uploadUncertain: '连接中断，结果可能已保存，请先刷新核对后再手动重试。',
+ 
+-  panelDescription: '保存原文件与每个版本。新上传资料默认仅自己可见，共享由你明确决定。',
++  panelDescription: '保存原文件与每个版本。企业共享中新建默认全员可见，目录内新增内容继承可见范围。',
+   toggleTree: '展开或收起我的资料树',
+   loadMore: '加载更多',
+   previousPage: '上一页',
+diff --git a/mammoth-agent/packages/client/ui-enterprise-library/tests/panel.client.spec.tsx b/mammoth-agent/packages/client/ui-enterprise-library/tests/panel.client.spec.tsx
+index 60bfd277..78174288 100644
+--- a/mammoth-agent/packages/client/ui-enterprise-library/tests/panel.client.spec.tsx
++++ b/mammoth-agent/packages/client/ui-enterprise-library/tests/panel.client.spec.tsx
+@@ -98,10 +98,48 @@ describe('library panel', () => {
+     await screen.findByRole('dialog', { name: zh.folder })
+     fireEvent.change(screen.getByRole('textbox', { name: zh.name }), { target: { value: '验收目录' } })
+     fireEvent.click(screen.getByRole('button', { name: zh.save }))
+-    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/folders', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '验收目录', parentId: null }), credentials: 'include' })))
++    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/folders', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '验收目录', parentId: null, scope: 'PRIVATE', confirmShare: false }), credentials: 'include' })))
+     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+   })
+ 
++  it('creates a folder directly in shared and displays its visibility before saving', async () => {
++    let saved = false
++    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
++      if (init?.method === 'POST') { saved = true; return Response.json({ id: 'shared-folder', scope: 'ENTERPRISE' }) }
++      return Response.json({ items: saved && url.includes('view=shared') ? [{ id: 'shared-folder', name: '共享新目录', kind: 'FOLDER', scope: 'ENTERPRISE' }] : [] })
++    })
++    render(<Panel useSourceRequest={noSource} t={t as never} clearSourceRequest={() => {}} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
++    await main().findByText(zh.empty)
++    fireEvent.click(screen.getByRole('button', { name: zh.shared }))
++    await main().findByText(zh.empty)
++    fireEvent.click(screen.getByRole('button', { name: zh.new }))
++    fireEvent.click(await screen.findByRole('menuitem', { name: zh.folder }))
++    const dialog = await screen.findByRole('dialog', { name: zh.folder })
++    expect(within(dialog).getByText('本企业成员可见；新建或上传的内容继承此范围。')).toBeTruthy()
++    fireEvent.change(within(dialog).getByRole('textbox', { name: zh.name }), { target: { value: '共享新目录' } })
++    fireEvent.click(within(dialog).getByRole('button', { name: zh.save }))
++    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/folders', expect.objectContaining({ body: JSON.stringify({ name: '共享新目录', parentId: null, scope: 'ENTERPRISE', confirmShare: true }) })))
++    await main().findByRole('button', { name: '共享新目录' })
++    expect(screen.getByRole('button', { name: zh.shared }).getAttribute('aria-current')).toBe('page')
++  })
++
++  it('confirms the server subtree count and sends its revision when sharing a folder', async () => {
++    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
++    const treeRevision = 'a'.repeat(64)
++    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
++      if (url.includes('/scope-impact')) return Response.json({ total: 4, changed: 4, treeRevision })
++      if (init?.method === 'POST') return Response.json({ id: 'folder', scope: 'ENTERPRISE' })
++      return Response.json({ items: [{ id: 'folder', name: '已有目录', kind: 'FOLDER', scope: 'PRIVATE', canManage: true }] })
++    })
++    render(<Panel useSourceRequest={noSource} t={t as never} clearSourceRequest={() => {}} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
++    await main().findByRole('button', { name: '已有目录' })
++    fireEvent.click(main().getByRole('button', { name: `${zh.more} · 已有目录` }))
++    fireEvent.click(await screen.findByRole('menuitem', { name: zh.share }))
++    await waitFor(() => expect(confirm).toHaveBeenCalledWith(expect.stringContaining('4')))
++    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/nodes/folder/scope', expect.objectContaining({ body: JSON.stringify({ scope: 'ENTERPRISE', confirmShare: true, confirmUnshare: false, expectedTreeRevision: treeRevision }) })))
++    confirm.mockRestore()
++  })
++
+   it('keeps the real parsing-failure reason visible in the preview modal', async () => {
+     const fetchImpl = vi.fn(async (url: string) => url.includes('/preview?') ? Response.json({ text: null, parseReason: '无法提取文字，请重试解析' }) : Response.json({ items: [
+       { id: 'failed', name: '失败.pdf', kind: 'FILE', currentVersion: { id: 'vf', versionNo: 1, parseStatus: 'FAILED' } },
+@@ -226,22 +264,27 @@ describe('t188 lazy tree, media and upload feedback', () => {
+     await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:private-fixture'));
+     expect(fetchImpl).toHaveBeenCalledWith('/ground-library/nodes/pic/download?versionId=vp&inline=1', expect.objectContaining({ credentials: 'include' }));
+   });
+-  it('reveals successful default-private uploads from shared in mine without silently sharing', async () => {
++  it('creates shared uploads directly and keeps the shared view selected', async () => {
+     let saved = false;
+     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+       if (url.endsWith('/config')) return Response.json({ maxFileBytes: 1000, allowedExtensions: ['.md'] });
+-      if (init?.method === 'POST') { saved = true; return Response.json({ items: [{ id: 'new' }], failed: [] }); }
+-      return Response.json({ items: saved && url.includes('view=mine') ? [{ id: 'new', name: '新增.md', kind: 'FILE', scope: 'PRIVATE', currentVersion: { id: 'vnew', versionNo: 1, parseStatus: 'READY' } }] : [] });
++      if (init?.method === 'POST') {
++        expect((init.body as FormData).get('scope')).toBe('ENTERPRISE');
++        expect((init.body as FormData).get('confirmShare')).toBe('true');
++        saved = true; return Response.json({ items: [{ id: 'new', scope: 'ENTERPRISE' }], failed: [] });
++      }
++      return Response.json({ items: saved && url.includes('view=shared') ? [{ id: 'new', name: '新增.md', kind: 'FILE', scope: 'ENTERPRISE', currentVersion: { id: 'vnew', versionNo: 1, parseStatus: 'READY' } }] : [] });
+     });
+     render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+     await main().findByText(zh.empty); fireEvent.click(screen.getByRole('button', { name: zh.shared }));
++    await waitFor(() => expect((screen.getAllByRole('button', { name: zh.upload })[0] as HTMLButtonElement).disabled).toBe(false));
+     fireEvent.click(screen.getAllByRole('button', { name: zh.upload })[0]!);
+     fireEvent.change(screen.getByLabelText(zh.uploadChoose, { selector: 'input' }), { target: { files: [new File(['fixture'], '新增.md')] } });
+     fireEvent.click(screen.getByRole('button', { name: zh.uploadStart }));
+     await screen.findByText(zh.uploadSuccess);
+     fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: zh.close }).at(-1)!);
+     await main().findByRole('button', { name: '新增.md' });
+-    expect(screen.getByRole('button', { name: zh.mine }).getAttribute('aria-current')).toBe('page');
++    expect(screen.getByRole('button', { name: zh.shared }).getAttribute('aria-current')).toBe('page');
+     expect(fetchImpl.mock.calls.some(([url]) => url.includes('/scope'))).toBe(false);
+   });
+   it('retains actual upload errors instead of reporting transfer success', async () => {
+diff --git a/mammoth-agent/packages/credentials/deepseek-account-platform/src/ground-library.ts b/mammoth-agent/packages/credentials/deepseek-account-platform/src/ground-library.ts
+index 1b44ec3b..18258ac8 100644
+--- a/mammoth-agent/packages/credentials/deepseek-account-platform/src/ground-library.ts
++++ b/mammoth-agent/packages/credentials/deepseek-account-platform/src/ground-library.ts
+@@ -11,7 +11,7 @@ const ROUTES: readonly [string, RegExp][] = [
+   ['POST', /^\/files\/[A-Za-z0-9_-]+\/versions$/],
+   ['PATCH', /^\/nodes\/[A-Za-z0-9_-]+$/], ['DELETE', /^\/nodes\/[A-Za-z0-9_-]+$/],
+   ['POST', /^\/nodes\/[A-Za-z0-9_-]+\/(?:move|scope|recycle|restore|retry-parse)$/],
+-  ['GET', /^\/nodes\/[A-Za-z0-9_-]+\/(?:preview|source|download|versions)$/],
++  ['GET', /^\/nodes\/[A-Za-z0-9_-]+\/(?:preview|source|download|versions|scope-impact)$/],
+ ]
+ 
+ /** Only explicit library operations, never admin, arbitrary origins or path traversal. */
+diff --git a/mammoth-agent/packages/credentials/deepseek-account-platform/tests/ground-library.spec.ts b/mammoth-agent/packages/credentials/deepseek-account-platform/tests/ground-library.spec.ts
+index d6175044..62799b89 100644
+--- a/mammoth-agent/packages/credentials/deepseek-account-platform/tests/ground-library.spec.ts
++++ b/mammoth-agent/packages/credentials/deepseek-account-platform/tests/ground-library.spec.ts
+@@ -6,6 +6,8 @@ it('allows explicit library paths, never admin, traversal or arbitrary upstream
+  expect(libraryProxyTarget('POST', '/ground-library/files')).toBe('/api/library/files')
+  expect(libraryProxyTarget('POST', '/ground-library/used')).toBe('/api/library/used')
+  expect(libraryProxyTarget('GET', '/ground-library/used')).toBeUndefined()
++ expect(libraryProxyTarget('GET', '/ground-library/nodes/abc/scope-impact?scope=ENTERPRISE')).toBe('/api/library/nodes/abc/scope-impact?scope=ENTERPRISE')
++ expect(libraryProxyTarget('POST', '/ground-library/nodes/abc/scope-impact')).toBeUndefined()
+  expect(libraryProxyTarget('GET', '/ground-library/nodes/abc/download?versionId=v&inline=1')).toBe('/api/library/nodes/abc/download?versionId=v&inline=1')
+  expect(libraryProxyTarget('GET', '/ground-library/nodes/abc/download?versionId=v')).toContain('/api/library/nodes/abc/download')
+  for(const path of ['/ground-library/admin/stats', '/ground-library/../admin', '/ground-library/nodes/a%2fb/download', '/api/library/items', '//evil.test/items']) expect(libraryProxyTarget('GET', path)).toBeUndefined()
+diff --git a/mammoth-agent/scripts/build.spec.ts b/mammoth-agent/scripts/build.spec.ts
+index aad5f509..5768850d 100644
+--- a/mammoth-agent/scripts/build.spec.ts
++++ b/mammoth-agent/scripts/build.spec.ts
+@@ -130,6 +130,19 @@ describe('repository build steps', () => {
+ 
+ 
+ describe('Web development build isolation', () => {
++  it('compiles shortcut Host entries before bundling without a Desktop dependency', () => {
++    const compiler = buildGates(root, 'artifacts', { MMP_BUILD_TARGET: 'web' })
++      .find(gate => gate.id === 'host-src')!
++    const result = spawnSync(compiler.command, [...compiler.args, '--dry', '--verbose'], {
++      cwd: root,
++      encoding: 'utf8',
++    })
++    expect(result.status, result.stdout + result.stderr).toBe(0)
++    const output = result.stdout.replaceAll('\\', '/')
++    expect(output).toContain('packages/client/shortcuts/tsconfig.host.json')
++    expect(output).not.toMatch(/apps\/desktop(?:-host)?\/tsconfig/u)
++  })
++
+   it('builds Web without compiling or bundling Desktop applications', () => {
+     const gates = buildGates(root, 'artifacts', { MMP_BUILD_TARGET: 'web' })
+     expect(gates.some(gate => gate.id === 'desktop-bundle')).toBe(false)
+diff --git a/mammoth-agent/tsconfig.host.json b/mammoth-agent/tsconfig.host.json
+index 5ee3b27f..4fcbb5ea 100644
+--- a/mammoth-agent/tsconfig.host.json
++++ b/mammoth-agent/tsconfig.host.json
+@@ -285,6 +285,7 @@
+     { "path": "./packages/experimental/session-titles-bundle" },
+     { "path": "./packages/experimental/translator" },
+     { "path": "./packages/client/product-analytics/tsconfig.host.json" },
++    { "path": "./packages/client/shortcuts/tsconfig.host.json" },
+     { "path": "./packages/telemetry/otel" },
+     { "path": "./packages/experimental/speech-to-text" },
+     { "path": "./packages/experimental/speech-to-text-sensevoice" },

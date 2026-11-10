@@ -72,7 +72,7 @@ A resume blocked by an existing write handle returns `session/writer-held` with 
 
 The Client's initial `follow`, reconnect openings, and `loadOlder()` request at least 50 append-origin `user/message` and `assistant/message` events and cross at least two `turn/start` events, including the partial Turn at the loaded window's beginning. The Host stops at the first Turn start satisfying both minima, or at 500 counted messages or history exhaustion, whichever comes first. Steering does not add a Turn boundary. Intervening events accompany the page without counting toward the message budget. The optional `turnWindow` on page and follow requests supplies these minima under `maxMessages`. `loadThrough()` uses the same rules with a 200-message minimum per page; the 500-message cap does not limit the whole jump. Requests without `turnWindow` retain message-aligned paging.
 
-Queue edits replace pending content with non-empty text only.
+Library prompt parts carry only node/version identities and a display-only browser name. The serial `session/resolve-library-reference` provider authorizes every source before attachment admission; a missing provider or refused source rejects the complete prompt. The final `session/validate-library-references` check verifies all captured account credentials before delivery; a missing validator also rejects the prompt. Accepted source text and authoritative metadata remain separate logged blocks. Queue edits accept non-empty ordinary text without source metadata, replace the question, and preserve already admitted library excerpt blocks unchanged.
 
 `session.attachment` receives `{ sessionId, attachment: ImageAttachmentRef }` and passes the complete reference to `AttachmentStore.readImage()`, without reading or traversing Session history. The Client supplies the message's reference through `session.readAttachment(ref)`. Connection authentication and Gateway permission checks still apply; `sessionId` selects the Session resource for the endpoint's permission check. After authorization, the handler does not check whether that Session exists and does not return `session/not-found` merely because it is absent. An authorized caller may read any image in the same store, including an image referenced only by another Session or by no Session. The response preserves the supplied reference after verifying its ID, media type, byte length, width, and height against the stored bytes. Optional `name` and `originalDimensions` pass through as caller-supplied display information and are not verified against the file. Missing or invalid objects return a terminal attachment failure. The Client's historical-image cache retains one result and browser URL per Session and attachment ID.
 
@@ -108,7 +108,7 @@ The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-a
 
 -----
 
-Blockquotes travel as ordinary prompt text without quote metadata. Local submission echoes and durable messages use the same text rendering rules; queue edits replace content while retaining prompt correlation.
+Blockquotes travel as ordinary prompt text without quote metadata. Local submission echoes and durable messages use the same text rendering rules; queue edits replace the question while retaining admitted library excerpts and prompt correlation.
 
 <a id="model-experience"></a>
 ## Model Experience

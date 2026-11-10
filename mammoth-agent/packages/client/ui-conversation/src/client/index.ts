@@ -101,7 +101,7 @@ export type {
   BeginCommandRequest, CommandClaim, ConsumeTokenRequest, DraftAttachmentId, DraftInitializationOptions,
   DraftInitializationResult, InputActions,
   InputState, InsertReferenceRequest, InsertTextRequest, PickOutcome, SessionInput,
-  SessionInputResolver, SubmitAttachment, SubmitOutcome,
+  SessionInputResolver, SubmitAttachment, SubmitOutcome, LibraryPromptPart, SerializedReference, SerializedDraftPrompt,
 } from './contract/input.ts'
 export type { CatalogDraftSelection, ArbitrateKey, ArbitrateOutcome, DraftInput, DraftQuote, DraftReference, DraftSnapshot, ReferenceInsert, TokenSpan } from './contract/draft-editor.ts'
 export type { ComposerBlock, ComposerBlocks } from './contract/composer-blocks.ts'

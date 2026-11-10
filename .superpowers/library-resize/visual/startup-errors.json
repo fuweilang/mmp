@@ -1,0 +1,4 @@
+[
+  "Error: web boot: 1 entry did not activate\n@mammoth-ai/mmp-client-ui-sidebar-documentpreview: import failed: client-modules: require(\"./client.LoadingIndicator.js\") missed the module table — not a platform seed word, not a materialized module, and no registered package factory (a build-time externals drift, or a dynamic dependency that did not arrive)\n    at XH (http://127.0.0.1:50132/assets/index-BjyFE1eM.js:194:60373)\n    at YH (http://127.0.0.1:50132/assets/index-BjyFE1eM.js:194:59837)\n    at async cV.run (http://127.0.0.1:50132/assets/index-BjyFE1eM.js:196:4510)",
+  "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+]

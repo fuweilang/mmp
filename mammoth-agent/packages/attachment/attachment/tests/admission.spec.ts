@@ -192,3 +192,11 @@ describe('AttachmentStore.admitPromptContent', () => {
     expect(mocks.saveImages).not.toHaveBeenCalled()
   })
 })
+
+
+it('preserves authoritative library metadata on an admitted text excerpt', async () => {
+  const { store } = storeOf()
+  const reference = { source: 'library' as const, nodeId: 'n', versionId: 'v', name: 'Official.pdf', versionNo: 3, bytes: 90 }
+  const content = [{ type: 'text' as const, text: 'EXACT AUTHORIZED EXCERPT', reference }]
+  await expect(store.admitPromptContent(content)).resolves.toEqual(content)
+})

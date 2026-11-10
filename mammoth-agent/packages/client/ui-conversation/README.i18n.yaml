@@ -5,36 +5,36 @@
 /:
   en: 0ca51f37788dcbdb
   zh: 14d73c6bc8d4e17f
-/deepseek-ai-mmp-client-ui-conversation:
-  en: 77ecbd074ef3a3ce
-  zh: 2c0e2b720e3b201e
-/deepseek-ai-mmp-client-ui-conversation/summary:
+/mammoth-ai-mmp-client-ui-conversation:
+  en: 5662ffda7db8f213
+  zh: 63ebf59e79e2392e
+/mammoth-ai-mmp-client-ui-conversation/summary:
   en: 8811c28013fdc6dc
   zh: 0a86edc422b38ba8
-/deepseek-ai-mmp-client-ui-conversation/table-of-contents:
+/mammoth-ai-mmp-client-ui-conversation/table-of-contents:
   en: eef4f18c3972ccc4
   zh: 6be65c6ac84ce497
-/deepseek-ai-mmp-client-ui-conversation/conversation-assembly:
-  en: ef43c4f149195939
-  zh: 49fc6c83fd3a05ce
-/deepseek-ai-mmp-client-ui-conversation/sent-user-text:
-  en: cc4dafd1aae02468
-  zh: be6b67724b7ac4a3
-/deepseek-ai-mmp-client-ui-conversation/shell-and-standard-props:
-  en: 9b596b668979544a
-  zh: 159f24dfc8715c92
-/deepseek-ai-mmp-client-ui-conversation/temporary-composer-entries:
-  en: 59cd63057dfb6eeb
-  zh: b2e2c86e810b7bb8
-/deepseek-ai-mmp-client-ui-conversation/model-experience:
+/mammoth-ai-mmp-client-ui-conversation/conversation-assembly:
+  en: 3df6f7efbac41baf
+  zh: 2e42269561f55a33
+/mammoth-ai-mmp-client-ui-conversation/sent-user-text:
+  en: 00ea3a684af0a59b
+  zh: df737207411a3bc2
+/mammoth-ai-mmp-client-ui-conversation/shell-and-standard-props:
+  en: 2dc7f4ce9de01ca0
+  zh: d3476a645fae6ec9
+/mammoth-ai-mmp-client-ui-conversation/temporary-composer-entries:
+  en: d73e0a03e4915f0a
+  zh: 2b743bc3ed83c7b1
+/mammoth-ai-mmp-client-ui-conversation/model-experience:
   en: e0a05b73ba3e4318
   zh: dc85ab8433bb4456
-/deepseek-ai-mmp-client-ui-conversation/model-experience/kv-cache-effect:
+/mammoth-ai-mmp-client-ui-conversation/model-experience/kv-cache-effect:
   en: 9f4e0da7c8addf88
   zh: 1a33d9981af75643
-/deepseek-ai-mmp-client-ui-conversation/known-limitations-and-deferred-work:
+/mammoth-ai-mmp-client-ui-conversation/known-limitations-and-deferred-work:
   en: 38d243630d0e4c38
   zh: a58cdc35b664020b
-/deepseek-ai-mmp-client-ui-conversation/known-limitations-and-deferred-work/dev-note:
+/mammoth-ai-mmp-client-ui-conversation/known-limitations-and-deferred-work/dev-note:
   en: e67f633dc6fe7773
   zh: e88aeb617ffb74ea

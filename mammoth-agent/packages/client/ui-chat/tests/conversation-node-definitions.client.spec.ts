@@ -358,6 +358,17 @@ describe('built-in conversation node Definitions', () => {
     expect(streamed).not.toBe(opening)
   })
 
+  it('shows selected library file names in rail previews without model excerpts', () => {
+    const reference = { source: 'library', nodeId: 'node-1', versionId: 'v1', name: 'Plan.md' }
+    const value = assembler([
+      at(1, 'turn/start', { turn: 1 }),
+      at(2, 'user/message', { ...textMessage('user-1', 'Compare.'), content: [
+        { type: 'text', text: 'PRIVATE RAIL EXCERPT', reference }, { type: 'text', text: 'Compare.' },
+      ] }, { surfaceOp: 'append' }),
+    ])
+    expect(snapshot(value).navigation.items()[0]?.prompt).toBe('Compare.')
+  })
+
   it('bounds each rail preview at its card budget instead of copying the whole transcript', () => {
     const long = 'x'.repeat(400)
     const value = assembler([

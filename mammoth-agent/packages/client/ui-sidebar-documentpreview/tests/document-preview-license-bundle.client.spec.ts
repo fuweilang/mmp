@@ -1,6 +1,6 @@
 /** Published PDF and spreadsheet chunks retain their bundled license notices. */
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
@@ -44,6 +44,15 @@ function runPnpm(args: string[], cwd: string, timeout: number): string {
 }
 
 describe('published document preview licenses', () => {
+  it.skipIf(!existsSync(bundlePath))('boots every client chunk without synchronous sibling chunk requests', () => {
+    const dependencies = readdirSync(join(packageRoot, 'lib')).filter(name => /^client(?:\.[^/]+)?\.js$/u.test(name)).flatMap(name => {
+      const source = readFileSync(join(packageRoot, 'lib', name), 'utf8')
+      return [...source.matchAll(/\brequire\(\s*["'](\.\.?\/[^"']+)["']\s*\)/gu)]
+        .map(match => ({ file: name, dependency: match[1] }))
+    })
+    expect(dependencies).toEqual([])
+  })
+
   it.skipIf(!existsSync(bundlePath))('keeps bundled licenses in the packed lazy chunks', ({ task }) => {
     expect(existsSync(pdfChunkPath)).toBe(true)
     const output = mkdtempSync(join(tmpdir(), 'mmp-document-preview-pack-'))
@@ -58,7 +67,7 @@ describe('published document preview licenses', () => {
 
       const client = run('tar', ['-xOf', resolve(packageRoot, packed.filename), 'package/lib/client.js'], packageRoot, task.timeout)
       const pdf = run('tar', ['-xOf', resolve(packageRoot, packed.filename), 'package/lib/client.pdf.js'], packageRoot, task.timeout)
-      expect([...client.matchAll(/require\.async\("(\.\/client[^"/]*\.js)"\)/gu)].map(match => match[1]))
+      expect([...new Set([...client.matchAll(/require\.async\("(\.\/client[^"/]*\.js)"\)/gu)].map(match => match[1]))])
         .toEqual(['./client.frontmatter-fields.js', './client.pdf.js', './client.excel.js'])
       expect(client).not.toMatch(/\brequire\("\.\/client[^"/]*\.js"\)/u)
       expect([...pdf.matchAll(/require\("(\.\/client[^"/]*\.js)"\)/gu)].map(match => match[1]))

@@ -1,6 +1,6 @@
 /** Browser-safe request, result, and lifecycle vocabulary for the Session Remote service. */
 
-import type {} from '@mammoth-ai/mmp-agent/types'
+import type { Agent } from '@mammoth-ai/mmp-agent/types'
 import type { NativeFileApplication } from '@mammoth-ai/mmp-native-command/types'
 import type {
   ImageAttachmentLimits, ImageAttachmentRef, ImageMediaType,
@@ -72,7 +72,8 @@ export type SessionProjectionValues = Partial<SessionProjectionMap>
  * Browser-submitted prompt content; the Host promotes image bytes to durable
  * references. File parts carry the opaque receipt returned by a preceding
  * upload on the same Session; the receipt of an image upload enters the
- * message as that image.
+ * message as that image. Library parts carry exact identities for Host authorization;
+ * their browser name cannot supply the admitted name or source text.
  */
 export type PromptContentPart =
   | { readonly type: 'text'; readonly text: string }
@@ -82,6 +83,7 @@ export type PromptContentPart =
     readonly data: string
     readonly name?: string
   }
+  | { readonly type: 'library'; readonly nodeId: string; readonly versionId: string; readonly name: string }
   | { readonly type: 'file'; readonly receiptId: Branded<'file-upload-receipt-id'> }
 
 /** Complete model selection for one Session. */
@@ -142,7 +144,7 @@ export type QueueAction =
   | {
     readonly kind: 'edit'
     /** Non-empty text-only replacement content. */
-    readonly content: readonly TextBlock[]
+    readonly content: readonly { readonly type: 'text'; readonly text: string }[]
   }
   | { readonly kind: 'remove' }
   | { readonly kind: 'steer' }
@@ -719,5 +721,28 @@ export type SessionWorkspacePathApplication = NativeFileApplication
 declare module '@mammoth-ai/cordis' {
   interface Events {
     'task/dispose-owned'(sessionId: SessionId): Promise<void>
+  }
+}
+
+/** Account providers resolve library identities before any prompt attachment is admitted. */
+declare module '@mammoth-ai/cordis' {
+  interface Events {
+    /**
+     * Authorize and materialize one immutable library excerpt for the addressed Agent.
+     * @mode serial
+     * @param agent - receiving Agent whose prompt is being admitted.
+     * @param part - selected node and exact version; name is display-only browser input.
+     */
+    'session/resolve-library-reference'(
+      agent: Agent,
+      part: Extract<PromptContentPart, { readonly type: 'library' }>,
+    ): Promise<TextBlock | undefined>
+    /**
+     * Recheck the captured account for every original resolved source immediately before delivery.
+     * @mode serial
+     * @param agent - receiving Agent whose prompt is ready for synchronous delivery.
+     * @param resolvedSources - original resolver blocks, before admission and message cloning.
+     */
+    'session/validate-library-references'(agent: Agent, resolvedSources: readonly TextBlock[]): Promise<true | undefined>
   }
 }

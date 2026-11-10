@@ -308,3 +308,17 @@ describe('Session Controller access', () => {
     })
   })
 })
+
+it('refuses non-owner library prompts before consulting the account resolver', async () => {
+  const { ctx, as, shared } = await harness()
+  const resolver = vi.fn(async () => ({ type: 'text' as const, text: 'OWNER PRIVATE EXCERPT', reference: {
+    source: 'library' as const, nodeId: 'n', versionId: 'v', name: 'Private.pdf',
+  } }))
+  ctx.on('session/resolve-library-reference', resolver)
+  await expect(as(GUEST, 'prompt').sessionController.prompt({
+    sessionId: SHARED, requestId: 'guest-library' as SessionRequestId, mode: 'queue',
+    content: [{ type: 'library', nodeId: 'n', versionId: 'v', name: 'Private.pdf' }],
+  }, new AbortController().signal)).rejects.toMatchObject({ code: 'gateway/bad-request', message: 'Library references require the owning account' })
+  expect(resolver).not.toHaveBeenCalled()
+  expect(shared.inbox.nextTurn).toHaveLength(0)
+})

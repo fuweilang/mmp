@@ -11,10 +11,27 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { libraryLimitsFromEnv } from './library.limits';
 
-export class CreateFolderDto {
+export class CreationScopeDto {
+  @IsOptional()
+  @IsIn(['PRIVATE', 'ENTERPRISE'])
+  scope?: 'PRIVATE' | 'ENTERPRISE';
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value)
+  @IsBoolean()
+  confirmShare?: boolean;
+}
+
+export class UploadFilesDto extends CreationScopeDto {
+  @IsOptional()
+  @IsString()
+  parentId?: string;
+}
+
+export class CreateFolderDto extends UploadFilesDto {
   @IsString()
   @MinLength(1)
   @MaxLength(180)
@@ -25,7 +42,7 @@ export class CreateFolderDto {
   parentId?: string;
 }
 
-export class CreateLinkDto {
+export class CreateLinkDto extends CreationScopeDto {
   @IsString()
   @MinLength(1)
   @MaxLength(180)
@@ -52,6 +69,9 @@ export class MoveNodeDto {
   @ValidateIf((_obj, value) => value !== null)
   @IsString()
   parentId!: string | null;
+
+  @IsOptional() @IsBoolean() confirmShare?: boolean;
+  @IsOptional() @IsString() @MaxLength(64) expectedTreeRevision?: string;
 }
 
 export class ScopeNodeDto {
@@ -61,6 +81,14 @@ export class ScopeNodeDto {
   @IsOptional()
   @IsBoolean()
   confirmShare?: boolean;
+
+  @IsOptional() @IsBoolean() confirmUnshare?: boolean;
+  @IsOptional() @IsString() @MaxLength(64) expectedTreeRevision?: string;
+}
+
+export class ScopeImpactQuery {
+  @IsIn(['PRIVATE', 'ENTERPRISE'])
+  scope!: 'PRIVATE' | 'ENTERPRISE';
 }
 
 export class AskDto {

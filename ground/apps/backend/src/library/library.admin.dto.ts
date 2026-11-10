@@ -16,6 +16,11 @@ export class AdminLibraryContext {
  @IsString() @MinLength(8) @MaxLength(100) requestId!: string;
  @IsString() @MinLength(4) @MaxLength(500) reason!: string;
 }
+export class AdminLibraryScopeImpactQuery {
+ @IsString() @MinLength(1) grantId!: string;
+ @IsString() @MinLength(1) targetGrantId!: string;
+ @IsIn(['PRIVATE','ENTERPRISE']) scope!: 'PRIVATE' | 'ENTERPRISE';
+}
 export class AdminLibraryCreate extends AdminLibraryContext {
  @IsString() @MinLength(1) ownerUserId!: string;
  @IsIn(['PRIVATE','ENTERPRISE']) scope!: 'PRIVATE' | 'ENTERPRISE';
@@ -33,6 +38,8 @@ export class AdminLibraryCommand extends AdminLibraryContext {
  @IsOptional() @IsIn(['PRIVATE','ENTERPRISE']) scope?: 'PRIVATE' | 'ENTERPRISE';
  @IsOptional() @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value) @IsBoolean() confirmShare?: boolean;
  @IsOptional() @IsString() targetGrantId?: string;
+ @IsOptional() @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value) @IsBoolean() confirmUnshare?: boolean;
+ @IsOptional() @IsString() @MaxLength(64) expectedTreeRevision?: string;
  @IsOptional() @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value) @IsBoolean() confirmPurge?: boolean;
  @IsOptional() @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value) @IsBoolean() confirmMissingParent?: boolean;
 }

@@ -130,6 +130,19 @@ describe('repository build steps', () => {
 
 
 describe('Web development build isolation', () => {
+  it('compiles shortcut Host entries before bundling without a Desktop dependency', () => {
+    const compiler = buildGates(root, 'artifacts', { MMP_BUILD_TARGET: 'web' })
+      .find(gate => gate.id === 'host-src')!
+    const result = spawnSync(compiler.command, [...compiler.args, '--dry', '--verbose'], {
+      cwd: root,
+      encoding: 'utf8',
+    })
+    expect(result.status, result.stdout + result.stderr).toBe(0)
+    const output = result.stdout.replaceAll('\\', '/')
+    expect(output).toContain('packages/client/shortcuts/tsconfig.host.json')
+    expect(output).not.toMatch(/apps\/desktop(?:-host)?\/tsconfig/u)
+  })
+
   it('builds Web without compiling or bundling Desktop applications', () => {
     const gates = buildGates(root, 'artifacts', { MMP_BUILD_TARGET: 'web' })
     expect(gates.some(gate => gate.id === 'desktop-bundle')).toBe(false)

@@ -6,8 +6,8 @@ import { createMemoryHistory, createRouter, RouterView, type Router } from 'vue-
 import ElementPlus, { ElMessageBox } from 'element-plus';
 import AdminLibrary from '@admin-library-fixture';
 import Custody from '@custody-fixture';
-const fixture=vi.hoisted(()=>({tenants:vi.fn(),options:vi.fn(),items:vi.fn(),detail:vi.fn(),preview:vi.fn(),folder:vi.fn(),command:vi.fn(),upload:vi.fn(),impact:vi.fn(),grant:vi.fn()}));
-vi.mock('../src/api/libraryAdmin',async original=>({...await original<typeof import('../src/api/libraryAdmin')>(),adminLibraryTenants:fixture.tenants,adminLibraryOptions:fixture.options,adminLibraryItems:fixture.items,adminLibraryDetail:fixture.detail,adminLibraryPreview:fixture.preview,adminLibraryFolder:fixture.folder,adminLibraryCommand:fixture.command,adminLibraryUpload:fixture.upload,adminLibraryImpact:fixture.impact}));
+const fixture=vi.hoisted(()=>({tenants:vi.fn(),options:vi.fn(),items:vi.fn(),detail:vi.fn(),preview:vi.fn(),folder:vi.fn(),command:vi.fn(),upload:vi.fn(),impact:vi.fn(),grant:vi.fn(),scopeImpact:vi.fn()}));
+vi.mock('../src/api/libraryAdmin',async original=>({...await original<typeof import('../src/api/libraryAdmin')>(),adminLibraryTenants:fixture.tenants,adminLibraryOptions:fixture.options,adminLibraryItems:fixture.items,adminLibraryDetail:fixture.detail,adminLibraryPreview:fixture.preview,adminLibraryFolder:fixture.folder,adminLibraryCommand:fixture.command,adminLibraryUpload:fixture.upload,adminLibraryImpact:fixture.impact,adminLibraryScopeImpact:fixture.scopeImpact}));
 vi.mock('../src/api/library',async original=>({...await original<typeof import('../src/api/library')>(),libraryCustodies:async()=>[],libraryCustodyOptions:async()=>({tenantId:'a',ownerUserId:'owner-a',canApproveEnterprise:true,grantees:[{id:'platform',name:'授权平台人'}]}),grantLibraryCustody:fixture.grant}));
 const require=createRequire(import.meta.url);
 const css=['el-overlay.css','el-dialog.css','el-select.css','el-message-box.css'].map(f=>readFileSync(require.resolve('element-plus/theme-chalk/'+f),'utf8')).join('\n')+'\n'+readFileSync('src/styles/libraryDialogs.css','utf8');
@@ -34,3 +34,13 @@ it('file purge disabled, unknown references not false zero, cancel does not dele
 it('existing approval defaults READ, explicit CRUD and actual message-box confirmation submit scoped grant',async()=>{await mount('/admin/library',true);click('代管授权与撤销');const d=await dialog('批准平台代管');await vi.waitFor(()=>expect(d.querySelectorAll('input[type=radio]')).toHaveLength(2));const radios=d.querySelectorAll<HTMLInputElement>('input[type=radio]');expect(radios[0]!.checked).toBe(true);await choose(d,'平台代管人','授权平台人');radios[1]!.click();input(d.querySelector<HTMLInputElement>('input[type=datetime-local]')!,'2099-01-01T12:00');input(d.querySelector<HTMLTextAreaElement>('textarea')!,'隔离明确授权');await nextTick();click('明确批准管理代管',d);await vi.waitFor(()=>expect(document.querySelector('.library-message-box')).toBeTruthy());click('批准',document.querySelector('.library-message-box')!);await vi.waitFor(()=>expect(fixture.grant).toHaveBeenCalledTimes(1));expect(fixture.grant.mock.calls[0]?.[0]).toMatchObject({tenantId:'a',ownerUserId:'owner-a',granteeUserId:'platform',powers:'CRUD',contentScope:'PRIVATE_OWNER'});await vi.waitFor(()=>expect(radios[0]!.checked).toBe(true));});
 
 it('cancelled impact request cannot later pollute a reopened rename dialog for the same node',async()=>{await mount();let reject:(error:Error)=>void=()=>{};fixture.impact.mockImplementationOnce(()=>new Promise((_resolve,r)=>{reject=r;}));await menu('移入回收站');let d=await dialog('回收');click('取消',d);await menu('重命名');d=await dialog('重命名');reject(new Error('stale impact failure fixture'));await new Promise(r=>setTimeout(r,10));expect(d.textContent).not.toContain('stale impact failure fixture');expect(fixture.command).not.toHaveBeenCalled();});
+
+it('admin visibility dialog includes all descendants and submits both grants with the confirmed revision', async () => {
+ fixture.items.mockResolvedValue({items:[{...item(),kind:'FOLDER',currentVersion:null,targetScopeGrantId:'shared-write'}],total:1});
+ fixture.scopeImpact.mockResolvedValue({total:4,changed:4,treeRevision:'c'.repeat(64)});
+ await mount();await menu('设为企业共享');const d=await dialog('修改可见性');
+ await vi.waitFor(()=>expect(d.textContent).toContain('4 项'));
+ input(d.querySelector<HTMLInputElement>('input[placeholder^="管理原因"]')!,'确认目录及全部子项');await nextTick();click('确认',d);
+ await vi.waitFor(()=>expect(fixture.command).toHaveBeenCalledTimes(1));
+ expect(fixture.command.mock.calls[0]?.[1]).toMatchObject({scope:'ENTERPRISE',grantId:'write-a',targetGrantId:'shared-write',confirmShare:true,confirmUnshare:false,expectedTreeRevision:'c'.repeat(64)});
+});

@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render } from '@testing-library/react'
+import { cleanup, fireEvent, render } from '@testing-library/react'
 import { makeTranslate } from '@mammoth-ai/mmp-client-test-runtime'
 import type { PropsRenderSlots } from '@mammoth-ai/mmp-client-ui-slots'
 import { zh as commonZh } from '@mammoth-ai/mmp-client-locale/src/locales/zh.ts'
@@ -14,7 +14,7 @@ import type {
   ChatConversationViewNode, SteeringMessageNode, UserMessageNode,
 } from '@mammoth-ai/mmp-client-ui-chat/client'
 import type { ChatNodeViewProps, UserContentInput } from '../src/client/contract/slots.ts'
-import { UserMessageNodeView } from '../src/client/chat/MessageItem.tsx'
+import { PendingSubmissionBubble, UserMessageNodeView } from '../src/client/chat/MessageItem.tsx'
 import { zh } from '../src/client/locale.ts'
 import { createUserContentFixture } from './user-content-component-fixture.tsx'
 import { unusedImageLoader } from './reasoning-component-fixture.tsx'
@@ -91,6 +91,35 @@ describe('official user renderer origin seat', () => {
     expect(bubble).not.toBeNull()
     expect(row.firstElementChild).toBe(origin)
     expect(origin!.compareDocumentPosition(bubble!) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+  })
+
+  it('renders source cards and copies links with the original prompt instead of source excerpts', () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    const reference = { source: 'library', nodeId: 'node-1', versionId: 'version-1', name: 'Notes.md' } as const
+    const props = viewProps({ ...userData, content: [
+      { type: 'text', text: 'PRIVATE SOURCE FOR MODEL', reference }, { type: 'text', text: 'Analyze this.' },
+    ] })
+    const view = render(<UserMessageNodeView {...props} {...userSlots} />)
+    expect(view.getByTitle('Notes.md')).toBeTruthy()
+    expect(view.getByText('Analyze this.')).toBeTruthy()
+    expect(view.container.textContent).not.toContain('PRIVATE SOURCE')
+    fireEvent.click(view.getByRole('button', { name: '复制' }))
+    expect(writeText).toHaveBeenCalledWith('[Notes.md](/ground-library/nodes/node-1/source?versionId=version-1)\n\nAnalyze this.')
+  })
+
+  it('shows the same library cards and copy projection during a pending submission', () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    const reference = { source: 'library', nodeId: 'node-1', versionId: 'version-1', name: 'Notes.md' } as const
+    const view = render(<PendingSubmissionBubble
+      submission={{ requestId: 'pending-source' as never, placement: 'transcript', time: 1_000,
+        text: 'Analyze this.', attachments: [], libraryReferences: [reference] }}
+      renderFactorySlot={renderUserFactory} loadImage={unusedImageLoader} t={t} />)
+    expect(view.getByTitle('Notes.md')).toBeTruthy()
+    expect(view.getByText('Analyze this.').closest('[data-submission-echo]')).not.toBeNull()
+    fireEvent.click(view.getByRole('button', { name: '复制' }))
+    expect(writeText).toHaveBeenCalledWith('[Notes.md](/ground-library/nodes/node-1/source?versionId=version-1)\n\nAnalyze this.')
   })
 
   it('preserves the bubble, text and actions across empty and occupied chain output', () => {

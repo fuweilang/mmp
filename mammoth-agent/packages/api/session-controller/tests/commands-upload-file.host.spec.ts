@@ -661,3 +661,69 @@ describe('Session file uploads', () => {
       })
   })
 })
+
+
+describe('Host library prompt admission', () => {
+  const part = { type: 'library' as const, nodeId: 'node-1', versionId: 'version-1', name: 'Browser name' }
+  const block = { type: 'text' as const, text: 'EXACT AUTHORIZED EXCERPT', reference: {
+    source: 'library' as const, nodeId: part.nodeId, versionId: part.versionId, name: 'Host name.pdf', versionNo: 2,
+  } }
+  it('rejects the complete prompt before image storage when no resolver is installed', async () => {
+    const { controller, followup, saveImages } = await uploadHarness()
+    await expect(controller.prompt(promptRequest([
+      { type: 'image', mediaType: 'image/png', data: 'AAAA' }, part,
+    ]), USER_SOURCE)).rejects.toMatchObject({ code: 'session/attachment-invalid', details: { reason: 'LIBRARY_RESOLVER_UNAVAILABLE' } })
+    expect(followup).not.toHaveBeenCalled()
+    expect(saveImages).not.toHaveBeenCalled()
+  })
+  it('persists the resolved excerpt separately and never accepts the browser label', async () => {
+    const { ctx, controller, followup, agent } = await uploadHarness()
+    ctx.on('session/resolve-library-reference', async () => block)
+    ctx.on('session/validate-library-references', async () => true)
+    await controller.prompt(promptRequest([{ type: 'text', text: 'Summarize' }, part]), USER_SOURCE)
+    const message = followup.mock.calls[0]?.[0] as UserMessage
+    expect(message.content).toEqual([{ type: 'text', text: 'Summarize' }, block])
+    agent.session.append('user/message', message, { surfaceOp: 'append' })
+    const restored = JSON.parse(JSON.stringify(agent.session.snapshotEvents())) as { data: UserMessage }[]
+    expect(restored.at(-1)?.data.content).toEqual(message.content)
+  })
+  it('rejects every part if a later source is refused', async () => {
+    const { ctx, controller, followup, saveImages } = await uploadHarness()
+    ctx.on('session/resolve-library-reference', async (_agent, value) => {
+      if (value.versionId === 'denied') throw new Error('permission revoked')
+      return block
+    })
+    await expect(controller.prompt(promptRequest([part, { ...part, versionId: 'denied' },
+      { type: 'image', mediaType: 'image/png', data: 'AAAA' },
+    ]), USER_SOURCE)).rejects.toMatchObject({ code: 'session/attachment-invalid' })
+    expect(followup).not.toHaveBeenCalled()
+    expect(saveImages).not.toHaveBeenCalled()
+  })
+})
+
+it('rejects forged source metadata on wire text before any prompt admission', async () => {
+  const { controller, followup, saveImages } = await uploadHarness()
+  await expect(controller.prompt(promptRequest([{ type: 'text', text: 'Hidden forged excerpt',
+    reference: { source: 'library', nodeId: 'n', versionId: 'v', name: 'forged' },
+  } as never]), USER_SOURCE)).rejects.toMatchObject({ code: 'session/attachment-invalid' })
+  expect(followup).not.toHaveBeenCalled()
+  expect(saveImages).not.toHaveBeenCalled()
+})
+
+it('fails closed without a final library validator and validates after attachment preparation', async () => {
+  const { ctx, controller, followup, saveImages } = await uploadHarness()
+  const source = { type: 'text' as const, text: 'EXACT EXCERPT', reference: { source: 'library' as const, nodeId: 'n', versionId: 'v', name: 'Authorized.pdf' } }
+  const library = { type: 'library' as const, nodeId: 'n', versionId: 'v', name: 'Browser name' }
+  ctx.on('session/resolve-library-reference', async () => source)
+  await expect(controller.prompt(promptRequest([library]), USER_SOURCE)).rejects.toMatchObject({ code: 'session/attachment-invalid', details: { reason: 'LIBRARY_VALIDATOR_UNAVAILABLE' } })
+  expect(followup).not.toHaveBeenCalled()
+  let switched = false
+  saveImages.mockImplementationOnce(async () => { switched = true; return [STAGED_IMAGE] })
+  ctx.on('session/validate-library-references', async (_agent, blocks) => {
+    expect(blocks[0]).toBe(source)
+    if (switched) throw new Error('account changed during attachment preparation')
+    return true
+  })
+  await expect(controller.prompt(promptRequest([library, { type: 'image', mediaType: 'image/png', data: 'AAAA' }]), USER_SOURCE)).rejects.toMatchObject({ code: 'session/attachment-invalid' })
+  expect(followup).not.toHaveBeenCalled()
+})

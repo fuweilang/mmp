@@ -1,0 +1,5 @@
+猛犸AI
+Failed to load plugins
+@mammoth-ai/mmp-client-ui-sidebar-documentpreview
+web boot: 1 entry did not activate
+@mammoth-ai/mmp-client-ui-sidebar-documentpreview: import failed: client-modules: require("./client.LoadingIndicator.js") missed the module table — not a platform seed word, not a materialized module, and no registered package factory (a build-time externals drift, or a dynamic dependency that did not arrive)

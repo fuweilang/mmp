@@ -34,6 +34,7 @@ export type LibraryItem = {
 };
 
 export type LibraryList = {
+  parentScope?: 'PRIVATE' | 'ENTERPRISE' | null;
   items: LibraryItem[];
   breadcrumb: { id: string; name: string }[];
   total: number;
@@ -91,17 +92,24 @@ export function listLibrary(view: LibraryView, parentId: string | null, q: strin
   return http<LibraryList>(`/api/library/items?${params.toString()}`);
 }
 
-export function createLibraryFolder(name: string, parentId: string | null) {
+export type LibraryCreationScope = { scope?: 'PRIVATE' | 'ENTERPRISE'; confirmShare?: boolean };
+export type LibraryScopeImpact = { total: number; changed: number; files: number; folders: number; links: number; treeRevision: string };
+
+export function libraryScopeImpact(id: string, scope: 'PRIVATE' | 'ENTERPRISE') {
+  return http<LibraryScopeImpact>(`/api/library/nodes/${encodeURIComponent(id)}/scope-impact?scope=${scope}`);
+}
+
+export function createLibraryFolder(name: string, parentId: string | null, options: LibraryCreationScope = {}) {
   return http<LibraryItem>('/api/library/folders', {
     method: 'POST',
-    body: JSON.stringify({ name, parentId: parentId ?? undefined }),
+    body: JSON.stringify({ name, parentId: parentId ?? undefined, ...options }),
   });
 }
 
-export function createLibraryLink(name: string, url: string, parentId: string | null) {
+export function createLibraryLink(name: string, url: string, parentId: string | null, options: LibraryCreationScope = {}) {
   return http<LibraryItem>('/api/library/links', {
     method: 'POST',
-    body: JSON.stringify({ name, url, parentId: parentId ?? undefined }),
+    body: JSON.stringify({ name, url, parentId: parentId ?? undefined, ...options }),
   });
 }
 
@@ -109,17 +117,17 @@ export function renameLibrary(id: string, name: string) {
   return http<LibraryItem>(`/api/library/nodes/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) });
 }
 
-export function moveLibrary(id: string, parentId: string | null) {
+export function moveLibrary(id: string, parentId: string | null, options: { confirmShare?: boolean; expectedTreeRevision?: string } = {}) {
   return http<LibraryItem>(`/api/library/nodes/${id}/move`, {
     method: 'POST',
-    body: JSON.stringify({ parentId }),
+    body: JSON.stringify({ parentId, ...options }),
   });
 }
 
-export function shareLibrary(id: string, scope: 'PRIVATE' | 'ENTERPRISE', confirmShare: boolean) {
+export function shareLibrary(id: string, scope: 'PRIVATE' | 'ENTERPRISE', confirmShare: boolean, options: { confirmUnshare?: boolean; expectedTreeRevision?: string } = {}) {
   return http<LibraryItem>(`/api/library/nodes/${id}/scope`, {
     method: 'POST',
-    body: JSON.stringify({ scope, confirmShare }),
+    body: JSON.stringify({ scope, confirmShare, ...options }),
   });
 }
 
@@ -200,11 +208,14 @@ export function uploadLibraryFiles(
   files: File[],
   parentId: string | null,
   onProgress: (ratio: number) => void,
+  options: LibraryCreationScope = {},
 ): Promise<UploadOutcome> {
   return new Promise((resolve, reject) => {
     const body = new FormData();
     for (const file of files) body.append('files', file);
     if (parentId) body.append('parentId', parentId);
+    if (options.scope) body.append('scope', options.scope);
+    if (options.confirmShare !== undefined) body.append('confirmShare', String(options.confirmShare));
     const xhr = new XMLHttpRequest();
     xhr.open('POST', apiUrl('/api/library/files'));
     xhr.withCredentials = true;

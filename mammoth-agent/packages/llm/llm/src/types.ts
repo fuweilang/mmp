@@ -5,7 +5,7 @@
  */
 
 import type { Branded } from '@mammoth-ai/mmp-brand'
-import type { FileAttachmentRef, ImageAttachmentRef } from '@mammoth-ai/mmp-attachment'
+import type { FileAttachmentRef, ImageAttachmentRef, LibrarySourceReference } from '@mammoth-ai/mmp-attachment'
 import type { LocalizedText } from '@mammoth-ai/mmp-package-manifest'
 import type { MessageId, ToolCallId, ProviderRequestId, ReasoningEffortId } from './brand.ts'
 import type { Message, UserMessage } from './message.ts'
@@ -65,10 +65,12 @@ export interface LlmFailure {
   readonly offloadImages?: number
 }
 
-/** Plain text visible to the end user. */
+/** Plain model text, optionally carrying Host-authorized source display metadata. */
 export interface TextBlock {
   type: 'text'
   text: string
+  /** Source identity for a separately logged excerpt; the text remains model-visible. */
+  reference?: LibrarySourceReference
 }
 
 /** Reasoning / thinking content, distinct from visible text. */

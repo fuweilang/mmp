@@ -18,6 +18,8 @@ export type LibraryView = 'recent' | 'mine' | 'shared' | 'trash' | 'managed';
 export type Actor = {
   /** Server-derived single-grant context; never accepted from request bodies. */
   custodyId?: string;
+  /** Explicit server-validated destination grant for a platform scope change. */
+  targetCustodyId?: string;
   userId: string;
   /** 登录态里的当前企业。 */
   tenantId: string;

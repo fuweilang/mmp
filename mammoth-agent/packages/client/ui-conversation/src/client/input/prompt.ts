@@ -1,8 +1,10 @@
 /** Serialize semantic draft spans without turning quoted references into gestures. */
 import { formatQuoteText } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { DraftSnapshot } from '../contract/draft-editor.ts'
+import type { LibraryPromptPart, SerializedDraftPrompt, SerializedReference } from '../contract/input.ts'
 
 type DraftToken = { readonly kind: 'text'; text: string } | { readonly kind: 'quote'; readonly text: string }
+  | { readonly kind: 'reference'; readonly part: LibraryPromptPart }
 interface DraftSpan {
   readonly offset: number
   readonly length: number
@@ -21,6 +23,10 @@ function pushText(tokens: DraftToken[], text: string): void {
 function normalizeQuoteBoundaries(tokens: DraftToken[]): DraftToken[] {
   const normalized: DraftToken[] = []
   for (const token of tokens) {
+    if (token.kind === 'reference') {
+      normalized.push(token)
+      continue
+    }
     if (token.kind === 'text') {
       pushText(normalized, token.text)
       continue
@@ -45,7 +51,7 @@ function normalizeQuoteBoundaries(tokens: DraftToken[]): DraftToken[] {
     next.text = next.text.trimStart()
     if (next.text !== '') next.text = `${QUOTE_SEPARATOR}${next.text}`
   }
-  return normalized.filter(token => token.kind === 'quote' || token.text !== '')
+  return normalized.filter(token => token.kind !== 'text' || token.text !== '')
 }
 
 /**
@@ -56,9 +62,9 @@ function normalizeQuoteBoundaries(tokens: DraftToken[]): DraftToken[] {
  */
 export function serializeDraftPrompt(
   draft: DraftSnapshot,
-  serializeReference: (source: string, ref: string) => Promise<string>,
-): string | Promise<string> {
-  const build = (references: readonly DraftSpan[]): string => {
+  serializeReference: (source: string, ref: string) => Promise<SerializedReference>,
+): string | Promise<SerializedDraftPrompt> {
+  const build = (references: readonly DraftSpan[]): SerializedDraftPrompt => {
     const spans = [
       ...references,
       ...(draft.quotes ?? []).map(quote => ({ offset: quote.offset, length: quote.length,
@@ -77,12 +83,24 @@ export function serializeDraftPrompt(
     if (first?.kind === 'text') first.text = first.text.trimStart()
     const last = tokens.at(-1)
     if (last?.kind === 'text') last.text = last.text.trimEnd()
-    return normalizeQuoteBoundaries(tokens)
-      .map(token => token.kind === 'quote' ? formatQuoteText(token.text) : token.text).join('')
+    const normalized = normalizeQuoteBoundaries(tokens)
+    if (!normalized.some(token => token.kind === 'reference')) {
+      return normalized.map(token => token.kind === 'quote' ? formatQuoteText(token.text) : token.kind === 'text' ? token.text : '').join('')
+    }
+    const parts: Exclude<SerializedDraftPrompt, string>[number][] = []
+    for (const token of normalized) {
+      if (token.kind === 'reference') { parts.push(token.part); continue }
+      const text = token.kind === 'quote' ? formatQuoteText(token.text) : token.text
+      const last = parts.at(-1)
+      if (last?.type === 'text') parts[parts.length - 1] = { type: 'text', text: last.text + text }
+      else parts.push({ type: 'text', text })
+    }
+    return parts
   }
-  if (draft.references.length === 0) return build([])
-  return Promise.all(draft.references.map(async reference => ({
-    offset: reference.offset, length: reference.length,
-    token: { kind: 'text' as const, text: await serializeReference(reference.source, reference.ref) },
-  }))).then(build)
+  if (draft.references.length === 0) return build([]) as string
+  return Promise.all(draft.references.map(async (reference): Promise<DraftSpan> => {
+    const value = await serializeReference(reference.source, reference.ref)
+    return { offset: reference.offset, length: reference.length, token: typeof value === 'string'
+      ? { kind: 'text', text: value } : { kind: 'reference', part: { ...value, name: reference.label } } }
+  })).then(build)
 }

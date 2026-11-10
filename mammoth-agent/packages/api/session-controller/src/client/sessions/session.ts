@@ -241,6 +241,7 @@ export class Session implements SessionFace {
       time: Date.now(),
       text: input.text,
       attachments: input.attachments,
+      ...(input.libraryReferences === undefined ? {} : { libraryReferences: input.libraryReferences }),
     }]
     this.submissionSettlements.set(requestId, {
       placement, accepted: false, onAccept: input.onAccept, onRetire: input.onRetire, retiring: false,
@@ -282,7 +283,7 @@ export class Session implements SessionFace {
         clientTimeZone,
         ...(catalogSelection === undefined ? {} : { catalogSelection }),
       }, signal)
-    } else if (content.some(part => part.type === 'file')) {
+    } else if (content.some(part => part.type === 'file' || part.type === 'library')) {
       result = {
         ok: false,
         error: new RemoteError(
@@ -294,7 +295,7 @@ export class Session implements SessionFace {
     } else {
       // The preceding branch rejects file parts before the narrower subagent
       // wire type is used; this array is not filtered or reordered.
-      const routedContent = content as Exclude<PromptContentPart, { readonly type: 'file' }>[]
+      const routedContent = content as Exclude<PromptContentPart, { readonly type: 'file' | 'library' }>[]
       const routed = await this.remote.subagents.prompt({
         requestId: requestId ?? randomUUID() as SessionRequestId,
         parentSessionId: this.address.parentSessionId,

@@ -9,7 +9,7 @@
  */
 import type { ComponentType } from 'react'
 import type {
-  CommandClaim, PickOutcome, ReferenceInsert, TokenSpan,
+  CommandClaim, PickOutcome, ReferenceInsert, TokenSpan, SerializedReference,
 } from '@mammoth-ai/mmp-client-ui-conversation/client'
 import type { IconProps } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
@@ -145,7 +145,7 @@ export interface ReferenceCodec {
   /** Clipboard / persistence projection of one reference (e.g. `/name`). */
   clipboardText(ref: string): string
   /** Model serialization of one reference (e.g. `<skill>name</skill>`). */
-  serialize(ref: string, signal: AbortSignal): Promise<string>
+  serialize(ref: string, signal: AbortSignal): Promise<SerializedReference>
 }
 
 /**

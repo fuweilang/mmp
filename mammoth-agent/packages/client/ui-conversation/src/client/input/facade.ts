@@ -18,13 +18,14 @@ import type { LexicalEditor } from 'lexical'
 import type {
   CommandClaim, ConsumeTokenRequest, DraftAttachmentId, DraftInitializationOptions, DraftInitializationResult,
   InputActions, InputEffect, InputNotice, InputState, InputTriggerController, PickOutcome,
-  SessionInput, SubmitAttempt, SubmitAttachment, SubmitOutcome,
+  SessionInput, SubmitAttempt, SubmitAttachment, SubmitOutcome, SerializedDraftPrompt,
 } from '../contract/input.ts'
 import type {
   ArbitrateKey, ArbitrateOutcome, ComposerKeyboard, DraftInput, DraftSnapshot, ReferenceInsert, TokenSpan,
 } from '../contract/draft-editor.ts'
 import type { InputSubmitMode, MessageSubmission, MessageSubmissionState } from '../contract/composer-submission.ts'
 import { serializeDraftPrompt } from './prompt.ts'
+import { replaceSourceReferences } from './reference-selection.ts'
 import { SubmitMachine } from './machine.ts'
 import { resolveDraftInput, snapshotDraft } from '../draft.ts'
 import { DraftEditorRuntime } from './editor/runtime.ts'
@@ -65,7 +66,7 @@ export interface SessionInputDeps {
    * shrinks before the message's echo renders.
    */
   defaultSink(
-    text: string,
+    text: SerializedDraftPrompt,
     attachmentIds: readonly DraftAttachmentId[],
     mode: InputSubmitMode,
     signal: AbortSignal,
@@ -144,7 +145,7 @@ export class SessionInputShell implements SessionInput {
   /** The public provide-channel action face (one stable identity per session). */
   readonly actions: InputActions = {
     setCatalogSelection: (value, initializeOnly) => this.setCatalogSelection(value, initializeOnly),
-    setEnterpriseKnowledge: enabled => { this.setEnterpriseKnowledge(enabled) },
+    setEnterpriseKnowledge: (enabled) => { this.setEnterpriseKnowledge(enabled) },
     insertQuote: text => this.insertQuote(text),
     captureInsertion: () => ({ ...this.caretSpan(), draftRev: this.rev }),
     insertText: (text, span) => {
@@ -293,14 +294,17 @@ export class SessionInputShell implements SessionInput {
     if (this.draftSnapshotCache?.revision === this.rev) return this.draftSnapshotCache.value
     const value = { ...snapshotDraft(
       this.projection.clipboardText, this.projection.occurrences, this.projection.command?.token, this.projection.quotes,
-    ), ...(this.catalogSelection === undefined ? {} : { catalogSelection: this.catalogSelection }), ...(this.enterpriseKnowledge ? { enterpriseKnowledge: true } : {}) }
+    ), ...(this.catalogSelection === undefined ? {} : { catalogSelection: this.catalogSelection }),
+    ...(this.enterpriseKnowledge ? { enterpriseKnowledge: true } : {}) }
     this.draftSnapshotCache = { revision: this.rev, value }
     return value
   }
 
   /** Explicit option changes never edit text, caret or editor revision. */
   setCatalogSelection(value: CatalogDraftSelection, initializeOnly=false): boolean {
-    if(this.disposed||frozen(this.core.state.phase)||(initializeOnly&&this.catalogSelection!==undefined)||(!initializeOnly&&this.catalogSelection!==undefined&&value.selectionVersion<=this.catalogSelection.selectionVersion))return false
+    if (this.disposed || frozen(this.core.state.phase) || (initializeOnly && this.catalogSelection !== undefined)
+      || (!initializeOnly && this.catalogSelection !== undefined
+        && value.selectionVersion <= this.catalogSelection.selectionVersion)) return false
     this.catalogSelection=structuredClone(value)
     this.draftSnapshotCache=undefined
     this.publish()
@@ -350,6 +354,12 @@ export class SessionInputShell implements SessionInput {
 
   private draftInitializationBlocked(): boolean {
     return this.disposed || frozen(this.core.state.phase)
+  }
+
+  replaceReferences(source: string, references: readonly ReferenceInsert[]): boolean {
+    if (this.draftInitializationBlocked()) return false
+    this.setDraft(replaceSourceReferences(this.draftSnapshot, source, references))
+    return true
   }
 
   /** Append ordered attachment ids unless an admission transaction is locked. */
@@ -764,9 +774,15 @@ export class SessionInputShell implements SessionInput {
       if (inputTriggers === undefined) throw new Error(`no serializer for reference source "${source}"`)
       return inputTriggers.serializeReference(source, ref, attempt.signal)
     })
-    const send = (text: string): void => {
+    const send = (text: SerializedDraftPrompt): void => {
       if (this.dead(attempt)) return
-      this.settleSink(attempt, this.deps.defaultSink(text, attachmentIds, mode, attempt.signal, () => { this.acceptSink(attempt) }, attempt.enterpriseKnowledge, attempt.catalogSelection))
+      const options: [enterpriseKnowledge?: boolean | undefined, catalogSelection?: CatalogDraftSelection] =
+        attempt.catalogSelection === undefined
+          ? attempt.enterpriseKnowledge === undefined ? [] : [attempt.enterpriseKnowledge]
+          : [attempt.enterpriseKnowledge, attempt.catalogSelection]
+      this.settleSink(attempt, this.deps.defaultSink(
+        text, attachmentIds, mode, attempt.signal, () => { this.acceptSink(attempt) }, ...options,
+      ))
     }
     if (!(prompt instanceof Promise)) { send(prompt); return }
     void prompt.then(send, (error: unknown) => { this.failSink(attempt, error) })

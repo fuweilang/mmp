@@ -8,6 +8,8 @@ Unsent browser drafts may stay in memory and native clients may stage them in op
 
 Source: [`packages/attachment/attachment/src/types.ts`](../../packages/attachment/attachment/src/types.ts)
 
+`LibrarySourceReference` identifies a Host-authorized library version with `source: library`, `nodeId`, `versionId`, and authoritative `name`; `versionNo` and `bytes` are optional display metadata. `TextBlock.reference` stores it beside the exact model-visible excerpt. Browser prompt text cannot supply this metadata; attachment admission preserves it only after Host resolution.
+
 ## Identity and verified metadata
 
 `AttachmentId` is a branded opaque string. The local backend currently emits `sha256:<digest>`, but consumers must neither parse that representation nor derive a filesystem path from it. A consumer may ask the attachment provider for its object location through `imageHostPath()`, then must use the current execution filesystem to decide whether model tools can read that host path.
@@ -87,7 +89,8 @@ type PromptContentPart =
  * `encodedBytes` holding the byte length of that upload.
  */
 type AttachmentAdmissionPart =
-  | PromptContentPart
+  | Exclude<PromptContentPart, { readonly type: 'text' }>
+  | { readonly type: 'text'; readonly text: string; readonly reference?: LibrarySourceReference }
   | { readonly type: 'file'; readonly attachment: FileAttachmentRef }
   | { readonly type: 'image'; readonly attachment: ImageAttachmentRef; readonly encodedBytes: number }
 ```
@@ -95,7 +98,7 @@ type AttachmentAdmissionPart =
 ```ts type-equiv
 /** Host-admitted prompt content with every attachment represented by its durable reference. */
 type AdmittedPromptContentPart =
-  | { readonly type: 'text'; readonly text: string }
+  | { readonly type: 'text'; readonly text: string; readonly reference?: LibrarySourceReference }
   | { readonly type: 'image'; readonly attachment: ImageAttachmentRef }
   | { readonly type: 'file'; readonly attachment: FileAttachmentRef }
 ```

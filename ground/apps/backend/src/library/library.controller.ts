@@ -36,6 +36,8 @@ import {
   OpenCitationDto,
   RenameNodeDto,
   ScopeNodeDto,
+  ScopeImpactQuery,
+  UploadFilesDto,
 } from './library.dto';
 import { LibraryError } from './library.errors';
 import { LibraryService } from './library.service';
@@ -82,7 +84,7 @@ export class LibraryController {
     @CurrentTenantId() tenantId: string | null,
     @Body() dto: CreateFolderDto,
   ) {
-    return this.run(async () => this.library.createFolder(await this.actor(user, tenantId), dto.name, dto.parentId));
+    return this.run(async () => this.library.createFolder(await this.actor(user, tenantId), dto.name, dto.parentId, dto));
   }
 
   @Post('links')
@@ -91,7 +93,7 @@ export class LibraryController {
     @CurrentTenantId() tenantId: string | null,
     @Body() dto: CreateLinkDto,
   ) {
-    return this.run(async () => this.library.createLink(await this.actor(user, tenantId), dto.name, dto.url, dto.parentId));
+    return this.run(async () => this.library.createLink(await this.actor(user, tenantId), dto.name, dto.url, dto.parentId, dto));
   }
 
   @Post('files')
@@ -100,7 +102,7 @@ export class LibraryController {
     @CurrentUser() user: User,
     @CurrentTenantId() tenantId: string | null,
     @UploadedFiles() files: UploadFile[] | undefined,
-    @Body('parentId') parentId?: string,
+    @Body() dto: UploadFilesDto,
   ) {
     const actor = await this.actor(user, tenantId);
     const items = [];
@@ -111,7 +113,9 @@ export class LibraryController {
           originalName: uploadedName(file.originalname),
           mimeType: file.mimetype,
           bytes: file.buffer,
-          parentId: parentId || null,
+          parentId: dto.parentId || null,
+          scope: dto.scope,
+          confirmShare: dto.confirmShare,
         }));
       } catch (error) {
         failed.push({
@@ -160,7 +164,12 @@ export class LibraryController {
     @Param('id') id: string,
     @Body() dto: MoveNodeDto,
   ) {
-    return this.run(async () => this.library.move(await this.actor(user, tenantId), id, dto.parentId));
+    return this.run(async () => this.library.move(await this.actor(user, tenantId), id, dto.parentId, dto));
+  }
+
+  @Get('nodes/:id/scope-impact')
+  async scopeImpact(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null, @Param('id') id: string, @Query() query: ScopeImpactQuery) {
+    return this.run(async () => this.library.scopeImpact(await this.actor(user, tenantId), id, query.scope));
   }
 
   @Post('nodes/:id/scope')
@@ -170,7 +179,7 @@ export class LibraryController {
     @Param('id') id: string,
     @Body() dto: ScopeNodeDto,
   ) {
-    return this.run(async () => this.library.setScope(await this.actor(user, tenantId), id, dto.scope, dto.confirmShare));
+    return this.run(async () => this.library.setScope(await this.actor(user, tenantId), id, dto.scope, dto.confirmShare, dto));
   }
 
   @Post('nodes/:id/recycle')

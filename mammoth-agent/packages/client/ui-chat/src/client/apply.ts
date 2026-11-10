@@ -176,6 +176,19 @@ export function apply(ctx: Context): void {
   registerChatNodeRenderers(ctx, performanceUsage, presentation)
   ctx.slots.registerFactory({
     name: 'conversation.chat.user.content', scope: 'session', locale: NS,
+    inject: (sessionId) => {
+      const triggers = ctx.get('inputTriggers')
+      if (triggers === undefined) return {}
+      return {
+        openLibraryReference: (reference) => {
+          const binding = ctx.sessions.binding(sessionId)
+          if (binding === undefined) throw new Error(`ui-chat: unknown session "${sessionId}"`)
+          triggers.sessionOf(binding.ctx).openReference('library', {
+            ref: `${reference.nodeId}@${reference.versionId}`, appearance: 'file',
+          })
+        },
+      }
+    },
     children: { 'conversation.chat.user.images': { kind: 'single', scope: 'session' } },
   }, UserContent)
 

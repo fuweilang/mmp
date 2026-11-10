@@ -12,7 +12,7 @@
 
 `LibraryNode` 是文件、文件夹或链接。`LibraryVersion` 是文件的一个字节版本。`LibraryChunk` 只属于一个版本。替换版本是新增行，不改旧行的正文。
 
-`scope` 只有 `PRIVATE` 和 `ENTERPRISE`。移动只改 `parentId`。共享只改 `scope`，且请求必须带 `confirmShare=true`。
+`scope` 只有 `PRIVATE` 和 `ENTERPRISE`。个人根目录默认私人，企业共享根目录显式确认后直接创建共享资料；目录内新增资料继承父目录范围。目录共享递归更新全部未彻删子项，先逐项鉴权再原子提交；共享目录内不允许单独设为私人。私有资料移入共享目录需要确认并递归共享，移出保留原范围。取消目录共享需确认全部子项影响。租户目录树写入共用事务锁，上传提交前重新检查父目录范围和修订；目录变化时拒绝提交并清理新原件。
 
 `state`：`ACTIVE`、`RECYCLED`、`PURGED`。回收写 `recycledAt`。超过保留天数后清正文并标 `PURGED`，行还在，用来回答「这份来源没了」。不把引用改到别的 ID。
 

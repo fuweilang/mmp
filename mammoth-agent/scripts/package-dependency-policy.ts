@@ -62,6 +62,7 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
     'viewerRequestFields', 'identityFromKey', 'identityKeyOf',
   ],
   '@mammoth-ai/mmp-llm': ['callConfigEquals'],
+  '@mammoth-ai/mmp-llm/user-content': ['userContentText'],
   '@mammoth-ai/mmp-session': ['SessionId'],
   '@mammoth-ai/mmp-session-format': ['sessionFormatLogFilename'],
   '@mammoth-ai/mmp-storage-domain': ['defineDomain'],

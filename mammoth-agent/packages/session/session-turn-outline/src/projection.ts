@@ -20,6 +20,7 @@
  */
 
 import { z } from 'zod'
+import { isLibrarySourceReference } from '@mammoth-ai/mmp-llm/user-content'
 import type { ZodType } from 'zod'
 import { SessionSeq, type SessionEvent } from '@mammoth-ai/mmp-session'
 import type { ProjectionDefinition } from '@mammoth-ai/mmp-session-projection'
@@ -36,8 +37,13 @@ type MessageContent = SessionEvent<'user/message'>['data']['content']
 function preview(content: MessageContent, limit: number): string {
   let text = ''
   let unread = false
+  const hasOriginalText = content.some(block => block.type === 'text'
+    && !isLibrarySourceReference(block.reference) && block.text !== '')
   for (const block of content) {
     if (block.type !== 'text') continue
+    const reference = isLibrarySourceReference(block.reference) ? block.reference : undefined
+    if (reference !== undefined && hasOriginalText) continue
+    const displayText = reference?.name ?? block.text
     if (text.length >= limit * 2) {
       unread = true
       break
@@ -45,8 +51,8 @@ function preview(content: MessageContent, limit: number): string {
     // Per-block bound: the fold runs on every message event, so a single
     // multi-megabyte block must not be concatenated (and regex-normalized)
     // whole for a preview this short.
-    const clipped = block.text.length > limit * 2
-    const chunk = clipped ? block.text.slice(0, limit * 2) : block.text
+    const clipped = displayText.length > limit * 2
+    const chunk = clipped ? displayText.slice(0, limit * 2) : displayText
     text += text === '' ? chunk : ` ${chunk}`
     if (clipped) {
       unread = true
@@ -84,7 +90,7 @@ const EMPTY_OUTLINE: TurnOutlineState = { turns: [], draft: '' }
 /** The `turnOutline` unit registered on `ctx.sessionProjections` (exported for the unit spec). */
 export const turnOutlineProjectionDefinition = {
   key: 'turnOutline',
-  stateVersion: 2,
+  stateVersion: 3,
   stateSchema: turnOutlineStateSchema,
   init: () => EMPTY_OUTLINE,
   apply: (state, event) => {

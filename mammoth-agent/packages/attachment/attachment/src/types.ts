@@ -45,6 +45,16 @@ export interface FileAttachmentRef {
   bytes: number
 }
 
+/** Host-authorized identity and display metadata for one immutable library version. */
+export interface LibrarySourceReference {
+  source: 'library'
+  nodeId: string
+  versionId: string
+  name: string
+  versionNo?: number
+  bytes?: number
+}
+
 /** Base64-encoded file upload accompanying one wire request. */
 export interface EncodedFileAttachment {
   /** Canonical base64 encoding of the file bytes. */
@@ -113,13 +123,14 @@ export type PromptContentPart =
  * `encodedBytes` holding the byte length of that upload.
  */
 export type AttachmentAdmissionPart =
-  | PromptContentPart
+  | Exclude<PromptContentPart, { readonly type: 'text' }>
+  | { readonly type: 'text'; readonly text: string; readonly reference?: LibrarySourceReference }
   | { readonly type: 'file'; readonly attachment: FileAttachmentRef }
   | { readonly type: 'image'; readonly attachment: ImageAttachmentRef; readonly encodedBytes: number }
 
 /** Host-admitted prompt content with every attachment represented by its durable reference. */
 export type AdmittedPromptContentPart =
-  | { readonly type: 'text'; readonly text: string }
+  | { readonly type: 'text'; readonly text: string; readonly reference?: LibrarySourceReference }
   | { readonly type: 'image'; readonly attachment: ImageAttachmentRef }
   | { readonly type: 'file'; readonly attachment: FileAttachmentRef }
 

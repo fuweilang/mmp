@@ -75,6 +75,20 @@ async function bench(maxConcurrentFileUploads = 2) {
 }
 
 describe('ConversationController', () => {
+  it('sends structured library references while the submission echo keeps cards separate from the question', async () => {
+    const b = await bench()
+    try {
+      const session = b.runtime.sessions.binding('s1')!.session
+      const begin = vi.spyOn(session, 'beginSubmission')
+      const library = { type: 'library' as const, nodeId: 'node-1', versionId: 'v1', name: '分析.docx' }
+      await b.root.sendSession(session, [library, { type: 'text', text: ' 请分析。' }], [], 'queue')
+      expect(begin).toHaveBeenCalledWith(expect.objectContaining({ text: '请分析。', libraryReferences: [
+        { source: 'library', nodeId: 'node-1', versionId: 'v1', name: '分析.docx' },
+      ] }))
+      expect(b.prompt.mock.calls[0]?.[0]).toEqual([library, { type: 'text', text: ' 请分析。' }])
+    } finally { await b.runtime.dispose() }
+  })
+
   it('does not revive a withdrawn generation when an old input submits before scoped cleanup', async () => {
     const b = await bench()
     try {

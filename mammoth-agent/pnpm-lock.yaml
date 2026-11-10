@@ -4515,6 +4515,9 @@ importers:
       '@mammoth-ai/mmp-client-ui-sidebar':
         specifier: workspace:*
         version: link:../ui-sidebar
+      '@mammoth-ai/mmp-client-ui-sidebar-documentpreview':
+        specifier: workspace:*
+        version: link:../ui-sidebar-documentpreview
       '@mammoth-ai/mmp-client-ui-slots':
         specifier: workspace:*
         version: link:../ui-slots
@@ -8223,6 +8226,9 @@ importers:
 
   packages/credentials/deepseek-account-platform:
     dependencies:
+      '@mammoth-ai/mmp-brand':
+        specifier: workspace:*
+        version: link:../../util/brand
       '@mammoth-ai/mmp-client-connection':
         specifier: workspace:*
         version: link:../../client/connection
@@ -8236,6 +8242,9 @@ importers:
       '@mammoth-ai/cordis':
         specifier: workspace:~
         version: link:../../../vendor/cordis
+      '@mammoth-ai/mmp-api-session-controller':
+        specifier: workspace:*
+        version: link:../../api/session-controller
       '@mammoth-ai/mmp-authorization':
         specifier: workspace:*
         version: link:../authorization
@@ -8248,6 +8257,9 @@ importers:
       '@mammoth-ai/mmp-host-webserver':
         specifier: workspace:*
         version: link:../../host/webserver
+      '@mammoth-ai/mmp-office-to-pdf':
+        specifier: workspace:*
+        version: link:../../document/office-to-pdf
       '@mammoth-ai/mmp-session':
         specifier: workspace:*
         version: link:../../core/session
@@ -14632,6 +14644,9 @@ importers:
       '@mammoth-ai/mmp-brand':
         specifier: workspace:*
         version: link:../../util/brand
+      '@mammoth-ai/mmp-llm':
+        specifier: workspace:*
+        version: link:../../llm/llm
       '@mammoth-ai/mmp-session-format':
         specifier: workspace:*
         version: link:../../session/session-format

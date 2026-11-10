@@ -39,6 +39,8 @@ Attach one or more images to a user prompt in the client UI. Each source is chec
 
 Any non-image file attaches to a prompt as a generic file: the exact bytes are saved read-only under the harness home, the message records the file name, byte size, and content digest, and the model receives one line naming the saved path so it can read the content with its file tools only when needed. There is no file-type whitelist and no size limit; what you attach is stored verbatim.
 
+Library excerpts use `LibrarySourceReference` metadata on a separate admitted text block. Admission retains the metadata and exact model text; authorization belongs to the resolving Host provider.
+
 ### Pass attachments to commands
 
 Commands declaring attachment input receive images and generic files in selection order. Commands that do not accept attachments return an error and retain the composer's draft and cards.

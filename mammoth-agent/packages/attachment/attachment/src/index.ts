@@ -37,6 +37,7 @@ export type {
   ImageAttachmentRef,
   ImageRequestTarget,
   ImageMediaType,
+  LibrarySourceReference,
   PromptContentPart,
   RequestImageAttachment,
   SaveFileAttachment,
@@ -149,7 +150,7 @@ export abstract class AttachmentStore extends Service {
     const refs = encoded.length === 0 ? [] : await admitEncodedImages(this, encoded)
     let next = 0
     return content.map((part) => {
-      if (part.type === 'text') return { type: 'text', text: part.text }
+      if (part.type === 'text') return { type: 'text', text: part.text, ...(part.reference === undefined ? {} : { reference: part.reference }) }
       if (part.type === 'file') return { type: 'file', attachment: part.attachment }
       if ('attachment' in part) return { type: 'image', attachment: part.attachment }
       return { type: 'image', attachment: refs[next++] as ImageAttachmentRef }

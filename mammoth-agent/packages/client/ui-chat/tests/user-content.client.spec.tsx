@@ -54,6 +54,7 @@ async function bench() {
   const imageCalls: PropsRuntime<'conversation.chat.user.images'>[] = []
   const openFile = vi.fn<(path: string) => void>()
   const openSkill = vi.fn<(name: string) => void>()
+  const openLibraryReference = vi.fn()
   await runtime.mount({ inject: ['slots'], apply: (ctx) => {
     ctx.slots.provideRoot({ props: { useContextMenu: contextMenuHook() } })
     const userText = new UserTextRegistry(ctx)
@@ -92,6 +93,7 @@ async function bench() {
   const mountContent = () => runtime.mount({ inject: ['slots'], apply: (ctx) => {
     ctx.slots.registerFactory({
       name: 'conversation.chat.user.content', scope: 'session', locale: NS,
+      inject: () => ({ openLibraryReference }),
       children: { 'conversation.chat.user.images': { kind: 'single', scope: 'session' } },
     }, UserContent)
   } })
@@ -120,7 +122,8 @@ async function bench() {
     return { ...view, rerender: update }
   }
   const loadImage = vi.fn<UserContentInput['loadImage']>(async () => 'blob:loaded')
-  return { runtime, locale, owner, mountContent, factory, render, loadImage, imageCalls, SessionProvider, openFile, openSkill }
+  return { runtime, locale, owner, mountContent, factory, render, loadImage, imageCalls, SessionProvider,
+    openFile, openSkill, openLibraryReference }
 }
 
 describe('user Content Factory', () => {
@@ -139,6 +142,35 @@ describe('user Content Factory', () => {
     expect(b.runtime.factoryOf('conversation.chat.user.content')).toMatchObject({
       component: UserContent, scope: 'session', locale: 'chat',
     })
+  })
+
+  it('renders same-name library cards with source labels and opens each saved version', async () => {
+    const b = await bench()
+    const first = { source: 'library', nodeId: 'first', versionId: 'v1', name: 'Plan.md', bytes: 10 } as const
+    const second = { ...first, nodeId: 'second', versionId: 'v2' }
+    const attachments: UserContentAttachment[] = [filePart, { type: 'library', reference: first }, { type: 'library', reference: second }]
+    const view = b.render(b.factory({ content: { ...empty, text: 'Compare.', attachments }, facts: {}, loadImage: b.loadImage, interactive: true }))
+    const cards = view.getAllByRole('button', { name: 'Plan.md' })
+    expect(view.getAllByText('Library · MD · 10B')).toHaveLength(2)
+    expect(view.getByText('notes.txt')).toBeTruthy()
+    fireEvent.click(cards[0]!)
+    fireEvent.click(cards[1]!)
+    expect(b.openLibraryReference.mock.calls).toEqual([[first], [second]])
+    expect(view.getByText('Compare.')).toBeTruthy()
+  })
+
+  it('folds more than four library files and expands only the cards with localized copy', async () => {
+    const b = await bench()
+    const attachments: UserContentAttachment[] = Array.from({ length: 6 }, (_, i) => ({
+      type: 'library', reference: { source: 'library', nodeId: `n${i}`, versionId: 'v1', name: `File ${i}.txt` },
+    }))
+    const view = b.render(b.factory({ content: { ...empty, attachments }, facts: {}, loadImage: b.loadImage }))
+    expect(view.getAllByTitle(/File/)).toHaveLength(4)
+    act(() => { b.locale.setLocale('zh') })
+    fireEvent.click(view.getByRole('button', { name: '展开 6 个文件' }))
+    expect(view.getAllByTitle(/File/)).toHaveLength(6)
+    expect(view.queryByRole('button', { name: 'File 5.txt' })).toBeNull()
+    expect(view.container.querySelector('[data-message-bubble]')).toBeNull()
   })
 
   it('keeps mixed files, durable images, and local previews in their prepared order through its user-image Slot', async () => {

@@ -1,0 +1,9 @@
+[
+  "packages/client/ui-chat/tests/user-message-content.client.spec.ts",
+  "packages/client/ui-conversation/tests/library-prompt.client.spec.ts",
+  "packages/client/ui-enterprise-library/tests/mention-selection.client.spec.ts",
+  "packages/client/ui-enterprise-library/tests/picker.client.spec.tsx",
+  "packages/credentials/deepseek-account-platform/tests/ground-library-prompt.spec.ts",
+  "packages/llm/llm/tests/user-content.spec.ts",
+  "packages/session/session-format-catalog/tests/library-reference.spec.ts"
+]

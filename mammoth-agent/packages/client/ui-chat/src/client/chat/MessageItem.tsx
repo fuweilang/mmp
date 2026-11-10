@@ -1,5 +1,7 @@
 import { memo, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { userContentText } from '@mammoth-ai/mmp-llm/user-content'
+import { userMessageContent } from './user-message-content.ts'
 import type { PendingSubmission } from '@mammoth-ai/mmp-api-session-controller/client'
 import type { PropsRenderFactories, PropsRenderSlots } from '@mammoth-ai/mmp-client-ui-slots'
 import type { UserTextFacts } from '@mammoth-ai/mmp-client-ui-conversation/client'
@@ -7,37 +9,13 @@ import { JsonBlock, StateDot, TextShimmer } from '@mammoth-ai/mmp-client-ui-prim
 import type {
   ChatNodeOwnerProps, ChatNodeViewProps, ChatViewSlotProps, UserContentAttachment, UserContentData, UserContentInput,
 } from '../contract/slots.ts'
-import type { ModelRetryNode, TurnErrorNode, UserMessageNode } from '../contract/snapshot.ts'
+import type { ModelRetryNode, TurnErrorNode } from '../contract/snapshot.ts'
 import { CompactionItem } from './CompactionItem.tsx'
 import { ContextInjectionRow } from './ContextInjectionRow.tsx'
 import { MessageIconActions } from './MessageIconActions.tsx'
 import css from './MessageItem.module.css'
 
 const EMPTY_TEXT_FACTS: Readonly<Partial<UserTextFacts>> = {}
-
-type UserImage = Extract<UserMessageNode['content'][number], { type: 'image' }>
-type UserFile = Extract<UserMessageNode['content'][number], { type: 'file' }>
-function contentParts(content: readonly unknown[]): {
-  text: string
-  attachments: UserContentAttachment[]
-  rest: unknown[]
-} {
-  const texts: string[] = []
-  const attachments: UserContentAttachment[] = []
-  const rest: unknown[] = []
-  for (const block of content) {
-    const b = block as { type?: string; text?: string; attachment?: unknown }
-    if (b.type === 'text' && typeof b.text === 'string') texts.push(b.text)
-    else if (b.type === 'image' && b.attachment !== undefined) {
-      attachments.push({ type: 'image', image: { attachment: (b as UserImage).attachment } })
-    }
-    else if (b.type === 'file' && b.attachment !== undefined) {
-      attachments.push({ type: 'file', file: (b as UserFile).attachment })
-    }
-    else rest.push(block)
-  }
-  return { text: texts.join(''), attachments, rest }
-}
 
 function retrySeconds(milliseconds: number): number {
   return Math.max(1, Math.ceil(milliseconds / 1_000))
@@ -204,11 +182,11 @@ function UserStyleBubble({
   /** Inputs used by text transforms, separate from row and rendering props. */
   facts?: Readonly<Partial<UserTextFacts>>
 } & Pick<ChatNodeOwnerProps, 'loadImage'> & Pick<UserContentInput, 'interactive'>): ReactNode {
-  const parts = useMemo(() => contentParts(content), [content])
+  const parts = useMemo(() => userMessageContent(content), [content])
   const prepared = useMemo<UserContentData>(() => ({
     text: parts.text,
     attachments: previewAttachments ?? parts.attachments,
-    extraBlocks: parts.rest,
+    extraBlocks: parts.extraBlocks,
     ...(referenceLabels === undefined ? {} : { referenceLabels }),
   }), [parts, previewAttachments, referenceLabels])
   const facts = useMemo<Readonly<Partial<UserTextFacts>>>(() => ({
@@ -230,7 +208,7 @@ function UserStyleBubble({
         facts,
         interactive,
       })}
-      {actions?.(prepared.text)}
+      {actions?.(userContentText(content))}
     </div>
   )
 }
@@ -280,13 +258,16 @@ export function PendingSubmissionBubble({ submission, loadImage, renderFactorySl
   t: ChatViewSlotProps['t']
 } & Pick<ChatNodeOwnerProps, 'loadImage'>): ReactNode {
   const content = useMemo(
-    () => (submission.text === '' ? [] : [{ type: 'text', text: submission.text }]),
-    [submission.text],
+    () => [
+      ...(submission.libraryReferences ?? []).map(reference => ({ type: 'text', text: '', reference })),
+      ...(submission.text === '' ? [] : [{ type: 'text', text: submission.text }]),
+    ],
+    [submission.text, submission.libraryReferences],
   )
   const previewAttachments = useMemo<readonly UserContentAttachment[]>(
-    () => submission.attachments.map(attachment => attachment.type === 'image'
+    () => [...submission.attachments.map(attachment => attachment.type === 'image'
       ? {
-        type: 'image',
+        type: 'image' as const,
         image: {
           preview: {
             url: attachment.value.previewUrl,
@@ -296,8 +277,9 @@ export function PendingSubmissionBubble({ submission, loadImage, renderFactorySl
           },
         },
       }
-      : { type: 'file', file: attachment.value }),
-    [submission.attachments],
+      : { type: 'file' as const, file: attachment.value }),
+    ...(submission.libraryReferences ?? []).map(reference => ({ type: 'library' as const, reference }))],
+    [submission.attachments, submission.libraryReferences],
   )
   return (
     <UserStyleBubble

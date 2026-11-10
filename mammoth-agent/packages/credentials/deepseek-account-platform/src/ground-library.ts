@@ -3,6 +3,7 @@ import type { Context } from '@mammoth-ai/cordis'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type {} from '@mammoth-ai/mmp-host-webserver'
 import type {} from '@mammoth-ai/mmp-client-connection'
+import { createGroundLibraryRenderer, readGroundLibraryResponse } from './ground-library-render.ts'
 
 const PREFIX = '/ground-library'
 const MAX_BYTES = 55 * 1024 * 1024
@@ -11,7 +12,7 @@ const ROUTES: readonly [string, RegExp][] = [
   ['POST', /^\/files\/[A-Za-z0-9_-]+\/versions$/],
   ['PATCH', /^\/nodes\/[A-Za-z0-9_-]+$/], ['DELETE', /^\/nodes\/[A-Za-z0-9_-]+$/],
   ['POST', /^\/nodes\/[A-Za-z0-9_-]+\/(?:move|scope|recycle|restore|retry-parse)$/],
-  ['GET', /^\/nodes\/[A-Za-z0-9_-]+\/(?:preview|source|download|versions)$/],
+  ['GET', /^\/nodes\/[A-Za-z0-9_-]+\/(?:preview|source|download|versions|scope-impact)$/],
 ]
 
 /** Only explicit library operations, never admin, arbitrary origins or path traversal. */
@@ -39,22 +40,6 @@ async function bodyOf(req: IncomingMessage): Promise<Buffer> {
   }
   return Buffer.concat(parts)
 }
-async function responseBytes(response: Response): Promise<Buffer> {
-  const parts: Uint8Array[] = []
-  let size = 0
-  const reader = response.body?.getReader()
-  if (!reader) return Buffer.alloc(0)
-  try {
-    while (true) {
-      const part = await reader.read()
-      if (part.done) break
-      size += part.value.length
-      if (size > MAX_BYTES) throw new Error('RESPONSE_LIMIT')
-      parts.push(part.value)
-    }
-  } finally { await reader.cancel().catch(() => undefined); reader.releaseLock() }
-  return Buffer.concat(parts)
-}
 
 /**
  * The Host checks its connection before using its account-owned credential.
@@ -64,11 +49,16 @@ async function responseBytes(response: Response): Promise<Buffer> {
  * @param reject - existing account invalidation callback.
  * @param timeoutMs - account request timeout.
  */
-export function installGroundLibrary(ctx: Context, origin: string, token: () => Promise<string | undefined>, reject: (value: string) => Promise<void>, timeoutMs: number): void {
-  ctx.inject(['webServer', 'connection'], host => {
+export function installGroundLibrary(
+  ctx: Context, origin: string, token: () => Promise<string | undefined>,
+  reject: (value: string) => Promise<void>, timeoutMs: number,
+): void {
+  ctx.inject(['webServer', 'connection'], (host) => {
+    const render = createGroundLibraryRenderer(host, origin, token, reject, timeoutMs)
     host.effect(() => host.webServer.register({ kind: 'prefix', path: PREFIX, handler: async (req, res) => {
       const denied = host.connection.requestRejection(req)
       if (denied !== undefined) { json(res, denied, '连接未授权'); return }
+      if (await render(req, res)) return
       const target = libraryProxyTarget(req.method ?? 'GET', req.url ?? '/')
       if (!target) { json(res, 404, '不存在的资料操作'); return }
       const captured = await token().catch(() => undefined)
@@ -83,7 +73,7 @@ export function installGroundLibrary(ctx: Context, origin: string, token: () => 
           method, headers, redirect: 'error', signal: AbortSignal.timeout(timeoutMs),
           ...(bytes === undefined ? {} : { body: new Uint8Array(bytes) }),
         })
-        const data = await responseBytes(upstream)
+        const data = await readGroundLibraryResponse(upstream, MAX_BYTES)
         if (await token() !== captured) { json(res, 409, '账号或企业已切换，请重新打开资料'); return }
         if (upstream.status === 401) void reject(captured).catch(() => undefined)
         res.statusCode = upstream.status

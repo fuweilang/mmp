@@ -1,0 +1,26 @@
+- button "新建任务"
+- button "收起侧边栏"
+- button "新建任务": 新任务
+- navigation "全局面板":
+  - button "插件"
+  - button "自动化任务"
+  - button "资料库"
+  - button "专家广场"
+  - button "更多"
+- text: 工作区
+- button "搜索任务"
+- textbox "搜索任务名称"
+- button "视图选项"
+- button "添加工作区"
+- tree "任务": 暂无任务
+- button "获取猛犸专家"
+- link "打开猛犸专家":
+  - /url: mmp-dev://open
+  - text: 已安装？直接打开
+- button "账号菜单": 更多
+- banner
+- text: 探索未至之境 预览版
+- button "选择工作区"
+- textbox "选择工作区"
+- button "添加文件或调用指令" [disabled]
+- button "发送消息" [disabled]

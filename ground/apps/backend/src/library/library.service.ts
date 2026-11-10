@@ -41,6 +41,11 @@ type UploadInput = {
   confirmShare?: boolean;
 };
 
+type CreationOptions = { scope?: LibraryScope; confirmShare?: boolean };
+type ScopeOptions = { confirmUnshare?: boolean; expectedTreeRevision?: string };
+type MoveOptions = { confirmShare?: boolean; expectedTreeRevision?: string };
+type ScopeImpact = { total: number; changed: number; files: number; folders: number; links: number; treeRevision: string };
+
 /** Chat opens a version without a locator, so the excerpt keeps every stored paragraph inside the existing character budget. */
 function joinedExcerpt(
   chunks: { locator: string; locatorKind: string; content: string }[],
@@ -92,7 +97,13 @@ export class LibraryService {
     private readonly store: LibraryStore,
     private readonly limits: LibraryLimits = libraryLimitsFromEnv(),
     private readonly now: () => number = () => Date.now(),
+    private readonly writing = false,
   ) {}
+
+  private write<T>(actor: Actor, work: (service: LibraryService) => Promise<T>): Promise<T> {
+    this.requireTenantActor(actor);
+    return this.store.withTenantWrite(actor.tenantId, store => work(new LibraryService(store, this.limits, this.now, true)));
+  }
 
   limitsView() {
     return {
@@ -125,9 +136,11 @@ export class LibraryService {
     await this.sweep(actor.tenantId);
     const custodies = await this.custodiesFor(actor);
     const nodes = await this.store.listNodes(actor.tenantId);
+    let parentScope: LibraryScope | null = null;
     if (parentId) {
       const parent = nodes.find((row) => row.id === parentId) ?? await this.store.getNode(parentId);
       if (!parent || parent.kind !== 'FOLDER' || parent.state !== 'ACTIVE' || !canSee(actor, parent, custodies, this.now())) throw libraryNotFound();
+      parentScope = parent.scope;
     }
     const recent = view === 'recent' ? await this.store.listRecent(actor.userId, actor.tenantId) : [];
     const recentAt = new Map(recent.map((row) => [row.nodeId, row.accessedAt]));
@@ -166,19 +179,21 @@ export class LibraryService {
       if (actor.custodyId) await this.auditCustodyRead(actor, node);
     }
     const breadcrumb = parentId ? await this.breadcrumb(actor, parentId, custodies) : [];
-    return { items, breadcrumb, total, page, pageSize: pageSize ?? total };
+    return { items, breadcrumb, parentScope, total, page, pageSize: pageSize ?? total };
   }
 
-  async createFolder(actor: Actor, name: string, parentId?: string | null) {
+  async createFolder(actor: Actor, name: string, parentId?: string | null, options: CreationOptions = {}) {
     this.requireMember(actor);
-    return this.createOwnedFolder(actor, actor.userId, name, parentId);
+    if (!parentId) this.scopeOrThrow(options.scope, options.confirmShare);
+    return this.createOwnedFolder(actor, actor.userId, name, parentId, options.scope);
   }
 
   /** Explicitly authorized platform creation keeps the real actor separate from the target owner. */
-  async createOwnedFolder(actor: Actor, ownerUserId: string, name: string, parentId?: string | null, scope: LibraryScope = 'PRIVATE') {
+  async createOwnedFolder(actor: Actor, ownerUserId: string, name: string, parentId?: string | null, requestedScope?: LibraryScope): Promise<LibraryItem> {
+    if (!this.writing) return this.write(actor, service => service.createOwnedFolder(actor, ownerUserId, name, parentId, requestedScope));
+    const { scope } = await this.creationTarget(actor, parentId, requestedScope);
     await this.assertCreation(actor, ownerUserId, scope);
     await this.sweep(actor.tenantId);
-    if (parentId) await this.requireVisibleFolder(actor, parentId);
     const now = this.now();
     const node = { ...this.blankNode(actor, 'FOLDER', safeNodeName(name), parentId ?? null, now), ownerUserId, scope };
     await this.store.insertNode(node);
@@ -186,12 +201,15 @@ export class LibraryService {
     return this.toItem(actor, node, await this.custodiesFor(actor), null);
   }
 
-  async createLink(actor: Actor, name: string, url: string, parentId?: string | null) {
+  async createLink(actor: Actor, name: string, url: string, parentId?: string | null, options: CreationOptions = {}): Promise<LibraryItem> {
     this.requireMember(actor);
+    if (!this.writing) return this.write(actor, service => service.createLink(actor, name, url, parentId, options));
+    if (!parentId) this.scopeOrThrow(options.scope, options.confirmShare);
     await this.sweep(actor.tenantId);
-    if (parentId) await this.requireVisibleFolder(actor, parentId);
+    const { scope } = await this.creationTarget(actor, parentId, options.scope);
     const now = this.now();
     const node = this.blankNode(actor, 'LINK', safeNodeName(name), parentId ?? null, now);
+    node.scope = scope;
     node.linkUrl = safeLinkUrl(url);
     await this.store.insertNode(node);
     await this.writeAudit(actor, 'library_link', { nodeId: node.id });
@@ -204,10 +222,11 @@ export class LibraryService {
   }
 
   async uploadOwned(actor: Actor, ownerUserId: string, input: UploadInput) {
-    await this.assertCreation(actor, ownerUserId, this.scopeOrThrow(input.scope, input.confirmShare));
+    if (!input.parentId) this.scopeOrThrow(input.scope, input.confirmShare);
+    const target = await this.creationTarget(actor, input.parentId, input.scope);
+    await this.assertCreation(actor, ownerUserId, target.scope);
     await this.sweep(actor.tenantId);
-    const scope = this.scopeOrThrow(input.scope, input.confirmShare);
-    if (input.parentId) await this.requireVisibleFolder(actor, input.parentId);
+    const scope = target.scope;
     const name = safeDisplayName(input.originalName);
     const ext = assertAllowedUpload(name, input.bytes, this.limits);
     await this.assertQuota(actor.tenantId, input.bytes.length);
@@ -217,17 +236,24 @@ export class LibraryService {
     const prepared = await this.prepareVersion(actor, node, name, input.mimeType || 'application/octet-stream', input.bytes, ext, 1, now);
     node.currentVersionId = prepared.version.id;
     try {
-      await this.store.commitNewFile({ node, version: prepared.version, chunks: prepared.chunks, tenantQuotaBytes: this.limits.tenantQuotaBytes });
+      return await this.write(actor, async service => {
+        const current = await service.creationTarget(actor, input.parentId, input.scope);
+        if (current.scope !== scope || current.parentRevision !== target.parentRevision) {
+          throw new LibraryError(409, '目标目录已变化，请确认保存位置后重试', 'SCOPE_CONFLICT');
+        }
+        await service.assertCreation(actor, ownerUserId, scope);
+        await service.store.commitNewFile({ node, version: prepared.version, chunks: prepared.chunks, tenantQuotaBytes: this.limits.tenantQuotaBytes });
+        await service.writeAudit(actor, 'library_upload', { nodeId: node.id, versionId: prepared.version.id, scope });
+        return service.toItem(actor, node, await service.custodiesFor(actor), null);
+      });
     } catch (error) {
       await this.store.deleteBlob(prepared.version.storageKey);
       throw error;
     }
-    await this.writeAudit(actor, 'library_upload', { nodeId: node.id, versionId: prepared.version.id, scope });
-    return this.toItem(actor, node, await this.custodiesFor(actor), null);
   }
 
-  async replaceVersion(actor: Actor, nodeId: string, originalName: string, mimeType: string, bytes: Buffer) {
-    const node = await this.requireManage(actor, nodeId);
+  async replaceVersion(actor: Actor, nodeId: string, originalName: string, mimeType: string, bytes: Buffer): Promise<LibraryItem> {
+    const node = { ...await this.requireManage(actor, nodeId) };
     if (node.kind !== 'FILE' || node.state !== 'ACTIVE') throw new LibraryError(400, '只有使用中的文件可以替换版本', 'BAD_STATE');
     const name = safeDisplayName(originalName);
     const ext = assertAllowedUpload(name, bytes, this.limits);
@@ -237,24 +263,30 @@ export class LibraryService {
     const updatedAt = this.now();
     const prepared = await this.prepareVersion(actor, node, name, mimeType || 'application/octet-stream', bytes, ext, versionNo, updatedAt);
     try {
-      await this.store.commitReplacement({
-        tenantQuotaBytes: this.limits.tenantQuotaBytes,
-        nodeId: node.id,
-        version: prepared.version,
-        chunks: prepared.chunks,
-        updatedAt,
+      return await this.write(actor, async service => {
+        const current = await service.requireManage(actor, nodeId);
+        if (current.state !== 'ACTIVE' || current.currentVersionId !== node.currentVersionId
+          || current.scope !== node.scope || current.parentId !== node.parentId || current.updatedAt !== node.updatedAt) {
+          throw new LibraryError(409, '资料已变化，请刷新后重试替换', 'VERSION_CONFLICT');
+        }
+        await service.store.commitReplacement({
+          tenantQuotaBytes: this.limits.tenantQuotaBytes,
+          nodeId: node.id,
+          version: prepared.version,
+          chunks: prepared.chunks,
+          updatedAt,
+        });
+        await service.writeAudit(actor, 'library_replace', { nodeId: node.id, versionId: prepared.version.id, versionNo });
+        return service.toItem(actor, { ...current, currentVersionId: prepared.version.id, updatedAt }, await service.custodiesFor(actor), null);
       });
     } catch (error) {
       await this.store.deleteBlob(prepared.version.storageKey);
       throw error;
     }
-    node.currentVersionId = prepared.version.id;
-    node.updatedAt = updatedAt;
-    await this.writeAudit(actor, 'library_replace', { nodeId: node.id, versionId: prepared.version.id, versionNo });
-    return this.toItem(actor, node, await this.custodiesFor(actor), null);
   }
 
-  async rename(actor: Actor, nodeId: string, name: string) {
+  async rename(actor: Actor, nodeId: string, name: string): Promise<LibraryItem> {
+    if (!this.writing) return this.write(actor, service => service.rename(actor, nodeId, name));
     const node = await this.requireManage(actor, nodeId);
     node.name = safeNodeName(name);
     node.updatedAt = this.now();
@@ -263,12 +295,27 @@ export class LibraryService {
     return this.toItem(actor, node, await this.custodiesFor(actor), null);
   }
 
-  async move(actor: Actor, nodeId: string, parentId: string | null) {
+  async move(actor: Actor, nodeId: string, parentId: string | null, options: MoveOptions = {}): Promise<LibraryItem> {
+    if (!this.writing) return this.write(actor, service => service.move(actor, nodeId, parentId, options));
     const node = await this.requireManage(actor, nodeId);
     if (parentId) {
-      const parent = await this.requireVisibleFolder(actor, parentId);
+      const destinationActor = actor.targetCustodyId ? { ...actor, custodyId: actor.targetCustodyId } : actor;
+      const parent = await this.requireVisibleFolder(destinationActor, parentId);
+      if (actor.isPlatformAdmin && !actor.activeMember
+        && matchingCustody(destinationActor, parent, await this.custodiesFor(destinationActor), this.now())?.powers !== 'CRUD') {
+        throw libraryNotFound();
+      }
       if (parent.id === node.id || await this.isDescendant(node.id, parent.id)) {
         throw new LibraryError(400, '不能移动到自己的子目录', 'BAD_PARENT');
+      }
+      if (parent.scope === 'ENTERPRISE') {
+        const tree = await this.scopeTree(actor, node, 'ENTERPRISE');
+        this.checkTreeRevision(tree, 'ENTERPRISE', options.expectedTreeRevision);
+        if (tree.some(row => row.scope !== 'ENTERPRISE')) {
+          if (options.confirmShare !== true) throw new LibraryError(400, '移入共享目录会共享该资料及全部子项，请确认', 'CONFIRM_SHARE');
+          await this.applyScope(tree, 'ENTERPRISE');
+          node.scope = 'ENTERPRISE';
+        }
       }
     }
     const previousScope = node.scope;
@@ -283,20 +330,43 @@ export class LibraryService {
     return this.toItem(actor, stored, await this.custodiesFor(actor), null);
   }
 
-  async setScope(actor: Actor, nodeId: string, scope: LibraryScope, confirmShare?: boolean) {
+  async scopeImpact(actor: Actor, nodeId: string, scope: LibraryScope): Promise<ScopeImpact> {
+    if (!this.writing) return this.write(actor, service => service.scopeImpact(actor, nodeId, scope));
     const node = await this.requireManage(actor, nodeId);
-    if (scope === node.scope) return this.toItem(actor, node, await this.custodiesFor(actor), null);
+    const tree = await this.scopeTree(actor, node, scope);
+    return {
+      total: tree.length,
+      changed: tree.filter(row => row.scope !== scope).length,
+      files: tree.filter(row => row.kind === 'FILE').length,
+      folders: tree.filter(row => row.kind === 'FOLDER').length,
+      links: tree.filter(row => row.kind === 'LINK').length,
+      treeRevision: this.treeRevision(tree, scope),
+    };
+  }
+
+  async setScope(actor: Actor, nodeId: string, scope: LibraryScope, confirmShare?: boolean, options: ScopeOptions = {}): Promise<LibraryItem> {
+    if (!this.writing) return this.write(actor, service => service.setScope(actor, nodeId, scope, confirmShare, options));
+    const node = await this.requireManage(actor, nodeId);
+    const tree = await this.scopeTree(actor, node, scope);
+    this.checkTreeRevision(tree, scope, options.expectedTreeRevision);
+    if (scope === 'PRIVATE' && node.parentId) {
+      const parent = await this.store.getNode(node.parentId);
+      if (parent?.scope === 'ENTERPRISE' && parent.state !== 'PURGED') throw new LibraryError(409, '共享目录内的资料不能单独改为私有，请先移出目录', 'SHARED_PARENT');
+    }
+    if (!tree.some(row => row.scope !== scope)) return this.toItem(actor, node, await this.custodiesFor(actor), null);
     if (scope === 'ENTERPRISE' && confirmShare !== true) {
       throw new LibraryError(400, '变为企业共享需要明确确认', 'CONFIRM_SHARE');
     }
-    node.scope = scope;
-    node.updatedAt = this.now();
-    await this.store.updateNode(node.id, { scope, updatedAt: node.updatedAt });
-    await this.writeAudit(actor, 'library_share', { nodeId: node.id, scope });
-    return this.toItem(actor, node, await this.custodiesFor(actor), null);
+    if (scope === 'PRIVATE' && tree.length > 1 && options.confirmUnshare !== true) {
+      throw new LibraryError(400, '取消共享会影响全部子项，请确认', 'CONFIRM_UNSHARE');
+    }
+    await this.applyScope(tree, scope);
+    await this.writeAudit(actor, 'library_share', { nodeId: node.id, scope, affectedCount: tree.length });
+    return this.toItem(actor, { ...node, scope, updatedAt: this.now() }, await this.custodiesFor(actor), null);
   }
 
-  async recycle(actor: Actor, nodeId: string) {
+  async recycle(actor: Actor, nodeId: string): Promise<{ ok: boolean }> {
+    if (!this.writing) return this.write(actor, service => service.recycle(actor, nodeId));
     const node = await this.requireManage(actor, nodeId);
     // 已在回收站的子项不阻止父目录回收，恢复时再按父子顺序处理。
     await this.assertNoLiveChildren(actor.tenantId, node.id, { allowRecycled: true });
@@ -308,7 +378,8 @@ export class LibraryService {
     return { ok: true };
   }
 
-  async restore(actor: Actor, nodeId: string) {
+  async restore(actor: Actor, nodeId: string): Promise<LibraryItem> {
+    if (!this.writing) return this.write(actor, service => service.restore(actor, nodeId));
     const node = await this.requireManage(actor, nodeId);
     if (node.state !== 'RECYCLED') throw new LibraryError(400, '资料不在回收站', 'BAD_STATE');
     if (node.parentId) {
@@ -332,7 +403,7 @@ export class LibraryService {
     return this.toItem(actor, node, await this.custodiesFor(actor), null);
   }
 
-  async purge(actor: Actor, nodeId: string) {
+  async purge(actor: Actor, nodeId: string): Promise<{ ok: boolean; code: 'SOURCE_GONE' }> {
     const node = await this.requireManage(actor, nodeId);
     if (node.state !== 'RECYCLED') {
       throw new LibraryError(400, '请先回收到回收站再彻底删除', 'BAD_STATE');
@@ -423,6 +494,8 @@ export class LibraryService {
       versionId: version.id,
       versionNo: version.versionNo,
       name: opened.node.name,
+      originalName: version.originalName,
+      mimeType: version.mimeType,
       previewKind: mediaKind ?? (version.parseStatus === 'READY' ? 'text' as const : 'download_only' as const),
       text: version.parseStatus === 'READY' ? text : null,
       linkUrl: null,
@@ -832,6 +905,68 @@ export class LibraryService {
       locator: chunk.locator,
       locatorKind: chunk.locatorKind,
     }));
+  }
+
+  private async creationTarget(actor: Actor, parentId?: string | null, requestedScope?: LibraryScope) {
+    this.requireTenantActor(actor);
+    if (!parentId) return { scope: requestedScope ?? 'PRIVATE' as LibraryScope, parentRevision: null };
+    const parent = await this.requireVisibleFolder(actor, parentId);
+    if (requestedScope !== undefined && requestedScope !== parent.scope) {
+      throw new LibraryError(409, '目标目录可见范围已变化，请刷新后重试', 'SCOPE_CONFLICT');
+    }
+    return { scope: parent.scope, parentRevision: JSON.stringify([parent.id, parent.parentId, parent.scope, parent.updatedAt]) };
+  }
+
+  private async scopeTree(actor: Actor, root: NodeRecord, scope: LibraryScope): Promise<NodeRecord[]> {
+    const tree = [root];
+    if (root.kind === 'FOLDER') {
+      const children = new Map<string, NodeRecord[]>();
+      for (const node of await this.store.listNodes(actor.tenantId)) {
+        if (node.parentId && node.state !== 'PURGED') {
+          const siblings = children.get(node.parentId) ?? [];
+          siblings.push(node);
+          children.set(node.parentId, siblings);
+        }
+      }
+      const seen = new Set([root.id]);
+      for (let i = 0; i < tree.length; i++) {
+        for (const child of children.get(tree[i]!.id) ?? []) {
+          if (seen.has(child.id)) throw new LibraryError(409, '目录关系异常，请先处理目录结构', 'BAD_PARENT');
+          seen.add(child.id);
+          tree.push(child);
+        }
+      }
+    }
+    const custodies = await this.custodiesFor(actor);
+    for (const node of tree) {
+      if (node.scope === scope) continue;
+      if (!canManage(actor, node, custodies, this.now())) throw new LibraryError(403, '目录包含无权修改的资料，整次操作未执行', 'FORBIDDEN');
+      if (actor.isPlatformAdmin && !actor.activeMember) {
+        const grant = actor.targetCustodyId ? await this.store.getCustody(actor.targetCustodyId) : null;
+        const target = { ...node, scope };
+        if (!grant || matchingCustody(actor, target, [grant], this.now())?.powers !== 'CRUD') {
+          throw new LibraryError(403, '需要全部待变更资料的目标范围管理授权', 'FORBIDDEN');
+        }
+      }
+    }
+    return tree;
+  }
+
+  private treeRevision(tree: NodeRecord[], scope: LibraryScope) {
+    const rows = tree.map(row => [row.id, row.parentId, row.ownerUserId, row.scope, row.state, row.updatedAt]);
+    rows.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+    return createHash('sha256').update(JSON.stringify([scope, rows])).digest('hex');
+  }
+
+  private checkTreeRevision(tree: NodeRecord[], scope: LibraryScope, expected?: string) {
+    if (expected && expected !== this.treeRevision(tree, scope)) throw new LibraryError(409, '目录内容已变化，请重新确认影响范围', 'TREE_CONFLICT');
+  }
+
+  private async applyScope(tree: NodeRecord[], scope: LibraryScope) {
+    const updatedAt = this.now();
+    for (const node of tree) {
+      if (node.scope !== scope) await this.store.updateNode(node.id, { scope, updatedAt });
+    }
   }
 
   private async assertCreation(actor: Actor, ownerUserId: string, scope: LibraryScope) {

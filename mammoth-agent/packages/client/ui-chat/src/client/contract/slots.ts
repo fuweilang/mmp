@@ -3,7 +3,7 @@ import type { RefObject } from 'react'
 import type { MessageId } from '@mammoth-ai/mmp-llm/brand'
 import type { SessionId, SessionSeq } from '@mammoth-ai/mmp-session/types'
 import type { PendingSubmission } from '@mammoth-ai/mmp-api-session-controller/client'
-import type { FileAttachmentRef } from '@mammoth-ai/mmp-attachment'
+import type { FileAttachmentRef, LibrarySourceReference } from '@mammoth-ai/mmp-attachment'
 import type { InboxState } from '@mammoth-ai/mmp-agent/types'
 import type {
   CommandNode, CompactionSummaryNode, ConversationLocationDataStore, ConversationTurnDataMap,
@@ -252,6 +252,7 @@ export interface ChatNodeOwnerProps {
 export type UserContentAttachment =
   | { readonly type: 'image'; readonly image: MessageImageSource }
   | { readonly type: 'file'; readonly file: FileAttachmentRef }
+  | { readonly type: 'library'; readonly reference: LibrarySourceReference }
 
 /** Prepared user contents without row identity, admission state, time, or actions. */
 export interface UserContentData {
@@ -269,6 +270,12 @@ export interface UserContentInput extends Pick<ChatNodeOwnerProps, 'loadImage'>,
   readonly content: UserContentData
   /** Transform inputs passed unchanged to UserText, separate from summary and rendering props. */
   readonly facts: Readonly<Partial<UserTextFacts>>
+}
+
+/** Source-opening callback captured for the Factory's viewed Session. */
+export interface UserContentInjected {
+  /** Open the saved file version through its registered reference source. */
+  readonly openLibraryReference?: (reference: LibrarySourceReference) => void
 }
 
 /** Shared presentation state for one Turn-process answer generation. */
@@ -412,6 +419,7 @@ declare module '@mammoth-ai/mmp-client-ui-slots' {
     'conversation.chat.user.content': {
       scope: 'session'
       props: UserContentInput
+      inject: UserContentInjected
       locale: 'chat'
       children: { 'conversation.chat.user.images': { kind: 'single'; scope: 'session' } }
     }

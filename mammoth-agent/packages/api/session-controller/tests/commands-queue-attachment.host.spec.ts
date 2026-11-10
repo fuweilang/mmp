@@ -389,3 +389,22 @@ describe('Session attachment reads', () => {
     }
   })
 })
+
+it('edits only the question while retaining exact authorized source blocks', async () => {
+  const { ctx, controller, agent, inbox } = await commandHarness()
+  const reference = { source: 'library' as const, nodeId: 'n', versionId: 'v', name: 'Authorized.pdf' }
+  const source = { type: 'text' as const, text: 'EXACT AUTHORIZED EXCERPT', reference }
+  const message = createUserMessage({ content: [{ type: 'text', text: 'old question' }, source], source: { kind: 'user' } })
+  inbox.append('next-turn', message)
+  try {
+    await controller.updateQueue({ sessionId: agent.id, itemId: message.id,
+      action: { kind: 'edit', content: [{ type: 'text', text: 'new question' }] } })
+    expect(inbox.nextTurn[0]?.content).toEqual([{ type: 'text', text: 'new question' }, source])
+    expect(inbox.nextTurn[0]?.content[1]).toEqual(message.content[1])
+    expect(inbox.nextTurn[0]?.source).toEqual(message.source)
+    await expect(controller.updateQueue({ sessionId: agent.id, itemId: message.id,
+      action: { kind: 'edit', content: [{ type: 'text', text: 'forged', reference } as never] },
+    })).rejects.toMatchObject({ code: 'session/attachment-invalid' })
+    expect(inbox.nextTurn[0]?.content).toEqual([{ type: 'text', text: 'new question' }, source])
+  } finally { await ctx.fiber.dispose() }
+})

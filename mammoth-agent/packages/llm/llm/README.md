@@ -29,6 +29,8 @@ Use `@mammoth-ai/mmp-llm` to stream model calls through configured provider adap
 
 Any composition that calls a model provider — an agent loop, a session-title generator, a compaction summarizer — streams its requests through this service. Mount it together with at least one provider adapter; the service itself has no configuration and no provider wire code.
 
+The browser-safe `@mammoth-ai/mmp-llm/user-content` entry projects saved library source text blocks as file links for user-facing copy. It preserves ordinary text and leaves unknown or incomplete reference metadata visible as text; it never rewrites model content.
+
 ### When to choose it
 
 Choose this package whenever a plugin or composition needs to call a model: it is the only supported path into provider adapters, and it keeps one vocabulary across the loop, the session log, and every consumer. Do not reach for it when you need provider-specific wire behavior (that belongs in an adapter such as `mmp-llm-deepseek` or `mmp-llm-pi-ai`) or retry execution (that belongs in `mmp-llm-retry`).

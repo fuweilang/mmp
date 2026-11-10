@@ -1,7 +1,7 @@
 <template>
   <section class="library-page">
     <div class="page-header">
-      <div><h2>{{ viewLabel }}</h2><p>保存原文件与版本，资料默认私人；明确共享后才对企业成员可见。</p></div>
+      <div><h2>{{ viewLabel }}</h2><p>保存原文件与版本；企业共享中新建默认全员可见，目录内新增内容继承可见范围。</p></div>
       <LibraryCustodyApproval />
     </div>
     <div class="library-shell">
@@ -24,11 +24,11 @@
         />
         <el-button @click="commitKeyword()">搜索</el-button>
         <el-button v-if="keyword" @click="keyword = ''">清除搜索</el-button>
-        <el-dropdown trigger="click" :disabled="view === 'trash'">
-          <el-button :disabled="view === 'trash'">新建 <ChevronDown :size="16" /></el-button>
-          <template #dropdown><el-dropdown-menu><el-dropdown-item @click="folderOpen = true">新建文件夹</el-dropdown-item><el-dropdown-item @click="linkOpen = true">保存链接</el-dropdown-item></el-dropdown-menu></template>
+        <el-dropdown trigger="click" :disabled="view === 'trash' || loading">
+          <el-button :disabled="view === 'trash' || loading">新建 <ChevronDown :size="16" /></el-button>
+          <template #dropdown><el-dropdown-menu><el-dropdown-item @click="openCreate('folder')">新建文件夹</el-dropdown-item><el-dropdown-item @click="openCreate('link')">保存链接</el-dropdown-item></el-dropdown-menu></template>
         </el-dropdown>
-        <el-button type="primary" :disabled="view === 'trash'" @click="pickUpload">上传文件</el-button>
+        <el-button type="primary" :disabled="view === 'trash' || loading" @click="pickUpload">上传文件</el-button>
       </header>
 
       <p class="library-muted">支持文档、PNG/JPEG/GIF/WebP/AVIF、MP4/WebM/MOV；{{ uploadLimit ? `单文件上限 ${formatBytes(uploadLimit.maxFileBytes)}` : '上传前检查当前大小限制' }}。图片视频仅保存，不代表 AI 可读。</p>
@@ -105,9 +105,9 @@
     </section>
 
     </div>
-    <LibraryUploadDialog v-if="uploadOpen" :title="replaceTarget ? '替换资料版本' : '上传资料'" :multiple="!replaceTarget" :accept="accept" hint="新资料默认仅自己可见；图片视频仅保存，不代表AI可读。" :load-limits="libraryConfig" :upload-file="uploadOne" @close="uploadOpen = false" @complete="onUploadComplete" />
+    <LibraryUploadDialog v-if="uploadOpen" :title="replaceTarget ? '替换资料版本' : '上传资料'" :multiple="!replaceTarget" :accept="accept" :hint="replaceTarget ? '沿用原文件的可见范围。' : targetHint(uploadTarget)" :load-limits="libraryConfig" :upload-file="uploadOne" @close="uploadOpen = false" @complete="onUploadComplete" />
     <el-dialog v-model="moveOpen" title="移动资料" width="420px" align-center append-to-body class="library-modal">
-      <p>移动不改变私人或共享范围。</p>
+      <p>移入共享目录时需确认共享该资料及全部子项；移出后保留当前可见范围。</p>
       <el-select v-model="moveParent" clearable placeholder="根目录">
         <el-option v-for="folder in moveFolders" :key="folder.id" :label="folder.name" :value="folder.id" />
       </el-select>
@@ -115,7 +115,7 @@
     </el-dialog>
     <el-dialog v-model="folderOpen" title="新建文件夹" width="420px" align-center append-to-body class="library-modal">
       <el-input v-model="folderName" placeholder="文件夹名称" />
-      <p class="library-muted">新建文件夹默认私人。移动它不会改变里面资料的可见性。</p>
+      <p class="library-muted">{{ targetHint(createTarget) }}</p>
       <template #footer>
         <el-button @click="folderOpen = false">取消</el-button>
         <el-button type="primary" @click="createFolder">创建</el-button>
@@ -124,7 +124,7 @@
     <el-dialog v-model="linkOpen" title="新建链接" width="420px" align-center append-to-body class="library-modal">
       <el-input v-model="linkName" placeholder="名称" />
       <el-input v-model="linkUrl" placeholder="https://" />
-      <p class="library-muted">只保存网址，不会抓取网页，也不是匿名公开链。</p>
+      <p class="library-muted">{{ targetHint(createTarget) }} 只保存网址，不抓取网页。</p>
       <template #footer>
         <el-button @click="linkOpen = false">取消</el-button>
         <el-button type="primary" @click="createLink">保存</el-button>
@@ -161,7 +161,7 @@ import {
 } from '@mammoth/shared';
 import { formatBytes, formatDateTime } from '../utils/format';
 import {
-  libraryConfig, libraryMediaUrl,
+  libraryConfig, libraryMediaUrl, libraryScopeImpact,
   batchLibrary,
   createLibraryFolder,
   createLibraryLink,
@@ -193,6 +193,13 @@ const parentId = computed<string | null>({
   set: value => { void router.replace({ query: { ...route.query, folder: value || undefined, parentId: undefined } }); },
 });
 const breadcrumb = ref<{ id: string; name: string }[]>([]);
+const parentScope = ref<'PRIVATE' | 'ENTERPRISE' | null>(null);
+type SaveTarget = { parentId: string | null; scope: 'PRIVATE' | 'ENTERPRISE'; name: string };
+const createTarget = ref<SaveTarget>({ parentId: null, scope: 'PRIVATE', name: '我的资料' });
+const uploadTarget = ref<SaveTarget>({ ...createTarget.value });
+function captureTarget(): SaveTarget { return { parentId: parentId.value, scope: parentId.value ? parentScope.value ?? (view.value === 'shared' ? 'ENTERPRISE' : 'PRIVATE') : view.value === 'shared' ? 'ENTERPRISE' : 'PRIVATE', name: breadcrumb.value.at(-1)?.name ?? (view.value === 'shared' ? '企业共享' : '我的资料') }; }
+function targetHint(target: SaveTarget) { return `保存到：${target.name}；${target.scope === 'ENTERPRISE' ? '本企业成员可见，新建或上传的内容继承此范围。' : '仅自己可见。'}`; }
+function openCreate(kind: 'folder' | 'link') { createTarget.value = captureTarget(); if (kind === 'folder') folderOpen.value = true; else linkOpen.value = true; }
 const routeKeyword = computed(() => typeof route.query.q === 'string' ? route.query.q : '');
 const keyword = ref(routeKeyword.value);
 let keywordTimer: ReturnType<typeof setTimeout> | null = null;
@@ -264,6 +271,7 @@ async function reload() {
     items.value = data.items;
     total.value = data.total;
     breadcrumb.value = data.breadcrumb;
+    parentScope.value = data.parentScope ?? null;
     listError.value = '';
   } catch (error) {
     if (sequence !== listSequence) return;
@@ -277,19 +285,19 @@ function onSelect(rows: LibraryItem[]) {
   selected.value = rows;
 }
 
-function pickUpload() { replaceTarget.value = null; uploadParent.value = parentId.value; uploadOpen.value = true; }
+function pickUpload() { replaceTarget.value = null; uploadTarget.value = captureTarget(); uploadParent.value = uploadTarget.value.parentId; uploadOpen.value = true; }
 async function uploadOne(file: File, progress: (ratio: number) => void) {
   if (replaceTarget.value) { await replaceLibraryFile(replaceTarget.value, file); return '新版本已保存；处理状态在列表中显示'; }
-  const result = await uploadLibraryFiles([file], uploadParent.value, progress);
+  const result = await uploadLibraryFiles([file], uploadTarget.value.parentId, progress, { scope: uploadTarget.value.scope, confirmShare: uploadTarget.value.scope === 'ENTERPRISE' });
   if (result.failed.length || !result.items.length) throw new Error(result.failed.map(row => row.message).join('；') || '未收到保存成功结果');
-  return '已保存，仅自己可见；处理状态单独显示';
+  return uploadTarget.value.scope === 'ENTERPRISE' ? '已保存，本企业成员可见；处理状态单独显示' : '已保存，仅自己可见；处理状态单独显示';
 }
 async function onUploadComplete(successes: number) { if (successes > 0) await revealCreated(); }
 
-/** 新建的私有资料在“最近使用/企业共享”里不可见，切回“我的资料”让创建结果可见。 */
+/** 创建后保留当前目录；最近使用不包含尚未打开的资料，转到我的资料。 */
 async function revealCreated() {
   window.dispatchEvent(new Event('mmp:library-changed'));
-  if (view.value !== 'mine') await router.push({ path: '/console/library/mine' });
+  if (view.value === 'recent') await router.push({ path: '/console/library/mine' });
   else if (keyword.value) { keyword.value = ''; commitKeyword(''); }
   page.value = 1;
   await reload();
@@ -297,7 +305,7 @@ async function revealCreated() {
 
 async function createFolder() {
   try {
-    await createLibraryFolder(folderName.value, parentId.value);
+    await createLibraryFolder(folderName.value, createTarget.value.parentId, { scope: createTarget.value.scope, confirmShare: createTarget.value.scope === 'ENTERPRISE' });
     folderOpen.value = false;
     folderName.value = '';
     await revealCreated();
@@ -308,7 +316,7 @@ async function createFolder() {
 
 async function createLink() {
   try {
-    await createLibraryLink(linkName.value, linkUrl.value, parentId.value);
+    await createLibraryLink(linkName.value, linkUrl.value, createTarget.value.parentId, { scope: createTarget.value.scope, confirmShare: createTarget.value.scope === 'ENTERPRISE' });
     linkOpen.value = false;
     linkName.value = '';
     linkUrl.value = '';
@@ -337,7 +345,15 @@ async function move(row: LibraryItem) {
 }
 async function confirmMove() {
   if (!moveTarget.value) return;
-  await act(() => moveLibrary(moveTarget.value!.id, moveParent.value));
+  try {
+    const options: { confirmShare?: boolean; expectedTreeRevision?: string } = {};
+    if (moveFolders.value.find(folder => folder.id === moveParent.value)?.scope === 'ENTERPRISE') {
+      const impact = await libraryScopeImpact(moveTarget.value.id, 'ENTERPRISE');
+      if (impact.changed && !await confirmAction(`移入后该资料及全部子项会企业共享，共涉及 ${impact.total} 项。`, '确认移动并共享')) return;
+      options.confirmShare = true; options.expectedTreeRevision = impact.treeRevision;
+    }
+    await act(() => moveLibrary(moveTarget.value!.id, moveParent.value, options));
+  } catch (error) { actionError.value = error instanceof Error ? error.message : '移动失败'; return; }
   if (!actionError.value) moveOpen.value = false;
 }
 
@@ -355,14 +371,18 @@ async function confirmAction(message: string, title: string): Promise<boolean> {
   }
 }
 
-async function share(row: LibraryItem) {
-  if (!await confirmAction('这会变成企业共享，本企业成员都能看到。此操作不会因为移动文件夹而自动发生。', '确认共享')) return;
-  await act(() => shareLibrary(row.id, 'ENTERPRISE', true));
+async function changeScope(row: LibraryItem, scope: 'PRIVATE' | 'ENTERPRISE') {
+  try {
+    const impact = await libraryScopeImpact(row.id, scope);
+    const message = scope === 'ENTERPRISE'
+      ? `该资料及全部子文件夹和文件会一起共享，本企业成员可见，共涉及 ${impact.total} 项。`
+      : `该资料及全部子文件夹和文件会改为各自所有者私有，共涉及 ${impact.total} 项。`;
+    if (!await confirmAction(message, scope === 'ENTERPRISE' ? '确认共享' : '确认取消共享')) return;
+    await act(() => shareLibrary(row.id, scope, scope === 'ENTERPRISE', { confirmUnshare: scope === 'PRIVATE', expectedTreeRevision: impact.treeRevision }));
+  } catch (error) { actionError.value = error instanceof Error ? error.message : '范围变更失败'; }
 }
-
-async function unshare(row: LibraryItem) {
-  await act(() => shareLibrary(row.id, 'PRIVATE', false));
-}
+async function share(row: LibraryItem) { await changeScope(row, 'ENTERPRISE'); }
+async function unshare(row: LibraryItem) { await changeScope(row, 'PRIVATE'); }
 
 async function retry(row: LibraryItem) {
   await act(() => retryLibraryParse(row.id));

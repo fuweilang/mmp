@@ -5,7 +5,7 @@ import type { Response } from 'express';
 import { JwtGuard } from '../auth/jwt.guard';
 import { CurrentUser } from '../auth/current-user';
 import { LibraryAdminService } from './library.admin.service';
-import { AdminLibraryCommand, AdminLibraryCreate, AdminLibraryQuery } from './library.admin.dto';
+import { AdminLibraryCommand, AdminLibraryCreate, AdminLibraryQuery, AdminLibraryScopeImpactQuery } from './library.admin.dto';
 import { libraryUploadLimit } from './library.dto';
 import { LibraryError } from './library.errors';
 import { HttpException } from '@nestjs/common';
@@ -21,6 +21,7 @@ export class LibraryAdminController {
  @Get('tenants/:tenantId/items') items(@CurrentUser() user:User,@Param('tenantId') id:string,@Query() query:AdminLibraryQuery){return this.run(()=>this.admin.items(user,id,query));}
  @Get('tenants/:tenantId/nodes/:id') detail(@CurrentUser() user:User,@Param('tenantId') tenant:string,@Param('id') id:string){return this.run(()=>this.admin.detail(user,tenant,id));}
  @Get('tenants/:tenantId/nodes/:id/impact') impact(@CurrentUser() user:User,@Param('tenantId') tenant:string,@Param('id') id:string){return this.run(()=>this.admin.impact(user,tenant,id));}
+ @Get('tenants/:tenantId/nodes/:id/scope-impact') scopeImpact(@CurrentUser() user:User,@Param('tenantId') tenant:string,@Param('id') id:string,@Query() query:AdminLibraryScopeImpactQuery){return this.run(()=>this.admin.scopeImpact(user,tenant,id,query));}
  @Get('tenants/:tenantId/nodes/:id/preview') preview(@CurrentUser() user:User,@Param('tenantId') tenant:string,@Param('id') id:string,@Query('grantId') grant:string,@Query('versionId') version?:string){return this.run(()=>this.admin.content(user,tenant,id,grant,version));}
  @Get('tenants/:tenantId/nodes/:id/download') async download(@CurrentUser() user:User,@Param('tenantId') tenant:string,@Param('id') id:string,@Query('grantId') grant:string,@Res() res:Response,@Query('versionId') version?:string,@Query('inline') inline?:string){const file=await this.run(()=>this.admin.content(user,tenant,id,grant,version,true,inline==='1'));if(!('bytes' in file))throw new BadRequestException('无文件可下载');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','private, no-store');res.setHeader('Content-Security-Policy',"default-src 'none'; sandbox");res.setHeader('Content-Type',file.contentType);res.setHeader('Content-Disposition',`${inline==='1'?'inline':'attachment'}; filename*=UTF-8''${encodeURIComponent(file.filename)}`);res.send(file.bytes);}
  @Post('tenants/:tenantId/folders') folder(@CurrentUser() user:User,@Param('tenantId') id:string,@Body() body:AdminLibraryCreate){return this.run(()=>this.admin.create(user,id,body));}

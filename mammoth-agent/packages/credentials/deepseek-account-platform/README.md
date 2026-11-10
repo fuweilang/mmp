@@ -34,6 +34,10 @@ Device identity reads validate the existing login device record and expose only 
 <a id="use-this-package"></a>
 ## Use this package
 
+Ground library prompt references are authorized through the captured account credential using `POST /api/library/open` with the exact node/version and `purpose: prepare`. A denied version or malformed excerpt rejects submission before attachment admission. The final `session/validate-library-references` check rejects changed or mixed account credentials and provider disposal immediately before delivery. Each accepted excerpt records the authoritative name, real locator, and truncation status in a separate model-visible text block; no credential or browser-supplied source body is logged.
+
+The Host-only library render route converts an explicitly selected doc/docx/ppt/pptx version through the optional Office-to-PDF provider. Ground authorizes the exact version before conversion admission; format validation uses that version's immutable original file name (older servers without this additive field fall back to the returned display name); original bytes are read only after admission through the ordinary protected download. Account changes discard the result, and disconnect, timeout, or provider disposal cancels the reader. PDF responses are uncached and carry URI-encoded missing-font diagnostics; unavailable conversion offers an actionable refusal without exposing engine details or credentials.
+
 The profile projection maps `id_profile.picture` to `avatarUrl`, using null when no picture is configured.
 
 Token resolution refuses requests while local sign-out is in progress. Successful local removal publishes `deepseek-account/signed-out` before returning the signed-out snapshot; remote revocation remains independent.

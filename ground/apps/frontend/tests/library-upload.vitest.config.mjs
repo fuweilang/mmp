@@ -9,5 +9,5 @@ const { default: vue } = await import(pathToFileURL(frontend.resolve('@vitejs/pl
 export default {
   root: resolve(here, '..'), plugins: [vue()],
   resolve: { alias: { '@upload-fixture': resolve(here, '../src/components/LibraryUploadDialog.vue'), '@library-fixture': resolve(here, '../src/views/Library.vue'), '@admin-library-fixture': resolve(here, '../src/views/admin/AdminLibrary.vue'), '@custody-fixture': resolve(here, '../src/components/LibraryCustodyApproval.vue'), '@mammoth/shared': resolve(here, '../../../packages/shared/src/index.ts'), vitest: resolve(dirname(native.resolve('vitest/package.json')), 'dist/index.js') } },
-  test: { environment: 'jsdom', include: ['tests/library-upload.client.spec.ts', 'tests/library-dialog.client.spec.ts', 'tests/library-admin.client.spec.ts'], globals: false, pool: 'forks', server: { deps: { inline: [/\.vue$/] } } },
+  test: { environment: 'jsdom', include: ['tests/library-upload.client.spec.ts', 'tests/library-dialog.client.spec.ts', 'tests/library-admin.client.spec.ts', 'tests/library-sharing.client.spec.ts'], globals: false, pool: 'forks', server: { deps: { inline: [/\.vue$/] } } },
 };

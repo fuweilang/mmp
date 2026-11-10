@@ -17,6 +17,21 @@
   width: max-content;
 }
 
+/* Library documents fill their pane; source page margins remain part of the document. */
+.body[data-pdf-edge-to-edge] {
+  gap: 0;
+  padding: 0;
+  background: white;
+}
+
+.body[data-pdf-edge-to-edge] .surface {
+  box-shadow: none;
+}
+
+:global([data-document-zoom-mode="fit-width"]) .body[data-pdf-edge-to-edge] .surface {
+  width: 100%;
+}
+
 .page {
   box-sizing: border-box;
   width: 100%;

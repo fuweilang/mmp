@@ -11,7 +11,7 @@ import { LoadingIndicator } from '../LoadingIndicator.tsx'
 export type ExcelBodyProps = DocumentPreviewProps & PropsLocale<'sidebarExcel'> & { readonly limits: ExcelLimits }
 
 /** Lazily loaded renderer input with the parser choice and main-bundle loading content. */
-export type LoadedExcelBodyProps = ExcelBodyProps & { readonly format: ExcelFormat; readonly loading: ReactNode }
+export type LoadedExcelBodyProps = Pick<ExcelBodyProps, 'content' | 't' | 'limits'> & { readonly format: ExcelFormat; readonly loading: ReactNode }
 
 const LoadedExcelBody = lazy(async () => ({ default: (await import('./excel.tsx')).ExcelBody }))
 

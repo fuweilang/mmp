@@ -9,11 +9,19 @@ import type { CatalogDraftSelection } from './draft-editor.ts'
  */
 import type { Context } from '@mammoth-ai/cordis'
 import type { SessionBinding } from '@mammoth-ai/mmp-api-session-controller/client'
+import type { PromptContentPart } from '@mammoth-ai/mmp-api-session-controller/types'
 import type { InboxState } from '@mammoth-ai/mmp-agent/types'
 import type { ObservableSnapshot, SnapshotStore } from '@mammoth-ai/mmp-client-store'
 import type { Branded } from '@mammoth-ai/mmp-brand'
 import type { ArbitrateKey, ArbitrateOutcome, DraftQuote, Occurrence, ReferenceInsert, TokenSpan } from './draft-editor.ts'
 import type { InputSubmitMode, MessageSubmission } from './composer-submission.ts'
+
+/** A selected library version resolved by the Host when the prompt is admitted. */
+export type LibraryPromptPart = Extract<PromptContentPart, { readonly type: 'library' }>
+/** Reference owners may return model text or an authorized source request. */
+export type SerializedReference = string | LibraryPromptPart
+/** Plain prompts retain their string path; structured sources keep ordered text and references. */
+export type SerializedDraftPrompt = string | readonly (Extract<PromptContentPart, { readonly type: 'text' }> | LibraryPromptPart)[]
 
 /** Attachment payload passed to a claimed command submission. */
 export type SubmitAttachment =
@@ -113,7 +121,7 @@ export interface InputTriggerController {
   /** @returns whether Space applied a trigger result. */
   onSpace(): boolean
   /** @param source - reference source. @param ref - source-local id. @param signal - submit cancellation. @returns model text. */
-  serializeReference(source: string, ref: string, signal: AbortSignal): Promise<string>
+  serializeReference(source: string, ref: string, signal: AbortSignal): Promise<SerializedReference>
   /** @param line - trimmed draft. @param signal - submit cancellation. @param envelope - attachment count. @returns winning result. */
   adjudicate(
     line: string,
@@ -189,6 +197,8 @@ export interface InputTarget {
 
 /** Per-session input facade owned by the conversation wiring layer. */
 export interface SessionInput extends InputTarget {
+  /** Replace one source's complete chip selection in one editable draft operation. */
+  replaceReferences(source: string, references: readonly ReferenceInsert[]): boolean
   setCatalogSelection?(value: CatalogDraftSelection, initializeOnly?: boolean): boolean
   /** Insert selected transcript text as an atomic quote. @param text - nonblank selection. @returns whether editing accepted it. */
   insertQuote(text: string): boolean
@@ -371,7 +381,7 @@ export type InputEvent =
   | {
     readonly type: 'enter'
     readonly catalogSelection?: CatalogDraftSelection
-  readonly enterpriseKnowledge?: boolean
+    readonly enterpriseKnowledge?: boolean
     readonly knowledgeRevision?: number
     readonly mode: InputSubmitMode
     readonly draft: string

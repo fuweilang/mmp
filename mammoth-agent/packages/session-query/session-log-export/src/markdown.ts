@@ -9,6 +9,7 @@
  * @module
  */
 
+import { userContentText } from '@mammoth-ai/mmp-llm/user-content'
 import type {
   AssistantMessage,
   SessionEvent,
@@ -207,7 +208,7 @@ function visibleContent(content: UserMessage['content']): string {
   for (const block of content) {
     switch (block.type) {
       case 'text':
-        if (block.text !== '') parts.push(block.text)
+        if (block.text !== '') parts.push(userContentText([block]))
         break
       case 'image':
         parts.push(imageLabel(block.attachment))

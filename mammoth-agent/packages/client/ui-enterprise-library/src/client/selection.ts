@@ -91,7 +91,7 @@ export function attachLibraryReference(input: DraftReferenceInput | undefined, i
   return { sent: false, attached: input.appendReference(ref) }
 }
 
-/** Stable reference id. The serializer refetches this version; it does not trust a model-written id. */
+/** Stable reference id. Host admission reads this exact version rather than a model-written id. */
 export function libraryRef(chip: Pick<LibraryChip, 'nodeId' | 'versionId'>): string {
   return `${chip.nodeId}@${chip.versionId}`
 }

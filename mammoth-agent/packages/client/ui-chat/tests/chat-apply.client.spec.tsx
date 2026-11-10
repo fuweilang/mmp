@@ -162,7 +162,7 @@ describe('Chat apply wiring', () => {
     expect(userContent.children?.['conversation.chat.user.images']).toMatchObject({ kind: 'single', scope: 'session' })
     expect(assistant?.children?.['conversation.chat.message.images']).toMatchObject({ kind: 'single', scope: 'session' })
     expect(userContent.store).toBeUndefined()
-    expect(userContent.inject).toBeUndefined()
+    expect(userContent.inject).toBeTypeOf('function')
     expect(view?.children?.['conversation.chat.flow']).toBeDefined()
     expect(view?.children?.['conversation.chat.node']).toBeUndefined()
     expect(view?.children?.['conversation.chat.message.images']).toBeUndefined()

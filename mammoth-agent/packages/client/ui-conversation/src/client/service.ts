@@ -20,6 +20,7 @@ import type {
 import type {} from '@mammoth-ai/mmp-client-file-upload/client'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import type { FileAttachmentRef, ImageMediaType } from '@mammoth-ai/mmp-attachment'
+import type { LibrarySourceReference } from '@mammoth-ai/mmp-attachment/types'
 import { createSnapshotStore } from '@mammoth-ai/mmp-client-store'
 import type { SnapshotStore } from '@mammoth-ai/mmp-client-store'
 import type {
@@ -29,7 +30,7 @@ import type { QueueAction } from '@mammoth-ai/mmp-api-session-controller/types'
 import type { MessageId } from '@mammoth-ai/mmp-llm/brand'
 import type { ComposerBlocks } from './contract/composer-blocks.ts'
 import type {
-  DraftAttachmentId, DraftAttachmentSerializationResult, SessionInputResolver, SubmitAttachment, SubmitOutcome,
+  DraftAttachmentId, DraftAttachmentSerializationResult, SessionInputResolver, SubmitAttachment, SubmitOutcome, SerializedDraftPrompt,
 } from './contract/input.ts'
 import type { InputSubmitMode } from './contract/composer-submission.ts'
 
@@ -234,7 +235,7 @@ export class ConversationController extends Service implements IConversation {
    */
   async sendSession(
     session: SessionFace,
-    text: string,
+    text: SerializedDraftPrompt,
     attachmentIds: readonly DraftAttachmentId[],
     mode: InputSubmitMode,
     signal?: AbortSignal,
@@ -284,9 +285,15 @@ export class ConversationController extends Service implements IConversation {
     // The composer owns the attachments until the Host accepts the prompt.
     const ownership = { accepted: false, retiredUnobserved: false }
     const acceptance = Promise.withResolvers<undefined>()
+    const promptParts = typeof text === 'string' ? text === '' ? [] : [{ type: 'text' as const, text }] : [...text]
+    const libraryReferences: LibrarySourceReference[] = promptParts.flatMap(part => part.type === 'library' ? [{
+      source: 'library' as const, nodeId: part.nodeId, versionId: part.versionId, name: part.name,
+    }] : [])
+    const displayText = typeof text === 'string' ? text : promptParts.filter(part => part.type === 'text').map(part => part.text).join('').trim()
     const submission = session.beginSubmission({
       mode,
-      text,
+      text: displayText,
+      ...(libraryReferences.length === 0 ? {} : { libraryReferences }),
       attachments: pendingAttachments,
       onAccept: () => {
         ownership.accepted = true
@@ -303,14 +310,21 @@ export class ConversationController extends Service implements IConversation {
     try {
       await nextPaint()
       const uploaded = await serializeAttachments()
-      content = [...uploaded, ...(text === '' ? [] : [{ type: 'text' as const, text }])]
+      content = [...uploaded, ...promptParts]
     } catch (error) {
       submission.abandon()
       throw error
     }
     // An Inbox row can show the acceptance before the receipt; a receipt that fails afterwards changes
     // nothing here because the Host already holds the message.
-    const result = await Promise.race([session.prompt(content, mode, signal, submission.requestId, catalogSelection===undefined?undefined:{protocol:1,selectionVersion:catalogSelection.selectionVersion,expertRef:catalogSelection.expertRef?{id:catalogSelection.expertRef.id,versionId:catalogSelection.expertRef.versionId}:null,skillRef:catalogSelection.skillRef?{id:catalogSelection.skillRef.id,revision:catalogSelection.skillRef.revision}:null}), acceptance.promise])
+    const prompt = catalogSelection === undefined ? session.prompt(content, mode, signal, submission.requestId)
+      : session.prompt(content, mode, signal, submission.requestId, {
+        protocol: 1, selectionVersion: catalogSelection.selectionVersion,
+        expertRef: catalogSelection.expertRef
+          ? { id: catalogSelection.expertRef.id, versionId: catalogSelection.expertRef.versionId } : null,
+        skillRef: catalogSelection.skillRef ? { id: catalogSelection.skillRef.id, revision: catalogSelection.skillRef.revision } : null,
+      })
+    const result = await Promise.race([prompt, acceptance.promise])
     if (result !== undefined && !result.ok) return { kind: 'error' }
     ownership.accepted = true
     // An accepted prompt whose echo already retired unobserved, as when its queue entry was removed.

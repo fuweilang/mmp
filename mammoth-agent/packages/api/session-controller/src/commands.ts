@@ -15,7 +15,7 @@ import type {} from '@mammoth-ai/mmp-client-file-upload'
 import {
   ReasoningEffortId, createUserMessage, freezeMessage,
 } from '@mammoth-ai/mmp-llm'
-import type { MessageSource } from '@mammoth-ai/mmp-llm'
+import type { MessageSource, TextBlock } from '@mammoth-ai/mmp-llm'
 import { buildForkSeed } from '@mammoth-ai/mmp-session/fork'
 import { SessionLogOffset, SessionSeq } from '@mammoth-ai/mmp-session'
 import type { SessionEvent, SessionHeader, SessionId, UserMessage } from '@mammoth-ai/mmp-session'
@@ -322,14 +322,18 @@ export class SessionCommandController {
    * @returns acknowledgement that the Agent accepted the prompt.
    */
   async prompt(request: SessionPromptRequest, source: MessageSource): Promise<SessionPromptValue> {
+    if (request.content.some(part => part.type === 'text' && 'reference' in part)) {
+      throw new RemoteError('session/attachment-invalid', 'Source metadata must be resolved by the Host.', { reason: 'UNAUTHORIZED_SOURCE_METADATA' })
+    }
     const agent = await this.resolveAgent(request.sessionId)
     await this.healModelSelection(agent)
     const selectionCheck = await this.ctx.serial('task/prepare-prompt', agent, request)
     const needsInterpreter=agent.session.snapshotEvents().some(e=>['official-gallery/composition','official-gallery/attempt'].includes(e.type))
     if ((request.catalogSelection !== undefined||needsInterpreter) && selectionCheck !== 'handled') throw new RemoteError('gateway/bad-request', 'TASK_SELECTION_UNSUPPORTED', {})
     if (hasPromptRequest(agent, request.requestId)) return { accepted: true }
+    const resolved = await this.resolveLibraryReferences(agent, request.content)
     const admission = resolvePromptFileReceipts(
-      request.content,
+      resolved.content,
       receiptId => this.ctx.fileUploads.resolve(agent, receiptId),
     )
     // Encoded images and image upload receipts both make an image prompt.
@@ -364,6 +368,19 @@ export class SessionCommandController {
         if(this.ctx.get('workspaceRegistry')&&underArchivedSession(this.ctx,agent))throw new RemoteError('session/agent-busy','Task is archived',{reason:'TASK_ARCHIVED'})
         const access=this.ctx.get('remoteAccess');if(access&&!access.allows({kind:'session',id:agent.id}))throw new RemoteError('gateway/bad-request','Task permission was revoked',{})
         if (hasPromptRequest(agent, request.requestId)) return { accepted: true }
+        if (resolved.sources.length > 0) {
+          try {
+            const valid = await this.ctx.serial('session/validate-library-references', agent, resolved.sources)
+            if (valid !== true) throw new RemoteError('session/attachment-invalid', 'Library account validation is unavailable.', { reason: 'LIBRARY_VALIDATOR_UNAVAILABLE' })
+          } catch (error) {
+            if (remoteErrorOf(error) !== undefined) throw error
+            throw new RemoteError('session/attachment-invalid', 'Library account changed; reopen the selected files and retry.', { reason: 'LIBRARY_ACCOUNT_CHANGED' })
+          }
+          if (this.ctx.agents.get(agent.id) !== agent) throw new RemoteError('session/not-found', 'Task was disposed during library validation', { sessionId: agent.id })
+          if (this.ctx.get('workspaceRegistry') && underArchivedSession(this.ctx, agent)) throw new RemoteError('session/agent-busy', 'Task is archived', { reason: 'TASK_ARCHIVED' })
+          if (access && !access.allows({ kind: 'session', id: agent.id })) throw new RemoteError('gateway/bad-request', 'Task permission was revoked', {})
+        }
+        if (hasPromptRequest(agent, request.requestId)) return { accepted: true }
         using binding = this.ctx.fileUploads.bindPrompt(agent, admission.receiptIds, request.requestId)
         if (request.mode === 'steer') agent.steer(message)
         else agent.followup(message)
@@ -378,6 +395,24 @@ export class SessionCommandController {
       return { accepted: true }
     }
     return this.agents.serializeImageAdmission(agent, admit)
+  }
+
+  private async resolveLibraryReferences(agent: Agent, content: SessionPromptRequest['content']): Promise<{ readonly content: readonly ResolvedLibraryPromptPart[]; readonly sources: readonly TextBlock[] }> {
+    const resolved: ResolvedLibraryPromptPart[] = []
+    const sources: TextBlock[] = []
+    for (const part of content) {
+      if (part.type !== 'library') { resolved.push(part); continue }
+      try {
+        const block = await this.ctx.serial('session/resolve-library-reference', agent, part)
+        if (block === undefined) throw new RemoteError('session/attachment-invalid', 'Library references are unavailable on this Host.', { reason: 'LIBRARY_RESOLVER_UNAVAILABLE' })
+        resolved.push(block)
+        sources.push(block)
+      } catch (error) {
+        if (remoteErrorOf(error) !== undefined) throw error
+        throw new RemoteError('session/attachment-invalid', 'Library source is unavailable; reopen it and retry.', { reason: 'LIBRARY_SOURCE_UNAVAILABLE' })
+      }
+    }
+    return { content: resolved, sources }
   }
 
   /**
@@ -446,7 +481,7 @@ export class SessionCommandController {
   async updateQueue(request: SessionUpdateQueueRequest): Promise<SessionUpdateQueueValue> {
     if (request.action.kind === 'edit') {
       // oxlint-disable-next-line typescript/no-unnecessary-condition -- Remote callers can submit untyped JSON.
-      if (request.action.content.some(block => block.type !== 'text')) {
+      if (request.action.content.some(block => block.type !== 'text' || 'reference' in block)) {
         throw new RemoteError(
           'session/attachment-invalid',
           'queue edits accept text content only',
@@ -495,7 +530,7 @@ export class SessionCommandController {
       case 'edit':
         agent.inbox.replace(request.itemId, freezeMessage<UserMessage>({
           ...message,
-          content: [...request.action.content],
+          content: replaceQueuedQuestion(message.content, request.action.content),
         }))
         break
       case 'remove': {
@@ -583,9 +618,11 @@ export class SessionCommandController {
   }
 }
 
+type ResolvedLibraryPromptPart = Exclude<SessionPromptRequest['content'][number], { readonly type: 'library' }> | TextBlock
+
 /** Replace each file part with the file or image its staged receipt names. */
 function resolvePromptFileReceipts(
-  content: SessionPromptRequest['content'],
+  content: readonly ResolvedLibraryPromptPart[],
   staged: (receiptId: FileUploadReceiptId) => StagedAttachment | undefined,
 ): { readonly content: AttachmentAdmissionPart[]; readonly receiptIds: readonly FileUploadReceiptId[] } {
   const receiptIds = new Set<FileUploadReceiptId>()
@@ -603,6 +640,21 @@ function resolvePromptFileReceipts(
     return attachment
   })
   return { content: resolved, receiptIds: [...receiptIds] }
+}
+
+/** Retain admitted excerpts in place while replacing only the editable user question. */
+function replaceQueuedQuestion(
+  content: UserMessage['content'],
+  question: Extract<SessionUpdateQueueRequest['action'], { readonly kind: 'edit' }>['content'],
+): UserMessage['content'] {
+  const result: UserMessage['content'][number][] = []
+  let inserted = false
+  for (const block of content) {
+    if (block.type === 'text' && block.reference !== undefined) result.push(block)
+    else if (block.type === 'text' && !inserted) { result.push(...question); inserted = true }
+  }
+  if (!inserted) result.push(...question)
+  return result
 }
 
 function hasPromptRequest(agent: Agent, requestId: SessionRequestId): boolean {

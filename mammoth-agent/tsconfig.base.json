@@ -194,6 +194,7 @@
       "@mammoth-ai/mmp-command-feedback/types": ["./packages/feedback/command-feedback/src/types.ts"],
       "@mammoth-ai/mmp-goal/types": ["./packages/goal/goal/src/types.ts"],
       "@mammoth-ai/mmp-goal/client": ["./packages/goal/goal/src/client.ts"],
+      "@mammoth-ai/mmp-llm/user-content": ["./packages/llm/llm/src/user-content.ts"],
       "@mammoth-ai/mmp-llm/types": ["./packages/llm/llm/src/types.ts"],
       "@mammoth-ai/mmp-llm/brand": ["./packages/llm/llm/src/brand.ts"],
       "@mammoth-ai/mmp-llm/assistant-stream": ["./packages/llm/llm/src/assistant-stream.ts"],
