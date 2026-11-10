@@ -32,6 +32,12 @@ export class UpdateAdminUserDto {
   @IsString()
   tenantId?: string | null;
 
+  /** 仅为既有平台账号新增 MEMBER 企业关系；不替换已有企业或平台角色。 */
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  addMemberTenantId?: string;
+
   /** 企业内角色：ADMIN=企业管理员，MEMBER=企业成员。 */
   @IsOptional()
   @IsIn(['ADMIN', 'MEMBER'])

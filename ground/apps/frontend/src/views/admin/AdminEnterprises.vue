@@ -70,6 +70,7 @@
       <el-table-column label="上级" width="120">
         <template #default="{ row }">
           <el-tag v-if="row.parentName" size="small" type="warning" effect="plain">{{ row.parentName }}</el-tag>
+          <span v-else-if="row.type === 'PLATFORM'" class="admin-empty">—</span>
           <span v-else class="admin-empty">猛犸总部</span>
         </template>
       </el-table-column>
@@ -135,7 +136,7 @@
             >
               进入业务工作台
             </el-button>
-            <el-button text type="primary" @click="openEdit(row)">
+            <el-button v-if="row.type !== 'PLATFORM'" text type="primary" @click="openEdit(row)">
               编辑
             </el-button>
             <el-button
@@ -157,9 +158,9 @@
               启用
             </el-button>
             <el-button
+              v-if="row.type !== 'PLATFORM'"
               text
               type="danger"
-              :disabled="row.type === 'PLATFORM'"
               :loading="deletingId === row.id"
               @click="onDelete(row)"
             >

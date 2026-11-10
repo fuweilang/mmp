@@ -8,7 +8,7 @@ import { createGroundLibraryRenderer, readGroundLibraryResponse } from './ground
 const PREFIX = '/ground-library'
 const MAX_BYTES = 55 * 1024 * 1024
 const ROUTES: readonly [string, RegExp][] = [
-  ['GET', /^\/(?:config|items|search)$/], ['POST', /^\/(?:folders|links|files|open|batch|used)$/],
+  ['GET', /^\/(?:context|config|items|search)$/], ['POST', /^\/(?:context|folders|links|files|open|batch|used)$/],
   ['POST', /^\/files\/[A-Za-z0-9_-]+\/versions$/],
   ['PATCH', /^\/nodes\/[A-Za-z0-9_-]+$/], ['DELETE', /^\/nodes\/[A-Za-z0-9_-]+$/],
   ['POST', /^\/nodes\/[A-Za-z0-9_-]+\/(?:move|scope|recycle|restore|retry-parse)$/],
@@ -48,10 +48,12 @@ async function bodyOf(req: IncomingMessage): Promise<Buffer> {
  * @param token - current account/tenant credential, never returned to the Client.
  * @param reject - existing account invalidation callback.
  * @param timeoutMs - account request timeout.
+ * @param acceptContext - account-owned scoped credential commit; rejects stale selections.
  */
 export function installGroundLibrary(
   ctx: Context, origin: string, token: () => Promise<string | undefined>,
   reject: (value: string) => Promise<void>, timeoutMs: number,
+  acceptContext?: (captured: string, selected: string) => Promise<boolean>,
 ): void {
   ctx.inject(['webServer', 'connection'], (host) => {
     const render = createGroundLibraryRenderer(host, origin, token, reject, timeoutMs)
@@ -73,9 +75,19 @@ export function installGroundLibrary(
           method, headers, redirect: 'error', signal: AbortSignal.timeout(timeoutMs),
           ...(bytes === undefined ? {} : { body: new Uint8Array(bytes) }),
         })
-        const data = await readGroundLibraryResponse(upstream, MAX_BYTES)
+        let data = await readGroundLibraryResponse(upstream, MAX_BYTES)
         if (await token() !== captured) { json(res, 409, '账号或企业已切换，请重新打开资料'); return }
         if (upstream.status === 401) void reject(captured).catch(() => undefined)
+        if (target.split('?')[0] === '/api/library/context' && method === 'POST' && upstream.ok) {
+          const value: unknown = JSON.parse(data.toString('utf8'))
+          if (!value || typeof value !== 'object' || !('token' in value) || typeof value.token !== 'string'
+            || !acceptContext || !await acceptContext(captured, value.token)) {
+            json(res, 409, '账号或企业已切换，请重新选择企业'); return
+          }
+          // A scoped credential belongs to the Host, never the browser response.
+          const { token: _credential, ...context } = value
+          data = Buffer.from(JSON.stringify(context))
+        }
         res.statusCode = upstream.status
         res.setHeader('cache-control', 'no-store')
         res.setHeader('x-content-type-options', 'nosniff')

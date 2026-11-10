@@ -39,6 +39,8 @@ test('admin full single-tenant library workflow without custody grants',{timeout
    const media=await request('platform',`${base}/items?fileType=image`);assert.equal(media.body.total,1);
    const opts=await request('platform',`${base}/options`);assert.ok(opts.body.filterOwners.some(o=>o.id===owner));assert.ok(opts.body.filterFolders.some(f=>f.id===folder.id));assert.equal(opts.body.grants,undefined);
    const scoped=await request('platform',`${base}/items?folderId=${folder.id}&ownerUserId=${owner}`);assert.equal(scoped.body.total,1);assert.equal(scoped.body.items[0].name,'新增.md');
+   const roots=await request('platform',`${base}/items?layer=children&ownerUserId=${owner}&pageSize=100`);assert.equal(roots.body.items.some(n=>n.id===folder.id),true);assert.equal(roots.body.items.some(n=>n.name==='新增.md'),false);
+   const inside=await request('platform',`${base}/items?layer=children&folderId=${folder.id}&ownerUserId=${owner}`);assert.equal(inside.body.items.some(n=>n.name==='新增.md'),true);
    deny(await command(await row(folder.id),'move',{parentId:folder.id}));
   });
   await t.test('metadata update, immutable replacement and expected stamp serialize concurrent operations',async()=>{

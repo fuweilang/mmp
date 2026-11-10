@@ -11,7 +11,7 @@ import {
   storageKeyFor,
 } from './library.files';
 import { libraryLimitsFromEnv, type LibraryLimits } from './library.limits';
-import { parseLibraryBytes } from './library.parse';
+import { listZipEntries, parseLibraryBytes } from './library.parse';
 import { canKnow, canManage, canSee, matchingCustody } from './library.policy';
 import type { LibraryStore } from './library.store';
 import type {
@@ -165,10 +165,10 @@ export class LibraryService {
     // A platform account that has not entered an enterprise workbench has no tenant
     // context. Report that state instead of failing every library request with 403,
     // so the client can explain how to enable the library.
-    if (!actor.tenantId) return {
+    if (!actor.tenantId || !actor.activeMember) return {
       enabled: false,
       reason: 'NO_TENANT',
-      message: '资料库属于企业能力：请先在控制台进入企业工作台，再打开资料库',
+      message: '请先选择你已加入的有效企业；尚未加入企业时，请联系平台管理员配置成员关系。',
       ...this.limitsView(),
       usedBytes: 0,
     };
@@ -188,7 +188,34 @@ export class LibraryService {
     return counts;
   }
 
-  async list(actor: Actor, view: LibraryView, parentId?: string | null, q?: string, flat = false, page = 1, pageSize?: number, status = 'all', fileType?: string, owner?: string) {
+  /** Files the member can see at every depth. Folders stay in the sidebar tree. */
+  async catalog(actor: Actor, q?: string, page = 1, pageSize = 10) {
+    this.requireTenantActor(actor);
+    if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) throw new LibraryError(400, '分页参数无效', 'BAD_PAGE');
+    await this.sweep(actor.tenantId);
+    const custodies = await this.custodiesFor(actor);
+    const nodes = await this.store.listNodes(actor.tenantId);
+    const query = q?.trim().toLowerCase();
+    const rows = [];
+    for (const node of nodes) {
+      if (node.kind !== 'FILE' || node.state !== 'ACTIVE' || !canSee(actor, node, custodies, this.now())) continue;
+      if (query && !node.name.toLowerCase().includes(query)) continue;
+      if (await this.versionStatus(node) === 'FAILED') continue;
+      rows.push(node);
+    }
+    rows.sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
+    const items = [];
+    for (const node of rows.slice((page - 1) * pageSize, page * pageSize)) {
+      const location = node.ownerUserId === actor.userId ? 'mine' as const : 'shared' as const;
+      const item = await this.toItem(actor, node, custodies, null);
+      item.location = location;
+      item.parentPath = this.catalogPath(node, nodes, actor, custodies, location);
+      items.push(item);
+    }
+    return { items, total: rows.length, page, pageSize };
+  }
+
+  async list(actor: Actor, view: LibraryView, parentId?: string | null, q?: string, flat = false, page = 1, pageSize?: number, status = 'all', fileType?: string, owner?: string, agent = false) {
     this.requireTenantActor(actor);
     if (view === 'members' && !(actor.isOrgAdmin && actor.activeMember)) {
       throw new LibraryError(403, '只有企业管理员可以查看成员资料', 'FORBIDDEN');
@@ -221,7 +248,21 @@ export class LibraryService {
     if (!query && parentId) rows = rows.filter((node) => node.parentId === parentId);
     else if (!query && !flat && (view === 'mine' || view === 'shared' || view === 'members' || view === 'managed')) rows = rows.filter((node) => this.isRootForView(node, nodes, actor, custodies, view, memberOwner));
     if (query) rows = rows.filter((node) => node.name.toLowerCase().includes(query));
-    if (status !== 'all') {
+    if (agent) {
+      const visible: NodeRecord[] = [];
+      for (const node of rows) {
+        if (node.kind === 'FILE' && await this.versionStatus(node) === 'FAILED') continue;
+        visible.push(node);
+      }
+      rows = visible;
+    }
+    if (status === 'uncitable') {
+      const matched: NodeRecord[] = [];
+      for (const node of rows) {
+        if (node.kind === 'FILE' && await this.versionStatus(node) !== 'READY') matched.push(node);
+      }
+      rows = matched;
+    } else if (status !== 'all') {
       const statuses = status === 'processing' ? ['PENDING', 'PROCESSING'] : [({ ready: 'READY', failed: 'FAILED', download: 'DOWNLOAD_ONLY' } as Record<string, string>)[status]].filter(value => value !== undefined);
       const matched: NodeRecord[] = [];
       for (const node of rows) {
@@ -607,10 +648,11 @@ export class LibraryService {
     const fullText = chunks.map((chunk) => chunk.content).join('\n');
     const truncated = fullText.length > 20_000 || version.extractTruncated;
     const text = fullText.slice(0, 20_000);
-    if (text) await this.touch(actor, opened.node);
     const ext = fileExtension(version.originalName);
     const mediaKind = ['.png','.jpg','.jpeg','.gif','.webp','.avif'].includes(ext) ? 'image' as const : ['.mp4','.webm','.mov'].includes(ext) ? 'video' as const : null;
     const page = chunks.some((chunk) => chunk.locatorKind === 'page');
+    const entries = ext === '.zip' ? await this.zipPreviewEntries(version.storageKey) : undefined;
+    if (text || entries) await this.touch(actor, opened.node);
     return {
       nodeId: opened.node.id,
       versionId: version.id,
@@ -621,6 +663,7 @@ export class LibraryService {
       previewKind: mediaKind ?? (version.parseStatus === 'READY' ? 'text' as const : 'download_only' as const),
       text: version.parseStatus === 'READY' ? text : null,
       linkUrl: null,
+      ...(entries ? { entries } : {}),
       truncated,
       truncationNote: truncated ? '预览只显示前 20000 个字符，可下载原文件查看全文。' : null,
       parseStatus: version.parseStatus,
@@ -629,6 +672,16 @@ export class LibraryService {
       preciseHighlight: page,
       highlightNote: page ? null : '没有可靠页码，只显示提取出的文字。',
     };
+  }
+
+  private async zipPreviewEntries(storageKey: string) {
+    const bytes = await this.store.getBlob(storageKey);
+    if (!bytes) return [] as { name: string; size: number }[];
+    try {
+      return (await listZipEntries(bytes)).entries;
+    } catch {
+      return [] as { name: string; size: number }[];
+    }
   }
 
   async download(actor: Actor, nodeId: string, versionId?: string | null, inline = false) {
@@ -658,7 +711,7 @@ export class LibraryService {
     const node = await this.store.getNode(nodeId);
     if (!node) throw libraryNotFound();
     const custodies = await this.custodiesFor(actor);
-    if (!canKnow(actor, node, custodies, this.now())) throw libraryNotFound();
+    if (!quotableInChat(actor, { ...node, state: 'ACTIVE' })) throw libraryNotFound();
     if (node.state === 'PURGED') {
       throw new LibraryError(410, '来源已彻底删除，不能改指向其他文件或版本', 'SOURCE_GONE');
     }
@@ -692,6 +745,7 @@ export class LibraryService {
   async markUsed(actor: Actor, nodeId: string, versionId: string) {
     this.requireMember(actor);
     const opened = await this.openBytes(actor, nodeId, versionId, false);
+    if (!quotableInChat(actor, opened.node)) throw libraryNotFound();
     if (opened.blocked || !opened.version || opened.version.parseStatus !== 'READY') throw new LibraryError(409, '资料当前不能加入任务', 'BLOCKED');
     await this.touch(actor, opened.node);
     return { ok: true };
@@ -716,7 +770,7 @@ export class LibraryService {
       seen.add(versionId);
       const version = await this.store.getVersion(versionId);
       const node = version ? await this.store.getNode(version.nodeId) : null;
-      if (!version || !node || version.tenantId !== actor.tenantId || !canKnow(actor, node, custodies, this.now())) {
+      if (!version || !node || version.tenantId !== actor.tenantId || !quotableInChat(actor, { ...node, state: 'ACTIVE' })) {
         hidden += 1;
         continue;
       }
@@ -1342,6 +1396,27 @@ export class LibraryService {
       current = nodes.find(row => row.id === current?.parentId);
     }
     return false;
+  }
+
+  /** Ancestors that actually appear in the destination tree. A shared file under a private folder stays at that tree's root. */
+  private async versionStatus(node: NodeRecord): Promise<string | null> {
+    if (node.kind !== 'FILE' || !node.currentVersionId) return null;
+    const version = await this.store.getVersion(node.currentVersionId);
+    return version?.parseStatus ?? null;
+  }
+
+  private catalogPath(node: NodeRecord, nodes: NodeRecord[], actor: Actor, custodies: CustodyRecord[], location: 'mine' | 'shared') {
+    const visible = (row: NodeRecord) => row.kind === 'FOLDER' && row.state === 'ACTIVE' && canSee(actor, row, custodies, this.now())
+      && (location === 'mine' ? row.ownerUserId === actor.userId : row.scope === 'ENTERPRISE');
+    const items: { id: string; name: string }[] = [];
+    const seen = new Set([node.id]);
+    let current = nodes.find((row) => row.id === node.parentId);
+    while (current && !seen.has(current.id) && visible(current) && items.length < 32) {
+      seen.add(current.id);
+      items.push({ id: current.id, name: current.name });
+      current = nodes.find((row) => row.id === current?.parentId);
+    }
+    return items.reverse();
   }
 
   private async breadcrumb(actor: Actor, parentId: string, custodies: CustodyRecord[]) {

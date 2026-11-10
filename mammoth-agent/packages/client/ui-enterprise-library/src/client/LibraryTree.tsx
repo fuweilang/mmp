@@ -20,13 +20,16 @@ type Props = {
   onCreate?: (action: LibraryCreateAction, path: readonly Crumb[], item: LibraryChoice) => void
   onAction?: (action: string, item: LibraryChoice) => void
   onDenied?: () => void
+  /** Folder ids then the file id, from the root of this branch. Missing rows load the next page. */
+  revealIds?: readonly string[]
   busy?: boolean
   /** Bumped after a library change. Open branches refetch without collapsing. */
   revision?: number
 }
 /** Children are fetched only while expanded; every branch has its own bounded page and cancellation. */
 export function LibraryTree(props: Props) {
-  const { origin, fetchImpl, t, path, onFolder, onFile, selectedId, view = 'mine', onDenied, revision = 0 } = props
+  const { origin, fetchImpl, t, path, onFolder, onFile, selectedId, view = 'mine', onDenied, revision = 0, revealIds } = props
+  const nextId = revealIds?.[0]
   const parentId = path.at(-1)?.id ?? null
   const [page, setPage] = useState(1)
   const [rows, setRows] = useState<LibraryChoice[]>([])
@@ -55,12 +58,16 @@ export function LibraryTree(props: Props) {
     } }).finally(() => { if (!control.signal.aborted) setLoading(false) })
     return () => { control.abort() }
   }, [origin, fetchImpl, parentId, page, retry, view, onDenied])
+  useEffect(() => {
+    if (!nextId || loading || error || rows.some((row) => row.nodeId === nextId) || rows.length >= total || page > 20) return
+    setPage((current) => current + 1)
+  }, [nextId, loading, error, rows, total, page])
   return <ul className={css.tree} aria-label={path.at(-1)?.name ?? t(view)}>
     {rows.map(item => {
       const folder = item.kind === 'FOLDER'; const invalid = path.some(part => part.id === item.nodeId) || path.length >= 32
-      const open = expanded.includes(item.nodeId)
+      const open = expanded.includes(item.nodeId) || revealIds?.[0] === item.nodeId
       const next = [...path, { id: item.nodeId, name: item.name }]
-      return <li key={item.nodeId}><div className={css.treeRow} data-actions={props.onAction ? true : undefined} data-current={selectedId === item.nodeId || undefined}>
+      return <li key={item.nodeId} ref={selectedId === item.nodeId ? (node) => { node?.scrollIntoView?.({ block: 'nearest' }) } : undefined}><div className={css.treeRow} data-actions={props.onAction ? true : undefined} data-current={selectedId === item.nodeId || undefined}>
         {folder ? <Button className={css.treeToggle} size="sm" aria-label={`${t('toggleTree')} · ${item.name}`} aria-expanded={open} disabled={invalid} onClick={() => { setExpanded(open ? expanded.filter(id => id !== item.nodeId) : [...expanded, item.nodeId]) }}><span style={{ display: 'flex', transform: open ? undefined : 'rotate(-90deg)' }}><IconChevronDownOutlineRegular size={12} /></span></Button> : <span className={css.treeToggleSpace} aria-hidden="true" />}
         <button type="button" className={css.treeName} aria-current={selectedId === item.nodeId ? 'page' : undefined} disabled={invalid} title={invalid ? t('treeLoop') : item.name} onClick={() => {
           if (folder) { setExpanded(ids => ids.includes(item.nodeId) ? ids : [...ids, item.nodeId]); onFolder(next, item) }
@@ -73,7 +80,7 @@ export function LibraryTree(props: Props) {
             onCreate={action => { props.onCreate?.(action, next, item) }} />}
           <RowActions item={item} view={view} busy={props.busy ?? false} t={t} onAction={props.onAction} />
         </span>}
-      </div>{folder && open && !invalid && <LibraryTree {...props} path={next} />}</li>
+      </div>{folder && open && !invalid && <LibraryTree {...props} path={next} revealIds={revealIds?.[0] === item.nodeId ? revealIds.slice(1) : undefined} />}</li>
     })}
     {loading && <li role="status">{t('loading')}</li>}
     {error && <li role="alert">{error}<Button size="sm" onClick={() => { setPage(1); setRetry(n => n + 1) }}>{t('refresh')}</Button></li>}

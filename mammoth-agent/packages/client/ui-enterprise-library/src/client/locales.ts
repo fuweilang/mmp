@@ -1,5 +1,6 @@
 /** Library copy. The English catalog is the key set. */
 export const en = {
+  memberContextHint: 'Select an enterprise you have joined. If none are available, ask a platform administrator to add your membership.',
   selectPreview: 'Select a file to preview',
   selectPreviewHint: 'Browse My files or Shared on the left, then select a file.',
   openLink: 'Open link',
@@ -47,7 +48,7 @@ export const en = {
   treeLoop: 'Folder nesting is invalid or too deep.',
   new: 'New',
   refresh: 'Refresh',
-  filterStatus: 'Filter by parsing status',
+  filterStatus: 'Filter by AI use',
   allStatus: 'All statuses',
   statusReady: 'Ready for AI',
   statusFailed: 'Parsing failed',
@@ -56,6 +57,8 @@ export const en = {
   statusDownloadOnly: 'Not available to AI',
   parseStatus: 'Parsing status',
   size: 'Size',
+  archiveEntries: 'Archive contents',
+  archiveEmpty: 'This archive has no files to list.',
   updated: 'Updated',
   private: 'Private',
   folderType: 'Folder',
@@ -120,11 +123,15 @@ export const en = {
   sourceNote: "Stored excerpt only; not a claim that the entire file was read.",
   truncatedExcerpt: "Only a partial excerpt is stored; the full file has not been read.",
   scope: "Visibility",
+  finderTitle: "Search documents",
+  finderPlaceholder: "Search documents",
+  finderEnd: "End of the list",
 } as const
 
 export type LibraryKey = keyof typeof en
 
 export const zh: Record<LibraryKey, string> = {
+  memberContextHint: '请选择你已加入的有效企业；尚未加入企业时，请联系平台管理员配置成员关系。',
   selectPreview: '选择文件以预览',
   selectPreviewHint: '在左侧展开我的资料或企业共享，点击文件查看内容。',
   openLink: '打开链接',
@@ -172,15 +179,17 @@ export const zh: Record<LibraryKey, string> = {
   browse: '资料库分类',
   new: '新建',
   refresh: '刷新',
-  filterStatus: '筛选解析状态',
+  filterStatus: '按能否引用筛选',
   allStatus: '全部状态',
   statusReady: '可供 AI 引用',
   statusFailed: '解析失败',
   statusPending: '等待解析',
   statusProcessing: '解析中',
-  statusDownloadOnly: '不能供 AI 引用',
+  statusDownloadOnly: '不可供 AI 引用',
   parseStatus: '处理状态',
   size: '大小',
+  archiveEntries: '压缩包内容',
+  archiveEmpty: '压缩包里没有可列出的文件。',
   updated: '更新时间',
   private: '仅自己',
   folderType: '文件夹',
@@ -245,6 +254,9 @@ export const zh: Record<LibraryKey, string> = {
   sourceNote: "以下为保存的版本摘录，不表示已阅读全文。",
   truncatedExcerpt: "仅保存了部分摘录，未读取全文。",
   scope: "可见范围",
+  finderTitle: "搜索文档",
+  finderPlaceholder: "搜索文档",
+  finderEnd: "已经到底了",
 }
 
 export const ja: Record<LibraryKey, string> = {

@@ -21,7 +21,8 @@ it('managed browsing derives the tenant from one grant and never leaks another o
  const managed = await h.service.managedActor(platform, privateGrant.id);
  assert.equal(managed.tenantId, 'ta'); assert.equal(managed.activeMember, false);
  const list = await h.service.list(managed, 'managed'); assert.deepEqual(list.items.map(x => x.name), ['甲私人.md']);
- assert.equal((await h.service.openCitation(managed, own.id, own.currentVersion!.id)).quote, '测试授权正文');
+ assert.equal((await h.service.preview(managed, own.id)).text, '测试授权正文');
+ await assert.rejects(h.service.openCitation(managed, own.id, own.currentVersion!.id), { status: 404 });
  await assert.rejects(h.service.preview(managed, shared.id), /不存在|不可见/);
  assert.ok(h.store.audits.some(a => a.action === 'library_custody_read'));
  await h.service.revokeCustody(owner, privateGrant.id);

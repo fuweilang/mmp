@@ -59,8 +59,13 @@ export const enterpriseSelect = {
   aiWallet: { select: { balanceCoins: true, totalCredited: true, totalDebited: true } },
   // 企业管理员 = 组织成员中角色为 ADMIN（含历史 OWNER）的用户，可多人
   members: {
-    // 企业管理员 = 拥有「企业管理员」角色的成员
-    where: { user: { roles: { some: { role: { key: 'org_admin' } } } } },
+    // 企业管理员 = 拥有「企业管理员」角色的成员。猛犸总部没有企业管理员角色，绑定的超级管理员显示在这里。
+    where: {
+      OR: [
+        { user: { roles: { some: { role: { key: 'org_admin' } } } } },
+        { tenant: { type: 'PLATFORM' }, user: { roles: { some: { role: { key: 'super_admin' } } } } },
+      ],
+    },
     select: { user: { select: { id: true, name: true, phone: true } } },
     orderBy: { createdAt: 'asc' as const },
   },

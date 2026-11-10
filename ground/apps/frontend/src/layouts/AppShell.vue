@@ -140,7 +140,7 @@
           </el-dropdown>
         </div>
       </header>
-      <section class="workspace" :class="{ 'library-workspace': isConsoleLibraryPage || route.path === '/admin/library' }">
+      <section class="workspace" :class="{ 'library-workspace': isConsoleLibraryPage, 'admin-library-workspace': isAdminLibraryPage }">
         <router-view />
       </section>
     </section>
@@ -219,6 +219,7 @@ onMounted(async () => {
 });
 
 const isConsoleLibraryPage = computed(() => consoleLibraryViews.some(child => child.path === route.path) || route.path === memberLibraryView.path);
+const isAdminLibraryPage = computed(() => route.path === '/admin/library' || route.path.startsWith('/admin/library/'));
 const libraryChildren = computed(() => consoleLibraryNav(session.value?.currentRole));
 const pageTitle = computed(() => (typeof route.meta.title === 'string' ? route.meta.title : '工作台'));
 const avatar = computed(() => (session.value?.user.name || '猛').slice(0, 1));
@@ -319,6 +320,7 @@ async function onLogout() {
 </script>
 <style scoped>
 .workspace.library-workspace { background:#fff; display:flex; flex-direction:column; }
+.workspace.admin-library-workspace { background:#fff; padding:0; display:flex; flex-direction:column; }
 .nav-group-trigger { align-items:center; display:flex; gap:10px; width:100%; height:44px; padding:0 18px; border:0; background:transparent; color:#667085; font:inherit; cursor:pointer; text-align:left; }
 .nav-group-trigger:hover { background:#EEF0F8; color:var(--app-primary-color); }
 .nav-group-active > .nav-group-trigger { color:var(--app-primary-color); }

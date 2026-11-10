@@ -46,6 +46,10 @@ export class JwtGuard implements CanActivate {
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user || user.status !== 'active') throw new UnauthorizedException('账号不可用');
 
+    if (payload.purpose === 'library-member' && !/^\/(?:api\/)?library\/(?:context|config|items|search|folders|links|files(?:\/[A-Za-z0-9_-]+\/versions)?|open|used|batch|nodes\/[A-Za-z0-9_-]+(?:\/(?:preview|source|download|versions|scope-impact|move|scope|recycle|restore|retry-parse))?)$/.test(req.path)) {
+      throw new ForbiddenException('资料库成员凭证不能访问管理功能');
+    }
+
     const effective = await computeEffectivePermissions(this.prisma, user.id, payload.tenantId ?? null);
     const principal = { ...user, isPlatformAdmin: effective.isPlatformAdmin };
 

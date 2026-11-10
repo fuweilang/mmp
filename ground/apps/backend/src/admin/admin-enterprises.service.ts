@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { MemberRole, Prisma, TenantType, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,21 +14,54 @@ import { creditSignupGiftInTx } from '../billing/welcome-gift';
 import { AdminSupportService, enterpriseSelect } from './admin-support.service';
 
 @Injectable()
-export class AdminEnterprisesService {
+export class AdminEnterprisesService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private support: AdminSupportService,
   ) {}
 
+  async onModuleInit() {
+    await this.ensureHeadquarters();
+  }
+
+  /** 猛犸总部是平台根节点，也是超级管理员自己的资料企业。不另建第二家。 */
+  async ensureHeadquarters() {
+    let platform = await this.prisma.tenant.findFirst({
+      where: { type: TenantType.PLATFORM },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!platform) {
+      platform = await this.prisma.tenant.create({
+        data: { name: '猛犸总部', slug: 'platform', type: TenantType.PLATFORM, quota: { create: {} } },
+      });
+    } else if (platform.name !== '猛犸总部') {
+      platform = await this.prisma.tenant.update({ where: { id: platform.id }, data: { name: '猛犸总部' } });
+    }
+    const supers = await this.prisma.userRole.findMany({
+      where: { role: { key: 'super_admin' }, user: { status: 'active' } },
+      select: { userId: true },
+    });
+    for (const row of supers) {
+      await this.prisma.orgMember.upsert({
+        where: { userId_tenantId: { userId: row.userId, tenantId: platform.id } },
+        create: { userId: row.userId, tenantId: platform.id, role: MemberRole.ADMIN },
+        update: {},
+      });
+    }
+    return platform;
+  }
+
   async listEnterprises(actor: User) {
     const scope = await this.support.adminScope(actor);
-    // 平台管理员看全量树（企业+代理商）；非空 scope 时只看范围内租户。
+    if (scope === null) await this.ensureHeadquarters();
+    // 平台管理员看全量树，含猛犸总部；非空 scope 时只看范围内租户。
     const tenants = await this.prisma.tenant.findMany({
-      where: scope === null ? { type: { in: ['ENTERPRISE', 'AGENCY'] } } : { id: { in: scope } },
+      where: scope === null ? { type: { in: ['ENTERPRISE', 'AGENCY', 'PLATFORM'] } } : { id: { in: scope } },
       select: enterpriseSelect,
       orderBy: { createdAt: 'asc' },
     });
-    return tenants.map((tenant) => this.support.presentEnterprise(tenant));
+    const rows = tenants.map((tenant) => this.support.presentEnterprise(tenant));
+    return [...rows.filter((row) => row.type === 'PLATFORM'), ...rows.filter((row) => row.type !== 'PLATFORM')];
   }
 
   async createEnterprise(actor: User, dto: CreateAdminEnterpriseDto) {
@@ -94,10 +128,7 @@ export class AdminEnterprisesService {
     await this.support.assertTenantInScope(scope, id);
     const existing = await this.prisma.tenant.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('企业不存在');
-    // 猛犸总部（PLATFORM）承载平台账号，不允许停用。
-    if (dto.status !== undefined && dto.status !== 'active' && existing.type === TenantType.PLATFORM) {
-      throw new ForbiddenException('平台租户不可停用');
-    }
+    if (existing.type === TenantType.PLATFORM) throw new ForbiddenException('猛犸总部只能查看');
 
     const data: Prisma.TenantUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name.trim();

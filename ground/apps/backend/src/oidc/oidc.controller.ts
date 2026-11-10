@@ -103,8 +103,8 @@ export class OidcController {
     const clear = () => this.clearSessionCookie(res, cookieName);
     try {
       const payload = await this.jwt.verifyAsync<JwtPayload>(token);
-      // browser-sso 票据只用于换正式会话，不能当登录态直接用（与 JwtGuard 的检查一致）。
-      if (payload.purpose === 'browser-sso') {
+      // Scoped library credentials and handoff tickets are never browser login sessions.
+      if (payload.purpose !== undefined) {
         clear();
         return null;
       }

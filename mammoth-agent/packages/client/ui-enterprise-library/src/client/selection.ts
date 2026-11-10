@@ -13,6 +13,8 @@ export type LibraryChoice = {
   readonly accessedAt?: string
   readonly updatedAt?: string
   readonly parentId?: string | null
+  readonly parentPath?: readonly { id: string; name: string }[]
+  readonly location?: 'mine' | 'shared'
   readonly url?: string | null
   readonly kind: LibraryKind
   readonly parseStatus: string | null

@@ -109,9 +109,13 @@
       :editing-id="editingId"
       :saving="saving"
       :enterprises="enterprises"
+      :user-enterprises="editingEnterprises"
+      :enterprises-loading="enterprisesLoading"
+      :enterprises-error="enterprisesError"
       :role-options="roleOptions"
       @save="onSave"
       @role-change="onRoleKeyChange"
+      @reload-enterprises="loadEnterprises"
     />
 
     <UserPermViewDialog
@@ -175,6 +179,9 @@ import { canChangePassword, canDeleteUser } from '@/components/admin/users/userD
 const auth = useAuthStore();
 const rows = ref<AdminUserRow[]>([]);
 const enterprises = ref<AdminEnterpriseRow[]>([]);
+const editingEnterprises = ref<Array<Pick<AdminEnterpriseRow, 'id' | 'name'>>>([]);
+const enterprisesLoading = ref(false);
+const enterprisesError = ref('');
 const roleOptions = ref<AdminRoleRow[]>([]);
 const loading = ref(false);
 const loadError = ref('');
@@ -182,6 +189,7 @@ const open = ref(false);
 const saving = ref(false);
 const editingId = ref('');
 const initialTenantId = ref('');
+const initialPlatformAccount = ref(false);
 const passwordOpen = ref(false);
 const viewOpen = ref(false);
 const viewingRow = ref<AdminUserRow | null>(null);
@@ -356,7 +364,9 @@ function onPageSizeChange(size: number) {
 }
 
 function resetForm() {
+  editingEnterprises.value = [];
   editingId.value = '';
+  initialPlatformAccount.value = false;
   initialTenantId.value = '';
   form.name = '';
   form.phone = '';
@@ -426,6 +436,8 @@ watch(viewTenantId, (next, prev) => {
 function openEdit(row: AdminUserRow) {
   resetForm();
   editingId.value = row.id;
+  editingEnterprises.value = row.tenants.map(({ id, name }) => ({ id, name }));
+  initialPlatformAccount.value = row.isPlatformAdmin;
   form.name = row.name;
   form.phone = row.phone;
   form.password = '';
@@ -463,10 +475,15 @@ async function load() {
 }
 
 async function loadEnterprises() {
+  if (enterprisesLoading.value) return;
+  enterprisesLoading.value = true;
+  enterprisesError.value = '';
   try {
     enterprises.value = await adminEnterpriseApi.list();
   } catch {
-    enterprises.value = [];
+    enterprisesError.value = '企业列表加载失败，请重试。';
+  } finally {
+    enterprisesLoading.value = false;
   }
 }
 
@@ -494,7 +511,10 @@ async function onSave() {
       if (!hideRoleSelect) {
         payload.isPlatformAdmin = isPlatformAccount;
         payload.roleKeys = [...form.roleKeys];
-        payload.tenantId = form.tenantId || null;
+        if (!initialPlatformAccount.value || !form.roleKeys.some(key => ['super_admin', 'platform_admin'].includes(key))) payload.tenantId = form.tenantId || null;
+      }
+      if (initialPlatformAccount.value && form.roleKeys.some(key => ['super_admin', 'platform_admin'].includes(key)) && form.tenantId && form.tenantId !== initialTenantId.value) {
+        payload.addMemberTenantId = form.tenantId;
       }
       await adminUserApi.update(editingId.value, payload);
       ElMessage.success('已保存');

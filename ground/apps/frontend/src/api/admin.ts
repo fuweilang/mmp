@@ -78,6 +78,8 @@ export type AdminUserCreate = {
 };
 
 export type AdminUserUpdate = {
+  /** 平台账号仅新增 MEMBER 成员关系，不替换已有企业。 */
+  addMemberTenantId?: string;
   name?: string;
   isPlatformAdmin?: boolean;
   status?: string;

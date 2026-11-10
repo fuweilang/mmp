@@ -8,6 +8,7 @@ import { fetchLibraryItems, fetchLibraryPage, fetchLibraryScopeImpact, fetchLibr
 import { choiceBlock, type LibraryChoice } from './selection.ts'
 import { RowActions } from './LibraryRowActions.tsx'
 import { LibraryTree } from './LibraryTree.tsx'
+import { LibraryFinder } from './LibraryFinder.tsx'
 import { LibraryCreateMenu, type LibraryCreateAction } from './LibraryCreateMenu.tsx'
 import { LibraryUploadDialog } from './LibraryUploadDialog.tsx'
 import { useLibrarySidebarResize } from './useLibrarySidebarResize.ts'
@@ -29,11 +30,32 @@ const VIEWS: readonly LibraryView[] = ['recent', 'mine', 'shared', 'trash']
 type SaveTarget = { parentId: string | null; scope: 'PRIVATE' | 'ENTERPRISE'; name: string }
 type Edit = { kind: 'folder' | 'link' | 'rename' | 'move'; item?: LibraryChoice; target?: SaveTarget }
 type ScopeConfirm = { nodeId: string; scope: 'PRIVATE' | 'ENTERPRISE'; total: number; treeRevision: string; moveParentId?: string | null }
-type Source = { originalName?: string; parseStatus?: string; bytes?: Uint8Array<ArrayBuffer>; mimeType?: string; missingFonts?: readonly string[]; item?: LibraryChoice; nodeId?: string; previewKind?: string; mediaUrl?: string; name?: string; text?: string | null; linkUrl?: string | null; parseReason?: string | null; highlightNote?: string | null; locator?: string | null; versionNo?: number | null; versionId?: string; truncated?: boolean; truncationNote?: string | null; chunks?: readonly { locator: string; text: string }[] }
+type ArchiveEntry = { name: string; size: number }
+type Source = { originalName?: string; parseStatus?: string; bytes?: Uint8Array<ArrayBuffer>; mimeType?: string; missingFonts?: readonly string[]; item?: LibraryChoice; nodeId?: string; previewKind?: string; mediaUrl?: string; name?: string; text?: string | null; linkUrl?: string | null; parseReason?: string | null; highlightNote?: string | null; locator?: string | null; versionNo?: number | null; versionId?: string; truncated?: boolean; truncationNote?: string | null; entries?: readonly ArchiveEntry[]; chunks?: readonly { locator: string; text: string }[] }
 
 const ACCEPT = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.md,.markdown,.txt,.csv,.html,.htm,.zip,.png,.jpg,.jpeg,.gif,.webp,.avif,.mp4,.webm,.mov'
 const VIEW_ICONS = { recent: IconClockOutlineRegular, mine: IconFolderCloseRegular, shared: IconShareOutlineRegular, trash: IconTrashOutlineRegular }
 type VersionRow = { id: string; versionNo: number; parseStatus: string; createdAt?: string }
+
+function readArchiveEntries(value: unknown): readonly ArchiveEntry[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const rows: ArchiveEntry[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue
+    const name = 'name' in item && typeof item.name === 'string' ? item.name : ''
+    const size = 'size' in item && typeof item.size === 'number' ? item.size : Number.NaN
+    if (!name || name.length > 240 || !Number.isSafeInteger(size) || size < 0) continue
+    rows.push({ name, size })
+    if (rows.length >= 40) break
+  }
+  return rows
+}
+
+function archiveSize(size: number) {
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(size < 10 * 1024 ? 1 : 0)} KB`
+  return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
 
 function versionWrittenAt(value: string | undefined) {
   if (!value) return ''
@@ -53,8 +75,7 @@ function statusKey(status: string | null): LibraryKey {
 
 function filterLabel(filter: string): LibraryKey {
   if (filter === 'ready') return 'statusReady'
-  if (filter === 'failed') return 'statusFailed'
-  if (filter === 'download') return 'statusDownloadOnly'
+  if (filter === 'uncitable') return 'statusDownloadOnly'
   return 'allStatus'
 }
 
@@ -64,10 +85,11 @@ function folderGone(error: unknown): boolean {
 }
 
 function matchesFilter(item: LibraryChoice, filter: string): boolean {
+  if (item.kind === 'FILE' && item.parseStatus === 'FAILED') return false
   if (filter === 'all') return true
   if (filter === 'ready') return !choiceBlock(item).disabled
-  if (filter === 'failed') return item.parseStatus === 'FAILED'
-  return item.kind === 'FILE' && statusKey(item.parseStatus) === 'statusDownloadOnly'
+  if (filter === 'uncitable') return item.kind === 'FILE' && choiceBlock(item).disabled
+  return false
 }
 
 /** Native Web/desktop library browser. Explicit save never uploads temporary chat attachments. */
@@ -80,7 +102,8 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [view, setView] = useState<LibraryView>('mine')
   const [expandedRoots, setExpandedRoots] = useState({ mine: true, shared: false })
   const [mountedRoots, setMountedRoots] = useState({ mine: true, shared: false })
-  const [query, setQuery] = useState('')
+  const [finderOpen, setFinderOpen] = useState(false)
+  const [located, setLocated] = useState<{ view: 'mine' | 'shared'; ids: readonly string[] } | null>(null)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [limits, setLimits] = useState<{ maxFileBytes: number; allowedExtensions: string[] }>()
@@ -137,11 +160,12 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       if ((result.nodeId && result.nodeId !== item.nodeId) || (result.versionId && result.versionId !== versionId)) throw new Error(t('operationFailed'))
       metadataReady = true
       const versionNo = result.versionNo ?? (versionId === item.versionId ? item.versionNo : null)
-      const authorized = { ...result, nodeId: item.nodeId,
+      const entries = readArchiveEntries(result.entries)
+      const authorized = { ...result, nodeId: item.nodeId, ...(entries ? { entries } : {}),
         item: { ...item, versionId, versionNo, parseStatus: result.parseStatus ?? (versionId === item.versionId ? item.parseStatus : null), parseReason: result.parseReason ?? null },
         versionNo, name: result.name ?? item.name, ...(versionId ? { versionId } : {}) }
       setSource(authorized)
-      const contents = item.kind === 'FILE' && versionId
+      const contents = item.kind === 'FILE' && versionId && !entries
         ? await fetchLibraryPreviewBytes(origin, item.nodeId, versionId, result.originalName ?? result.name ?? item.name, fetchImpl, control.signal)
         : undefined
       if (control.signal.aborted || generation !== previewGeneration.current) return
@@ -160,33 +184,37 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [movePath, setMovePath] = useState<readonly { id: string; name: string; scope?: string | undefined }[]>([])
   const parentId = path.at(-1)?.id ?? null
   const refresh = () => { setRevision(n => n + 1) }
-  /** Platform admins have no default enterprise; let them enter one in place. */
+  const [memberTenantId, setMemberTenantId] = useState<string | null>(null)
+  const entering = useRef(false)
+  const autoTenant = useRef<string | null>(null)
   const loadTenants = async () => {
-    try {
-      const res = await fetch(`${origin}/api/auth/me`, { credentials: 'include', cache: 'no-store' })
-      if (!res.ok) return
-      const me = await res.json() as { user?: { isPlatformAdmin?: boolean }; tenants?: readonly { id: string; name: string; type?: string; status?: string }[] }
-      if (!me.user?.isPlatformAdmin) return
-      setTenants((me.tenants ?? []).filter(x => x.type !== 'PLATFORM' && x.status === 'active').map(x => ({ id: x.id, name: x.name })))
-    } catch { /* the guidance text stays when tenant discovery fails */ }
+    const context = await libraryRequest(origin, 'context', 'GET', undefined, fetchImpl) as {
+      tenants: readonly { id: string; name: string }[]; selectedTenantId: string | null
+    }
+    if (!Array.isArray(context.tenants)) throw new Error(t('operationFailed'))
+    setTenants(context.tenants); setMemberTenantId(context.selectedTenantId)
+    const only = context.tenants.length === 1 ? context.tenants[0] : undefined
+    if (!context.selectedTenantId && only && autoTenant.current !== only.id) {
+      autoTenant.current = only.id
+      void enterTenant(only.id)
+    }
   }
   const enterTenant = async (tenantId: string) => {
-    if (switching) return
-    setSwitching(true); setError('')
+    if (entering.current || busy) return
+    entering.current = true
+    setSwitching(true); setError(''); setBlocked(t('loading')); closePreview(); setItems([]); setVersions(undefined)
+    setPath([]); setFilter('all'); setView('mine'); setUploadTarget(undefined); setEdit(undefined)
+    setMountedRoots({ mine: true, shared: false }); setExpandedRoots({ mine: true, shared: false })
     try {
-      const res = await fetch(`${origin}/api/auth/switch-tenant`, {
-        method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tenantId }),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { message?: string }
-        throw new Error(body.message ?? `切换企业失败 (${res.status})`)
-      }
-      closePreview(); setBlocked(null); setLimits(undefined); refresh()
-    } catch (e) { showToast(e instanceof Error ? e.message : t('operationFailed')) }
-    finally { setSwitching(false) }
+      await libraryRequest(origin, 'context', 'POST', { tenantId }, fetchImpl)
+      setMemberTenantId(tenantId); setBlocked(null); setLimits(undefined); refresh()
+    } catch (error) {
+      setBlocked(t('memberContextHint'))
+      showToast(error instanceof Error ? error.message : t('operationFailed'))
+    } finally { entering.current = false; setSwitching(false) }
   }
-  useEffect(() => { setPage(1) }, [view, query, parentId, filter])
+  useEffect(() => { void loadTenants().catch(() => { /* Failed discovery grants no enterprise access. */ }) }, [origin, fetchImpl, revision])
+  useEffect(() => { setPage(1) }, [view, parentId, filter])
 
   useEffect(() => {
     let current = true
@@ -196,7 +224,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       if (config.enabled === false) {
         closePreview()
         setBlocked(config.message ?? t('loadError'))
-        void loadTenants()
+        void loadTenants().catch(() => { /* Keep the refusal, never show an unverified enterprise. */ })
         return
       }
       setBlocked(null)
@@ -205,8 +233,8 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       // Older Ground builds answer 403 NO_TENANT instead of a disabled config.
       if (current && e instanceof Error && /缺少企业上下文|NO_TENANT/.test(e.message)) {
         closePreview()
-        setBlocked('资料库属于企业能力：请先在控制台进入企业工作台，再打开资料库')
-        void loadTenants()
+        setBlocked(t('memberContextHint'))
+        void loadTenants().catch(() => { /* Keep the refusal, never show an unverified enterprise. */ })
       }
     })
     return () => { current = false }
@@ -215,7 +243,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     if (blocked !== null) { setLoading(false); setItems([]); return }
     const control = new AbortController()
     setLoading(true); setItems([])
-    void fetchLibraryPage(origin, view, query, fetchImpl, control.signal, parentId, page, filter).then(next => {
+    void fetchLibraryPage(origin, view, '', fetchImpl, control.signal, parentId, page, filter).then(next => {
       if (!control.signal.aborted) {
         const lastPage = Math.max(1, Math.ceil(next.total / 20)); if (page > lastPage) { setPage(lastPage); return }
         setItems(next.items); setTotal(next.total); setParentScope(next.parentScope);
@@ -231,7 +259,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       setError(`${t('loadError')} ${e instanceof Error ? e.message : ''}`)
     } }).finally(() => { if (!control.signal.aborted) setLoading(false) })
     return () => { control.abort() }
-  }, [blocked, origin, view, query, fetchImpl, t, revision, parentId, page, filter])
+  }, [blocked, origin, view, fetchImpl, t, revision, parentId, page, filter])
   useEffect(() => {
     if (edit?.kind !== 'move') return
     const control = new AbortController()
@@ -254,9 +282,10 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       const opened = value as Source
       if (control.signal.aborted || generation !== previewGeneration.current) return
       if (opened.versionId !== requested.versionId || !opened.name) throw new Error(t('operationFailed'))
-      const contents = await fetchLibraryPreviewBytes(origin, requested.nodeId, requested.versionId, opened.originalName ?? opened.name, fetchImpl, control.signal)
+      const entries = readArchiveEntries(opened.entries)
+      const contents = entries ? undefined : await fetchLibraryPreviewBytes(origin, requested.nodeId, requested.versionId, opened.originalName ?? opened.name, fetchImpl, control.signal)
       if (!control.signal.aborted && generation === previewGeneration.current) {
-        setSource({ ...opened, ...contents, nodeId: requested.nodeId, name: opened.name, versionId: requested.versionId })
+        setSource({ ...opened, ...contents, ...(entries ? { entries } : {}), nodeId: requested.nodeId, name: opened.name, versionId: requested.versionId })
       }
     }).catch(error => {
       if (!control.signal.aborted && generation === previewGeneration.current) {
@@ -296,7 +325,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   }
   const revealCreated = () => {
     if (view === 'recent') { setView('mine'); setPath([]) }
-    setQuery(''); setFilter('all'); setPage(1); refresh()
+    setFilter('all'); setPage(1); refresh()
   }
   const captureTarget = (): SaveTarget => ({ parentId, scope: parentId ? parentScope ?? (view === 'shared' ? 'ENTERPRISE' : 'PRIVATE') : view === 'shared' ? 'ENTERPRISE' : 'PRIVATE', name: path.at(-1)?.name ?? t(view === 'shared' ? 'shared' : 'mine') })
   const openEdit = (kind: Edit['kind'], item?: LibraryChoice, target = captureTarget()) => {
@@ -314,7 +343,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       setExpandedRoots(roots => ({ ...roots, [next]: next === view ? !roots[next] : true }))
       setMountedRoots(roots => ({ ...roots, [next]: true }))
     }
-    setView(next); setPath([]); setParentScope(undefined); setQuery(''); setFilter('all')
+    setView(next); setPath([]); setParentScope(undefined); setFilter('all')
   }
   const leaveFolder = (nodeId: string) => {
     setPath(current => {
@@ -327,7 +356,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   }
   const chooseFolder = (nextView: 'mine' | 'shared', next: readonly { id: string; name: string }[], item: LibraryChoice) => {
     closePreview()
-    setView(nextView); setQuery(''); setPath(next)
+    setView(nextView); setPath(next)
     setParentScope(item.scope === 'ENTERPRISE' ? 'ENTERPRISE' : 'PRIVATE')
   }
   const downloadVersion = (item: Pick<LibraryChoice, 'nodeId'> & { versionId?: string | null }, versionId = item.versionId) => {
@@ -400,7 +429,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   }) }
   const beginCreate = (action: LibraryCreateAction, nextView: 'mine' | 'shared', nextPath: readonly { id: string; name: string }[], target: SaveTarget) => {
     closePreview()
-    setView(nextView); setPath(nextPath); setParentScope(target.scope); setQuery(''); setFilter('all')
+    setView(nextView); setPath(nextPath); setParentScope(target.scope); setFilter('all')
     setExpandedRoots(roots => ({ ...roots, [nextView]: true }))
     setMountedRoots(roots => ({ ...roots, [nextView]: true }))
     if (action === 'upload') setUploadTarget(target)
@@ -408,7 +437,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   }
   const flatList = <div className={view === 'trash' ? css.treeRoot : css.flatList}>
     {loading && <p role="status">{t('loading')}</p>}
-    {!loading && visibleItems.length === 0 && <p className={css.treeEmpty}>{query || filter !== 'all' ? t('noResults') : t('empty')}</p>}
+    {!loading && visibleItems.length === 0 && <p className={css.treeEmpty}>{filter !== 'all' ? t('noResults') : t('empty')}</p>}
     {visibleItems.map(item => view === 'trash' ? <div key={item.nodeId} className={css.treeRow} data-actions>
       <span className={css.treeToggleSpace} aria-hidden="true" />
       <button type="button" className={css.treeName} disabled title={item.name}>
@@ -438,14 +467,15 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   </div>
   return <section ref={sidebarResize.pageRef} className={css.page} style={sidebarResize.style} aria-busy={busy || loading}>
     <aside className={css.navigation} ref={sidebarResize.attachNavigation}>
-      <h2 className={css.navTitle}>{t('panel')}</h2>
       <div className={css.toolbar}>
-        <div className={css.search}><IconSearchOutlineRegular size={18} /><Input type="search" aria-label={t('searchPlaceholder')} value={query} placeholder={t('searchPlaceholder')} onChange={e => { setQuery(e.target.value) }} /></div>
         <div className={css.toolbarTools}>
           <Menu open={filterOpen} onClose={() => { setFilterOpen(false) }} portal minWidthFromAnchor autoFocus align="end" selectedId={filter} listClassName={css.filterList}
-            items={[{ id: 'all', label: t('allStatus') }, { id: 'ready', label: t('statusReady') }, { id: 'failed', label: t('statusFailed') }, { id: 'download', label: t('statusDownloadOnly') }]}
-            onSelect={id => { setFilter(id); setFilterOpen(false) }}
+            items={[{ id: 'ready', label: t('statusReady') }, { id: 'uncitable', label: t('statusDownloadOnly') }]}
+            onSelect={id => { setFilter(id === filter ? 'all' : id); setFilterOpen(false) }}
             anchor={<Button variant="outline" className={css.filterButton} aria-label={t('filterStatus')} aria-haspopup="menu" aria-expanded={filterOpen} onClick={() => { setFilterOpen(!filterOpen) }} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setFilterOpen(true) } }}><span>{t(filterLabel(filter))}</span><IconChevronDownOutlineRegular size={14} /></Button>} />
+          <Tooltip label={t('searchPlaceholder')}>
+            <Button variant="outline" className={css.finderButton} aria-label={t('searchPlaceholder')} disabled={blocked !== null} onClick={() => { setFinderOpen(true) }} icon={<IconSearchOutlineRegular size={16} />} />
+          </Tooltip>
           <Tooltip label={t('refresh')}>
             <Button variant="outline" className={css.refresh} aria-label={t('refresh')} disabled={busy || loading} onClick={refresh} icon={<IconRefreshOutlineRegular size={16} />} />
           </Tooltip>
@@ -453,7 +483,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       </div>
 
       {blocked !== null && <div role="alert" className={css.error}>{blocked}</div>}
-      {blocked !== null && tenants.map(tenant => <Button key={tenant.id} size="sm" disabled={switching} onClick={() => { void enterTenant(tenant.id) }}>{tenant.name}</Button>)}
+      {tenants.length > 1 && tenants.map(tenant => <Button key={tenant.id} size="sm" aria-pressed={memberTenantId === tenant.id} disabled={switching || busy} onClick={() => { void enterTenant(tenant.id) }}>{tenant.name}</Button>)}
       <nav className={css.navScroll} aria-label={t('browse')}>
         {VIEWS.map(id => {
           const Icon = VIEW_ICONS[id]
@@ -469,13 +499,14 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
                 onCreate={action => { beginCreate(action, treeView, [], { parentId: null, scope: treeView === 'shared' ? 'ENTERPRISE' : 'PRIVATE', name: t(treeView) }) }} />}
             </div>
             {treeView && mountedRoots[treeView] && blocked === null && <div id={`enterprise-library-${treeView}-tree`} className={css.treeRoot}
-              hidden={!expandedRoots[treeView] || (view === treeView && (query !== '' || filter !== 'all'))}>
-              <LibraryTree revision={revision} view={treeView} t={t} origin={origin} fetchImpl={fetchImpl} path={[]}
-                selectedId={view === treeView ? source?.nodeId ?? parentId ?? undefined : undefined}
-                onFolder={(next, item) => { chooseFolder(treeView, next, item) }} onFile={item => { if (view !== treeView) { setView(treeView); setPath([]); setQuery('') } void openSource(item) }}
-                onCreate={(action, next, item) => { beginCreate(action, treeView, next, { parentId: item.nodeId, scope: item.scope === 'ENTERPRISE' ? 'ENTERPRISE' : 'PRIVATE', name: item.name }) }} onAction={(action, item) => { if (view !== treeView) { closePreview(); setView(treeView); setPath([]); setQuery('') } rowAction(action, item) }} onDenied={closePreview} busy={busy} />
+              hidden={!expandedRoots[treeView] || (view === treeView && filter !== 'all')}>
+              <LibraryTree key={memberTenantId ?? 'unselected'} revision={revision} view={treeView} t={t} origin={origin} fetchImpl={fetchImpl} path={[]}
+                revealIds={located?.view === treeView ? located.ids : undefined}
+                selectedId={located?.view === treeView ? located.ids.at(-1) : view === treeView ? source?.nodeId ?? parentId ?? undefined : undefined}
+                onFolder={(next, item) => { setLocated(null); chooseFolder(treeView, next, item) }} onFile={item => { setLocated(null); if (view !== treeView) { setView(treeView); setPath([]) } void openSource(item) }}
+                onCreate={(action, next, item) => { beginCreate(action, treeView, next, { parentId: item.nodeId, scope: item.scope === 'ENTERPRISE' ? 'ENTERPRISE' : 'PRIVATE', name: item.name }) }} onAction={(action, item) => { if (view !== treeView) { closePreview(); setView(treeView); setPath([]) } rowAction(action, item) }} onDenied={closePreview} busy={busy} />
             </div>}
-            {view === id && id !== 'recent' && (id === 'trash' || query !== '' || filter !== 'all') && flatList}
+            {view === id && id !== 'recent' && (id === 'trash' || filter !== 'all') && flatList}
           </div>
         })}
       </nav>
@@ -497,7 +528,14 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       {previewError && <div role="alert" className={css.previewStatus}><p>{previewError}</p>
         {!source && <Button variant="outline" onClick={() => { closePreview(); clearSourceRequest() }}>{t('close')}</Button>}
       </div>}
-      {source?.bytes && <div className={css.previewBody} key={`${source.nodeId}:${source.versionId}`}>
+      {source?.entries && <div className={css.previewBody} key={`${source.nodeId}:${source.versionId}:archive`}>
+        <div className={css.archivePreview}>
+          <p className={css.archiveTitle}>{t('archiveEntries')}</p>
+          {source.entries.length === 0 ? <p className={css.archiveEmpty}>{t('archiveEmpty')}</p> : <ul className={css.archiveList}>{source.entries.map((entry) => <li key={entry.name}><span>{entry.name}</span><span>{archiveSize(entry.size)}</span></li>)}</ul>}
+          {source.text ? <pre className={css.archiveText}>{source.text}</pre> : null}
+        </div>
+      </div>}
+      {source?.bytes && !source.entries && <div className={css.previewBody} key={`${source.nodeId}:${source.versionId}`}>
         {renderFactorySlot('document.preview.bytes', { name: source.originalName ?? source.name ?? '', bytes: source.bytes, mimeType: source.mimeType ?? 'application/octet-stream', ...(source.missingFonts ? { missingFonts: source.missingFonts } : {}) })}
       </div>}
       {source?.linkUrl && <div className={css.previewStatus}><IconLinkOutlineRegular size={32} /><p>{source.linkUrl}</p><a href={source.linkUrl} target="_blank" rel="noopener noreferrer">{t('openLink')}</a></div>}
@@ -508,6 +546,16 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       </div>}
     </main>
     {uploadTarget && <LibraryUploadDialog t={t} accept={limits?.allowedExtensions.join(',') ?? ACCEPT} single={!!uploadTarget.replacement} maxFileBytes={limits?.maxFileBytes} loadLimits={loadUploadLimits} uploadFile={uploadOne} onSaved={revealCreated} onClose={() => { setUploadTarget(undefined) }} />}
+    <LibraryFinder open={finderOpen} origin={origin} fetchImpl={fetchImpl} t={t} onClose={() => { setFinderOpen(false) }} onLocate={(item) => {
+      const treeView = item.location === 'shared' ? 'shared' : 'mine'
+      const ids = [...(item.parentPath ?? []).map((part) => part.id), item.nodeId]
+      closePreview()
+      setView(treeView); setPath([]); setParentScope(undefined); setFilter('all'); setPage(1)
+      setExpandedRoots((roots) => ({ ...roots, [treeView]: true }))
+      setMountedRoots((roots) => ({ ...roots, [treeView]: true }))
+      setLocated({ view: treeView, ids })
+      setFinderOpen(false)
+    }} />
     <Modal open={purgeItem !== undefined} onClose={() => { if (!busy) setPurgeItem(undefined) }} title={t('purge')} closeLabel={t('cancel')} className={`${css.dialog ?? ''} ${css.compactDialog ?? ''}`} footer={<><Button variant="outline" disabled={busy} onClick={() => { setPurgeItem(undefined) }}>{t('cancel')}</Button><Button variant="primary" disabled={busy} onClick={confirmPurge}>{t('purge')}</Button></>}><p className={css.confirmCopy}>{t('confirmPurge')}</p></Modal>
     <Modal open={scopeConfirm !== undefined} onClose={() => { if (!busy) setScopeConfirm(undefined) }} title={scopeConfirm ? t(scopeConfirm.scope === 'ENTERPRISE' ? 'share' : 'unshare') : ''} closeLabel={t('cancel')} className={`${css.dialog ?? ''} ${css.compactDialog ?? ''}`} footer={<><Button variant="outline" disabled={busy} onClick={() => { setScopeConfirm(undefined) }}>{t('cancel')}</Button><Button variant="primary" disabled={busy || scopeConfirm === undefined} onClick={confirmScope}>{scopeConfirm ? t(scopeConfirm.scope === 'ENTERPRISE' ? 'share' : 'unshare') : ''}</Button></>}><p className={css.confirmCopy}>{scopeConfirm ? t(scopeConfirm.scope === 'ENTERPRISE' ? 'confirmShareTree' : 'confirmUnshareTree').replace('{count}', String(scopeConfirm.total)) : ''}</p></Modal>
     <Modal open={edit !== undefined} onClose={() => { if (!busy) setEdit(undefined) }} title={edit ? t(edit.kind) : ''} closeLabel={t('cancel')} className={`${css.dialog ?? ''} ${edit?.kind === 'folder' || edit?.kind === 'link' ? css.compactDialog : ''}`} contentClassName={css.dialogContent ?? ''} footer={<><Button variant="outline" disabled={busy} onClick={() => { setEdit(undefined) }}>{t('cancel')}</Button><Button variant="primary" disabled={busy || (edit?.kind !== 'move' && !name.trim()) || (edit?.kind === 'link' && !url.trim())} onClick={saveEdit}>{t('save')}</Button></>}>

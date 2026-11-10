@@ -167,8 +167,8 @@ export class SearchQuery {
 }
 
 export class ListQuery {
-  @IsOptional() @IsIn(['all', 'ready', 'failed', 'download', 'processing'])
-  status?: 'all' | 'ready' | 'failed' | 'download' | 'processing';
+  @IsOptional() @IsIn(['all', 'ready', 'failed', 'download', 'processing', 'uncitable'])
+  status?: 'all' | 'ready' | 'failed' | 'download' | 'processing' | 'uncitable';
 
   @IsOptional() @Type(() => Number) @IsInt() @Min(1)
   page?: number;
@@ -180,6 +180,16 @@ export class ListQuery {
   @IsOptional()
   @IsIn(['1'])
   flat?: '1';
+
+  /** All visible files, every folder depth, paged for the document finder. */
+  @IsOptional()
+  @IsIn(['1'])
+  catalog?: '1';
+
+  /** Agent library. Failed files stay stored and remain visible to Console and Admin. */
+  @IsOptional()
+  @IsIn(['1'])
+  agent?: '1';
 
   @IsOptional()
   @IsIn(['recent', 'mine', 'shared', 'trash', 'members'])

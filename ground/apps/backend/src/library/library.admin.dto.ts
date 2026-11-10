@@ -8,6 +8,8 @@ export class AdminLibraryQuery {
  @IsOptional() @IsIn(['PRIVATE','ENTERPRISE']) scope?: 'PRIVATE' | 'ENTERPRISE';
  @IsOptional() @IsString() ownerUserId?: string;
  @IsOptional() @IsString() folderId?: string;
+ /** children：只返回当前目录的直接子项；不带 folderId 时返回这一视角的根。搜索和回收站不传。 */
+ @IsOptional() @IsIn(['children']) layer?: 'children';
  @IsOptional() @IsIn(['folder','link','image','video','pdf','word','excel','ppt','text','other']) fileType?: string;
  @IsOptional() @IsIn(['PENDING','PROCESSING','READY','FAILED','DOWNLOAD_ONLY','NOT_APPLICABLE']) status?: string;
 }

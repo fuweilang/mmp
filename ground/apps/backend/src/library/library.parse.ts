@@ -16,11 +16,21 @@ const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif'];
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov'];
 const VIDEO_REASON = '仅保存：不做视频理解，不能供 AI 引用';
 const IMAGE_REASON = '没有读出可引用的文字，仅保存原图';
-const DOWNLOAD_REASON: Record<string, string> = {
-  '.zip': '压缩包只供下载，不自动解压，也不能用于问答',
-};
+const ZIP_LIST_LIMIT = 40;
+const ZIP_ENTRY_BYTES = 8 * 1024 * 1024;
+const ZIP_TOTAL_BYTES = 20 * 1024 * 1024;
+const ZIP_CHUNK_LIMIT = 400;
+const ZIP_EMPTY = '压缩包里没有可引用的文字，仅保存原件';
+const EXECUTABLE_EXTENSIONS = new Set(['.exe', '.dll', '.so', '.dylib', '.sh', '.bat', '.cmd', '.com', '.msi', '.scr', '.ps1', '.app', '.command', '.jar']);
+const ZIP_CITABLE = new Set([
+  '.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx',
+  '.md', '.markdown', '.txt', '.csv', '.html', '.htm',
+  ...IMAGE_EXTENSIONS,
+]);
 
-/** Parse supported documents without executing HTML, Office macros or ZIP contents. */
+export type ZipEntry = { name: string; size: number };
+
+/** Parse supported documents. A zip is read one level deep and never executed. */
 export async function parseLibraryBytes(name: string, bytes: Buffer): Promise<ParseResult> {
   const ext = fileExtension(name);
   try {
@@ -29,7 +39,7 @@ export async function parseLibraryBytes(name: string, bytes: Buffer): Promise<Pa
       const text = await recognizeImageText(name, bytes);
       return text ? textChunks(text) : downloadOnly(IMAGE_REASON);
     }
-    if (DOWNLOAD_REASON[ext]) return downloadOnly(DOWNLOAD_REASON[ext]);
+    if (ext === '.zip') return await parseZip(bytes);
     if (ext === '.pdf') {
       const parsed = await parsePdf(bytes);
       if (parsed.status !== 'DOWNLOAD_ONLY') return parsed;
@@ -137,4 +147,87 @@ async function parseDocx(bytes: Buffer): Promise<ParseResult> {
   };
   visit(parser.parse(source));
   return textChunks(output.join(''));
+}
+
+/** Names and declared sizes only. This does not inflate entry bytes. */
+export async function listZipEntries(bytes: Buffer): Promise<{ entries: ZipEntry[]; truncated: boolean }> {
+  const archive = await JSZip.loadAsync(bytes);
+  const rows: ZipEntry[] = [];
+  for (const file of Object.values(archive.files)) {
+    const entry = listedZipEntry(file);
+    if (entry) rows.push(entry);
+  }
+  rows.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  return { entries: rows.slice(0, ZIP_LIST_LIMIT), truncated: rows.length > ZIP_LIST_LIMIT };
+}
+
+async function parseZip(bytes: Buffer): Promise<ParseResult> {
+  const archive = await JSZip.loadAsync(bytes);
+  const listed = Object.values(archive.files).flatMap((file) => {
+    const entry = listedZipEntry(file);
+    return entry ? [{ file, ...entry }] : [];
+  }).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  const visible = listed.slice(0, ZIP_LIST_LIMIT);
+  let truncated = listed.length > ZIP_LIST_LIMIT;
+  const chunks: ParseChunk[] = [];
+  let total = 0;
+  for (const entry of visible) {
+    const ext = fileExtension(entry.name);
+    if (ext === '.zip' || EXECUTABLE_EXTENSIONS.has(ext) || !ZIP_CITABLE.has(ext)) continue;
+    if (entry.size > ZIP_ENTRY_BYTES || total + entry.size > ZIP_TOTAL_BYTES) {
+      truncated = true;
+      continue;
+    }
+    total += entry.size;
+    let inner: ParseResult;
+    try {
+      const content = Buffer.from(await entry.file.async('nodebuffer'));
+      if (content.length > ZIP_ENTRY_BYTES) {
+        truncated = true;
+        continue;
+      }
+      inner = await parseLibraryBytes(entry.name, content);
+    } catch {
+      continue;
+    }
+    if (inner.status !== 'READY') continue;
+    truncated ||= inner.truncated;
+    for (const chunk of inner.chunks) {
+      if (chunks.length >= ZIP_CHUNK_LIMIT) {
+        truncated = true;
+        break;
+      }
+      chunks.push({
+        ordinal: chunks.length,
+        content: chunk.content,
+        locator: `${entry.name} ${chunk.locator}`.slice(0, 500),
+        locatorKind: chunk.locatorKind,
+      });
+    }
+  }
+  if (!chunks.length) return downloadOnly(truncated ? '压缩包只列出部分文件，里面没有可引用的文字' : ZIP_EMPTY);
+  return { status: 'READY', reason: truncated ? '仅提取压缩包中的部分文字' : null, truncated, chunks };
+}
+
+function listedZipEntry(file: JSZip.JSZipObject): ZipEntry | null {
+  if (file.dir) return null;
+  const name = zipDisplayPath(file.unsafeOriginalName ?? file.name);
+  const size = zipDeclaredSize(file);
+  if (!name || size === null) return null;
+  return { name, size };
+}
+
+function zipDisplayPath(raw: string): string | null {
+  const text = raw.replace(/\\/g, '/').replace(/\0/g, '');
+  if (!text || text.startsWith('/') || /^[A-Za-z]:/.test(text)) return null;
+  const parts = text.split('/');
+  if (!parts.length || parts.some((part) => part === '' || part === '.' || part === '..')) return null;
+  const name = parts.join('/');
+  return name.length > 240 ? null : name;
+}
+
+function zipDeclaredSize(file: JSZip.JSZipObject): number | null {
+  const size = (file as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize;
+  if (typeof size !== 'number' || !Number.isSafeInteger(size) || size < 0) return null;
+  return size;
 }

@@ -197,9 +197,25 @@ export class PlatformAccount extends DeepSeekAccount {
     if (this.authMode === 'oidc') {
       // Same-origin recharge proxy for the client RechargeDialog (Ground JWT stays on the Host).
       installGroundBilling(ctx, this.origin, () => this.groundSessionJwt(), token => this.rejectToken(token))
-      installGroundLibrary(ctx, this.origin, () => this.groundSessionJwt(), token => this.rejectToken(token), this.requestTimeout)
-      installGroundLibraryPrompt(ctx, this.origin, () => this.groundSessionJwt(), token => this.rejectToken(token), this.requestTimeout)
-      installGroundLibrarySearch(ctx, this.origin, () => this.groundSessionJwt(), token => this.rejectToken(token), this.requestTimeout)
+      // Library member selection is account-owned and never replaces the Admin/SSO credential.
+      let libraryContext: { account: string; selected: string } | undefined
+      const libraryToken = async () => {
+        const account = await this.groundSessionJwt()
+        if (libraryContext?.account !== account) libraryContext = undefined
+        return libraryContext?.selected ?? account
+      }
+      const rejectLibrary = async (token: string) => {
+        if (libraryContext?.selected === token) libraryContext = undefined
+        else await this.rejectToken(token)
+      }
+      installGroundLibrary(ctx, this.origin, libraryToken, rejectLibrary, this.requestTimeout, async (captured, selected) => {
+        const account = await this.groundSessionJwt()
+        if (!account || await libraryToken() !== captured) return false
+        libraryContext = { account, selected }
+        return true
+      })
+      installGroundLibraryPrompt(ctx, this.origin, libraryToken, rejectLibrary, this.requestTimeout)
+      installGroundLibrarySearch(ctx, this.origin, libraryToken, rejectLibrary, this.requestTimeout)
       if (resolved.historySync) installGroundHistory(ctx, { origin: this.origin, account: this,
         intervalMs: resolved.historySyncIntervalMs, batchSize: resolved.historyBatchSize, requestTimeoutMs: this.requestTimeout,
         clientKind: resolved.desktopPlatform === null ? 'web' : 'desktop' })

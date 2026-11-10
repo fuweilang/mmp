@@ -129,8 +129,10 @@ export type LibraryItem = {
   parentId: string | null;
   parentName: string | null;
   parentHidden: boolean;
-  /** Authorized ancestor labels, only requested for flat mine management lists. */
+  /** Authorized ancestor labels for flat lists and the document finder. */
   parentPath?: { id: string; name: string }[];
+  /** Which sidebar tree contains this file. */
+  location?: 'mine' | 'shared';
   linkUrl: string | null;
   mine: boolean;
   canManage: boolean;

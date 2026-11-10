@@ -150,6 +150,14 @@ export class AdminUsersService {
       if (!tenant) throw new NotFoundException('企业不存在');
     }
 
+    if (dto.addMemberTenantId) {
+      if (!currentlyPlatform || dto.tenantId !== undefined) throw new BadRequestException('新增成员企业仅用于既有平台账号，不能同时替换企业');
+      await this.support.assertCanManageSuperAdmin(actor, currentKeys, '绑定企业成员身份');
+      await this.support.assertTenantInScope(scope, dto.addMemberTenantId);
+      const tenant = await this.prisma.tenant.findUnique({ where: { id: dto.addMemberTenantId }, select: { status: true, type: true } });
+      if (!tenant || tenant.status !== 'active' || tenant.type === TenantType.PLATFORM) throw new BadRequestException('请选择有效业务企业，不能绑定平台总部');
+    }
+
     const roleChangeRequested = !isSuperAdminTarget && (dto.roleKeys !== undefined || dto.platformRoleKey !== undefined);
     const nextKeys = roleChangeRequested ? this.support.resolveRoleKeys(dto) : currentKeys;
     const nextRoles = roleChangeRequested ? await this.support.loadRoles(nextKeys) : [];
@@ -157,6 +165,8 @@ export class AdminUsersService {
     const nextHasAdmin = roleChangeRequested
       ? nextRoles.some((role) => roleGrantsAdmin(role))
       : existing.isPlatformAdmin;
+
+    if (dto.addMemberTenantId && !nextHasAdmin) throw new BadRequestException('新增成员关系不能同时取消平台身份');
 
     // 除超级管理员、平台管理员外，其余角色都必须挂在一家企业下。
     if (roleChangeRequested && !nextIsPlatformOnly) {
@@ -203,6 +213,9 @@ export class AdminUsersService {
       if (roleChangeRequested) {
         await this.support.setUserRoles(tx, id, nextRoles);
       }
+      if (dto.addMemberTenantId) {
+        await tx.orgMember.upsert({where:{userId_tenantId:{userId:id,tenantId:dto.addMemberTenantId}},create:{userId:id,tenantId:dto.addMemberTenantId,role:MemberRole.MEMBER},update:{}});
+      }
       if (dto.tenantId !== undefined) {
         if (dto.tenantId === null) {
           await tx.orgMember.deleteMany({ where: { userId: id } });
@@ -225,6 +238,7 @@ export class AdminUsersService {
           targetUserId: id,
           ...(roleChangeRequested ? { roleKeys: nextKeys } : {}),
           ...(dto.tenantId !== undefined ? { tenantId: dto.tenantId } : {}),
+          ...(dto.addMemberTenantId ? { addedMemberTenantId: dto.addMemberTenantId, requestedMemberRole: 'MEMBER', existingMembershipPreserved: true } : {}),
         },
       },
     });

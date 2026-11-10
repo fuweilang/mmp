@@ -17,6 +17,8 @@ type RawItem = {
   canManage?: boolean
   scope?: string
   parentId?: string | null
+  parentPath?: { id?: string; name?: string }[]
+  location?: string
   updatedAt?: string
   accessedAt?: string
   linkUrl?: string | null
@@ -42,6 +44,7 @@ export function readLibraryItems(payload: unknown): LibraryChoice[] {
   if (!payload || typeof payload !== 'object' || !Array.isArray((payload as { items?: unknown }).items)) return []
   return (payload as { items: RawItem[] }).items.flatMap((item) => {
     if (!item.id || !item.name || (item.kind !== 'FILE' && item.kind !== 'FOLDER' && item.kind !== 'LINK')) return []
+    if (item.kind === 'FILE' && item.currentVersion?.parseStatus === 'FAILED') return []
     return [{
       nodeId: item.id,
       ...(typeof item.accessedAt === 'string' ? { accessedAt: item.accessedAt } : {}),
@@ -51,6 +54,8 @@ export function readLibraryItems(payload: unknown): LibraryChoice[] {
       canManage: item.canManage === true,
       scope: item.scope ?? 'PRIVATE',
       parentId: item.parentId ?? null,
+      ...(Array.isArray(item.parentPath) ? { parentPath: item.parentPath.flatMap((part) => part.id && part.name ? [{ id: part.id, name: part.name }] : []) } : {}),
+      ...(item.location === 'mine' || item.location === 'shared' ? { location: item.location } : {}),
       url: item.linkUrl ?? null,
       kind: item.kind,
       versionId: item.currentVersion?.id ?? null,
@@ -163,9 +168,22 @@ export async function libraryRequest(origin: string, path: string, method: strin
 }
 
 export type LibraryPage = { items: LibraryChoice[]; total: number; breadcrumb: { id: string; name: string }[]; parentScope?: 'PRIVATE' | 'ENTERPRISE' };
+
+/** Every visible file, ten at a time. Folders are not included. */
+export async function fetchLibraryCatalog(origin: string, q: string, page: number, fetchImpl: LibraryFetch, signal?: AbortSignal): Promise<{ items: LibraryChoice[]; total: number }> {
+  const params = new URLSearchParams({ catalog: '1', page: String(page), pageSize: '10' })
+  const query = q.trim()
+  if (query) params.set('q', query)
+  const response = await fetchImpl(`${origin.replace(/\/$/, '')}/ground-library/items?${params}`, { credentials: 'include', ...(signal ? { signal } : {}) })
+  if (!response.ok) throw await failure(response, 'library list')
+  const payload: unknown = await response.json()
+  const total = payload && typeof payload === 'object' && typeof (payload as { total?: unknown }).total === 'number' ? (payload as { total: number }).total : 0
+  return { items: readLibraryItems(payload).filter((item) => item.kind === 'FILE'), total }
+}
 /** A single authorized page; paging is explicit so old flat pickers keep all their candidates. */
 export async function fetchLibraryPage(origin: string, view: LibraryView, q: string, fetchImpl: LibraryFetch, signal?: AbortSignal, parentId?: string | null, page = 1, status = 'all'): Promise<LibraryPage> {
-  const url = libraryItemsUrl(origin, view, q, parentId) + `&page=${page}&pageSize=20&status=${encodeURIComponent(status)}`;
+  const requested = status === 'download' ? 'uncitable' : status
+  const url = libraryItemsUrl(origin, view, q, parentId) + `&page=${page}&pageSize=20&status=${encodeURIComponent(requested)}&agent=1`;
   const response = await fetchImpl(url, { credentials: 'include', ...(signal ? { signal } : {}) });
   if (!response.ok) throw await failure(response, 'library list');
   const payload: unknown = await response.json();

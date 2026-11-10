@@ -59,9 +59,13 @@ export type LibraryPreview = {
   versionId: string | null;
   versionNo: number | null;
   name: string;
+  originalName?: string | null;
+  mimeType?: string | null;
   previewKind: 'text' | 'download_only' | 'link' | 'blocked' | 'image' | 'video';
   text: string | null;
   linkUrl: string | null;
+  /** Present for a zip. Names and sizes only; inner files are not opened here. */
+  entries?: { name: string; size: number }[];
   truncated?: boolean;
   truncationNote?: string | null;
   parseStatus: LibraryParseStatus;

@@ -224,13 +224,13 @@ export function hasPermission(
 }
 
 /**
- * 企业控制台访问权：需要 portal.console.access；平台管理员代运营时另需选中企业。
+ * 企业控制台访问权：企业成员需要 portal.console.access；平台账号只进入 Admin。
  * 无该权限时 agent/客户端侧应隐藏「企业控制台」入口（勿留可点的 403 按钮）。
  */
 export function canAccessConsole(session: SessionMe | null | undefined): boolean {
   if (!session) return false;
   if (session.user.isPlatformAdmin) {
-    return Boolean(session.currentTenant);
+    return false;
   }
   if (!session.currentTenant) return false;
   return hasPermission(session, 'portal.console.access');

@@ -171,12 +171,16 @@
     <el-dialog v-model="previewOpen" :title="preview?.name || '预览'" width="720px" align-center append-to-body class="library-modal">
       <p v-if="preview?.parseStatus === 'FAILED' && preview.parseReason">{{ preview.parseReason }}</p>
       <p v-if="preview?.text && preview.truncated && !previewIsPdf" class="library-muted">{{ preview.truncationNote || '预览已截断，可下载原文件查看全文。' }}</p>
+      <ul v-if="preview?.entries?.length" class="library-entries">
+        <li v-for="entry in preview.entries" :key="entry.name"><span>{{ entry.name }}</span><span>{{ formatBytes(entry.size) }}</span></li>
+      </ul>
+      <p v-else-if="preview?.entries" class="library-muted">压缩包里没有可列出的文件。</p>
       <img v-if="preview?.previewKind === 'image' && preview.versionId" class="library-media" :src="libraryMediaUrl(preview.nodeId, preview.versionId)" :alt="preview.name" />
       <video v-else-if="preview?.previewKind === 'video' && preview.versionId" class="library-media" :src="libraryMediaUrl(preview.nodeId, preview.versionId)" controls preload="metadata" />
       <iframe v-else-if="pdfUrl" class="library-pdf" :src="pdfUrl" :title="preview?.name || 'PDF'" />
       <pre v-else-if="preview?.text && !previewIsPdf" class="library-pre">{{ preview.text }}</pre>
       <p v-else-if="preview?.previewKind === 'link'">{{ preview.linkUrl }}</p>
-      <p v-else-if="preview && !pdfLoading">{{ pdfError || '这里没有可安全预览的正文，可以下载原文件。' }}</p>
+      <p v-else-if="preview && !pdfLoading && !preview.entries">{{ pdfError || '这里没有可安全预览的正文，可以下载原文件。' }}</p>
       <template #footer><el-button @click="previewOpen = false">关闭</el-button><el-button v-if="preview?.versionId" type="primary" @click="download(preview.nodeId, preview.versionId)">下载</el-button></template>
     </el-dialog>
   </section>
@@ -793,4 +797,9 @@ watch(() => route.query.preview, async value => {
 .library-name { color:var(--el-color-primary); font-size:13px; padding:0; }
 .library-name,.library-folder-name,.library-muted { overflow-wrap:anywhere; }
 .library-pre { white-space:pre-wrap; overflow-wrap:anywhere; background:var(--el-fill-color-light); padding:12px; border-radius:8px; font-size:12px; line-height:1.6; }
+.library-entries { list-style:none; margin:0 0 12px; padding:0; border:1px solid var(--el-border-color-lighter); border-radius:8px; }
+.library-entries li { display:flex; justify-content:space-between; gap:12px; padding:8px 12px; font-size:13px; }
+.library-entries li + li { border-top:1px solid var(--el-border-color-lighter); }
+.library-entries li span:first-child { min-width:0; overflow-wrap:anywhere; }
+.library-entries li span:last-child { flex:none; color:var(--el-text-color-secondary); }
 </style>

@@ -20,3 +20,8 @@ An `@` library chip serializes to a selected node/version request. The Host supp
 ## Known Limitations and Deferred Work
 
 Desktop packaging is not exercised here. Web and desktop share the web-app composition. A signed-in Ground OIDC account and trusted Host connection are required; cross-origin direct browser calls are not used. OCR, spreadsheets, and ZIP contents remain unavailable as AI excerpts where the server reports download-only; supported spreadsheets still have a visual preview. Real-account acceptance and installed desktop packaging are separate from controlled Web tests.
+
+
+## Member enterprise selection
+
+The panel discovers only real active enterprise memberships through the protected Host `context` route. Selection is explicit, including for platform administrators, and never changes the Admin or browser SSO credential. The account Host holds the library-only member credential and supplies it consistently to previews, selected source reads and automatic search. It is discarded when the underlying account credential changes or the Host restarts. No enterprise is created or chosen implicitly. Platform membership does not enable Console access. Ground revalidates membership and the own-private/shared reference policy for every source read; management access to other members' private files is not model permission.

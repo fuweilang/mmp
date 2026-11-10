@@ -6,6 +6,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  Header,
   GoneException,
   InternalServerErrorException,
   NotFoundException,
@@ -22,6 +23,8 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { MemberRole, User } from '@prisma/client';
 import type { Response } from 'express';
 import { JwtGuard } from '../auth/jwt.guard';
+import { JwtService } from '@nestjs/jwt';
+import { IsString, IsNotEmpty } from 'class-validator';
 import { CurrentTenantId, CurrentUser } from '../auth/current-user';
 import { completeLibraryTurn } from './library.llm';
 import {
@@ -46,6 +49,10 @@ import type { Actor } from './library.types';
 import { LlmChatGatewayService } from '../llm/llm-chat.gateway.service';
 import { PrismaService } from '../prisma/prisma.service';
 
+class MemberContextDto {
+  @IsString() @IsNotEmpty() tenantId!: string;
+}
+
 type UploadFile = { originalname: string; mimetype: string; size: number; buffer: Buffer };
 
 /** Multer reads multipart filenames as latin1. A browser UTF-8 name has no code point above 255 until this repair. */
@@ -62,7 +69,30 @@ export class LibraryController {
     private readonly library: LibraryService,
     private readonly prisma: PrismaService,
     private readonly gateway: LlmChatGatewayService,
+    private readonly jwt: JwtService,
   ) {}
+
+  /** Actual memberships only; Admin tenant discovery remains unchanged. */
+  @Get('context')
+  @Header('Cache-Control', 'no-store')
+  async context(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null) {
+    const rows = await this.prisma.orgMember.findMany({
+      where: { userId: user.id, tenant: { status: 'active' } },
+      select: { tenant: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    const tenants = rows.map(row => row.tenant);
+    return { tenants, selectedTenantId: tenants.some(t => t.id === tenantId) ? tenantId : null };
+  }
+
+  /** Host-only scoped credential; never changes the Admin/browser login cookie. */
+  @Post('context')
+  @Header('Cache-Control', 'no-store')
+  async selectContext(@CurrentUser() user: User, @Body() body: MemberContextDto) {
+    const context = await this.context(user, body.tenantId);
+    if (!context.selectedTenantId) throw new ForbiddenException('只能选择本人已加入的有效企业');
+    return { ...context, token: this.jwt.sign({ sub: user.id, tenantId: body.tenantId, purpose: 'library-member' }) };
+  }
 
   @Get('config')
   async config(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null) {
@@ -110,8 +140,9 @@ export class LibraryController {
     @Query() query: ListQuery,
   ) {
     const actor = await this.actor(user, tenantId);
+    if (query.catalog === '1') return this.run(async () => this.library.catalog(actor, query.q, query.page ?? 1, query.pageSize ?? 10));
     const view = query.view ?? 'mine';
-    return this.run(async () => this.library.list(actor, view, query.parentId ?? null, query.q, query.flat === '1', query.page, query.pageSize, query.status, query.fileType, view === 'members' ? query.owner : undefined));
+    return this.run(async () => this.library.list(actor, view, query.parentId ?? null, query.q, query.flat === '1', query.page, query.pageSize, query.status, query.fileType, view === 'members' ? query.owner : undefined, query.agent === '1'));
   }
 
   @Post('folders')
@@ -369,19 +400,21 @@ export class LibraryController {
     return this.run(async () => this.library.revokeCustody(await this.actor(user, tenantId), id));
   }
 
-  /** 企业只来自登录态。平台管理员不是成员时不能把管理员身份当成资料读权限。 */
+  /** 企业只来自真实成员关系。加入猛犸总部的平台账号按普通成员使用资料库，不获得企业管理员权限。 */
   private async actor(user: User, tenantId: string | null): Promise<Actor> {
     if (!tenantId) return { userId: user.id, tenantId: '', isPlatformAdmin: user.isPlatformAdmin, isOrgAdmin: false, activeMember: false };
     const membership = await this.prisma.orgMember.findUnique({
       where: { userId_tenantId: { userId: user.id, tenantId } },
     });
-    const isOrgAdmin = Boolean(membership && (membership.role === MemberRole.ADMIN || membership.role === MemberRole.OWNER));
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { status: true, type: true } });
+    const activeMember = Boolean(membership && tenant?.status === 'active');
+    const isOrgAdmin = Boolean(!user.isPlatformAdmin && activeMember && membership && (membership.role === MemberRole.ADMIN || membership.role === MemberRole.OWNER));
     return {
       userId: user.id,
-      tenantId,
+      tenantId: activeMember ? tenantId : '',
       isPlatformAdmin: user.isPlatformAdmin,
       isOrgAdmin,
-      activeMember: Boolean(membership),
+      activeMember,
     };
   }
 

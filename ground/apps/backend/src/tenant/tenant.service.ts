@@ -428,6 +428,7 @@ export class TenantService {
    * 控制台各页面的模块权限后续单独拆分。
    */
   async requireConsoleAdmin(user: User, tenantId: string | null) {
+    if (user.isPlatformAdmin) throw new ForbiddenException('平台账号请使用 Admin 管理后台');
     return this.requireTenant(user, tenantId);
   }
 
@@ -454,6 +455,7 @@ export class TenantService {
 
   /** 控制台模块权限：成员身份 + 有效权限含指定键（平台管理员直通）。 */
   async requireConsolePerm(user: User, tenantId: string | null, permKey: string) {
+    if (user.isPlatformAdmin) throw new ForbiddenException('平台账号请使用 Admin 管理后台');
     const id = await this.requireTenant(user, tenantId);
     if (user.isPlatformAdmin) return id;
     const eff = await computeEffectivePermissions(this.prisma, user.id, id);

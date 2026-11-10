@@ -88,9 +88,11 @@ const router = createRouter({
         },
         {
           path: 'library',
+          beforeEnter: to => typeof to.query.tenantId === 'string' ? { path: `/admin/library/${encodeURIComponent(to.query.tenantId)}`, query: { ...to.query, tenantId: undefined }, replace: true } : true,
           meta: { title: '企业资料库' },
           component: () => import('../views/admin/AdminLibrary.vue'),
         },
+        { path: 'library/:tenantId', meta: { title: '企业资料库详情' }, component: () => import('../views/admin/AdminLibrary.vue') },
         {
           path: 'billing',
           redirect: (to) => {
@@ -188,18 +190,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.path.startsWith('/console')) {
-    if (session?.user.isPlatformAdmin && !session.currentTenant) {
-      const wanted = typeof to.query.tenantId === 'string' ? to.query.tenantId : '';
-      if (wanted) {
-        try {
-          await auth.switchTenant(wanted);
-          return true;
-        } catch {
-          return '/admin';
-        }
-      }
-      return '/admin';
-    }
+    if (session?.user.isPlatformAdmin) return '/admin';
 
     if (!canAccessConsole(session)) {
       if (session?.user.isPlatformAdmin) return '/admin';

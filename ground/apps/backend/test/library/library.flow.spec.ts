@@ -22,13 +22,13 @@ import { LibraryError } from '../../src/library/library.errors';
 import { resolveUnderRoot } from '../../src/library/library.files';
 import { buildLibraryModelRequest, readModelText } from '../../src/library/library.llm';
 import { LIBRARY_ALLOWED_EXTENSIONS } from '../../src/library/library.limits';
-import { htmlToText, parseLibraryBytes } from '../../src/library/library.parse';
+import { htmlToText, listZipEntries, parseLibraryBytes } from '../../src/library/library.parse';
 import { canSee } from '../../src/library/library.policy';
 import { LibraryService } from '../../src/library/library.service';
 import { MemoryLibraryStore } from '../../src/library/library.store';
 import type { Actor, LibraryItem } from '../../src/library/library.types';
 
-function zipStored(name: string, content: Buffer, method: 0 | 8 = 0) {
+function zipStored(name: string, content: Buffer, method: 0 | 8 = 0, declared = content.length) {
   const data = method === 8 ? deflateRawSync(content) : content;
   const nameBuf = Buffer.from(name);
   const header = Buffer.alloc(30);
@@ -37,10 +37,10 @@ function zipStored(name: string, content: Buffer, method: 0 | 8 = 0) {
   header.writeUInt16LE(method, 8);
   header.writeUInt32LE(data.length, 18);
   header.writeUInt16LE(nameBuf.length, 26);
-  header.writeUInt32LE(content.length, 22);
+  header.writeUInt32LE(declared, 22);
   const central = Buffer.alloc(46);
   central.writeUInt32LE(0x02014b50, 0); central.writeUInt16LE(20, 4); central.writeUInt16LE(20, 6);
-  central.writeUInt16LE(method, 10); central.writeUInt32LE(data.length, 20); central.writeUInt32LE(content.length, 24);
+  central.writeUInt16LE(method, 10); central.writeUInt32LE(data.length, 20); central.writeUInt32LE(declared, 24);
   central.writeUInt16LE(nameBuf.length, 28);
   const local = Buffer.concat([header, nameBuf, data]);
   const directory = Buffer.concat([central, nameBuf]);
@@ -294,9 +294,9 @@ describe('enterprise library', () => {
     assert.match(joined.locator ?? '', /paragraph:2/);
     const zip = zipStored('readme.md', Buffer.from('压缩包里的机密'));
     const packed = await upload(service, owner, '空摘录.zip', zip);
-    const empty = await service.openCitation(owner, packed.id, packed.currentVersion!.id);
-    assert.equal(empty.quote, null);
-    assert.equal(empty.locator, null);
+    const citedZip = await service.openCitation(owner, packed.id, packed.currentVersion!.id);
+    assert.match(citedZip.quote ?? '', /压缩包里的机密/);
+    assert.match(citedZip.locator ?? '', /readme\.md/);
     const hidden = code(await service.openCitation(other, single.id, singleId).catch((error: unknown) => error));
     assert.equal(hidden.status, 404);
     assert.equal(hidden.message.includes('唯一段落'), false);
@@ -306,7 +306,7 @@ describe('enterprise library', () => {
     assert.equal(gone.status, 410);
   });
 
-  it('retries parse without duplicating chunks and does not index zip or execute html', async () => {
+  it('retries parse without duplicating chunks, indexes one zip level, and does not execute html', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');
     const md = await upload(service, owner, '笔记.md', Buffer.from('第一段说明\n\n第二段说明'));
@@ -319,8 +319,12 @@ describe('enterprise library', () => {
     assert.equal(store.chunkWrites.at(-1), before);
     const zip = zipStored('readme.md', Buffer.from('压缩包里的机密'));
     const packed = await upload(service, owner, '材料.zip', zip);
-    assert.equal(packed.currentVersion?.parseStatus, 'DOWNLOAD_ONLY');
-    assert.equal((await store.listChunks(packed.currentVersion!.id)).length, 0);
+    assert.equal(packed.currentVersion?.parseStatus, 'READY');
+    const zipChunks = await store.listChunks(packed.currentVersion!.id);
+    assert.ok(zipChunks.some((chunk) => chunk.content.includes('压缩包里的机密') && chunk.locator.includes('readme.md')));
+    const zipPreview = await service.preview(owner, packed.id);
+    assert.deepEqual(zipPreview.entries, [{ name: 'readme.md', size: Buffer.from('压缩包里的机密').length }]);
+    assert.match(zipPreview.text ?? '', /压缩包里的机密/);
     assert.equal((await store.getBlob((await store.getVersion(packed.currentVersion!.id))!.storageKey))?.equals(zip), true);
     const html = await upload(service, owner, '页面.html', Buffer.from('<script>alert(1)</script><p>政策正文</p>'));
     const preview = await service.preview(owner, html.id);
@@ -608,7 +612,24 @@ describe('enterprise library', () => {
     assert.equal(source.includes('ollama'), false);
     assert.equal(source.includes('OPENAI_API_KEY'), false);
     assert.equal(htmlToText('<style>.x{}</style><script>steal()</script>正文'), '正文');
-    assert.equal((await parseLibraryBytes('包.zip', zipStored('a.md', Buffer.from('秘密')))).chunks.length, 0);
+    const indexed = await parseLibraryBytes('包.zip', zipStored('a.md', Buffer.from('秘密')));
+    assert.match(indexed.chunks[0]?.content ?? '', /秘密/);
+    assert.match(indexed.chunks[0]?.locator ?? '', /a\.md/);
+    const nested = await parseLibraryBytes('外层.zip', zipStored('inner.zip', zipStored('secret.md', Buffer.from('不能展开'))));
+    assert.equal(nested.chunks.length, 0);
+    assert.equal((await listZipEntries(zipStored('inner.zip', Buffer.from('PK')))).entries[0]?.name, 'inner.zip');
+    const slip = zipStored('../secret.md', Buffer.from('越界'));
+    assert.equal((await listZipEntries(slip)).entries.length, 0);
+    assert.equal((await parseLibraryBytes('越界.zip', slip)).chunks.length, 0);
+    const program = zipStored('run.exe', Buffer.from('nope'));
+    assert.equal((await parseLibraryBytes('工具.zip', program)).chunks.length, 0);
+    assert.equal((await listZipEntries(program)).entries[0]?.name, 'run.exe');
+    const page = await parseLibraryBytes('页.zip', zipStored('a.html', Buffer.from('<script>alert(1)</script><p>包内正文</p>')));
+    assert.match(page.chunks[0]?.content ?? '', /包内正文/);
+    assert.equal((page.chunks[0]?.content ?? '').includes('alert'), false);
+    const bomb = zipStored('a.md', Buffer.from('x'), 0, 50_000_000);
+    assert.equal((await parseLibraryBytes('炸弹.zip', bomb)).status, 'DOWNLOAD_ONLY');
+    assert.equal((await listZipEntries(bomb)).entries[0]?.size, 50_000_000);
     assert.throws(() => resolveUnderRoot('/data/library', '../etc/passwd'));
     assert.throws(() => resolveUnderRoot('/data/library', 'tenant/../../etc/passwd'));
     const node = {
@@ -753,5 +774,82 @@ describe('t191 Console flat mine management', () => {
     const ignored = await service.list(owner, 'mine', null, '', false, 1, 20, 'all', undefined, 'mate');
     assert.equal(ignored.items.some((row) => row.id === secret.id), true);
     assert.equal(ignored.items.some((row) => row.id === folder.id), false);
+  });
+
+  it('pages every visible file by name and returns the tree path used to locate it', async () => {
+    const { service, actor } = world();
+    const owner = actor('owner', 'ta');
+    const mate = actor('mate', 'ta');
+    const apple = await service.createFolder(owner, 'apple');
+    const inner = await service.createFolder(owner, 'inner', apple.id);
+    const deep = await service.upload(owner, { originalName: 'deep.md', mimeType: 'text/plain', bytes: Buffer.from('深层'), parentId: inner.id });
+    const root = await service.upload(owner, { originalName: 'root.md', mimeType: 'text/plain', bytes: Buffer.from('根上') });
+    const picture = await service.upload(owner, { originalName: '封面.png', mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+    await service.createFolder(owner, 'only-folder');
+    await service.createLink(owner, '只是链接', 'https://example.test/');
+    const shared = await service.upload(mate, { originalName: 'shared.md', mimeType: 'text/plain', bytes: Buffer.from('共享正文') });
+    await service.setScope(mate, shared.id, 'ENTERPRISE', true);
+    const secret = await service.upload(mate, { originalName: 'secret.md', mimeType: 'text/plain', bytes: Buffer.from('别人的私人') });
+    const hidden = await service.createFolder(mate, '私有夹');
+    const exposed = await service.upload(mate, { originalName: '露出.md', mimeType: 'text/plain', bytes: Buffer.from('共享文件'), parentId: hidden.id });
+    await service.setScope(mate, exposed.id, 'ENTERPRISE', true);
+    const recycled = await service.upload(owner, { originalName: 'gone.md', mimeType: 'text/plain', bytes: Buffer.from('回收') });
+    await service.recycle(owner, recycled.id);
+
+    const first = await service.catalog(owner, '', 1, 10);
+    assert.equal(first.total, 5);
+    assert.deepEqual(first.items.map((row) => row.name).sort(), ['deep.md', 'root.md', 'shared.md', '封面.png', '露出.md'].sort());
+    assert.equal(first.items.some((row) => row.kind !== 'FILE' || row.name === 'secret.md' || row.name === 'only-folder'), false);
+    const nested = first.items.find((row) => row.id === deep.id)!;
+    assert.equal(nested.location, 'mine');
+    assert.deepEqual(nested.parentPath, [{ id: apple.id, name: 'apple' }, { id: inner.id, name: 'inner' }]);
+    assert.equal(first.items.find((row) => row.id === shared.id)?.location, 'shared');
+    assert.deepEqual(first.items.find((row) => row.id === exposed.id)?.parentPath, []);
+    assert.equal((await service.catalog(owner, 'DEEP', 1, 10)).items.map((row) => row.id).join(), deep.id);
+    assert.equal((await service.catalog(owner, '封面', 1, 10)).items[0]?.id, picture.id);
+    assert.equal((await service.catalog(mate, '', 1, 10)).items.some((row) => row.id === root.id || row.id === secret.id && row.location !== 'mine'), false);
+    const mateRows = await service.catalog(mate, '', 1, 10);
+    assert.equal(mateRows.items.find((row) => row.id === secret.id)?.location, 'mine');
+    assert.equal(mateRows.items.find((row) => row.id === shared.id)?.location, 'mine');
+    assert.equal(mateRows.items.some((row) => row.id === root.id), false);
+
+    for (let i = 0; i < 12; i++) await service.upload(owner, { originalName: `n${i}.md`, mimeType: 'text/plain', bytes: Buffer.from('x') });
+    const page1 = await service.catalog(owner, '', 1, 10);
+    const page2 = await service.catalog(owner, '', 2, 10);
+    assert.equal(page1.total, 17);
+    assert.equal(page1.items.length, 10);
+    assert.equal(page2.items.length, 7);
+    assert.equal(new Set([...page1.items, ...page2.items].map((row) => row.id)).size, 17);
+    const bad = code(await service.catalog(owner, '', 0, 10).catch((error: unknown) => error));
+    assert.equal(bad.status, 400);
+    assert.equal(bad.code, 'BAD_PAGE');
+  });
+
+  it('hides failed files from the agent library and keeps them on the console list', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const org = actor('admin', 'ta', { isOrgAdmin: true });
+    const ready = await upload(service, owner, '可用.md', Buffer.from('可以引用'));
+    const failed = await upload(service, owner, '失败.md', Buffer.from('解析失败'));
+    const pending = await upload(service, owner, '等待.md', Buffer.from('还在处理'));
+    const image = await service.upload(owner, { originalName: '封面.png', mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+    await store.updateVersion(failed.currentVersion!.id, { parseStatus: 'FAILED' });
+    await store.updateVersion(pending.currentVersion!.id, { parseStatus: 'PENDING' });
+    await store.updateVersion(image.currentVersion!.id, { parseStatus: 'DOWNLOAD_ONLY' });
+    const agent = await service.list(owner, 'mine', null, '', false, 1, 20, 'all', undefined, undefined, true);
+    assert.equal(agent.items.some((row) => row.id === failed.id), false);
+    assert.equal(agent.items.some((row) => row.id === ready.id), true);
+    assert.equal(agent.items.some((row) => row.id === pending.id), true);
+    const consoleList = await service.list(owner, 'mine');
+    assert.equal(consoleList.items.some((row) => row.id === failed.id), true);
+    const members = await service.list(org, 'members');
+    assert.equal(members.items.some((row) => row.id === failed.id), true);
+    const cite = await service.list(owner, 'mine', null, '', true, 1, 20, 'ready', undefined, undefined, true);
+    assert.deepEqual(cite.items.map((row) => row.id), [ready.id]);
+    const unavailable = await service.list(owner, 'mine', null, '', true, 1, 20, 'uncitable', undefined, undefined, true);
+    assert.deepEqual(unavailable.items.map((row) => row.name).sort(), ['封面.png', '等待.md']);
+    const found = await service.catalog(owner, '', 1, 10);
+    assert.equal(found.items.some((row) => row.id === failed.id), false);
+    assert.equal(found.items.some((row) => row.id === ready.id), true);
   });
 });

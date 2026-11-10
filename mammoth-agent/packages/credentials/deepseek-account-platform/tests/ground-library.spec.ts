@@ -15,7 +15,7 @@ it('allows explicit library paths, never admin, traversal or arbitrary upstream 
  for(const path of ['/ground-library/admin/stats', '/ground-library/../admin', '/ground-library/nodes/a%2fb/download', '/api/library/items', '//evil.test/items']) expect(libraryProxyTarget('GET', path)).toBeUndefined()
  expect(libraryProxyTarget('POST', '/ground-library/items')).toBeUndefined()
 })
-async function server(denied?: number, switchAccount = false, switchAfter = 1, upstreamResponse?: () => Response) {
+async function server(denied?: number, switchAccount = false, switchAfter = 1, upstreamResponse?: () => Response, acceptContext?: (captured: string, selected: string) => Promise<boolean>) {
  let handler: (req: IncomingMessage, res: ServerResponse) => Promise<void> = async (_req, res) => { res.end() }
  const upstream = vi.fn(async (_url: string, _init: RequestInit) => upstreamResponse?.() ?? new Response(Uint8Array.from([0, 255, 1]), { headers: { 'content-type': 'application/octet-stream', 'content-disposition': 'attachment' } }))
  const realFetch = fetch
@@ -26,7 +26,7 @@ async function server(denied?: number, switchAccount = false, switchAfter = 1, u
   connection: { requestRejection: () => denied }, effect: (run: () => unknown) => run(),
   webServer: { register: (route: { handler: typeof handler }) => { handler = route.handler; return () => {} } },
  }) }
- installGroundLibrary(ctx as never, 'https://ground.test', async () => { tokenCalls++; return switchAccount && tokenCalls > switchAfter ? 'account-b' : 'account-a' }, async value => { rejected.push(value) }, 1000)
+ installGroundLibrary(ctx as never, 'https://ground.test', async () => { tokenCalls++; return switchAccount && tokenCalls > switchAfter ? 'account-b' : 'account-a' }, async value => { rejected.push(value) }, 1000, acceptContext)
  const http = createServer((req, res) => { void handler(req, res) }); await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
  const address = http.address(); if(!address || typeof address === 'string')throw new Error('listen failed')
  return { upstream, rejected, request: (path: string, init?: RequestInit) => realFetch(`http://127.0.0.1:${address.port}${path}`, init), close: () => new Promise<void>(resolve => { http.closeAllConnections(); http.close(() => resolve()) }) }
@@ -66,5 +66,22 @@ it('forwards a 403 refusal message without treating a library denial as an expir
   expect(response.status).toBe(403)
   expect(await response.json()).toEqual({ message: '该资料未授权查看' })
   expect(h.rejected).toEqual([])
+ } finally { await h.close() }
+})
+
+it('commits member selection only on the Host and redacts credentials even with a query string', async () => {
+ const commit = vi.fn(async () => true)
+ const h = await server(undefined, false, 1, () => Response.json({token:'synthetic-library-credential',tenants:[{id:'a',name:'A'}],selectedTenantId:'a'}), commit)
+ try {
+  const response = await h.request('/ground-library/context?ignored=1', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tenantId:'a'})})
+  expect(response.status).toBe(200);expect(await response.json()).toEqual({tenants:[{id:'a',name:'A'}],selectedTenantId:'a'})
+  expect(commit).toHaveBeenCalledWith('account-a','synthetic-library-credential')
+ } finally { await h.close() }
+})
+it('discards a stale member selection without returning its credential', async () => {
+ const h = await server(undefined, false, 1, () => Response.json({token:'synthetic-library-credential'}), async () => false)
+ try {
+  const response = await h.request('/ground-library/context', {method:'POST',body:'{}'})
+  expect(response.status).toBe(409);expect(await response.text()).not.toContain('synthetic-library-credential')
  } finally { await h.close() }
 })
