@@ -20,8 +20,8 @@ test('real HTTP authorization, immutable versions, recycle, file failures', { ti
     const one = await request('owner', 'open', 'POST', { nodeId: id, versionId: v1 });
     assert.equal(one.status, 201); assert.equal(one.body.quote, secretText); assert.equal(one.body.locator, 'paragraph:1');
 
-    await t.test('all private read/mutation paths reject peers, foreign tenant, tenant admin and ungranted platform without title/body leaks', async () => {
-      for (const who of ['mate', 'other', 'tenantAdmin', 'platform']) {
+    await t.test('all private read/mutation paths reject peers, foreign tenant and ungranted platform without title/body leaks', async () => {
+      for (const who of ['mate', 'other', 'platform']) {
         for (const route of [`nodes/${id}/preview?versionId=${v1}`, `nodes/${id}/download?versionId=${v1}`, `nodes/${id}/source?versionId=${v1}`, `nodes/${id}/versions`]) deny(await request(who, route));
         deny(await request(who, 'open', 'POST', { nodeId: id, versionId: v1 }));
         for (const [suffix, method, body] of [['', 'PATCH', { name: 'no' }], ['/move', 'POST', { parentId: null }], ['/scope', 'POST', { scope: 'ENTERPRISE', confirmShare: true }], ['/retry-parse', 'POST', {}], ['/recycle', 'POST', {}], ['/restore', 'POST', {}], ['', 'DELETE', undefined]]) deny(await request(who, `nodes/${id}${suffix}`, method, body));
@@ -33,6 +33,14 @@ test('real HTTP authorization, immutable versions, recycle, file failures', { ti
       }
       deny(await request('other', 'open', 'POST', { nodeId: id, versionId: v1, tenantId: tenants[0].id }));
       assert.equal((await request(null, `nodes/${id}/preview`)).status, 401);
+      deny(await request('mate', 'items?view=members'));
+      const managed = await request('tenantAdmin', 'items?view=members&q=' + encodeURIComponent(hiddenTitle));
+      assert.equal(managed.status, 200);
+      assert.equal(managed.body.items.some(row => row.id === id && row.ownerUserId === users[0].id), true);
+      assert.equal((await request('tenantAdmin', 'items?view=mine&q=' + encodeURIComponent(hiddenTitle))).body.items.length, 0);
+      const preview = await request('tenantAdmin', `nodes/${id}/preview?versionId=${v1}`);
+      assert.equal(preview.status, 200);
+      assert.equal(preview.body.text, secretText);
     });
     await t.test('sharing is explicit and revocation removes visible titles as well as source access', async () => {
       assert.equal((await request('owner', `nodes/${id}/scope`, 'POST', { scope: 'ENTERPRISE', confirmShare: true })).status, 201);

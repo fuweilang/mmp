@@ -1,8 +1,10 @@
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    if (code) this.code = code;
   }
 }
 
@@ -55,7 +57,8 @@ export async function request<T>(url: string, init: RequestInit = {}): Promise<T
       : typeof msg === 'string' && msg
         ? msg
         : '请求失败';
-    throw new ApiError(res.status, msgText);
+    const code = (data as { code?: unknown })?.code;
+    throw new ApiError(res.status, msgText, typeof code === 'string' ? code : undefined);
   }
   return data as T;
 }

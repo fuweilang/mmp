@@ -14,8 +14,8 @@ export const en = {
   pickerAttachFailed: 'Files could not be added. Your selection is kept; try again.',
   pickerAdding: 'Adding files…',
   saveTo: 'Save to:',
-  sharedSaveHint: 'Visible to enterprise members; new folders and uploads inherit this visibility.',
-  privateSaveHint: 'Visible only to you.',
+  sharedSaveHint: 'Visible to enterprise members',
+  privateSaveHint: 'Visible only to you',
   confirmShareTree: 'Share this item and every nested file and folder with enterprise members? {count} items will be included.',
   confirmUnshareTree: 'Make this item and every nested file and folder private to their respective owners? {count} items will be included.',
   moveShareHint: 'Moving into a shared folder shares this item and all nested items after confirmation. Moving out keeps their current visibility.',
@@ -25,10 +25,11 @@ export const en = {
   uploadStart: 'Start upload',
   uploadRetry: 'Retry failed files',
   uploadQueued: 'Waiting',
+  uploadRemove: 'Remove',
   uploadSuccess: 'Upload saved',
   uploadFailure: 'Upload failed',
   uploadRetryOne: 'Retry this file',
-  uploadBatchHint: 'Up to 50 files per batch; one at a time. Saving does not mean ready for AI.',
+  uploadBatchHint: 'Up to 50 files',
   uploadBusyHint: 'Keep this dialog open while uploading. Closing the page does not undo requests already sent.',
   uploadSingleHint: 'One file per version replacement.',
   uploadQueueLimit: 'At most 50 files per batch; folders are not supported.',
@@ -52,7 +53,7 @@ export const en = {
   statusFailed: 'Parsing failed',
   statusPending: 'Pending',
   statusProcessing: 'Parsing',
-  statusDownloadOnly: 'Saved only',
+  statusDownloadOnly: 'Not available to AI',
   parseStatus: 'Parsing status',
   size: 'Size',
   updated: 'Updated',
@@ -91,7 +92,8 @@ export const en = {
   folder: "New folder",
   link: "Save link",
   name: "Name",
-  url: "URL only (no fetching)",
+  url: "Link",
+  urlHint: "Only the address is saved. The page is not fetched.",
   rename: "Rename",
   move: "Move",
   root: "Root",
@@ -118,7 +120,6 @@ export const en = {
   sourceNote: "Stored excerpt only; not a claim that the entire file was read.",
   truncatedExcerpt: "Only a partial excerpt is stored; the full file has not been read.",
   scope: "Visibility",
-  localDraft: 'Local files stay out of the library until you save them.',
 } as const
 
 export type LibraryKey = keyof typeof en
@@ -138,8 +139,8 @@ export const zh: Record<LibraryKey, string> = {
   pickerAttachFailed: '资料未能添加，已保留所选内容，请重试',
   pickerAdding: '正在添加资料…',
   saveTo: '保存到：',
-  sharedSaveHint: '本企业成员可见；新建或上传的内容继承此范围。',
-  privateSaveHint: '仅自己可见。',
+  sharedSaveHint: '企业成员可见',
+  privateSaveHint: '仅自己可见',
   confirmShareTree: '这会将该资料及全部子文件夹和文件一起共享，本企业成员可见，共涉及 {count} 项。确认共享？',
   confirmUnshareTree: '这会将该资料及全部子文件夹和文件改为各自所有者私有，共涉及 {count} 项。确认取消共享？',
   moveShareHint: '移入共享目录时需确认共享该资料及全部子项；移出后保留当前可见范围。',
@@ -149,10 +150,11 @@ export const zh: Record<LibraryKey, string> = {
   uploadStart: '开始上传',
   uploadRetry: '重试失败项',
   uploadQueued: '等待上传',
+  uploadRemove: '移出',
   uploadSuccess: '上传成功',
   uploadFailure: '上传失败',
   uploadRetryOne: '重试此文件',
-  uploadBatchHint: '每批最多50个，逐个上传。上传成功仅表示已保存，不代表可供AI引用。',
+  uploadBatchHint: '每批最多 50 个',
   uploadBusyHint: '上传期间请保持窗口打开；关闭页面不会撤销已发送的请求。',
   uploadSingleHint: '替换版本一次只选择一个文件。',
   uploadQueueLimit: '每批最多50个文件，暂不支持上传文件夹。',
@@ -176,7 +178,7 @@ export const zh: Record<LibraryKey, string> = {
   statusFailed: '解析失败',
   statusPending: '等待解析',
   statusProcessing: '解析中',
-  statusDownloadOnly: '仅保存',
+  statusDownloadOnly: '不能供 AI 引用',
   parseStatus: '处理状态',
   size: '大小',
   updated: '更新时间',
@@ -215,7 +217,8 @@ export const zh: Record<LibraryKey, string> = {
   folder: "新建文件夹",
   link: "保存链接",
   name: "名称",
-  url: "仅保存 URL（不抓取网页）",
+  url: "链接",
+  urlHint: "只保存网址，不抓取网页",
   rename: "改名",
   move: "移动",
   root: "根目录",
@@ -242,7 +245,6 @@ export const zh: Record<LibraryKey, string> = {
   sourceNote: "以下为保存的版本摘录，不表示已阅读全文。",
   truncatedExcerpt: "仅保存了部分摘录，未读取全文。",
   scope: "可见范围",
-  localDraft: '本地文件在明确保存之前不会进入资料库。',
 }
 
 export const ja: Record<LibraryKey, string> = {
@@ -263,7 +265,6 @@ export const ja: Record<LibraryKey, string> = {
   trash: 'ゴミ箱',
   loadError: '一覧を読み込めませんでした。表示中の内容は残します。',
   upload: 'アップロード',
-  localDraft: 'ローカルファイルは保存するまでライブラリに入りません。',
 }
 
 export const es: Record<LibraryKey, string> = {
@@ -284,7 +285,6 @@ export const es: Record<LibraryKey, string> = {
   trash: 'Papelera',
   loadError: 'No se pudo cargar la lista. Las filas actuales siguen.',
   upload: 'Subir',
-  localDraft: 'Los archivos locales no entran en la biblioteca hasta que los guardes.',
 }
 
 export const fr: Record<LibraryKey, string> = {
@@ -305,7 +305,6 @@ export const fr: Record<LibraryKey, string> = {
   trash: 'Corbeille',
   loadError: 'La liste n’a pas pu être chargée. Les lignes affichées restent.',
   upload: 'Téléverser',
-  localDraft: 'Les fichiers locaux restent hors bibliothèque tant que vous ne les enregistrez pas.',
 }
 
 export const de: Record<LibraryKey, string> = {
@@ -326,7 +325,6 @@ export const de: Record<LibraryKey, string> = {
   trash: 'Papierkorb',
   loadError: 'Die Liste konnte nicht geladen werden. Vorhandene Zeilen bleiben.',
   upload: 'Hochladen',
-  localDraft: 'Lokale Dateien bleiben außerhalb der Bibliothek, bis du sie speicherst.',
 }
 
 export const ru: Record<LibraryKey, string> = {
@@ -347,7 +345,6 @@ export const ru: Record<LibraryKey, string> = {
   trash: 'Корзина',
   loadError: 'Список не загрузился. Уже показанные строки остаются.',
   upload: 'Загрузить',
-  localDraft: 'Локальные файлы не попадают в библиотеку, пока их явно не сохранят.',
 }
 
 export const pt: Record<LibraryKey, string> = {
@@ -368,7 +365,6 @@ export const pt: Record<LibraryKey, string> = {
   trash: 'Lixeira',
   loadError: 'A lista não carregou. As linhas atuais permanecem.',
   upload: 'Enviar',
-  localDraft: 'Arquivos locais não entram na biblioteca até você salvá-los.',
 }
 
 export const NS = 'enterpriseLibrary'

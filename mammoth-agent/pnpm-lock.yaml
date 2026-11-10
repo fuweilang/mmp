@@ -8269,6 +8269,9 @@ importers:
       '@mammoth-ai/mmp-storage-domain':
         specifier: workspace:*
         version: link:../../storage/storage-domain
+      '@mammoth-ai/mmp-tools':
+        specifier: workspace:*
+        version: link:../../core/tools
       '@mammoth-ai/mmp-workspace':
         specifier: workspace:*
         version: link:../../workspace/workspace

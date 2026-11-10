@@ -20,6 +20,7 @@ export type LibraryItem = {
   name: string;
   scope: 'PRIVATE' | 'ENTERPRISE';
   state: 'ACTIVE' | 'RECYCLED' | 'PURGED';
+  ownerUserId?: string;
   ownerName: string | null;
   parentId: string | null;
   parentName: string | null;
@@ -35,6 +36,8 @@ export type LibraryItem = {
 
 export type LibraryList = {
   parentScope?: 'PRIVATE' | 'ENTERPRISE' | null;
+  /** 当前文件夹的所有者。成员页用它把只带 folder 的旧地址补上 member。根目录为 null。 */
+  ownerUserId?: string | null;
   items: LibraryItem[];
   breadcrumb: { id: string; name: string }[];
   total: number;
@@ -42,7 +45,14 @@ export type LibraryList = {
   pageSize: number;
 };
 
-export type LibraryView = 'recent' | 'mine' | 'shared' | 'trash';
+export type LibraryMemberRow = {
+  userId: string;
+  name: string;
+  phone: string | null;
+  itemCount: number;
+};
+
+export type LibraryView = 'recent' | 'mine' | 'shared' | 'trash' | 'members';
 
 export type LibraryPreview = {
   nodeId: string;
@@ -83,13 +93,20 @@ export type LibraryAnswer = {
   notices: string[];
 };
 
-export function listLibrary(view: LibraryView, parentId: string | null, q: string, page?: number, flat = false) {
+export function listLibrary(view: LibraryView, parentId: string | null, q: string, page?: number, flat = false, pageSize = 20, fileType?: string, status?: 'ready' | 'failed' | 'download' | 'processing', owner?: string) {
   const params = new URLSearchParams({ view });
-  if (page !== undefined) { params.set('page', String(page)); params.set('pageSize', '20'); }
+  if (page !== undefined) { params.set('page', String(page)); params.set('pageSize', String(pageSize)); }
   if (flat) params.set('flat', '1');
   if (parentId) params.set('parentId', parentId);
   if (q.trim()) params.set('q', q.trim());
+  if (fileType) params.set('fileType', fileType);
+  if (status) params.set('status', status);
+  if (owner) params.set('owner', owner);
   return http<LibraryList>(`/api/library/items?${params.toString()}`);
+}
+
+export function listLibraryMembers() {
+  return http<{ members: LibraryMemberRow[] }>('/api/library/members');
 }
 
 export type LibraryCreationScope = { scope?: 'PRIVATE' | 'ENTERPRISE'; confirmShare?: boolean };
@@ -191,11 +208,22 @@ export function batchLibrary(ids: string[], action: 'recycle' | 'restore' | 'pur
   });
 }
 
-export function libraryFolders() {
-  return listLibrary('mine', null, '').then(async (mine) => {
-    const shared = await listLibrary('shared', null, '');
-    return [...mine.items, ...shared.items].filter((item) => item.kind === 'FOLDER');
-  });
+async function listAllFolders(view: 'mine' | 'shared' | 'members', owner?: string) {
+  const items: LibraryItem[] = [];
+  for (let page = 1; page <= 50; page += 1) {
+    const data = await listLibrary(view, null, '', page, true, 100, 'folder', undefined, owner);
+    for (const item of data.items) if (item.kind === 'FOLDER') items.push(item);
+    if (items.length >= data.total || data.items.length === 0) break;
+  }
+  return items;
+}
+
+export async function libraryFolders(view?: 'mine' | 'shared' | 'members', owner?: string) {
+  if (view) return listAllFolders(view, owner);
+  const [mine, shared] = await Promise.all([listAllFolders('mine'), listAllFolders('shared')]);
+  const byId = new Map<string, LibraryItem>();
+  for (const item of [...mine, ...shared]) byId.set(item.id, item);
+  return [...byId.values()];
 }
 
 export type UploadOutcome = {

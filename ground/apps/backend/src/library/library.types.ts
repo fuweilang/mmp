@@ -13,7 +13,7 @@ export type LibraryParseStatus =
 export type LocatorKind = 'paragraph' | 'page';
 export type CustodyScope = 'ENTERPRISE' | 'PRIVATE_OWNER';
 export type CustodyPower = 'READ' | 'CRUD';
-export type LibraryView = 'recent' | 'mine' | 'shared' | 'trash' | 'managed';
+export type LibraryView = 'recent' | 'mine' | 'shared' | 'trash' | 'members' | 'managed';
 
 export type Actor = {
   /** Server-derived single-grant context; never accepted from request bodies. */
@@ -27,6 +27,8 @@ export type Actor = {
   isOrgAdmin: boolean;
   /** 仍是该企业成员。离开后为 false，不因此把私人资料改成共享。 */
   activeMember: boolean;
+  /** 仅总后台资料库服务设置。普通登录不会带上，因此平台身份不会自动打通 Console。 */
+  libraryAdmin?: boolean;
 };
 
 export type NodeRecord = {

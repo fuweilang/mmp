@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, IconChevronDownOutlineRegular, IconFolderCloseRegular, IconLinkOutlineRegular, FileTypeIcon } from '@mammoth-ai/mmp-client-ui-primitives'
 import { fetchLibraryPage, type LibraryFetch } from './api.ts'
 import type { LibraryChoice } from './selection.ts'
@@ -21,10 +21,12 @@ type Props = {
   onAction?: (action: string, item: LibraryChoice) => void
   onDenied?: () => void
   busy?: boolean
+  /** Bumped after a library change. Open branches refetch without collapsing. */
+  revision?: number
 }
 /** Children are fetched only while expanded; every branch has its own bounded page and cancellation. */
 export function LibraryTree(props: Props) {
-  const { origin, fetchImpl, t, path, onFolder, onFile, selectedId, view = 'mine', onDenied } = props
+  const { origin, fetchImpl, t, path, onFolder, onFile, selectedId, view = 'mine', onDenied, revision = 0 } = props
   const parentId = path.at(-1)?.id ?? null
   const [page, setPage] = useState(1)
   const [rows, setRows] = useState<LibraryChoice[]>([])
@@ -33,14 +35,23 @@ export function LibraryTree(props: Props) {
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
   const [expanded, setExpanded] = useState<readonly string[]>([])
+  const revisionSeen = useRef(revision)
+  useEffect(() => {
+    if (revisionSeen.current === revision) return
+    revisionSeen.current = revision
+    setPage(1)
+    setRetry(n => n + 1)
+  }, [revision])
   useEffect(() => {
     const control = new AbortController(); setLoading(true); setError('')
     void fetchLibraryPage(origin, view, '', fetchImpl, control.signal, parentId, page).then(result => {
       if (control.signal.aborted) return
       setRows(previous => page === 1 ? result.items : [...new Map([...previous, ...result.items].map(row => [row.nodeId, row])).values()]); setTotal(result.total)
     }).catch(e => { if (!control.signal.aborted) {
-      setRows([]); setError(String(e))
-      if (/(?:401|403|409)/.test(String(e))) onDenied?.()
+      const message = String(e)
+      if (parentId && (message.includes('404') || message.includes('资料不存在'))) { setRows([]); setError(''); return }
+      setRows([]); setError(message)
+      if (/(?:401|403|409)/.test(message)) onDenied?.()
     } }).finally(() => { if (!control.signal.aborted) setLoading(false) })
     return () => { control.abort() }
   }, [origin, fetchImpl, parentId, page, retry, view, onDenied])

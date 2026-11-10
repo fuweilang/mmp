@@ -6,12 +6,12 @@
       <el-button :disabled="running" @click="input?.click()">选择{{ multiple ? '多个文件' : '文件' }}</el-button>
       <input ref="input" hidden type="file" :multiple="multiple" :accept="accept" @change="choose" />
     </div>
-    <p class="library-upload-note">支持类型：{{ accept }}。{{ currentLimits ? `单文件上限 ${formatBytes(currentLimits.maxFileBytes)}。` : '正在检查上传限制。' }} {{ hint }} {{ multiple ? '每批最多50个，逐个上传。' : '替换版本一次只选择一个文件。' }} 上传成功仅表示已保存，AI可用性以处理状态为准。</p>
+    <p class="library-upload-note">{{ note }}</p>
     <p v-if="running" role="status">上传期间请保持窗口打开；关闭页面不会撤销已发送的请求。</p>
     <p v-if="error" class="library-upload-error" role="alert">{{ error }}</p>
     <ul class="library-upload-list" aria-label="上传队列">
       <li v-for="row in rows" :key="row.id">
-        <div><strong>{{ row.file.name }}</strong><span>{{ formatBytes(row.file.size) }}</span></div>
+        <div><strong>{{ row.file.name }}</strong><span class="library-upload-side"><span>{{ formatBytes(row.file.size) }}</span><el-button v-if="row.status === 'queued'" link :aria-label="`移出 · ${row.file.name}`" :disabled="running" @click="remove(row.id)">×</el-button></span></div>
         <span role="status">{{ label(row) }}</span>
         <p v-if="row.message" :class="{ 'library-upload-error': row.status === 'failed' }">{{ row.message }}</p>
         <el-button v-if="row.status === 'failed'" size="small" :disabled="running" @click="start([row])">重试此文件</el-button>
@@ -25,12 +25,12 @@
   </el-dialog>
 </template>
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { formatBytes } from '../utils/format';
 import '../styles/libraryDialogs.css';
 import { runLibraryUploads, type UploadRow, type UploadLimits } from '../utils/libraryUploadQueue';
 const props = withDefaults(defineProps<{
-  title?: string; hint: string; accept: string; multiple?: boolean;
+  title?: string; hint: string; accept: string; multiple?: boolean; simple?: boolean;
   loadLimits: () => Promise<UploadLimits>;
   prepare?: (files: readonly File[]) => Promise<void> | void;
   uploadFile: (file: File, progress: (ratio: number) => void) => Promise<string | void>;
@@ -39,6 +39,14 @@ const emit = defineEmits<{ close: []; complete: [successes: number] }>();
 const input = ref<HTMLInputElement>(); const rows = ref<UploadRow[]>([]);
 const running = ref(false), locked = ref(false), error = ref('');
 const currentLimits = ref<UploadLimits>();
+const note = computed(() => {
+  const limit = currentLimits.value ? `单文件上限 ${formatBytes(currentLimits.value.maxFileBytes)}` : '';
+  if (props.simple) {
+    const batch = props.multiple ? '每批最多 50 个' : '一次只选择一个文件';
+    return limit ? `${batch} · ${limit}` : batch;
+  }
+  return `支持类型：${props.accept}。${limit ? `${limit}。` : '正在检查上传限制。'} ${props.hint} ${props.multiple ? '每批最多50个，逐个上传。' : '替换版本一次只选择一个文件。'} 上传成功仅表示已保存，AI可用性以处理状态为准。`;
+});
 let alive = true;
 onBeforeUnmount(() => { alive = false; });
 onMounted(() => { void props.loadLimits().then(value => { currentLimits.value = value; }).catch(cause => { error.value = cause instanceof Error ? cause.message : '无法获取上传限制'; }); });
@@ -51,6 +59,7 @@ function add(files: File[]) {
   rows.value.push(...unique.map(file => ({ id: crypto.randomUUID(), file, status: 'queued' as const })));
   error.value = '';
 }
+function remove(id: string) { if (!running.value) rows.value = rows.value.filter(row => row.id !== id); }
 function choose(event: Event) { const element = event.target as HTMLInputElement; add(Array.from(element.files ?? [])); element.value = ''; }
 function drop(event: DragEvent) {
   if (Array.from(event.dataTransfer?.items ?? []).some(item => item.webkitGetAsEntry?.()?.isDirectory)) { error.value = '暂不支持上传文件夹，请选择文件。'; return; }
@@ -68,6 +77,7 @@ async function start(jobs: UploadRow[]) {
     const limits = await props.loadLimits(); currentLimits.value = limits; locked.value = true;
     const successes = await runLibraryUploads(jobs, limits, props.uploadFile, () => alive);
     if (alive) emit('complete', successes);
+    if (alive && rows.value.length > 0 && rows.value.every(row => row.status === 'success')) emit('close');
   } catch (cause) { error.value = cause instanceof Error ? cause.message : '无法开始上传'; }
   finally { running.value = false; }
 }
@@ -79,7 +89,9 @@ async function start(jobs: UploadRow[]) {
 .library-upload-error { color:var(--el-color-danger); overflow-wrap:anywhere; }
 .library-upload-list { list-style:none; padding:0; margin:12px 0 0; }
 .library-upload-list li { padding:12px 0; border-bottom:1px solid var(--el-border-color-lighter); font-size:13px; }
-.library-upload-list li > div { display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; }
+.library-upload-list li > div { display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center; }
+.library-upload-side { display:inline-flex; align-items:center; gap:8px; margin-left:auto; }
+.library-upload-side :deep(.el-button) { min-width:32px; height:32px; padding:0; font-size:18px; }
 .library-upload-list strong { font-weight:500; overflow-wrap:anywhere; min-width:0; }
 .library-upload-list p { margin:4px 0; font-size:12px; overflow-wrap:anywhere; }
 </style>

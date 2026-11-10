@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createApp, h, nextTick, type App } from 'vue';
+import { createPinia } from 'pinia';
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router';
 import ElementPlus, { ElMessageBox } from 'element-plus';
 import Library from '@library-fixture';
@@ -27,7 +28,7 @@ async function mount(view='mine') {
  root=document.createElement('div');root.style.cssText='transform:translateX(80px);overflow:hidden;width:600px;height:400px';document.body.append(root);
  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/console/library/:view',component:Library}]});
  await router.push('/console/library/'+view+'?preview=fixture&version=fixture-v1');await router.isReady();
- app=createApp({render:()=>h(RouterView)});app.use(ElementPlus);app.use(router);app.mount(root);await nextTick();
+ app=createApp({render:()=>h(RouterView)});app.use(createPinia());app.use(ElementPlus);app.use(router);app.mount(root);await nextTick();
  await vi.waitFor(()=>expect(document.querySelector('.el-dialog.library-modal.is-align-center')).toBeTruthy());
  return document.querySelector<HTMLElement>('.el-dialog.library-modal')!;
 }
@@ -54,6 +55,7 @@ it('uses real native MessageBox viewport positioning and namespaced scrollable c
  expect(getComputedStyle(box.closest('.el-overlay')!).position).toBe('fixed');
  expect(getComputedStyle(box.closest('.el-overlay-message-box')!).textAlign).toBe('center');
  expect(getComputedStyle(box).verticalAlign).toBe('middle');expect(getComputedStyle(box).display).toBe('inline-flex');
+ expect(getComputedStyle(box).width).toBe('420px');
  expect(getComputedStyle(box.querySelector('.el-message-box__content')!).overflowY).toBe('auto');
  box.querySelector<HTMLButtonElement>('.el-message-box__btns button')!.click();await pending;
 });

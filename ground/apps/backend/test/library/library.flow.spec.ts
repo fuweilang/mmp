@@ -1,8 +1,14 @@
 import 'reflect-metadata';
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { deflateRawSync } from 'node:zlib';
+import JSZip from 'jszip';
+import sharp from 'sharp';
 import { ValidationPipe } from '@nestjs/common';
 import {
   confirmLibrarySelection,
@@ -11,7 +17,7 @@ import {
   retainRowsOnListError,
   stageLocalFiles,
 } from '../../../../packages/shared/src/index';
-import { CreateFolderDto } from '../../src/library/library.dto';
+import { CreateFolderDto, ListQuery } from '../../src/library/library.dto';
 import { LibraryError } from '../../src/library/library.errors';
 import { resolveUnderRoot } from '../../src/library/library.files';
 import { buildLibraryModelRequest, readModelText } from '../../src/library/library.llm';
@@ -41,6 +47,12 @@ function zipStored(name: string, content: Buffer, method: 0 | 8 = 0) {
   const end = Buffer.alloc(22); end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(1, 8); end.writeUInt16LE(1, 10);
   end.writeUInt32LE(directory.length, 12); end.writeUInt32LE(local.length, 16);
   return Buffer.concat([local, directory, end]);
+}
+
+async function officeZip(entries: Record<string, string>) {
+  const zip = new JSZip();
+  for (const [path, content] of Object.entries(entries)) zip.file(path, content);
+  return Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
 }
 
 function textPdf(text: string) {
@@ -105,7 +117,7 @@ async function upload(service: LibraryService, actor: Actor, name: string, bytes
 }
 
 describe('enterprise library', () => {
-  it('keeps one private copy, rejects cross-tenant and admin reads, and does not share on departure or unconfirmed move', async () => {
+  it('keeps one private copy, lets only the org admin read another member, and does not share on departure or unconfirmed move', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');
     const mate = actor('mate', 'ta');
@@ -123,9 +135,11 @@ describe('enterprise library', () => {
     const hidden = code(await service.preview(other, item.id).catch((error: unknown) => error));
     assert.equal(hidden.status, 404);
     assert.equal(hidden.message.includes('秘密'), false);
-    const adminRead = code(await service.download(org, item.id).catch((error: unknown) => error));
-    assert.equal(adminRead.status, 404);
-    assert.equal(adminRead.message.includes('秘密'), false);
+    assert.equal((await service.download(org, item.id)).bytes.toString(), '只有本人能看的正文');
+    assert.equal((await service.list(org, 'mine', null, '秘密')).items.length, 0);
+    assert.equal((await service.list(org, 'members', null, '秘密')).items[0]?.ownerUserId, owner.userId);
+    const memberView = code(await service.list(mate, 'members').catch((error: unknown) => error));
+    assert.equal(memberView.status, 403);
     const left = actor('owner', 'ta', { activeMember: false });
     const departed = code(await service.preview(left, item.id).catch((error: unknown) => error));
     assert.equal(departed.status, 404);
@@ -236,6 +250,31 @@ describe('enterprise library', () => {
     assert.equal((await service.restore(owner, folder.id)).state, 'ACTIVE');
   });
 
+  it('recycles a folder together with the active items inside it', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const folder = await service.createFolder(owner, '资料夹');
+    const child = await upload(service, owner, '子文件.md', Buffer.from('子文件正文'));
+    await service.move(owner, child.id, folder.id);
+    await service.recycle(owner, folder.id);
+    assert.equal((await store.getNode(folder.id))?.state, 'RECYCLED');
+    assert.equal((await store.getNode(child.id))?.state, 'RECYCLED');
+    assert.equal((await service.list(owner, 'trash')).items.length, 2);
+  });
+
+  it('purges a recycled folder together with the recycled items inside it', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const folder = await service.createFolder(owner, '资料夹');
+    const child = await upload(service, owner, '子文件.md', Buffer.from('子文件正文'));
+    await service.move(owner, child.id, folder.id);
+    await service.recycle(owner, child.id);
+    await service.recycle(owner, folder.id);
+    await service.purge(owner, folder.id);
+    assert.equal((await store.getNode(folder.id))?.state, 'PURGED');
+    assert.equal((await store.getNode(child.id))?.state, 'PURGED');
+  });
+
   it('opens a single ready chunk without a locator and still rejects missing or forbidden versions', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');
@@ -291,9 +330,81 @@ describe('enterprise library', () => {
     const scanned = await upload(service, owner, '扫描.pdf', textPdf(''));
     assert.equal(scanned.currentVersion?.parseStatus, 'DOWNLOAD_ONLY');
     assert.match(scanned.currentVersion?.parseReason ?? '', /OCR/);
-    const sheet = await upload(service, owner, '表.xlsx', Buffer.from('PK fake xlsx'));
-    assert.equal(sheet.currentVersion?.parseStatus, 'DOWNLOAD_ONLY');
-    assert.match(sheet.currentVersion?.parseReason ?? '', /表格/);
+    const broken = await upload(service, owner, '坏表.xlsx', Buffer.from('PK fake xlsx'));
+    assert.equal(broken.currentVersion?.parseStatus, 'FAILED');
+    const deck = await upload(service, owner, '发布.pptx', await officeZip({ 'ppt/slides/slide1.xml': '<p:sld><a:t>封面标题</a:t></p:sld>' }));
+    assert.equal(deck.currentVersion?.parseStatus, 'READY');
+    assert.match((await service.preview(owner, deck.id)).text ?? '', /封面标题/);
+    const sheet = await upload(service, owner, '表.xlsx', await officeZip({
+      'xl/sharedStrings.xml': '<sst><si><t>品名</t></si></sst>',
+      'xl/worksheets/sheet1.xml': '<worksheet><sheetData><row><c t="s"><v>0</v></c><c><f>A1+1</f><v>42</v></c></row></sheetData></worksheet>',
+    }));
+    assert.equal(sheet.currentVersion?.parseStatus, 'READY');
+    const cited = await service.openCitation(owner, sheet.id, sheet.currentVersion!.id);
+    assert.match(cited.quote ?? '', /品名/);
+    assert.match(cited.quote ?? '', /42/);
+    assert.equal((cited.quote ?? '').includes('A1+1'), false);
+    await store.updateVersion(sheet.currentVersion!.id, { parseStatus: 'DOWNLOAD_ONLY', parseReason: '旧状态' });
+    await store.replaceChunks(sheet.currentVersion!.id, 'ta', []);
+    const again = await service.retryParse(owner, sheet.id);
+    assert.equal(again.currentVersion?.parseStatus, 'READY');
+  });
+
+  it('cites a legacy Word file and text inside a picture on this Mac', async () => {
+    if (process.platform !== 'darwin') return;
+    const dir = await mkdtemp(join(tmpdir(), 'legacy-doc-'));
+    try {
+      const convert = (profile: string, target: string, inputName: string) => new Promise<void>((resolve, reject) => {
+        const child = spawn('/opt/homebrew/bin/soffice', [
+          `-env:UserInstallation=file://${join(dir, profile)}`,
+          '--headless', '--norestore', '--nolockcheck', '--nologo',
+          '--convert-to', target, '--outdir', dir, join(dir, inputName),
+        ], { stdio: 'ignore', timeout: 45_000 });
+        child.on('error', reject);
+        child.on('close', (code) => code === 0 ? resolve() : reject(new Error(String(code))));
+      });
+      await writeFile(join(dir, 'source.txt'), '旧版合同');
+      await convert('profile-doc', 'doc', 'source.txt');
+      const parsed = await parseLibraryBytes('旧版.doc', await readFile(join(dir, 'source.doc')));
+      assert.equal(parsed.status, 'READY');
+      assert.match(parsed.chunks.map((chunk) => chunk.content).join('\n'), /旧版合同/);
+      await writeFile(join(dir, 'source.csv'), '品名\n');
+      await convert('profile-xls', 'xls', 'source.csv');
+      const sheet = await parseLibraryBytes('老版.xls', await readFile(join(dir, 'source.xls')));
+      assert.equal(sheet.status, 'READY');
+      assert.match(sheet.chunks.map((chunk) => chunk.content).join('\n'), /品名/);
+      await writeFile(join(dir, 'source.fodp'), `<?xml version="1.0" encoding="UTF-8"?>
+<office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:presentation="urn:oasis:names:tc:opendocument:xmlns:presentation:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" office:version="1.3" office:mimetype="application/vnd.oasis.opendocument.presentation">
+ <office:body><office:presentation><draw:page draw:name="page1">
+  <draw:frame svg:width="20cm" svg:height="3cm" svg:x="1cm" svg:y="1cm"><draw:text-box><text:p>老版演示</text:p></draw:text-box></draw:frame>
+ </draw:page></office:presentation></office:body></office:document>`);
+      await convert('profile-ppt', 'ppt', 'source.fodp');
+      const deck = await parseLibraryBytes('老版.ppt', await readFile(join(dir, 'source.ppt')));
+      assert.equal(deck.status, 'READY');
+      assert.match(deck.chunks.map((chunk) => chunk.content).join('\n'), /老版演示/);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+    const png = await sharp(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="160"><rect width="100%" height="100%" fill="white"/><text x="24" y="100" font-size="72" font-family="Helvetica" fill="black">CONTRACT</text></svg>')).png().toBuffer();
+    const image = await parseLibraryBytes('条款.png', png);
+    assert.equal(image.status, 'READY');
+    assert.match(image.chunks.map((chunk) => chunk.content).join('\n'), /CONTRACT/);
+    const scanDir = await mkdtemp(join(tmpdir(), 'scan-pdf-'));
+    try {
+      const scanPng = join(scanDir, 'page.png');
+      const scanPdf = join(scanDir, 'page.pdf');
+      await writeFile(scanPng, png);
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn('sips', ['-s', 'format', 'pdf', scanPng, '--out', scanPdf], { stdio: 'ignore' });
+        child.on('error', reject);
+        child.on('close', (code) => code === 0 ? resolve() : reject(new Error(String(code))));
+      });
+      const scanned = await parseLibraryBytes('扫描件.pdf', await readFile(scanPdf));
+      assert.equal(scanned.status, 'READY');
+      assert.match(scanned.chunks.map((chunk) => chunk.content).join('\n'), /CONTRACT/);
+    } finally {
+      await rm(scanDir, { recursive: true, force: true });
+    }
   });
 
   it('extracts a real pdf page and a docx paragraph, and bounds the model prompt', async () => {
@@ -461,6 +572,15 @@ describe('enterprise library', () => {
     assert.equal(expired.message.includes('共享'), false);
   });
 
+  it('accepts the processing list filter', async () => {
+    const pipe = new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true });
+    const query = await pipe.transform(
+      { view: 'mine', status: 'processing', page: '1', pageSize: '20' },
+      { type: 'query', metatype: ListQuery },
+    ) as ListQuery;
+    assert.equal(query.status, 'processing');
+  });
+
   it('rejects a client tenant id on the folder body and keeps picker files unsent', async () => {
     const pipe = new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true });
     await assert.rejects(() => pipe.transform(
@@ -497,7 +617,10 @@ describe('enterprise library', () => {
       recycledAt: null, purgedAt: null, createdAt: 0, updatedAt: 0,
     };
     const org: Actor = { userId: 'admin', tenantId: 'ta', isPlatformAdmin: false, isOrgAdmin: true, activeMember: true };
-    assert.equal(canSee(org, node, [], Date.now()), false);
+    assert.equal(canSee(org, node, [], Date.now()), true);
+    assert.equal(canSee({ ...org, activeMember: false }, node, [], Date.now()), false);
+    assert.equal(canSee({ ...org, isOrgAdmin: false }, node, [], Date.now()), false);
+    assert.equal(canSee({ ...org, tenantId: 'tb' }, node, [], Date.now()), false);
   });
 });
 
@@ -532,6 +655,23 @@ describe('t188 navigation and media bounds', () => {
 
 
 describe('t191 Console flat mine management', () => {
+  it('pages owned items by ten and filters the recorded file type', async () => {
+    const { service, actor } = world();
+    const owner = actor('owner', 'ta');
+    await service.createFolder(owner, '目录');
+    await service.upload(owner, { originalName: '图.png', mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+    for (let i = 0; i < 11; i++) await service.upload(owner, { originalName: `笔记-${i}.txt`, mimeType: 'text/plain', bytes: Buffer.from('字') });
+    const page = await service.list(owner, 'mine', null, '', true, 1, 10);
+    assert.equal(page.total, 13);
+    assert.equal(page.items.length, 10);
+    const images = await service.list(owner, 'mine', null, '', true, 1, 10, 'all', 'image');
+    assert.equal(images.total, 1);
+    assert.equal(images.items[0]?.name, '图.png');
+    const content = await service.list(owner, 'mine', null, '', true, 1, 20, 'all', 'content');
+    assert.equal(content.total, 12);
+    assert.equal(content.items.some((row) => row.kind === 'FOLDER'), false);
+  });
+
   it('paginates owned levels including shared, searches globally and keeps directory semantics', async () => {
     const { service, actor } = world(); const owner = actor('owner', 'ta');
     const apple = await service.createFolder(owner, 'Apple');
@@ -563,5 +703,55 @@ describe('t191 Console flat mine management', () => {
     const row = (await service.list(owner, 'mine', null, '', true, 1, 20)).items[0]!;
     assert.equal(row.parentHidden, true); assert.equal(row.parentName, null); assert.deepEqual(row.parentPath, []);
     assert.equal(row.currentVersion?.mimeType, 'text/plain'); assert.ok(!JSON.stringify(row).includes('不得泄漏上级名称'));
+  });
+  it('searches only the caller\'s private files and enterprise-shared excerpts', async () => {
+    const { service, actor } = world();
+    const owner = actor('owner', 'ta');
+    const mate = actor('mate', 'ta');
+    const org = actor('admin', 'ta', { isOrgAdmin: true });
+    const privateFile = await upload(service, owner, '泡泡玛特商业分析.md', Buffer.from('泡泡玛特 2026 年渠道仍以盲盒为主。'));
+    await service.upload(owner, { originalName: '仅保存.png', mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=', 'base64') });
+    const shared = await upload(service, mate, '公开说明.md', Buffer.from('企业共享里提到泡泡玛特联名。'));
+    await service.setScope(mate, shared.id, 'ENTERPRISE', true);
+    const own = await service.searchQuotes(owner, '泡泡玛特');
+    assert.deepEqual(own.hits.map(hit => hit.nodeId).sort(), [privateFile.id, shared.id].sort());
+    assert.equal(own.hits.every(hit => hit.quote.includes('泡泡玛特')), true);
+    const colleague = await service.searchQuotes(mate, '泡泡玛特');
+    assert.deepEqual(colleague.hits.map(hit => hit.nodeId), [shared.id]);
+    const admin = await service.searchQuotes(org, '泡泡玛特');
+    assert.deepEqual(admin.hits.map(hit => hit.nodeId), [shared.id]);
+    await service.recycle(owner, privateFile.id);
+    assert.equal((await service.searchQuotes(owner, '渠道仍以盲盒')).hits.length, 0);
+  });
+
+  it('opens one member at a time and keeps another member\'s folder out of their root', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const mate = actor('mate', 'ta');
+    const org = actor('admin', 'ta', { isOrgAdmin: true });
+    const secret = await upload(service, owner, '私人.md', Buffer.from('只有本人'));
+    const folder = await service.createFolder(mate, '同事目录');
+    const nested = await service.createFolder(owner, '挂在别人目录下');
+    await store.updateNode(nested.id, { parentId: folder.id });
+    await assert.rejects(() => service.list(mate, 'members'), (error: unknown) => code(error).status === 403);
+    await assert.rejects(() => service.ownerCounts(mate), (error: unknown) => code(error).status === 403);
+    const counts = await service.ownerCounts(org);
+    assert.equal(counts.owner, 2);
+    assert.equal(counts.mate, 1);
+    const all = await service.list(org, 'members');
+    assert.equal(all.ownerUserId, null);
+    assert.equal(all.items.some((row) => row.id === secret.id), true);
+    assert.equal(all.items.some((row) => row.id === folder.id), true);
+    const one = await service.list(org, 'members', null, '', false, 1, 20, 'all', undefined, 'owner');
+    assert.deepEqual(one.items.map((row) => row.id).sort(), [secret.id, nested.id].sort());
+    assert.equal(one.items.some((row) => row.id === folder.id), false);
+    const wrongFolder = code(await service.list(org, 'members', folder.id, '', false, 1, 20, 'all', undefined, 'owner').catch((error: unknown) => error));
+    assert.equal(wrongFolder.status, 404);
+    const matePage = await service.list(org, 'members', folder.id, '', false, 1, 20, 'all', undefined, 'mate');
+    assert.equal(matePage.ownerUserId, 'mate');
+    assert.equal(matePage.items.some((row) => row.id === nested.id), false);
+    const ignored = await service.list(owner, 'mine', null, '', false, 1, 20, 'all', undefined, 'mate');
+    assert.equal(ignored.items.some((row) => row.id === secret.id), true);
+    assert.equal(ignored.items.some((row) => row.id === folder.id), false);
   });
 });

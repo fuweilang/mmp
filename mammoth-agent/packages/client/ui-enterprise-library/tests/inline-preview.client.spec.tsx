@@ -75,7 +75,7 @@ it('uploads from a nested shared folder menu with that exact parent and visibili
   const dialog = within(await screen.findByRole('dialog'))
   fireEvent.change(dialog.getByLabelText(zh.uploadChoose, { selector: 'input' }), { target: { files: [new File(['# 内容'], '资料.md')] } })
   fireEvent.click(dialog.getByRole('button', { name: zh.uploadStart }))
-  await dialog.findByText(zh.uploadSuccess)
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: zh.upload })).toBeNull())
   const body = fetchImpl.mock.calls.find(([url, init]) => url.endsWith('/files') && init?.method === 'POST')?.[1]?.body as FormData
   expect(body.get('parentId')).toBe('shared-folder')
   expect(body.get('scope')).toBe('ENTERPRISE')
@@ -188,6 +188,38 @@ it('uses immutable version format after renaming the displayed file without an e
   const right = within(view.container.querySelector('main')!)
   await right.findByRole('heading', { name: '真实文档结构' })
   expect(right.getByRole('heading', { name: '改名后的制度' })).toBeTruthy()
+})
+
+it('lists newer versions first and shows each version write time', async () => {
+  const older = '2026-11-05T07:46:42.000Z'
+  const newer = '2026-11-10T07:54:00.000Z'
+  const written = (value: string) => {
+    const date = new Date(value)
+    const pad = (part: number) => String(part).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  }
+  const fetchImpl = vi.fn(async (url: string) => {
+    if (url.endsWith('/versions')) return Response.json([
+      { id: 'v1', versionNo: 1, parseStatus: 'DOWNLOAD_ONLY', createdAt: older },
+      { id: 'v2', versionNo: 2, parseStatus: 'DOWNLOAD_ONLY', createdAt: newer },
+    ])
+    if (url.includes('/preview?')) return Response.json({ name: '图片.png', originalName: '图片.png', versionId: 'v1', versionNo: 1, parseStatus: 'DOWNLOAD_ONLY', previewKind: 'image' })
+    if (url.includes('/download?')) return new Response('png', { headers: { 'content-type': 'image/png' } })
+    return Response.json({ items: [file('pic', '图片.png')], total: 1 })
+  })
+  const view = fixture(fetchImpl)
+  fireEvent.click(await within(view.container.querySelector('aside')!).findByRole('button', { name: `${zh.more} · 图片.png` }))
+  fireEvent.click(await screen.findByRole('menuitem', { name: zh.versions }))
+  const dialog = await screen.findByRole('dialog')
+  const text = dialog.textContent ?? ''
+  expect(text.indexOf('v2')).toBeGreaterThanOrEqual(0)
+  expect(text.indexOf('v1')).toBeGreaterThan(text.indexOf('v2'))
+  expect(text).toContain(written(newer))
+  expect(text).toContain(written(older))
+  const times = [...dialog.querySelectorAll('time')].map(node => node.getAttribute('dateTime'))
+  expect(times).toEqual([newer, older])
+  fireEvent.click(within(dialog).getAllByRole('button', { name: zh.preview })[1]!)
+  await waitFor(() => expect(fetchImpl.mock.calls.some(([url]) => String(url).includes('versionId=v1'))).toBe(true))
 })
 
 it('uses the selected historical version parsing state for AI actions', async () => {

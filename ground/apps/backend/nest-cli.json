@@ -8,6 +8,10 @@
       {
         "include": "official-agent/assets/**/*",
         "watchAssets": true
+      },
+      {
+        "include": "library/*.m",
+        "watchAssets": true
       }
     ]
   }

@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus';
 import { canAccessAdmin, canAccessConsole, hasPermission } from '@mammoth/shared';
 import { useAuthStore } from '../stores/auth';
 import { redirectToAgentWeb } from '../utils/agent';
-import { consoleLibraryEntry, consoleLibraryViews } from '../utils/libraryNavigation';
+import { consoleLibraryEntry, consoleLibraryViews, memberLibraryView } from '../utils/libraryNavigation';
 /** 本次整页加载是否已刷新过会话权限（含总后台与企业控制台，避免旧缓存里的 effectivePermissions 一直生效）。 */
 let sessionRefreshed = false;
 const AppShell = () => import('../layouts/AppShell.vue');
@@ -119,6 +119,7 @@ const router = createRouter({
           meta: { title: item.label, perm: 'portal.console.access' },
           component: () => import('../views/Library.vue'),
         })),
+        { path: 'library/members', meta: { title: memberLibraryView.label, perm: 'portal.console.access' }, component: () => import('../views/Library.vue') },
         { path: '', meta: { title: '工作台', perm: 'portal.console.workbench' }, component: () => import('../views/Home.vue') },
         { path: 'knowledge', meta: { title: '知识库', perm: 'portal.console.kb' }, component: () => import('../views/Knowledge.vue') },
         { path: 'members', meta: { title: '成员管理', perm: 'portal.console.members' }, component: () => import('../views/Members.vue') },

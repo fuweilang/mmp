@@ -3,6 +3,8 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { installGroundLibrary, libraryProxyTarget } from '../src/ground-library.ts'
 afterEach(() => vi.unstubAllGlobals())
 it('allows explicit library paths, never admin, traversal or arbitrary upstream paths', () => {
+ expect(libraryProxyTarget('GET', '/ground-library/search?q=%E6%B3%A1%E6%B3%A1')).toBe('/api/library/search?q=%E6%B3%A1%E6%B3%A1')
+ expect(libraryProxyTarget('POST', '/ground-library/search')).toBeUndefined()
  expect(libraryProxyTarget('POST', '/ground-library/files')).toBe('/api/library/files')
  expect(libraryProxyTarget('POST', '/ground-library/used')).toBe('/api/library/used')
  expect(libraryProxyTarget('GET', '/ground-library/used')).toBeUndefined()

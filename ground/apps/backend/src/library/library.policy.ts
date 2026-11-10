@@ -25,7 +25,8 @@ export function matchingCustody(
 
 /**
  * 列表和正文可见性。回收站里的资料仍可被有权的人看见标题。
- * 彻底删除的行不出现在列表。跨租户、非成员、他人私人资料都不可见。
+ * 彻底删除的行不出现在列表。跨租户不可见。普通成员看不见他人私人资料。
+ * 本企业管理员可以查看本企业全部资料，含成员尚未共享的私人资料。
  */
 export function canSee(
   actor: Actor,
@@ -35,6 +36,8 @@ export function canSee(
 ): boolean {
   if (node.tenantId !== actor.tenantId) return false;
   if (node.state === 'PURGED') return false;
+  if (actor.libraryAdmin && actor.isPlatformAdmin) return true;
+  if (actor.isOrgAdmin && actor.activeMember) return true;
   const custody = matchingCustody(actor, node, custodies, now);
   if (node.scope === 'PRIVATE') {
     if (node.ownerUserId === actor.userId && actor.activeMember) return true;
@@ -64,8 +67,9 @@ export function canManage(
 ): boolean {
   if (!canSee(actor, node, custodies, now) && !canKnow(actor, node, custodies, now)) return false;
   if (node.state === 'PURGED') return false;
+  if (actor.libraryAdmin && actor.isPlatformAdmin) return true;
   if (node.ownerUserId === actor.userId && actor.activeMember) return true;
-  if (actor.isOrgAdmin && actor.activeMember && node.scope === 'ENTERPRISE') return true;
+  if (actor.isOrgAdmin && actor.activeMember) return true;
   const custody = matchingCustody(actor, node, custodies, now);
   return custody?.powers === 'CRUD';
 }

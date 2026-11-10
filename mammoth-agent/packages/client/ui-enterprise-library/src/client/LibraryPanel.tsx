@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Input, Menu, Modal, Tag, FileTypeIcon, IconClockOutlineRegular, IconFolderCloseRegular, IconShareOutlineRegular, IconTrashOutlineRegular, IconSearchOutlineRegular, IconLinkOutlineRegular, IconChevronDownOutlineRegular, IconCloseOutlineRegular } from '@mammoth-ai/mmp-client-ui-primitives'
+import { Button, Input, Menu, Modal, Tag, Toast, Tooltip, FileTypeIcon, IconClockOutlineRegular, IconFolderCloseRegular, IconShareOutlineRegular, IconTrashOutlineRegular, IconSearchOutlineRegular, IconLinkOutlineRegular, IconChevronDownOutlineRegular, IconCloseOutlineRegular, IconRefreshOutlineRegular } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { LibraryKey } from './locales.ts'
 import type { HostObservable, InjectFace, PropsLocale, PropsRuntime, PropsRenderFactories } from '@mammoth-ai/mmp-client-ui-slots'
 import type {} from '@mammoth-ai/mmp-client-ui-layout/client'
@@ -28,16 +28,46 @@ export type LibraryPanelProps = PropsRuntime<'main'> & PropsLocale<'enterpriseLi
 const VIEWS: readonly LibraryView[] = ['recent', 'mine', 'shared', 'trash']
 type SaveTarget = { parentId: string | null; scope: 'PRIVATE' | 'ENTERPRISE'; name: string }
 type Edit = { kind: 'folder' | 'link' | 'rename' | 'move'; item?: LibraryChoice; target?: SaveTarget }
+type ScopeConfirm = { nodeId: string; scope: 'PRIVATE' | 'ENTERPRISE'; total: number; treeRevision: string; moveParentId?: string | null }
 type Source = { originalName?: string; parseStatus?: string; bytes?: Uint8Array<ArrayBuffer>; mimeType?: string; missingFonts?: readonly string[]; item?: LibraryChoice; nodeId?: string; previewKind?: string; mediaUrl?: string; name?: string; text?: string | null; linkUrl?: string | null; parseReason?: string | null; highlightNote?: string | null; locator?: string | null; versionNo?: number | null; versionId?: string; truncated?: boolean; truncationNote?: string | null; chunks?: readonly { locator: string; text: string }[] }
 
 const ACCEPT = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.md,.markdown,.txt,.csv,.html,.htm,.zip,.png,.jpg,.jpeg,.gif,.webp,.avif,.mp4,.webm,.mov'
 const VIEW_ICONS = { recent: IconClockOutlineRegular, mine: IconFolderCloseRegular, shared: IconShareOutlineRegular, trash: IconTrashOutlineRegular }
+type VersionRow = { id: string; versionNo: number; parseStatus: string; createdAt?: string }
+
+function versionWrittenAt(value: string | undefined) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return ''
+  const pad = (part: number) => String(part).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 function statusKey(status: string | null): LibraryKey {
   if (status === 'READY') return 'statusReady'
   if (status === 'FAILED') return 'statusFailed'
   if (status === 'PENDING' || status === 'QUEUED') return 'statusPending'
   if (status === 'PROCESSING' || status === 'PARSING') return 'statusProcessing'
   return 'statusDownloadOnly'
+}
+
+function filterLabel(filter: string): LibraryKey {
+  if (filter === 'ready') return 'statusReady'
+  if (filter === 'failed') return 'statusFailed'
+  if (filter === 'download') return 'statusDownloadOnly'
+  return 'allStatus'
+}
+
+function folderGone(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return message.includes('404') || message.includes('资料不存在')
+}
+
+function matchesFilter(item: LibraryChoice, filter: string): boolean {
+  if (filter === 'all') return true
+  if (filter === 'ready') return !choiceBlock(item).disabled
+  if (filter === 'failed') return item.parseStatus === 'FAILED'
+  return item.kind === 'FILE' && statusKey(item.parseStatus) === 'statusDownloadOnly'
 }
 
 /** Native Web/desktop library browser. Explicit save never uploads temporary chat attachments. */
@@ -59,6 +89,12 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [items, setItems] = useState<readonly LibraryChoice[]>([])
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [toast, setToast] = useState<{ seq: number; text: string } | null>(null)
+  const toastSeq = useRef(0)
+  const showToast = (text: string) => {
+    toastSeq.current += 1
+    setToast({ seq: toastSeq.current, text })
+  }
   const [busy, setBusy] = useState(false)
   const [blocked, setBlocked] = useState<string | null>(null)
   const [tenants, setTenants] = useState<readonly { id: string; name: string }[]>([])
@@ -69,6 +105,8 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [uploadTarget, setUploadTarget] = useState<SaveTarget & { replacement?: LibraryChoice }>()
   const [revision, setRevision] = useState(0)
   const [edit, setEdit] = useState<Edit>()
+  const [purgeItem, setPurgeItem] = useState<LibraryChoice>()
+  const [scopeConfirm, setScopeConfirm] = useState<ScopeConfirm>()
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
   const [source, setSource] = useState<Source>()
@@ -117,7 +155,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       if (!control.signal.aborted && generation === previewGeneration.current) setPreviewLoading(false)
     }
   }, [origin, fetchImpl, t])
-  const [versions, setVersions] = useState<{ item: LibraryChoice; rows: readonly { id: string; versionNo: number; parseStatus: string }[] }>()
+  const [versions, setVersions] = useState<{ item: LibraryChoice; rows: readonly VersionRow[] }>()
   const [moveFolders, setMoveFolders] = useState<readonly LibraryChoice[]>([])
   const [movePath, setMovePath] = useState<readonly { id: string; name: string; scope?: string | undefined }[]>([])
   const parentId = path.at(-1)?.id ?? null
@@ -145,7 +183,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
         throw new Error(body.message ?? `切换企业失败 (${res.status})`)
       }
       closePreview(); setBlocked(null); setLimits(undefined); refresh()
-    } catch (e) { setError(e instanceof Error ? e.message : t('operationFailed')) }
+    } catch (e) { showToast(e instanceof Error ? e.message : t('operationFailed')) }
     finally { setSwitching(false) }
   }
   useEffect(() => { setPage(1) }, [view, query, parentId, filter])
@@ -183,6 +221,12 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
         setItems(next.items); setTotal(next.total); setParentScope(next.parentScope);
         if (parentId && next.breadcrumb.length) setPath(next.breadcrumb); setError('') }
     }).catch(e => { if (!control.signal.aborted) {
+      if (parentId && folderGone(e)) {
+        setPath(current => current.filter(part => part.id !== parentId))
+        if (path.length === 1) setParentScope(undefined)
+        setError('')
+        return
+      }
       if (e instanceof Error && /(?:401|403|409)/.test(e.message)) { setItems([]); closePreview(); setVersions(undefined) }
       setError(`${t('loadError')} ${e instanceof Error ? e.message : ''}`)
     } }).finally(() => { if (!control.signal.aborted) setLoading(false) })
@@ -193,7 +237,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     const control = new AbortController()
     void fetchLibraryItems(origin, 'mine', '', fetchImpl, control.signal, movePath.at(-1)?.id).then(next => {
       if (!control.signal.aborted) setMoveFolders(next.filter(x => x.kind === 'FOLDER' && x.nodeId !== edit.item?.nodeId))
-    }).catch(e => { if (!control.signal.aborted) setError(String(e)) })
+    }).catch(e => { if (!control.signal.aborted) showToast(e instanceof Error ? e.message : String(e)) })
     return () => { control.abort() }
   }, [origin, fetchImpl, edit, movePath])
   useEffect(() => {
@@ -225,8 +269,8 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   }, [requested, origin, fetchImpl, t])
   const run = async (action: () => Promise<void>) => {
     if (busy) return
-    setBusy(true); setError(''); setNotice('')
-    try { await action() } catch (e) { setNotice(''); setError(e instanceof Error ? e.message : t('operationFailed')) }
+    setBusy(true); setNotice('')
+    try { await action() } catch (e) { setNotice(''); showToast(e instanceof Error ? e.message : t('operationFailed')) }
     finally { setBusy(false) }
   }
   const mutate = async (suffix: string, method: string, data?: unknown) => {
@@ -263,7 +307,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     else for (const item of chosen) await onUse(item)
     setNotice(t('added'))
   })
-  const visibleItems = items.filter(item => filter === 'all' || (filter === 'ready' ? !choiceBlock(item).disabled : filter === 'failed' ? item.parseStatus === 'FAILED' : item.kind === 'FILE' && statusKey(item.parseStatus) === 'statusDownloadOnly'))
+  const visibleItems = items.filter(item => matchesFilter(item, filter))
   const chooseView = (next: LibraryView) => {
     if (next !== view || next === 'recent') closePreview()
     if (next === 'mine' || next === 'shared') {
@@ -271,6 +315,15 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       setMountedRoots(roots => ({ ...roots, [next]: true }))
     }
     setView(next); setPath([]); setParentScope(undefined); setQuery(''); setFilter('all')
+  }
+  const leaveFolder = (nodeId: string) => {
+    setPath(current => {
+      const index = current.findIndex(part => part.id === nodeId)
+      if (index < 0) return current
+      const next = current.slice(0, index)
+      if (next.length === 0) setParentScope(undefined)
+      return next
+    })
   }
   const chooseFolder = (nextView: 'mine' | 'shared', next: readonly { id: string; name: string }[], item: LibraryChoice) => {
     closePreview()
@@ -289,18 +342,40 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     if (action === 'preview') { void openSource(item); return }
     if (action === 'rename' || action === 'move') { openEdit(action, item); return }
     if (action === 'replace') { setUploadTarget({ ...captureTarget(), replacement: item }); return }
+    if (action === 'purge') { setPurgeItem(item); return }
     void run(async () => {
       if (action === 'versions') {
         const result = await libraryRequest(origin, `nodes/${id}/versions`, 'GET', undefined, fetchImpl)
-        setVersions({ item, rows: Array.isArray(result) ? result : [] })
+        const rows = (Array.isArray(result) ? result : []) as VersionRow[]
+        setVersions({ item, rows: [...rows].sort((a, b) => b.versionNo - a.versionNo) })
       } else if (action === 'scope') {
         const scope = item.scope === 'ENTERPRISE' ? 'PRIVATE' : 'ENTERPRISE'
         const impact = await fetchLibraryScopeImpact(origin, item.nodeId, scope, fetchImpl)
-        if (window.confirm(t(scope === 'ENTERPRISE' ? 'confirmShareTree' : 'confirmUnshareTree').replace('{count}', String(impact.total)))) await mutate(`nodes/${id}/scope`, 'POST', { scope, confirmShare: scope === 'ENTERPRISE', confirmUnshare: scope === 'PRIVATE', expectedTreeRevision: impact.treeRevision })
-      } else if (action === 'purge') {
-        if (window.confirm(t('confirmPurge'))) await mutate(`nodes/${id}`, 'DELETE')
+        setScopeConfirm({ nodeId: item.nodeId, scope, total: impact.total, treeRevision: impact.treeRevision })
       } else if (action === 'retry') await mutate(`nodes/${id}/retry-parse`, 'POST')
-      else if (action === 'restore' || action === 'recycle') await mutate(`nodes/${id}/${action}`, 'POST')
+      else if (action === 'restore' || action === 'recycle') { leaveFolder(item.nodeId); await mutate(`nodes/${id}/${action}`, 'POST') }
+    })
+  }
+  const confirmPurge = () => {
+    const item = purgeItem
+    if (!item) return
+    setPurgeItem(undefined)
+    void run(async () => {
+      leaveFolder(item.nodeId)
+      await mutate(`nodes/${encodeURIComponent(item.nodeId)}`, 'DELETE')
+    })
+  }
+  const confirmScope = () => {
+    const pending = scopeConfirm
+    if (!pending) return
+    setScopeConfirm(undefined)
+    void run(async () => {
+      if ('moveParentId' in pending) {
+        await mutate(`nodes/${pending.nodeId}/move`, 'POST', { parentId: pending.moveParentId ?? null, confirmShare: true, expectedTreeRevision: pending.treeRevision })
+        setEdit(undefined)
+      } else {
+        await mutate(`nodes/${encodeURIComponent(pending.nodeId)}/scope`, 'POST', { scope: pending.scope, confirmShare: pending.scope === 'ENTERPRISE', confirmUnshare: pending.scope === 'PRIVATE', expectedTreeRevision: pending.treeRevision })
+      }
     })
   }
   const saveEdit = () => { if (edit) void run(async () => {
@@ -308,7 +383,10 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       let options: { confirmShare?: boolean; expectedTreeRevision?: string } = {}
       if (movePath.at(-1)?.scope === 'ENTERPRISE') {
         const impact = await fetchLibraryScopeImpact(origin, edit.item.nodeId, 'ENTERPRISE', fetchImpl)
-        if (impact.changed && !window.confirm(t('confirmShareTree').replace('{count}', String(impact.total)))) return
+        if (impact.changed) {
+          setScopeConfirm({ nodeId: edit.item.nodeId, scope: 'ENTERPRISE', total: impact.total, treeRevision: impact.treeRevision, moveParentId: movePath.at(-1)?.id ?? null })
+          return
+        }
         options = { confirmShare: true, expectedTreeRevision: impact.treeRevision }
       }
       await mutate(`nodes/${edit.item.nodeId}/move`, 'POST', { parentId: movePath.at(-1)?.id ?? null, ...options })
@@ -328,23 +406,29 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     if (action === 'upload') setUploadTarget(target)
     else openEdit(action, undefined, target)
   }
-  const flatList = <div className={css.flatList}>
+  const flatList = <div className={view === 'trash' ? css.treeRoot : css.flatList}>
     {loading && <p role="status">{t('loading')}</p>}
     {!loading && visibleItems.length === 0 && <p className={css.treeEmpty}>{query || filter !== 'all' ? t('noResults') : t('empty')}</p>}
-    {visibleItems.map(item => <div key={item.nodeId} className={css.flatRow}>
+    {visibleItems.map(item => view === 'trash' ? <div key={item.nodeId} className={css.treeRow} data-actions>
+      <span className={css.treeToggleSpace} aria-hidden="true" />
+      <button type="button" className={css.treeName} disabled title={item.name}>
+        {item.kind === 'FOLDER' ? <IconFolderCloseRegular size={14} /> : item.kind === 'LINK' ? <IconLinkOutlineRegular size={14} /> : <FileTypeIcon path={item.name} size={14} />}
+        <span>{item.name}</span>
+      </button>
+      <span className={css.treeActions}><RowActions item={item} view={view} busy={busy} t={t} onAction={rowAction} /></span>
+    </div> : <div key={item.nodeId} className={css.flatRow}>
       <FileTypeIcon path={item.name} size={16} />
-      <button type="button" className={css.treeName} disabled={view === 'trash'} title={item.name} onClick={() => {
+      <button type="button" className={css.treeName} title={item.name} onClick={() => {
         if (item.kind === 'FOLDER') { chooseFolder(view === 'shared' ? 'shared' : 'mine', [...path, { id: item.nodeId, name: item.name }], item) }
         else void openSource(item)
       }}><span>{item.name}</span></button>
       <span className={css.treeActions}>
-        {view !== 'trash' && item.kind === 'FOLDER' && item.canManage && <LibraryCreateMenu name={item.name} disabled={busy} t={t}
+        {item.kind === 'FOLDER' && item.canManage && <LibraryCreateMenu name={item.name} disabled={busy} t={t}
           onCreate={action => { beginCreate(action, view === 'shared' ? 'shared' : 'mine', [...path, { id: item.nodeId, name: item.name }], {
             parentId: item.nodeId, scope: item.scope === 'ENTERPRISE' ? 'ENTERPRISE' : 'PRIVATE', name: item.name,
           }) }} />}
         <RowActions item={item} view={view} busy={busy} t={t} onAction={rowAction} />
       </span>
-      {item.parseReason && <small className={css.flatReason}>{item.parseReason}</small>}
     </div>)}
     {total > 20 && <nav className={css.pagination} aria-label={t('browse')}>
       <Button size="sm" disabled={loading || page <= 1} onClick={() => { setPage(n => n - 1) }}>{t('previousPage')}</Button>
@@ -357,11 +441,15 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       <h2 className={css.navTitle}>{t('panel')}</h2>
       <div className={css.toolbar}>
         <div className={css.search}><IconSearchOutlineRegular size={18} /><Input type="search" aria-label={t('searchPlaceholder')} value={query} placeholder={t('searchPlaceholder')} onChange={e => { setQuery(e.target.value) }} /></div>
-        <Menu open={filterOpen} onClose={() => { setFilterOpen(false) }} portal compact minWidthFromAnchor autoFocus align="end" selectedId={filter} listClassName={css.filterList}
-          items={[{ id: 'all', label: t('allStatus') }, { id: 'ready', label: t('statusReady') }, { id: 'failed', label: t('statusFailed') }, { id: 'download', label: t('statusDownloadOnly') }]}
-          onSelect={id => { setFilter(id); setFilterOpen(false) }}
-          anchor={<Button variant="outline" className={css.filterButton} aria-label={t('filterStatus')} aria-haspopup="menu" aria-expanded={filterOpen} onClick={() => { setFilterOpen(!filterOpen) }} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setFilterOpen(true) } }}><span>{t(filter === 'ready' ? 'statusReady' : filter === 'failed' ? 'statusFailed' : filter === 'download' ? 'statusDownloadOnly' : 'allStatus')}</span><IconChevronDownOutlineRegular size={14} /></Button>} />
-        <Button variant="outline" disabled={busy || loading} onClick={refresh}>{t('refresh')}</Button>
+        <div className={css.toolbarTools}>
+          <Menu open={filterOpen} onClose={() => { setFilterOpen(false) }} portal minWidthFromAnchor autoFocus align="end" selectedId={filter} listClassName={css.filterList}
+            items={[{ id: 'all', label: t('allStatus') }, { id: 'ready', label: t('statusReady') }, { id: 'failed', label: t('statusFailed') }, { id: 'download', label: t('statusDownloadOnly') }]}
+            onSelect={id => { setFilter(id); setFilterOpen(false) }}
+            anchor={<Button variant="outline" className={css.filterButton} aria-label={t('filterStatus')} aria-haspopup="menu" aria-expanded={filterOpen} onClick={() => { setFilterOpen(!filterOpen) }} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setFilterOpen(true) } }}><span>{t(filterLabel(filter))}</span><IconChevronDownOutlineRegular size={14} /></Button>} />
+          <Tooltip label={t('refresh')}>
+            <Button variant="outline" className={css.refresh} aria-label={t('refresh')} disabled={busy || loading} onClick={refresh} icon={<IconRefreshOutlineRegular size={16} />} />
+          </Tooltip>
+        </div>
       </div>
 
       {blocked !== null && <div role="alert" className={css.error}>{blocked}</div>}
@@ -382,7 +470,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
             </div>
             {treeView && mountedRoots[treeView] && blocked === null && <div id={`enterprise-library-${treeView}-tree`} className={css.treeRoot}
               hidden={!expandedRoots[treeView] || (view === treeView && (query !== '' || filter !== 'all'))}>
-              <LibraryTree key={revision} view={treeView} t={t} origin={origin} fetchImpl={fetchImpl} path={[]}
+              <LibraryTree revision={revision} view={treeView} t={t} origin={origin} fetchImpl={fetchImpl} path={[]}
                 selectedId={view === treeView ? source?.nodeId ?? parentId ?? undefined : undefined}
                 onFolder={(next, item) => { chooseFolder(treeView, next, item) }} onFile={item => { if (view !== treeView) { setView(treeView); setPath([]); setQuery('') } void openSource(item) }}
                 onCreate={(action, next, item) => { beginCreate(action, treeView, next, { parentId: item.nodeId, scope: item.scope === 'ENTERPRISE' ? 'ENTERPRISE' : 'PRIVATE', name: item.name }) }} onAction={(action, item) => { if (view !== treeView) { closePreview(); setView(treeView); setPath([]); setQuery('') } rowAction(action, item) }} onDenied={closePreview} busy={busy} />
@@ -393,11 +481,6 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       </nav>
       {error && <div role="alert" className={css.error}><span>{error}</span><Button size="sm" onClick={refresh}>{t('refresh')}</Button></div>}
       {notice && <p role="status" className={css.notice}>{notice}</p>}
-      <nav aria-label={t('root')} className={css.saveLocation}>
-        <span>{t('saveTo')} {captureTarget().name}</span>
-        {path.length > 0 && <Button size="sm" onClick={() => { setPath([]); setParentScope(undefined) }}>{t('root')}</Button>}
-      </nav>
-      <p className={css.navHint}>{t('localDraft')}</p>
     </aside>
     <div className={css.resizeHandle} data-resizing={sidebarResize.resizing || undefined} aria-label={t('resizeNavigation')} {...sidebarResize.separatorProps} />
     <main className={css.previewPane} aria-label={t('preview')} aria-busy={previewLoading}>
@@ -424,17 +507,19 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
         <IconFolderCloseRegular size={40} /><h2>{t('selectPreview')}</h2><p>{t('selectPreviewHint')}</p>
       </div>}
     </main>
-    {uploadTarget && <LibraryUploadDialog t={t} accept={limits?.allowedExtensions.join(',') ?? ACCEPT} single={!!uploadTarget.replacement} hint={uploadTarget.replacement ? undefined : `${t('saveTo')} ${uploadTarget.name} · ${t(uploadTarget.scope === 'ENTERPRISE' ? 'sharedSaveHint' : 'privateSaveHint')}`} maxFileBytes={limits?.maxFileBytes} loadLimits={loadUploadLimits} uploadFile={uploadOne} onSaved={revealCreated} onClose={() => { setUploadTarget(undefined) }} />}
-    <Modal open={edit !== undefined} onClose={() => { if (!busy) setEdit(undefined) }} title={edit ? t(edit.kind) : ''} closeLabel={t('cancel')} className={css.dialog ?? ''} contentClassName={css.dialogContent ?? ''} footer={<><Button variant="outline" disabled={busy} onClick={() => { setEdit(undefined) }}>{t('cancel')}</Button><Button variant="primary" disabled={busy || (edit?.kind !== 'move' && !name.trim()) || (edit?.kind === 'link' && !url.trim())} onClick={saveEdit}>{t('save')}</Button></>}>
-      {edit?.target && <><p>{t('saveTo')} {edit.target.name}</p><p>{t(edit.target.scope === 'ENTERPRISE' ? 'sharedSaveHint' : 'privateSaveHint')}</p></>}
+    {uploadTarget && <LibraryUploadDialog t={t} accept={limits?.allowedExtensions.join(',') ?? ACCEPT} single={!!uploadTarget.replacement} maxFileBytes={limits?.maxFileBytes} loadLimits={loadUploadLimits} uploadFile={uploadOne} onSaved={revealCreated} onClose={() => { setUploadTarget(undefined) }} />}
+    <Modal open={purgeItem !== undefined} onClose={() => { if (!busy) setPurgeItem(undefined) }} title={t('purge')} closeLabel={t('cancel')} className={`${css.dialog ?? ''} ${css.compactDialog ?? ''}`} footer={<><Button variant="outline" disabled={busy} onClick={() => { setPurgeItem(undefined) }}>{t('cancel')}</Button><Button variant="primary" disabled={busy} onClick={confirmPurge}>{t('purge')}</Button></>}><p className={css.confirmCopy}>{t('confirmPurge')}</p></Modal>
+    <Modal open={scopeConfirm !== undefined} onClose={() => { if (!busy) setScopeConfirm(undefined) }} title={scopeConfirm ? t(scopeConfirm.scope === 'ENTERPRISE' ? 'share' : 'unshare') : ''} closeLabel={t('cancel')} className={`${css.dialog ?? ''} ${css.compactDialog ?? ''}`} footer={<><Button variant="outline" disabled={busy} onClick={() => { setScopeConfirm(undefined) }}>{t('cancel')}</Button><Button variant="primary" disabled={busy || scopeConfirm === undefined} onClick={confirmScope}>{scopeConfirm ? t(scopeConfirm.scope === 'ENTERPRISE' ? 'share' : 'unshare') : ''}</Button></>}><p className={css.confirmCopy}>{scopeConfirm ? t(scopeConfirm.scope === 'ENTERPRISE' ? 'confirmShareTree' : 'confirmUnshareTree').replace('{count}', String(scopeConfirm.total)) : ''}</p></Modal>
+    <Modal open={edit !== undefined} onClose={() => { if (!busy) setEdit(undefined) }} title={edit ? t(edit.kind) : ''} closeLabel={t('cancel')} className={`${css.dialog ?? ''} ${edit?.kind === 'folder' || edit?.kind === 'link' ? css.compactDialog : ''}`} contentClassName={css.dialogContent ?? ''} footer={<><Button variant="outline" disabled={busy} onClick={() => { setEdit(undefined) }}>{t('cancel')}</Button><Button variant="primary" disabled={busy || (edit?.kind !== 'move' && !name.trim()) || (edit?.kind === 'link' && !url.trim())} onClick={saveEdit}>{t('save')}</Button></>}>
+      {edit?.target && <div className={css.saveTarget}><p><span>{t('saveTo')}</span> {edit.target.name}</p><p>{t(edit.target.scope === 'ENTERPRISE' ? 'sharedSaveHint' : 'privateSaveHint')}</p></div>}
       {edit?.kind === 'move' ? <div className={css.folderPicker}>
         <p>{t('moveShareHint')}</p><p>{t('root')} / {movePath.map(x => x.name).join(' / ')}</p><Button variant="outline" disabled={!movePath.length || busy} onClick={() => { setMovePath(movePath.slice(0, -1)) }}>{t('back')}</Button>
         {moveFolders.map(folder => <Button key={folder.nodeId} icon={<IconFolderCloseRegular size={18} />} onClick={() => { setMovePath([...movePath, { id: folder.nodeId, name: folder.name, scope: folder.scope }]) }}>{folder.name}</Button>)}
-      </div> : <div className={css.form}><label>{t('name')}<Input data-modal-autofocus value={name} onChange={e => { setName(e.target.value) }} /></label>{edit?.kind === 'link' && <label>{t('url')}<Input value={url} onChange={e => { setUrl(e.target.value) }} /></label>}</div>}
-      {error && <p role="alert" className={css.error}>{error}</p>}
+      </div> : <div className={css.form}><label>{t('name')}<Input data-modal-autofocus value={name} onChange={e => { setName(e.target.value) }} /></label>{edit?.kind === 'link' && <div className={css.field}><label>{t('url')}<Input value={url} onChange={e => { setUrl(e.target.value) }} /></label><span className={css.fieldHint}>{t('urlHint')}</span></div>}</div>}
     </Modal>
+    {toast !== null && <Toast key={toast.seq} text={toast.text} onDone={() => { setToast(current => current?.seq === toast.seq ? null : current) }} />}
     <Modal open={versions !== undefined} onClose={() => { setVersions(undefined) }} title={`${versions?.item.name ?? ''} · ${t('versions')}`} closeLabel={t('cancel')} className={css.dialog ?? ''} contentClassName={css.dialogContent ?? ''} footer={<Button variant="outline" onClick={() => { setVersions(undefined) }}>{t('close')}</Button>}>
-      <div className={css.versionList}>{versions?.rows.map(version => <div key={version.id}><span>v{version.versionNo}</span><Tag>{t(statusKey(version.parseStatus))}</Tag><Button size="sm" disabled={busy} onClick={() => { if (versions) void run(async () => { await openSource(versions.item, version.id); setVersions(undefined) }) }}>{t('preview')}</Button><Button size="sm" onClick={() => { if (versions) downloadVersion(versions.item, version.id) }}>{t('download')}</Button></div>)}</div>
+      <div className={css.versionList}>{versions?.rows.map(version => <div key={version.id} className={css.versionRow}><span>v{version.versionNo}</span>{versionWrittenAt(version.createdAt) ? <time className={css.versionWhen} dateTime={version.createdAt}>{versionWrittenAt(version.createdAt)}</time> : <span />}<span className={css.versionStatus}><Tag>{t(statusKey(version.parseStatus))}</Tag></span><Button size="sm" disabled={busy} onClick={() => { if (versions) void run(async () => { await openSource(versions.item, version.id); setVersions(undefined) }) }}>{t('preview')}</Button><Button size="sm" onClick={() => { if (versions) downloadVersion(versions.item, version.id) }}>{t('download')}</Button></div>)}</div>
     </Modal>
 
   </section>

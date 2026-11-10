@@ -159,9 +159,17 @@ export class GrantCustodyDto {
   reason!: string;
 }
 
+export class SearchQuery {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  q!: string;
+}
+
 export class ListQuery {
-  @IsOptional() @IsIn(['all', 'ready', 'failed', 'download'])
-  status?: 'all' | 'ready' | 'failed' | 'download';
+  @IsOptional() @IsIn(['all', 'ready', 'failed', 'download', 'processing'])
+  status?: 'all' | 'ready' | 'failed' | 'download' | 'processing';
+
   @IsOptional() @Type(() => Number) @IsInt() @Min(1)
   page?: number;
 
@@ -174,8 +182,8 @@ export class ListQuery {
   flat?: '1';
 
   @IsOptional()
-  @IsIn(['recent', 'mine', 'shared', 'trash'])
-  view?: 'recent' | 'mine' | 'shared' | 'trash';
+  @IsIn(['recent', 'mine', 'shared', 'trash', 'members'])
+  view?: 'recent' | 'mine' | 'shared' | 'trash' | 'members';
 
   @IsOptional()
   @IsString()
@@ -185,6 +193,16 @@ export class ListQuery {
   @IsString()
   @MaxLength(180)
   q?: string;
+
+  /** 成员资料进入某一个人时使用。其他视图忽略。 */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  owner?: string;
+
+  @IsOptional()
+  @IsIn(['folder', 'link', 'image', 'video', 'pdf', 'word', 'excel', 'ppt', 'text', 'other', 'content'])
+  fileType?: string;
 }
 
 export const libraryUploadLimit = libraryLimitsFromEnv().maxFileBytes;

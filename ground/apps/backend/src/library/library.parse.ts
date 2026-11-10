@@ -4,26 +4,47 @@ import { PDFParse } from 'pdf-parse';
 import { Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileExtension } from './library.files';
+import { convertLegacyOffice } from './library.office-convert';
+import { presentationText, workbookText } from './library.office-text';
+import { recognizeImageText } from './library.ocr';
 import type { ParseChunk, ParseResult } from './library.types';
 
 const MAX_EXTRACT_CHARS = 200_000;
 const MAX_XML_BYTES = 16 * 1024 * 1024;
 const CHUNK_CHARS = 1_500;
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif'];
+const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov'];
+const VIDEO_REASON = '仅保存：不做视频理解，不能供 AI 引用';
+const IMAGE_REASON = '没有读出可引用的文字，仅保存原图';
 const DOWNLOAD_REASON: Record<string, string> = {
   '.zip': '压缩包只供下载，不自动解压，也不能用于问答',
-  '.ppt': '演示文稿本期仅下载', '.pptx': '演示文稿本期仅下载',
-  '.xls': '表格本期仅下载，不做精确计算', '.xlsx': '表格本期仅下载，不做精确计算',
-  '.doc': '老版 Word 本期仅下载',
 };
 
 /** Parse supported documents without executing HTML, Office macros or ZIP contents. */
 export async function parseLibraryBytes(name: string, bytes: Buffer): Promise<ParseResult> {
   const ext = fileExtension(name);
   try {
-    if (['.png','.jpg','.jpeg','.gif','.webp','.avif','.mp4','.webm','.mov'].includes(ext)) return downloadOnly('仅保存：支持预览或下载，不进行图片识别、OCR 或视频理解，不能供 AI 引用');
+    if (VIDEO_EXTENSIONS.includes(ext)) return downloadOnly(VIDEO_REASON);
+    if (IMAGE_EXTENSIONS.includes(ext)) {
+      const text = await recognizeImageText(name, bytes);
+      return text ? textChunks(text) : downloadOnly(IMAGE_REASON);
+    }
     if (DOWNLOAD_REASON[ext]) return downloadOnly(DOWNLOAD_REASON[ext]);
-    if (ext === '.pdf') return await parsePdf(bytes);
+    if (ext === '.pdf') {
+      const parsed = await parsePdf(bytes);
+      if (parsed.status !== 'DOWNLOAD_ONLY') return parsed;
+      const text = await recognizeImageText(name, bytes);
+      return text ? textChunks(text) : parsed;
+    }
     if (ext === '.docx') return await parseDocx(bytes);
+    if (ext === '.pptx') return textChunks(await presentationText(bytes));
+    if (ext === '.xlsx') return textChunks(await workbookText(bytes));
+    if (ext === '.doc' || ext === '.ppt' || ext === '.xls') {
+      const converted = await convertLegacyOffice(bytes, ext);
+      if (!converted) return downloadOnly('这台机器没有 Office 转换程序，老版文件仅下载');
+      const next = ext === '.doc' ? '.docx' : ext === '.ppt' ? '.pptx' : '.xlsx';
+      return parseLibraryBytes(`converted${next}`, converted);
+    }
     if (ext === '.html' || ext === '.htm') return textChunks(htmlToText(bytes.toString('utf8')));
     if (['.md', '.markdown', '.txt', '.csv'].includes(ext)) return textChunks(bytes.toString('utf8'));
     return downloadOnly('该类型本期不能解析');

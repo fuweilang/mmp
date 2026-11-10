@@ -1,9 +1,18 @@
 /* Only library dialogs opt in. Teleported Element Plus nodes need unscoped, namespaced rules. */
+.el-overlay-dialog:has(.library-modal) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
 .el-dialog.library-modal {
   --library-dialog-gap: 24px;
   display: flex;
   background: var(--el-bg-color, #fff);
+  flex: 0 0 auto;
   flex-direction: column;
+  align-self: center;
+  width: var(--el-dialog-width, 420px);
   max-width: calc(100vw - var(--library-dialog-gap) * 2);
   max-height: calc(100vh - var(--library-dialog-gap) * 2);
   max-height: calc(100dvh - var(--library-dialog-gap) * 2);
@@ -18,10 +27,20 @@
 .library-modal .el-dialog__body { min-height: 0; overflow-y: auto; overflow-wrap: anywhere; overscroll-behavior: contain; }
 .library-modal .el-dialog__footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 .library-modal .el-dialog__footer .el-button + .el-button { margin-left: 0; }
+.el-overlay-message-box:has(.library-message-box) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 100%;
+}
 .el-message-box.library-message-box {
   --library-dialog-gap: 24px;
   display: inline-flex;
+  flex: 0 0 auto;
   flex-direction: column;
+  align-self: center;
+  width: 420px;
   max-width: calc(100vw - var(--library-dialog-gap) * 2);
   max-height: calc(100vh - var(--library-dialog-gap) * 2);
   max-height: calc(100dvh - var(--library-dialog-gap) * 2);

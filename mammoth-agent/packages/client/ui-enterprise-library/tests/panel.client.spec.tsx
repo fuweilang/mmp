@@ -238,7 +238,7 @@ describe('library panel', () => {
     fireEvent.click(screen.getByRole('button', { name: `${zh.new} · ${zh.shared}` }))
     fireEvent.click(await screen.findByRole('menuitem', { name: zh.folder }))
     const dialog = await screen.findByRole('dialog', { name: zh.folder })
-    expect(within(dialog).getByText('本企业成员可见；新建或上传的内容继承此范围。')).toBeTruthy()
+    expect(within(dialog).getByText(zh.sharedSaveHint)).toBeTruthy()
     fireEvent.change(within(dialog).getByRole('textbox', { name: zh.name }), { target: { value: '共享新目录' } })
     fireEvent.click(within(dialog).getByRole('button', { name: zh.save }))
     await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/folders', expect.objectContaining({ body: JSON.stringify({ name: '共享新目录', parentId: null, scope: 'ENTERPRISE', confirmShare: true }) })))
@@ -247,7 +247,7 @@ describe('library panel', () => {
   })
 
   it('confirms the server subtree count and sends its revision when sharing a folder', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const confirm = vi.spyOn(window, 'confirm')
     const treeRevision = 'a'.repeat(64)
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.includes('/scope-impact')) return Response.json({ total: 4, changed: 4, treeRevision })
@@ -258,7 +258,10 @@ describe('library panel', () => {
     await listing().findByRole('button', { name: '已有目录' })
     fireEvent.click(listing().getByRole('button', { name: `${zh.more} · 已有目录` }))
     fireEvent.click(await screen.findByRole('menuitem', { name: zh.share }))
-    await waitFor(() => expect(confirm).toHaveBeenCalledWith(expect.stringContaining('4')))
+    const dialog = await screen.findByRole('dialog', { name: zh.share })
+    expect(within(dialog).getByText(zh.confirmShareTree.replace('{count}', '4'))).toBeTruthy()
+    expect(confirm).not.toHaveBeenCalled()
+    fireEvent.click(within(dialog).getByRole('button', { name: zh.share }))
     await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/nodes/folder/scope', expect.objectContaining({ body: JSON.stringify({ scope: 'ENTERPRISE', confirmShare: true, confirmUnshare: false, expectedTreeRevision: treeRevision }) })))
     confirm.mockRestore()
   })
@@ -271,6 +274,19 @@ describe('library panel', () => {
     fireEvent.click(await listing().findByRole('button', { name: '失败.txt' }))
     await preview().findByRole('heading', { name: '失败.txt' })
     expect(screen.getByText('无法提取文字，请重试解析')).toBeTruthy()
+  })
+
+  it('keeps the parse reason in the preview and off the recent list', async () => {
+    const reason = '仅保存：支持预览或下载'
+    const fetchImpl = vi.fn(async (url: string) => url.includes('/preview?')
+      ? Response.json({ text: null, parseReason: reason, previewKind: 'image' })
+      : Response.json({ items: [{ id: 'pic', name: '333.jpg', kind: 'FILE', currentVersion: { id: 'vp', versionNo: 1, parseStatus: 'DOWNLOAD_ONLY', parseReason: reason } }] }))
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('button', { name: zh.recent }))
+    await listing().findByRole('button', { name: '333.jpg' })
+    expect(screen.queryByText(reason)).toBeNull()
+    fireEvent.click(listing().getByRole('button', { name: '333.jpg' }))
+    expect(await preview().findByText(reason)).toBeTruthy()
   })
 
   it('rechecks link preview authorization instead of displaying a cached private URL', async () => {
@@ -365,7 +381,8 @@ describe('t188 lazy tree, media and upload feedback', () => {
     expect(nav.getByRole('button', { name: '根文件.md' })).toBeTruthy();
     fireEvent.click(nav.getByRole('button', { name: '项目文件夹' }));
     await listing().findByRole('button', { name: '子文件.md' });
-    expect(within(view.container.querySelector('aside')!).getByRole('navigation', { name: zh.root })).toBeTruthy();
+    expect(view.container.textContent).not.toContain('本地文件在明确保存之前不会进入资料库');
+    expect(view.container.textContent).not.toContain(zh.saveTo);
   });
   it('stops repeated ancestor ids rather than recursively fetching a corrupt cycle', async () => {
     const fetchImpl = vi.fn(async () => Response.json({ items: [{ id: 'loop', kind: 'FOLDER', name: '循环目录' }], total: 1 }));
@@ -405,8 +422,7 @@ describe('t188 lazy tree, media and upload feedback', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: zh.upload }));
     fireEvent.change(screen.getByLabelText(zh.uploadChoose, { selector: 'input' }), { target: { files: [new File(['fixture'], '新增.md')] } });
     fireEvent.click(screen.getByRole('button', { name: zh.uploadStart }));
-    await screen.findByText(zh.uploadSuccess);
-    fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: zh.close }).at(-1)!);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: zh.upload })).toBeNull());
     await listing().findByRole('button', { name: '新增.md' });
     expect(screen.getByRole('button', { name: zh.shared }).getAttribute('aria-current')).toBe('page');
     expect(fetchImpl.mock.calls.some(([url]) => url.includes('/scope'))).toBe(false);
@@ -481,6 +497,71 @@ describe('t190 direct mine root navigation', () => {
     fireEvent.click(nav.getByRole('button', { name: zh.mine }))
     expect(nav.getByRole('button', { name: 'Apple内.md' })).toBeTruthy();
   });
+  it('keeps open folders open after a library refresh', async () => {
+    const fetchImpl = vi.fn(async (url: string) => Response.json({ items: url.includes('parentId=apple') ? children : rootItems, total: url.includes('parentId=apple') ? 1 : 2 }));
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    const nav = within(view.container.querySelector('aside')!);
+    fireEvent.click(await nav.findByRole('button', { name: 'Apple' }));
+    await nav.findByRole('button', { name: 'Apple内.md' });
+    fireEvent.click(nav.getByRole('button', { name: zh.refresh }));
+    await waitFor(() => expect(fetchImpl.mock.calls.filter(([url]) => String(url).includes('parentId=apple')).length).toBeGreaterThan(1));
+    expect(nav.getByRole('button', { name: `${zh.toggleTree} · Apple` }).getAttribute('aria-expanded')).toBe('true');
+    expect(nav.getByRole('button', { name: 'Apple内.md' })).toBeTruthy();
+  });
+  it('indents recycled files under the trash heading and keeps the reason with the name', async () => {
+    const fetchImpl = vi.fn(async (url: string) => Response.json({ items: url.includes('view=trash') ? [{ id: 'sheet', name: '指标.xlsx', kind: 'FILE', currentVersion: { id: 'vs', versionNo: 1, parseStatus: 'DOWNLOAD_ONLY', parseReason: '表格本期仅下载' } }] : [], total: url.includes('view=trash') ? 1 : 0 }));
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    const nav = within(view.container.querySelector('aside')!);
+    fireEvent.click(await nav.findByRole('button', { name: zh.trash }));
+    const file = await nav.findByRole('button', { name: '指标.xlsx' });
+    expect(file.closest(`.${panelCss.treeRoot}`)).toBeTruthy();
+    expect(file.querySelector('small')).toBeNull();
+  });
+  it('leaves a recycled folder instead of reporting that its list is missing', async () => {
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST' && url.includes('/recycle')) return Response.json({ ok: true });
+      if (url.includes('parentId=aaa')) return Response.json({ message: '资料不存在' }, { status: 404 });
+      if (url.includes('parentId=apple')) return Response.json({ items: [{ id: 'aaa', kind: 'FOLDER', name: 'aaa', canManage: true }], total: 1 });
+      return Response.json({ items: [{ id: 'apple', kind: 'FOLDER', name: 'apple', canManage: true }], total: 1 });
+    });
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    const nav = within(view.container.querySelector('aside')!);
+    fireEvent.click(await nav.findByRole('button', { name: 'apple' }));
+    fireEvent.click(await nav.findByRole('button', { name: 'aaa' }));
+    fireEvent.click(nav.getByRole('button', { name: `${zh.more} · aaa` }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: zh.recycle }));
+    await waitFor(() => expect(fetchImpl.mock.calls.some(([url, init]) => String(url).includes('/recycle') && (init as RequestInit | undefined)?.method === 'POST')).toBe(true));
+    await waitFor(() => expect(view.container.querySelector('[role="alert"]')).toBeNull());
+    expect(view.container.textContent).toContain('apple');
+    expect(view.container.textContent).not.toContain('资料不存在');
+  });
+  it('shows a refused library action in a toast instead of the library footer', async () => {
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST' && String(url).includes('/recycle')) return Response.json({ message: '目录不为空' }, { status: 400 });
+      return Response.json({ items: [{ id: 'bbb', kind: 'FOLDER', name: 'bbb', canManage: true }], total: 1 });
+    });
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    const nav = within(view.container.querySelector('aside')!);
+    fireEvent.click(await nav.findByRole('button', { name: `${zh.more} · bbb` }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: zh.recycle }));
+    expect((await screen.findByRole('alert')).textContent).toContain('目录不为空');
+    expect(view.container.textContent).not.toContain('目录不为空');
+  });
+  it('confirms permanent delete in a dialog and then sends the delete', async () => {
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'DELETE') return Response.json({ ok: true });
+      return Response.json({ items: url.includes('view=trash') ? [{ id: 'aaa', kind: 'FOLDER', name: 'aaa', canManage: true }] : [], total: url.includes('view=trash') ? 1 : 0 });
+    });
+    const view = render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    const nav = within(view.container.querySelector('aside')!);
+    fireEvent.click(await nav.findByRole('button', { name: zh.trash }));
+    fireEvent.click(await nav.findByRole('button', { name: `${zh.more} · aaa` }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: zh.purge }));
+    const dialog = await screen.findByRole('dialog', { name: zh.purge });
+    expect(within(dialog).getByText(zh.confirmPurge)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: zh.purge }));
+    await waitFor(() => expect(fetchImpl.mock.calls.some(([url, init]) => (init as RequestInit | undefined)?.method === 'DELETE' && String(url).includes('/nodes/aaa'))).toBe(true));
+  });
   it('does not send a late subtree response into another category main list', async () => {
     let release: (value: Response) => void = () => {};
     const fetchImpl = vi.fn(async (url: string) => {
@@ -510,6 +591,8 @@ describe('t196 real primitive status menu', () => {
     const menu = await screen.findByRole('menu');
     expect(view.container.contains(menu)).toBe(false);
     expect(within(menu).getAllByRole('menuitem')).toHaveLength(4);
+    expect(within(menu).queryByRole('menuitem', { name: '处理中' })).toBeNull();
+    expect(within(menu).getByRole('menuitem', { name: zh.statusDownloadOnly })).toBeTruthy();
     expect(within(menu).getByRole('menuitem', { name: zh.allStatus }).querySelector('[data-icon=dsw-icon-check-outline-regular]')).toBeTruthy();
     fireEvent.click(within(menu).getByRole('menuitem', { name: zh.statusReady }));
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
@@ -538,6 +621,26 @@ describe('t196 real primitive status menu', () => {
     fireEvent.click(trigger); await screen.findByRole('menu');
     fireEvent.pointerDown(screen.getByRole('searchbox', { name: zh.searchPlaceholder }));
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+  });
+  it('keeps unfinished files out of the not-for-AI filter', async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ items: [
+      { id: 'wait', name: '等待.pdf', kind: 'FILE', currentVersion: { id: 'vw', versionNo: 1, parseStatus: 'PENDING' } },
+      { id: 'work', name: '解析.docx', kind: 'FILE', currentVersion: { id: 'vx', versionNo: 1, parseStatus: 'PROCESSING' } },
+      { id: 'pic', name: '图片.png', kind: 'FILE', currentVersion: { id: 'vp', versionNo: 1, parseStatus: 'DOWNLOAD_ONLY' } },
+    ] }));
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    await listing().findByRole('button', { name: '等待.pdf' });
+    expect(listing().getByRole('button', { name: '解析.docx' })).toBeTruthy();
+    expect(listing().getByRole('button', { name: '图片.png' })).toBeTruthy();
+    const trigger = screen.getByRole('button', { name: zh.filterStatus });
+    fireEvent.click(trigger);
+    fireEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: zh.statusDownloadOnly }));
+    await waitFor(() => {
+      expect(listing().getByRole('button', { name: '图片.png' })).toBeTruthy();
+      expect(listing().queryByRole('button', { name: '等待.pdf' })).toBeNull();
+      expect(listing().queryByRole('button', { name: '解析.docx' })).toBeNull();
+    });
+    expect(screen.getByRole('button', { name: zh.refresh }).textContent).toBe('');
   });
 });
 

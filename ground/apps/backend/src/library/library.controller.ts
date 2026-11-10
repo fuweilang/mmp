@@ -27,6 +27,7 @@ import { completeLibraryTurn } from './library.llm';
 import {
   AskDto,
   BatchDto,
+  SearchQuery,
   CreateFolderDto,
   CreateLinkDto,
   GrantCustodyDto,
@@ -68,6 +69,40 @@ export class LibraryController {
     return this.run(async () => this.library.config(await this.actor(user, tenantId)));
   }
 
+  @Get('search')
+  async search(
+    @CurrentUser() user: User,
+    @CurrentTenantId() tenantId: string | null,
+    @Query() query: SearchQuery,
+  ) {
+    const actor = await this.actor(user, tenantId);
+    return this.run(async () => this.library.searchQuotes(actor, query.q));
+  }
+
+  @Get('members')
+  async members(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null) {
+    const actor = await this.actor(user, tenantId);
+    if (!actor.isOrgAdmin || !actor.activeMember) throw new ForbiddenException('只有企业管理员可以查看成员资料');
+    return this.run(async () => {
+      const [rows, counts] = await Promise.all([
+        this.prisma.orgMember.findMany({
+          where: { tenantId: actor.tenantId },
+          include: { user: { select: { id: true, name: true, phone: true, status: true } } },
+          orderBy: { createdAt: 'asc' },
+        }),
+        this.library.ownerCounts(actor),
+      ]);
+      return {
+        members: rows.filter((row) => row.user.status === 'active').map((row) => ({
+          userId: row.user.id,
+          name: row.user.name,
+          phone: row.user.phone,
+          itemCount: counts[row.user.id] ?? 0,
+        })),
+      };
+    });
+  }
+
   @Get('items')
   async items(
     @CurrentUser() user: User,
@@ -75,7 +110,8 @@ export class LibraryController {
     @Query() query: ListQuery,
   ) {
     const actor = await this.actor(user, tenantId);
-    return this.run(async () => this.library.list(actor, query.view ?? 'mine', query.parentId ?? null, query.q, query.flat === '1', query.page, query.pageSize, query.status));
+    const view = query.view ?? 'mine';
+    return this.run(async () => this.library.list(actor, view, query.parentId ?? null, query.q, query.flat === '1', query.page, query.pageSize, query.status, query.fileType, view === 'members' ? query.owner : undefined));
   }
 
   @Post('folders')

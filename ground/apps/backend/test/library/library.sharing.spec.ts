@@ -76,16 +76,16 @@ describe('library sharing inheritance', () => {
     const own = await service.createFolder(owner, '自己的子项', root.id);
     const foreign = await service.createFolder(mate, '隐藏的他人资料');
     await store.updateNode(foreign.id, { parentId: root.id });
-    for (const who of [owner, admin]) {
-      await assert.rejects(service.setScope(who, root.id, 'ENTERPRISE', true), error => {
-        assert.equal((error as { code?: string }).code, 'FORBIDDEN');
-        assert.equal(String(error).includes('隐藏的他人资料'), false);
-        return true;
-      });
-    }
+    await assert.rejects(service.setScope(owner, root.id, 'ENTERPRISE', true), error => {
+      assert.equal((error as { code?: string }).code, 'FORBIDDEN');
+      assert.equal(String(error).includes('隐藏的他人资料'), false);
+      return true;
+    });
+    await service.setScope(admin, root.id, 'ENTERPRISE', true);
     assert.equal((await store.getNode(root.id))?.scope, 'ENTERPRISE');
     assert.equal((await store.getNode(own.id))?.scope, 'ENTERPRISE');
-    assert.equal((await store.getNode(foreign.id))?.scope, 'PRIVATE');
+    assert.equal((await store.getNode(foreign.id))?.scope, 'ENTERPRISE');
+    assert.equal((await store.getNode(foreign.id))?.ownerUserId, mate.userId);
   });
 
   it('rolls back all subtree changes if storage rejects one update', async () => {

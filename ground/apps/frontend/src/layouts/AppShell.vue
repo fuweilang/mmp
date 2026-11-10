@@ -151,8 +151,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type Component } from 'vue';
-import { RouterLink, useRoute, useRouter, type LocationQuery } from 'vue-router';
-import { consoleLibraryViews } from '../utils/libraryNavigation';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { consoleLibraryMenuTarget, consoleLibraryNav, consoleLibraryViews, memberLibraryView } from '../utils/libraryNavigation';
 import {
   BarChart3,
   Bot,
@@ -218,7 +218,8 @@ onMounted(async () => {
   }
 });
 
-const isConsoleLibraryPage = computed(() => consoleLibraryViews.some(child => child.path === route.path));
+const isConsoleLibraryPage = computed(() => consoleLibraryViews.some(child => child.path === route.path) || route.path === memberLibraryView.path);
+const libraryChildren = computed(() => consoleLibraryNav(session.value?.currentRole));
 const pageTitle = computed(() => (typeof route.meta.title === 'string' ? route.meta.title : '工作台'));
 const avatar = computed(() => (session.value?.user.name || '猛').slice(0, 1));
 const isPlatformArea = computed(() => route.path.startsWith('/admin'));
@@ -272,28 +273,25 @@ const platformItems: NavItem[] = [
 ];
 
 const navItems = computed(() => {
-  if (isPlatformArea.value) {
-    return platformItems.filter((item) => !item.perm || hasPermission(session.value, item.perm));
-  }
-  if (session.value?.user.isPlatformAdmin) return businessItems;
-  return businessItems.filter((item) => !item.perm || hasPermission(session.value, item.perm));
+  const items = isPlatformArea.value
+    ? platformItems.filter((item) => !item.perm || hasPermission(session.value, item.perm))
+    : session.value?.user.isPlatformAdmin
+      ? businessItems
+      : businessItems.filter((item) => !item.perm || hasPermission(session.value, item.perm));
+  return items.map((item) => item.path === '/console/library' ? { ...item, children: libraryChildren.value } : item);
 });
 
 // Expansion is navigation state only; the parent button never changes route/Layout.
 const libraryExpanded = ref(true);
-const libraryLocations = ref<Record<string, LocationQuery>>({});
 watch(() => route.fullPath, () => {
-  if (consoleLibraryViews.some(item => item.path === route.path)) {
-    libraryExpanded.value = true;
-    libraryLocations.value[route.path] = { ...route.query };
-  }
+  if (consoleLibraryViews.some(item => item.path === route.path) || route.path === memberLibraryView.path) libraryExpanded.value = true;
 }, { immediate: true });
 function toggleLibraryGroup() {
   if (isSidebarCollapsed.value) { isSidebarCollapsed.value = false; libraryExpanded.value = true; }
   else libraryExpanded.value = !libraryExpanded.value;
 }
 function libraryTarget(path: string) {
-  return { path, query: libraryLocations.value[path] ?? {} };
+  return consoleLibraryMenuTarget(path);
 }
 
 function isActive(path: string) {
@@ -320,7 +318,7 @@ async function onLogout() {
 }
 </script>
 <style scoped>
-.workspace.library-workspace { padding:0; background:#fff; }
+.workspace.library-workspace { background:#fff; display:flex; flex-direction:column; }
 .nav-group-trigger { align-items:center; display:flex; gap:10px; width:100%; height:44px; padding:0 18px; border:0; background:transparent; color:#667085; font:inherit; cursor:pointer; text-align:left; }
 .nav-group-trigger:hover { background:#EEF0F8; color:var(--app-primary-color); }
 .nav-group-active > .nav-group-trigger { color:var(--app-primary-color); }
