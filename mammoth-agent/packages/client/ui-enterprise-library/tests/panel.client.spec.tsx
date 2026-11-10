@@ -342,7 +342,7 @@ describe('library panel', () => {
   })
 
   it('shows an empty library and a search miss', async () => {
-    const fetchImpl = vi.fn(async () => Response.json({ items: [] }))
+    const fetchImpl = vi.fn(async (_url: string) => Response.json({ items: [] }))
     render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="http://ground.test" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     await waitFor(() => expect(listing().getByText(zh.empty)).toBeTruthy())
     expect(screen.queryByRole('heading', { name: zh.panel })).toBeNull()
@@ -355,7 +355,7 @@ describe('library panel', () => {
   })
 
   it('sends one catalog request for the finished phrase after typing pauses', async () => {
-    const fetchImpl = vi.fn(async () => Response.json({ items: [], total: 0 }))
+    const fetchImpl = vi.fn(async (_url: string) => Response.json({ items: [], total: 0 }))
     render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="http://ground.test" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: zh.searchPlaceholder }))
     const dialog = await screen.findByRole('dialog', { name: zh.finderTitle })

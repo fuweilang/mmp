@@ -21,7 +21,7 @@ type Props = {
   onAction?: (action: string, item: LibraryChoice) => void
   onDenied?: () => void
   /** Folder ids then the file id, from the root of this branch. Missing rows load the next page. */
-  revealIds?: readonly string[]
+  revealIds?: readonly string[] | undefined
   busy?: boolean
   /** Bumped after a library change. Open branches refetch without collapsing. */
   revision?: number

@@ -12,8 +12,8 @@ import css from './Input.module.css'
  * @returns wrapper span containing the native input; input attributes pass through.
  */
 export const Input = forwardRef<HTMLInputElement, {
-  icon?: ReactNode
-  className?: string
+  icon?: ReactNode | undefined
+  className?: string | undefined
 } & InputHTMLAttributes<HTMLInputElement>>(function Input({ icon, className, ...rest }, ref) {
   return (
     <span className={clsx(css.wrap, className)}>
