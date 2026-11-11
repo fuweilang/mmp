@@ -60,6 +60,12 @@ jobs:
       - name: Install dependencies
         run: corepack pnpm install --frozen-lockfile
 
+      # 客户端 tsconfig 会引用 ../ground/apps/backend/src/library，类型解析需要 ground 自己的
+      # node_modules（jszip/pdf-parse/fast-xml-parser/sharp）。只装依赖，不构建 Ground。
+      - name: Install Ground dependencies
+        working-directory: ground
+        run: corepack pnpm install --frozen-lockfile
+
       # .env.windows 被 .gitignore 忽略，CI 按需生成：身份与已发布 Mac 包一致，
       # 策略服务指向生产域名；未签名安装包不读取任何证书配置。
       - name: Write Windows packaging environment
