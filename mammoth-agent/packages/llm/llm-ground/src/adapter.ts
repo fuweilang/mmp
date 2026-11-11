@@ -1,4 +1,6 @@
 /** OpenAI-compatible Ground chat adapter. */
+import { Buffer } from 'node:buffer'
+import type { AttachmentStore, ImageAttachmentRef } from '@mammoth-ai/mmp-attachment'
 import { ACCOUNT_QUOTA_EXCEEDED_CODE, attributionHeaders, LlmAdapter, LlmError } from '@mammoth-ai/mmp-llm'
 import type {
   GenerateOptions,
@@ -11,7 +13,7 @@ import type { DeepSeekAccount } from '@mammoth-ai/mmp-deepseek-account'
 import type { SessionId } from '@mammoth-ai/mmp-session'
 import type { GroundOfficialAttribution } from './attribution.ts'
 import { chatCompletionsUrl, modelsUrl } from './config.ts'
-import { OpenAiSseTranslator, toOpenAiMessages, toOpenAiTools } from './openai-map.ts'
+import { OpenAiSseTranslator, toOpenAiMessages, toOpenAiTools, type GroundRequestImage } from './openai-map.ts'
 import { loggedFetch } from './http-log.ts'
 import { fitGroundChatCompletionsBody, resolveGroundChatBodyMaxBytes } from './body-budget.ts'
 
@@ -30,6 +32,8 @@ export interface GroundAdapterOptions {
   account: () => DeepSeekAccount | undefined
   /** Official version bound to the requesting Session, when this is an official Agent run. */
   officialFor?: (sessionId: SessionId) => GroundOfficialAttribution | undefined
+  /** Durable image bytes for vision requests. Text-only routes never read it. */
+  attachments?: () => AttachmentStore | undefined
 }
 
 async function readSseOrJsonError(response: Response): Promise<string> {
@@ -193,12 +197,53 @@ export class GroundLlmAdapter extends LlmAdapter {
     }
   }
 
+  override imageRequestTarget(_provider: string, _model: string, image: ImageAttachmentRef) {
+    const edge = Math.max(image.width, image.height, 1)
+    const scale = Math.min(1, 2048 / edge)
+    return {
+      width: Math.max(1, Math.round(image.width * scale)),
+      height: Math.max(1, Math.round(image.height * scale)),
+      maxBytes: Math.min(image.bytes, 4 * 1024 * 1024),
+    }
+  }
+
+  private async encodedImages(options: GenerateOptions): Promise<Map<string, GroundRequestImage>> {
+    const images = new Map<string, GroundRequestImage>()
+    const pending: ImageAttachmentRef[] = []
+    for (const message of options.messages) {
+      if (message.role !== 'user' && message.role !== 'tool') continue
+      for (const block of message.content) {
+        if (block.type !== 'image' || block.offloaded === true) continue
+        if (pending.some(item => item.attachmentId === block.attachment.attachmentId)) continue
+        pending.push(block.attachment)
+      }
+    }
+    if (pending.length === 0) return images
+    const store = this.options.attachments?.()
+    if (store === undefined) {
+      throw new LlmError('Image input requires the attachment store.', 'UNSUPPORTED_CONTENT')
+    }
+    for (const ref of pending) {
+      const version = await store.readImageRequest(
+        ref,
+        this.imageRequestTarget(options.provider, options.model, ref),
+        options.signal,
+      )
+      images.set(String(ref.attachmentId), {
+        mediaType: version.mediaType,
+        base64: Buffer.from(version.data).toString('base64'),
+      })
+    }
+    return images
+  }
+
   override async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     const resolved = await this.resolveModel(options.provider, options.model, options.signal)
     const token = await this.resolveToken()
+    const images = await this.encodedImages(options)
     const rawBody = {
       model: resolved.id,
-      messages: toOpenAiMessages(options),
+      messages: toOpenAiMessages(options, images),
       stream: true,
       stream_options: { include_usage: true },
       ...options.temperature === undefined ? {} : { temperature: options.temperature },

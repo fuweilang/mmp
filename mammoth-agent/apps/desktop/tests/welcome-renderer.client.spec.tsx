@@ -20,6 +20,8 @@ function mount(language = 'zh-CN', takeNotice = vi.fn<() => Promise<WelcomeNotic
     analyticsEnabled: async () => true,
     onAccountState: vi.fn((_listener: (state: AccountView) => void) => stopAccount),
     startSignIn: vi.fn(async (): Promise<AccountView> => ({ links: { usageUrl: 'http://localhost/usage', topUpUrl: 'http://localhost/top_up' }, status: 'signed-out', attempt: null })),
+    signInWithPassword: vi.fn(async () => ({ ok: true as const })),
+    registerWithPassword: vi.fn(async () => ({ ok: true as const })),
     cancelSignIn: vi.fn(async (): Promise<AccountView> => ({ links: { usageUrl: 'http://localhost/usage', topUpUrl: 'http://localhost/top_up' }, status: 'signed-out', attempt: null })),
     copySignInLink: vi.fn(async () => undefined),
     ...resolveDesktopLocale(language),
@@ -27,12 +29,12 @@ function mount(language = 'zh-CN', takeNotice = vi.fn<() => Promise<WelcomeNotic
     skip: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   }
   const mounted = render(<Welcome api={api} />)
-  const input = document.querySelector('input')!
+  const input = document.querySelector<HTMLInputElement>('#key-input')!
   const button = (id: string) => document.querySelector<HTMLButtonElement>(id)!
   const enterKey = (value: string) => {
     fireEvent.change(input, { target: { value } })
   }
-  const submit = () => fireEvent.submit(document.querySelector('form')!)
+  const submit = () => fireEvent.submit(document.querySelector('#key-form')!)
   const copy = () => {
     const heading = document.querySelector('main')!.getAttribute('aria-labelledby')!
     return [
@@ -192,18 +194,33 @@ it.each(['zh-CN', 'en'])('renders %s browser fallback and copies only the active
   expect(view.document.querySelector('main')!.classList.contains('waiting-page')).toBe(false)
 })
 
-it('keeps a newer account notification when the start response arrives late', async () => {
+it('submits the phone and password once and stays on the login page when the password is wrong', async () => {
   const view = mount()
-  const started = Promise.withResolvers<AccountView>()
-  view.api.startSignIn.mockReturnValueOnce(started.promise)
-  fireEvent.click(view.button('#sign-in'))
-  expect(view.button('#auth-cancel').disabled).toBe(true)
-  const state: AccountView = { status: 'signed-out', links: { usageUrl: '', topUpUrl: '' },
-    attempt: { id: 'attempt' as NonNullable<AccountView['attempt']>['id'], phase: 'expired' } }
-  act(() => { view.api.onAccountState.mock.calls[0]![0](state) })
-  await act(async () => { started.resolve({ ...state, attempt: { ...state.attempt!, phase: 'waiting-browser' } }); await started.promise })
-  expect(view.document.querySelector('#auth-status')!.textContent).toBe(view.api.messages.welcomeAuthExpired)
-  expect(view.button('#auth-retry').hidden).toBe(false)
+  fireEvent.change(view.document.querySelector('#login-phone')!, { target: { value: '13800138000' } })
+  fireEvent.change(view.document.querySelector('#login-password')!, { target: { value: 'secret' } })
+  view.api.signInWithPassword.mockResolvedValueOnce({ ok: false, reason: 'credentials' })
+  fireEvent.submit(view.document.querySelector('#login-form')!)
+  await vi.waitFor(() => { expect(view.document.querySelector('#login-error')!.textContent).toBe(view.api.messages.welcomeLoginFailed) })
+  expect(view.api.signInWithPassword).toHaveBeenCalledExactlyOnceWith('13800138000', 'secret')
+  expect(view.api.startSignIn).not.toHaveBeenCalled()
+  expect(view.document.querySelector<HTMLElement>('#login-form')!.hidden).toBe(false)
+})
+
+it('registers an enterprise in the client without opening a browser', async () => {
+  const view = mount()
+  fireEvent.click(view.document.querySelector('[role="tab"][aria-selected="false"]')!)
+  fireEvent.change(view.document.querySelector('#register-name')!, { target: { value: '张三' } })
+  fireEvent.change(view.document.querySelector('#login-phone')!, { target: { value: '13800138000' } })
+  fireEvent.change(view.document.querySelector('#register-enterprise')!, { target: { value: '小米' } })
+  fireEvent.change(view.document.querySelector('#register-slug')!, { target: { value: 'xiaomi' } })
+  fireEvent.change(view.document.querySelector('#login-password')!, { target: { value: 'secret' } })
+  fireEvent.submit(view.document.querySelector('#login-form')!)
+  await vi.waitFor(() => { expect(view.api.registerWithPassword).toHaveBeenCalledOnce() })
+  expect(view.api.registerWithPassword).toHaveBeenCalledWith({
+    name: '张三', phone: '13800138000', password: 'secret', enterpriseName: '小米', slug: 'xiaomi',
+  })
+  expect(view.api.signInWithPassword).not.toHaveBeenCalled()
+  expect(view.api.startSignIn).not.toHaveBeenCalled()
 })
 
 it('does not restore a copied-link status after leaving the waiting phase', async () => {
@@ -335,9 +352,10 @@ it('reports each return to the welcome entry once, including account cancellatio
   fireEvent.click(view.button('#api-key'))
   fireEvent.click(view.button('#back-to-login'))
   expect(view.api.analytics.mock.calls.map(([action]) => action)).toEqual(['auth_page_click', 'auth_page_view'])
-  const pending = Promise.withResolvers<AccountView>()
-  view.api.startSignIn.mockReturnValueOnce(pending.promise)
+  fireEvent.change(view.document.querySelector('#login-phone')!, { target: { value: '13800138000' } })
+  fireEvent.change(view.document.querySelector('#login-password')!, { target: { value: 'secret' } })
   fireEvent.click(view.button('#sign-in'))
-  await act(async () => { pending.resolve({ links: { usageUrl: 'http://localhost/usage', topUpUrl: 'http://localhost/top_up' }, status: 'signed-out', attempt: null }) })
-  expect(view.api.analytics.mock.calls.map(([action]) => action)).toEqual(['auth_page_click', 'auth_page_view', 'auth_page_click', 'auth_page_view'])
+  expect(view.api.analytics.mock.calls.map(([action]) => action)).toEqual(['auth_page_click', 'auth_page_view', 'auth_page_click'])
+  expect(view.api.startSignIn).not.toHaveBeenCalled()
+  expect(view.api.signInWithPassword).toHaveBeenCalledExactlyOnceWith('13800138000', 'secret')
 })

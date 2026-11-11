@@ -41,6 +41,32 @@ export class AuthService {
     return this.me(user, tenant.id);
   }
 
+  /** Desktop registration. The session JWT is returned; the browser cookie is not set. */
+  async clientRegister(
+    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string },
+    ip?: string,
+  ) {
+    const { user, tenant } = await this.createEnterpriseAccount(input);
+    await this.prisma.auditLog.create({
+      data: { userId: user.id, tenantId: tenant.id, action: 'client_register', ip },
+    });
+    return {
+      token: this.jwt.sign({ sub: user.id, tenantId: tenant.id }),
+      session: await this.me(user, tenant.id),
+    };
+  }
+
+  /** Record that this account has dismissed the one-time welcome. Idempotent. */
+  async markWelcomeSeen(user: User): Promise<{ welcomeSeen: true }> {
+    if (user.welcomeSeenAt == null) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { welcomeSeenAt: new Date() },
+      });
+    }
+    return { welcomeSeen: true };
+  }
+
   async provisionEnterpriseUser(
     actor: User,
     input: { name: string; phone: string; password: string; enterpriseName: string; slug: string },
@@ -122,6 +148,24 @@ export class AuthService {
   }
 
   async login(phone: string, password: string, res: Response, ip?: string) {
+    const session = await this.openSession(phone, password, ip, 'login');
+    this.setCookie(res, { sub: session.user.id, tenantId: session.tenantId });
+    return session.me;
+  }
+
+  /**
+   * Desktop password login. Returns the same 7-day session JWT the browser cookie carries,
+   * without writing that cookie, so Chrome keeps its own login.
+   */
+  async clientLogin(phone: string, password: string, ip?: string) {
+    const session = await this.openSession(phone, password, ip, 'client_login');
+    return {
+      token: this.jwt.sign({ sub: session.user.id, tenantId: session.tenantId }),
+      session: session.me,
+    };
+  }
+
+  private async openSession(phone: string, password: string, ip: string | undefined, action: string) {
     const user = await this.prisma.user.findUnique({ where: { phone } });
     if (!user || user.status !== 'active') throw new UnauthorizedException('账号或密码错误');
     const ok = await bcrypt.compare(password, user.passwordHash);
@@ -137,12 +181,11 @@ export class AuthService {
     if (!user.isPlatformAdmin && !current) {
       throw new ForbiddenException('企业已停用，无法登录');
     }
-    this.setCookie(res, { sub: user.id, tenantId: current?.id ?? null });
-
+    const tenantId = current?.id ?? null;
     await this.prisma.auditLog.create({
-      data: { userId: user.id, tenantId: current?.id, action: 'login', ip },
+      data: { userId: user.id, tenantId, action, ip },
     });
-    return await this.toMe(user, current?.id ?? null, tenants);
+    return { user, tenantId, me: await this.toMe(user, tenantId, tenants) };
   }
 
   async me(user: User, tenantId: string | null): Promise<SessionMe> {
@@ -364,6 +407,7 @@ export class AuthService {
       })),
       effectivePermissions: eff.effectivePermissions,
       platformRoleKey: eff.platformRoleKey,
+      welcomeSeen: user.welcomeSeenAt != null,
     };
   }
 }

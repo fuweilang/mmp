@@ -287,4 +287,6 @@ export type SessionMe = {
   /** Sorted unique permission keys (platform ∪ org preset). */
   effectivePermissions: string[];
   platformRoleKey: string | null;
+  /** False only for an account that has not dismissed the one-time welcome. */
+  welcomeSeen: boolean;
 };

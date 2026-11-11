@@ -27,7 +27,7 @@ import type { InputSubmitMode } from '../contract/composer-submission.ts'
 import type { PopupDismissFace } from './facade.ts'
 import { SessionInputShell } from './facade.ts'
 import { reportMessageSubmission } from './submission-analytics.ts'
-import { readConversationDraft } from '../stores.ts'
+import { readConversationDraft, writeConversationDraftCatalog } from '../stores.ts'
 import { enterpriseKnowledgePrompt } from './enterprise-knowledge.ts'
 
 /** Structural command face for per-session popup resolution. */
@@ -95,14 +95,9 @@ export class InputHub implements SessionInputResolver {
   clearCatalogSelection(binding: SessionBinding): void {
     if (this.sessions().binding(binding.sessionId) !== binding) return
     const shell = this.shellFor(binding)
-    const current = shell.snapshot.catalogSelection
-    if (current !== undefined && current.expertRef === null && current.skillRefs.length === 0) return
-    shell.setCatalogSelection({
-      protocol: 1,
-      selectionVersion: current === undefined ? 1 : current.selectionVersion + 1,
-      expertRef: null,
-      skillRefs: [],
-    })
+    shell.clearCatalogForNewTask()
+    const selection = shell.draftSnapshot.catalogSelection
+    if (selection !== undefined) writeConversationDraftCatalog(binding.sessionId, selection)
   }
 
   /**

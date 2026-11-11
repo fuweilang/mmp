@@ -249,8 +249,8 @@ export interface SessionInputResolver {
    */
   requestDraftInitialization(binding: SessionBinding, options: DraftInitializationOptions): DraftInitializationResult
   /**
-   * Drop the expert and skills saved on a new task.
-   * A plaza session keeps its expert until that session sends; this only runs for New Task.
+   * Drop the expert and skills on the conversation New Task opens.
+   * Typed text stays. A plaza conversation keeps the expert the user picked.
    */
   clearCatalogSelection(binding: SessionBinding): void
 }

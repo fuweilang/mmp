@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createApp, h, nextTick, type App } from 'vue';
 import { createPinia } from 'pinia';
 import { createMemoryHistory, createRouter, RouterView, type Router } from 'vue-router';
-import ElementPlus, { ElMessageBox } from 'element-plus';
+import ElementPlus, { ElMessage, ElMessageBox } from 'element-plus';
 import { ApiError } from '../src/api/http';
 import Library from '@library-fixture';
 
@@ -28,7 +28,7 @@ beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Fixture forbids live requests'));
 });
 afterEach(async () => {
-  ElMessageBox.close(); app?.unmount(); root?.remove(); app = undefined; root = undefined;
+  ElMessageBox.close(); ElMessage.closeAll(); app?.unmount(); root?.remove(); app = undefined; root = undefined;
   document.querySelectorAll('.el-overlay,.el-popper').forEach(node => node.remove());
   vi.restoreAllMocks(); await nextTick();
 });
@@ -150,6 +150,14 @@ it('asks before recycling and only sends the request after confirmation', async 
   [...document.querySelectorAll<HTMLElement>('.el-dropdown-menu__item')].find(node => node.textContent?.trim() === '回收')!.click();
   click('确认', await confirmBox());
   await vi.waitFor(() => expect(fixture.recycle).toHaveBeenCalledWith('file'));
+  const notice = await vi.waitFor(() => {
+    const node = [...document.querySelectorAll('.el-message')].find(item => item.textContent?.includes('已放入回收站'));
+    expect(node).toBeTruthy();
+    return node!;
+  });
+  notice.querySelector('button')!.click();
+  await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/console/library/trash'));
+  expect(root!.textContent).toContain('所有者');
 });
 
 it('asks before a batch recycle and skips the request when cancelled', async () => {

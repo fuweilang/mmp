@@ -33,13 +33,21 @@ export type LocalDraft = {
   readonly persisted: false
 }
 
+const CHAT_IMAGE_NAME = /\.(png|jpe?g|gif|webp)$/i
+
+/** A stored photo can enter chat as the original image, even without extracted text. */
+function chatImage(item: LibraryChoice): boolean {
+  return CHAT_IMAGE_NAME.test(item.name) && item.parseStatus === 'DOWNLOAD_ONLY'
+}
+
 /** Why a visible row cannot be attached to the composer. */
 export function choiceBlock(item: LibraryChoice): { disabled: boolean; reason: string | null } {
   if (item.kind !== 'FILE') return { disabled: true, reason: 'not-file' }
-  if (item.parseStatus !== 'READY' || item.versionId == null || item.versionNo == null) {
+  if (item.versionId == null || item.versionNo == null) {
     return { disabled: true, reason: item.parseReason ?? item.parseStatus ?? 'unavailable' }
   }
-  return { disabled: false, reason: null }
+  if (item.parseStatus === 'READY' || chatImage(item)) return { disabled: false, reason: null }
+  return { disabled: true, reason: item.parseReason ?? item.parseStatus ?? 'unavailable' }
 }
 
 /** Add one ready version. Duplicate versions stay once. This never marks the draft sent. */

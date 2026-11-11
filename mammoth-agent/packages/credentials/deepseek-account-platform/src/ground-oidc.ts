@@ -212,6 +212,8 @@ export function groundSessionProfile(value: unknown): AccountProfile {
     name,
     contact,
     avatarUrl: null,
+    // Missing or any value other than false counts as already seen.
+    welcomeSeen: (value as { welcomeSeen?: unknown }).welcomeSeen !== false,
   }
 }
 

@@ -30,6 +30,8 @@ export class DesktopOnboardingController {
   private error: 'settings' | null = null
   private failedWrite: { next: OnboardingProgress; applyPreferences: boolean } | undefined
   private creditFunded: boolean | undefined
+  /** True while a new account is rewriting an installation that already finished for someone else. */
+  private resettingWelcome = false
 
   /**
    * @param progress - installation-scoped durable progress.
@@ -195,12 +197,39 @@ export class DesktopOnboardingController {
     }
   }
 
+  /**
+   * Desktop-only account flag. Absent, still loading, or a non-desktop client keeps local progress.
+   * @returns seen when this account must skip the flow, new when it must run even if this install already finished.
+   */
+  private accountWelcome(): 'seen' | 'new' | 'unset' {
+    if (!('mmpDesktop' in globalThis)) return 'unset'
+    const profile = this.account.getSnapshot().details?.profile
+    if (profile?.status !== 'ready') return 'unset'
+    if (profile.value.welcomeSeen === true) return 'seen'
+    if (profile.value.welcomeSeen === false) return 'new'
+    return 'unset'
+  }
+
   private derive(): void {
     if (this.disposed) return
     const host = this.progress.getSnapshot()
     const snapshot = this.account.getSnapshot()
     const account = snapshot.view
     const signedIn = account?.status === 'credential-stored'
+    const welcome = this.accountWelcome()
+    const unavailableNow = host.status === 'unavailable' || (host.status === 'ready' && !host.writable)
+    const savedStep = this.readProgress()?.step
+    if (welcome === 'new' && savedStep === 'done' && signedIn && !unavailableNow && host.status === 'ready' && this.error === null
+      && !this.saving && !this.completing && this.draft === undefined && !this.resettingWelcome) {
+      this.resettingWelcome = true
+      const pending = freshProgress()
+      this.draft = pending
+      void this.save(pending, false).finally(() => {
+        if (this.error === null && this.draft === pending) this.draft = undefined
+        this.resettingWelcome = false
+        this.derive()
+      })
+    }
     const progress = this.draft ?? this.readProgress() ?? freshProgress()
     if (!signedIn) this.creditFunded = undefined
     else if (this.creditFunded === undefined && host.status === 'ready' && progress.step === 'credit') {
@@ -218,7 +247,7 @@ export class DesktopOnboardingController {
     const next: DesktopOnboardingState = {
       progress: shallowEqual(previous.progress, progress) ? previous.progress : progress,
       creditFunded: this.creditFunded ?? false,
-      visible: !done && signedIn && !unavailable,
+      visible: welcome === 'seen' ? false : welcome === 'new' ? signedIn && !unavailable : !done && signedIn && !unavailable,
       status: this.completing || (this.saving && this.draft === undefined) ? 'saving' : unavailable || readFailed || accountFailed || this.error !== null ? 'error'
         : host.status === 'loading' || account === undefined ? 'loading' : 'ready',
       error: unavailable || readFailed ? 'settings' : this.error,

@@ -89,6 +89,13 @@ export interface AccountSectionInjected {
   bonusNoticeDismissed: (orderId: BonusNotice['orderId']) => void
   /** @returns after the login attempt is created. */
   start: () => Promise<void>
+  /**
+   * Desktop password login. Absent on the web, which keeps browser sign-in.
+   * @param phone - enterprise phone number.
+   * @param password - account password.
+   * @returns after the local session is stored.
+   */
+  submitPassword?: (phone: string, password: string) => Promise<void>
   /** @param id - attempt to cancel. @returns after cancellation or an already-admitted commit. */
   cancel: (id: SignInAttemptId) => Promise<void>
   /** @returns whether a running task currently uses the account token. */

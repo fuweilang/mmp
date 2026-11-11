@@ -162,6 +162,7 @@ describe('Chat apply wiring', () => {
     expect(userContent.children?.['conversation.chat.user.images']).toMatchObject({ kind: 'single', scope: 'session' })
     expect(userContent.children?.['conversation.chat.user.skills']).toMatchObject({ kind: 'single', scope: 'session' })
     expect(assistant?.children?.['conversation.chat.message.images']).toMatchObject({ kind: 'single', scope: 'session' })
+    expect(assistant?.children?.['conversation.chat.assistant.expert']).toMatchObject({ kind: 'single', scope: 'session' })
     expect(userContent.store).toBeUndefined()
     expect(userContent.inject).toBeTypeOf('function')
     expect(view?.children?.['conversation.chat.flow']).toBeDefined()
@@ -187,6 +188,7 @@ describe('Chat apply wiring', () => {
     expect(b.runtime.slots.spec('conversation.chat.message.images')).toBeUndefined()
     expect(b.runtime.slots.spec('conversation.chat.user.images')).toBeUndefined()
     expect(b.runtime.slots.spec('conversation.chat.user.skills')).toBeUndefined()
+    expect(b.runtime.slots.spec('conversation.chat.assistant.expert')).toBeUndefined()
     expect(() => b.runtime.factoryOf('conversation.chat.user.content')).toThrow('no definition')
   })
 

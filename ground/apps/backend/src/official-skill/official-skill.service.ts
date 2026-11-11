@@ -81,7 +81,7 @@ export class OfficialSkillService {
     if(f.capability!=='all'||f.industry!=='all')filters.push(catalogDiscoveryWhere('skill',f.capability,f.industry));
     if(f.q)filters.push({OR:[...['name','summary','key'].map(field=>({[field]:{contains:f.q,mode:'insensitive' as const}})),...Object.entries(DESCRIPTIONS).filter(([,v])=>v.summary.toLocaleLowerCase().includes(f.q.toLocaleLowerCase())).map(([key,v])=>({key,summary:v.expectedOriginal}))]});
     const where:Prisma.OfficialSkillWhereInput={AND:filters};
-    const [total,rows]=await this.prisma.$transaction([this.prisma.officialSkill.count({where}),this.prisma.officialSkill.findMany({where:{AND:[where,...f.after?[{key:{gt:f.after}}]:[]]},orderBy:{key:'asc'},take:21,select:{id:true,key:true,name:true,summary:true,categories:true,enabledAt:true,currentRevision:true,customAvatarPath:true}})],{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
+    const [total,rows]=await Promise.all([this.prisma.officialSkill.count({where}),this.prisma.officialSkill.findMany({where:{AND:[where,...f.after?[{key:{gt:f.after}}]:[]]},orderBy:{key:'asc'},take:21,select:{id:true,key:true,name:true,summary:true,categories:true,enabledAt:true,currentRevision:true,customAvatarPath:true}})]);
     const page=rows.slice(0,20);return {items:page.map(row=>({id:row.id,key:row.key,name:row.name,summary:displaySummary(row.key,row.summary),category:primarySkillCategory(row.categories),enabledAt:row.enabledAt?.toISOString()??null,packageRevision:row.currentRevision,avatarUrl:uploadedCatalogIconUrl(row.customAvatarPath),discovery:discoveryOf('skill',row.key)})),total,hasMore:rows.length>20,nextCursor:rows.length>20?nextCatalogCursor(page[page.length-1]!.key,f.signature):null};
   }
 

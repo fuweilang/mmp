@@ -1338,6 +1338,14 @@ async function main(): Promise<void> {
           if (welcomeBackend === undefined) throw new Error('desktop welcome: backend unavailable')
           return welcomeBackend.account.cancel(id)
         },
+        signInWithPassword: async (phone, password) => {
+          if (welcomeBackend === undefined) return { ok: false, reason: 'unavailable' }
+          return welcomeBackend.account.signInWithPassword(desktopClientMetadata(locale.id), phone, password)
+        },
+        registerWithPassword: async (input) => {
+          if (welcomeBackend === undefined) return { ok: false, reason: 'unavailable' }
+          return welcomeBackend.account.registerWithPassword(desktopClientMetadata(locale.id), input)
+        },
         copySignInLink: async (id) => {
           const state = await welcomeBackend?.account.state()
           if (state?.attempt?.id !== id || state.attempt.phase !== 'waiting-browser' || state.attempt.authorizeUrl === undefined) {

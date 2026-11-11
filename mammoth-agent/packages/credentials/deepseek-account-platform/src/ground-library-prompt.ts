@@ -1,7 +1,12 @@
 /** Account-owned resolution of durable library excerpts for prompt admission. */
 import type { Context } from '@mammoth-ai/cordis'
+import type { ImageMediaType } from '@mammoth-ai/mmp-attachment'
+import type {} from '@mammoth-ai/mmp-attachment'
 import type {} from '@mammoth-ai/mmp-api-session-controller/types'
 import { z } from 'zod'
+
+const IMAGE_NAME = /\.(png|jpe?g|gif|webp)$/i
+const IMAGE_BYTES = 20 * 1024 * 1024
 
 /** Stable provider failure; Session admission owns the localized retry report. */
 class LibraryPromptError extends Error {
@@ -77,6 +82,18 @@ export function installGroundLibraryPrompt(ctx: Context, origin: string, token: 
     const captured = await token()
     if (!captured) throw new LibraryPromptError('LIBRARY_SIGN_IN_REQUIRED')
     if (await token() !== captured) throw new LibraryPromptError('LIBRARY_ACCOUNT_CHANGED')
+    if (IMAGE_NAME.test(part.name)) {
+      const loaded = await downloadLibraryImage(origin, captured, part, AbortSignal.any([lifetime.signal, AbortSignal.timeout(timeoutMs)]))
+      if (await token() !== captured) throw new LibraryPromptError('LIBRARY_ACCOUNT_CHANGED')
+      if (lifetime.signal.aborted) throw new LibraryPromptError('LIBRARY_PROVIDER_DISPOSED')
+      const store = ctx.get('attachments')
+      if (store === undefined) throw new LibraryPromptError('LIBRARY_SOURCE_UNAVAILABLE')
+      const [attachment] = await store.saveImages([{ data: loaded.bytes, mediaType: loaded.mediaType, name: part.name }])
+      if (attachment === undefined) throw new LibraryPromptError('LIBRARY_SOURCE_INVALID')
+      const block = { type: 'image' as const, attachment, encodedBytes: loaded.bytes.byteLength }
+      credentials.set(block, captured)
+      return block
+    }
     const response = await fetch(new URL('/api/library/open', origin), {
       method: 'POST', redirect: 'error',
       headers: { authorization: `Bearer ${captured}`, accept: 'application/json', 'content-type': 'application/json' },
@@ -116,5 +133,62 @@ export function installGroundLibraryPrompt(ctx: Context, origin: string, token: 
     }
     return true
   })
+}
+
+function sniffImage(bytes: Uint8Array): ImageMediaType | undefined {
+  if (bytes.length >= 8
+    && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+    && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) return 'image/png'
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg'
+  if (bytes.length >= 6) {
+    const signature = String.fromCharCode(bytes[0]!, bytes[1]!, bytes[2]!, bytes[3]!, bytes[4]!, bytes[5]!)
+    if (signature === 'GIF87a' || signature === 'GIF89a') return 'image/gif'
+  }
+  if (bytes.length >= 12
+    && String.fromCharCode(bytes[0]!, bytes[1]!, bytes[2]!, bytes[3]!) === 'RIFF'
+    && String.fromCharCode(bytes[8]!, bytes[9]!, bytes[10]!, bytes[11]!) === 'WEBP') return 'image/webp'
+  return undefined
+}
+
+async function downloadLibraryImage(
+  origin: string,
+  captured: string,
+  part: { readonly nodeId: string; readonly versionId: string },
+  signal: AbortSignal,
+): Promise<{ readonly bytes: Uint8Array; readonly mediaType: ImageMediaType }> {
+  const url = new URL(`/api/library/nodes/${encodeURIComponent(part.nodeId)}/download`, origin)
+  url.searchParams.set('versionId', part.versionId)
+  url.searchParams.set('inline', '1')
+  const response = await fetch(url, {
+    method: 'GET', redirect: 'error',
+    headers: { authorization: `Bearer ${captured}`, accept: 'application/octet-stream' },
+    signal,
+  })
+  if (!response.ok) throw new LibraryPromptError('LIBRARY_SOURCE_UNAVAILABLE')
+  const reader = response.body?.getReader()
+  if (reader === undefined) throw new LibraryPromptError('LIBRARY_SOURCE_INVALID')
+  const chunks: Uint8Array[] = []
+  let size = 0
+  try {
+    while (true) {
+      const next = await reader.read()
+      if (next.done) break
+      size += next.value.byteLength
+      if (size > IMAGE_BYTES) throw new LibraryPromptError('LIBRARY_SOURCE_TOO_LARGE')
+      chunks.push(next.value)
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined)
+    reader.releaseLock()
+  }
+  const bytes = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  const mediaType = sniffImage(bytes)
+  if (mediaType === undefined) throw new LibraryPromptError('LIBRARY_SOURCE_INVALID')
+  return { bytes, mediaType }
 }
 

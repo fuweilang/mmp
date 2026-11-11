@@ -325,6 +325,32 @@ export class SessionInputShell implements SessionInput {
     return true
   }
 
+  /**
+   * New Task drops the expert and skills and keeps typed text.
+   * A restored draft can hold a newer selection than the published one, and that older write is rejected.
+   */
+  clearCatalogForNewTask(): void {
+    if (this.disposed) return
+    const current = this.catalogSelection
+    const published = this.state.getSnapshot().catalogSelection
+    const empty = current !== undefined && current.expertRef === null && current.skillRefs.length === 0
+    const publishedEmpty = published !== undefined && published.expertRef === null && published.skillRefs.length === 0
+    if (empty && publishedEmpty) return
+    if (!empty) {
+      this.catalogSelection = {
+        protocol: 1,
+        selectionVersion: (current?.selectionVersion ?? 0) + 1,
+        expertRef: null,
+        skillRefs: [],
+      }
+      this.draftSnapshotCache = undefined
+    }
+    this.placingSkill = true
+    try { this.draftEditor.syncSkillChips([]) }
+    finally { this.placingSkill = false }
+    this.publish()
+  }
+
   /** Insert or clear the draft's skill chip to match the catalog selection. */
   private placeSkillChip(): void {
     if (this.disposed || frozen(this.core.state.phase)) return
@@ -786,8 +812,8 @@ export class SessionInputShell implements SessionInput {
   /**
    * Execute the commit-draft effect: clear the committed content (retaining
    * a pure typed-during-flight suffix when the snapshot allows), drop the
-   * sent expert and skill chips, and cut the undo history so sent content cannot resurrect.
-   * A refused send never reaches this effect.
+   * sent skill chips, and cut the undo history so sent content cannot resurrect.
+   * The expert stays for later turns in this conversation. A refused send never reaches this effect.
    */
   private commitDraft(retainSuffixOf: string | null): void {
     this.placingSkill = true
@@ -800,10 +826,9 @@ export class SessionInputShell implements SessionInput {
       })
       const current = this.catalogSelection
       // Keep this version. The next explicit selection uses the following one and still applies after acceptance.
-      if (current !== undefined && (current.expertRef !== null || current.skillRefs.length > 0)) {
+      if (current !== undefined && current.skillRefs.length > 0) {
         this.catalogSelection = {
           ...current,
-          expertRef: null,
           skillRefs: [],
         }
         this.draftSnapshotCache = undefined

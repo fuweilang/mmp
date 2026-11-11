@@ -1,6 +1,6 @@
 猛犸AI
 猛犸AI
-Welcome to 猛犸AI
-Build potential. Explore intelligence.
-Sign in
-Add API Key
+猛犸专家
+Password
+Register
+Sign in [disabled]

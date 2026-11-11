@@ -1,6 +1,6 @@
 /** Operations available to the isolated native welcome renderer. */
 
-import type { AccountView, SignInAttemptId } from '@mammoth-ai/mmp-deepseek-account/types'
+import type { AccountView, PasswordSignInResult, SignInAttemptId } from '@mammoth-ai/mmp-deepseek-account/types'
 import type { ProductEventMap } from '@mammoth-ai/mmp-client-product-analytics/types'
 import type { DesktopLocale } from './locale.ts'
 
@@ -13,6 +13,8 @@ export const WELCOME_IPC = {
   start: 'mmp-welcome:start',
   cancel: 'mmp-welcome:cancel',
   copyLink: 'mmp-welcome:copy-link',
+  password: 'mmp-welcome:password',
+  register: 'mmp-welcome:register',
   state: 'mmp-welcome:state',
   takeNotice: 'mmp-welcome:take-notice',
 } as const
@@ -39,6 +41,25 @@ export interface WelcomeOperations {
   cancelSignIn(id: SignInAttemptId): Promise<AccountView>
   /** @param id - current waiting attempt whose authorization URL is copied to the system clipboard. */
   copySignInLink(id: SignInAttemptId): Promise<void>
+  /**
+   * Sign in on this computer. The system browser is not opened.
+   * @param phone - enterprise phone number.
+   * @param password - account password. It stays in the main process.
+   * @returns whether the local session was stored, without the session token.
+   */
+  signInWithPassword(phone: string, password: string): Promise<PasswordSignInResult>
+  /**
+   * Register on this computer. The system browser is not opened and its cookie is not set.
+   * @param input - enterprise registration fields. The password stays in the main process.
+   * @returns whether the local session was stored, without the session token.
+   */
+  registerWithPassword(input: {
+    name: string
+    phone: string
+    password: string
+    enterpriseName: string
+    slug: string
+  }): Promise<PasswordSignInResult>
 
   /**
    * Store the official provider's key before entering the workspace.

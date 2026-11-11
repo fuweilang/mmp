@@ -126,10 +126,10 @@ describe('SidebarRoot shell', () => {
     const shortcut: ShortcutCatalogEntry = { id: 'session.new' as ShortcutCommandId, label: 'New', aliases: [],
       binding: null, modified: true, conflicts: [], issue: null, keys: ['Ctrl', 'N'], aria: 'Control+N' }
     mountShell({ shortcuts: [shortcut] })
-    for (const button of screen.getAllByRole('button', { name: 'New session' })) {
+    for (const button of screen.getAllByRole('button', { name: 'New task' })) {
       expect(button.getAttribute('aria-keyshortcuts')).toBe('Control+N')
     }
-    const expanded = screen.getAllByRole('button', { name: 'New session' }).find(button => button.querySelector('kbd') !== null)!
+    const expanded = screen.getAllByRole('button', { name: 'New task' }).find(button => button.querySelector('kbd') !== null)!
     fireEvent.pointerEnter(expanded)
     fireEvent.focus(expanded)
     expect(screen.queryByRole('tooltip')).toBeNull()
@@ -142,7 +142,7 @@ describe('SidebarRoot shell', () => {
       {...allowAllAccess}
       usePanels={select => select([])} useEntryPins={select => select([])}
       useEntryActions={select => select(false)} setPinned={vi.fn()} useShortcuts={select => select([shortcut])} />)
-    const button = screen.getByRole('button', { name: 'New session' })
+    const button = screen.getByRole('button', { name: 'New task' })
     expect(screen.getByRole('button', { name: 'Open sidebar' }).hasAttribute('data-sidebar-opener')).toBe(true)
     expect(button.getAttribute('aria-keyshortcuts')).toBe('Control+N')
     fireEvent.focus(button)
@@ -155,7 +155,7 @@ describe('SidebarRoot shell', () => {
     expect(screen.getByTestId('custom-brand-mark')).toBeTruthy()
     expect(screen.getByTestId('custom-brand-name')).toBeTruthy()
     // Expanded, both the wordmark and the capsule start a session and report a sidebar New Session click first.
-    const starters = screen.getAllByRole('button', { name: 'New session' })
+    const starters = screen.getAllByRole('button', { name: 'New task' })
     expect(starters).toHaveLength(2)
     for (const button of starters) fireEvent.click(button)
     expect(b.startSession).toHaveBeenCalledTimes(2)
@@ -171,7 +171,7 @@ describe('SidebarRoot shell', () => {
 
   it('reports the collapsed rail New Session as a sidebar click outside the Windows caption', () => {
     const b = mountShell({ collapsed: true, width: 56 })
-    fireEvent.click(screen.getByRole('button', { name: 'New session' }))
+    fireEvent.click(screen.getByRole('button', { name: 'New task' }))
     expect(b.startSession).toHaveBeenCalledOnce()
     expect(b.trackEntryClick).toHaveBeenCalledExactlyOnceWith({ menu_name: 'new_session', position: 'sidebar' })
   })
@@ -199,7 +199,7 @@ describe('SidebarRoot shell', () => {
 
     // Neither the brand row nor the dedicated button starts a Session; the brand still renders.
     expect(useRemoteAccess).toHaveBeenCalledWith('session/create')
-    expect(screen.queryByRole('button', { name: 'New session' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'New task' })).toBeNull()
     expect(screen.getByTestId('brand-mark')).toBeTruthy()
     expect(screen.getByTestId('brand-name')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
@@ -207,7 +207,7 @@ describe('SidebarRoot shell', () => {
     expect(startSession).not.toHaveBeenCalled()
   })
 
-  it('renders generic brand fallbacks when no package fills the slots', () => {
+  it('renders the logo and product name without a build version', () => {
     vi.stubEnv('MMP_CLIENT_COMMIT_HASH', '0123456')
     vi.stubEnv('MMP_CLIENT_GIT_DIRTY', 'true')
     vi.stubEnv('MMP_CLIENT_VERSION', '1.2.3-rc.4')
@@ -225,43 +225,16 @@ describe('SidebarRoot shell', () => {
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
 
-    expect(screen.getByText('MMP Local Build')).toBeTruthy()
-    expect(screen.getByText('1.2.3-rc.4-0123456-dirty')).toBeTruthy()
+    expect(screen.getByText('猛犸AI')).toBeTruthy()
+    expect(screen.queryByText('1.2.3-rc.4-0123456-dirty')).toBeNull()
+    expect(container.querySelector('[data-copy-version]')).toBeNull()
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
-  it.each([
-    [{ MMP_CLIENT_VERSION: '1.2.3' }, '1.2.3'],
-    [{ MMP_CLIENT_COMMIT_HASH: 'abcdef0', MMP_CLIENT_VERSION: '1.2.3' }, '1.2.3-abcdef0'],
-  ])('omits unavailable build-version suffixes from %j', (environment, expected) => {
-    for (const [name, value] of Object.entries(environment)) vi.stubEnv(name, value)
-    render(<SidebarRoot
-      drawer={false}
-      collapsed={false} width={300}
-      useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
-      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
-      useEntryActions={selector => selector(false)} setPinned={vi.fn()}
-      useShortcuts={selector => selector([])}
-      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
-      {...allowAllAccess}
-      startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
-      renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
-        options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
-    />)
-
-    expect(screen.getByText('MMP Local Build')).toBeTruthy()
-    expect(screen.getByText(expected)).toBeTruthy()
-  })
-
-  it.each([false, true])('copies the local-build version from the fallback mark and name (darwin=%s)', async (darwin) => {
+  it.each([false, true])('keeps the brand a session control without a version chip (darwin=%s)', (darwin) => {
     if (darwin) document.documentElement.dataset.platform = 'darwin'
     vi.stubEnv('MMP_CLIENT_COMMIT_HASH', 'abcdef0')
     vi.stubEnv('MMP_CLIENT_VERSION', '1.2.3')
-    const writeText = vi.fn<(text: string) => Promise<void>>()
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error('denied'))
-      .mockResolvedValueOnce(undefined)
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     const startSession = vi.fn()
     const trackEntryClick = vi.fn<SidebarRootComponentProps['trackEntryClick']>()
     render(<SidebarRoot
@@ -276,38 +249,14 @@ describe('SidebarRoot shell', () => {
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
-    vi.useFakeTimers()
 
-    const copiedToasts = () => screen.queryAllByRole('alert').map(toast => toast.textContent)
-    await act(async () => { fireEvent.click(screen.getByText('MMP Local Build')) })
-    expect(writeText).toHaveBeenLastCalledWith('1.2.3-abcdef0')
-    expect(copiedToasts()).toEqual(['Version copied'])
-    // The brand itself keeps its title and version.
-    expect(screen.getByText('MMP Local Build')).toBeTruthy()
-    expect(screen.getByText('1.2.3-abcdef0')).toBeTruthy()
-    act(() => { vi.advanceTimersByTime(4000) })
-    expect(copiedToasts()).toEqual([])
-
-    // A refused write claims no success.
-    await act(async () => { fireEvent.click(screen.getByText('1.2.3-abcdef0')) })
-    expect(copiedToasts()).toEqual([])
-
-    // The fallback mark copies too, and its click still reaches document.
-    const documentClick = vi.fn()
-    document.addEventListener('click', documentClick)
-    const mark = screen.getByText('MMP Local Build').closest('[aria-hidden]')!.querySelector('svg')!
-    await act(async () => { fireEvent.click(mark) })
-    document.removeEventListener('click', documentClick)
-    expect(documentClick).toHaveBeenCalledOnce()
-    expect(writeText).toHaveBeenCalledTimes(3)
-    expect(copiedToasts()).toEqual(['Version copied'])
-    expect(startSession).not.toHaveBeenCalled()
-    // Copying the version is not a New Session click.
-    expect(trackEntryClick).not.toHaveBeenCalled()
-
-    // The rest of the brand button still starts and reports a session.
-    if (!darwin) {
-      fireEvent.click(screen.getAllByRole('button', { name: 'New session' })[0]!)
+    expect(screen.getByText('猛犸AI')).toBeTruthy()
+    expect(screen.queryByText('1.2.3-abcdef0')).toBeNull()
+    fireEvent.click(screen.getByText('猛犸AI'))
+    if (darwin) {
+      expect(startSession).not.toHaveBeenCalled()
+      expect(trackEntryClick).not.toHaveBeenCalled()
+    } else {
       expect(startSession).toHaveBeenCalledOnce()
       expect(trackEntryClick).toHaveBeenCalledExactlyOnceWith({ menu_name: 'new_session', position: 'sidebar' })
     }
@@ -328,7 +277,7 @@ describe('SidebarRoot shell', () => {
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
 
-    expect(screen.getByText('MMP Local Build')).toBeTruthy()
+    expect(screen.getByText('猛犸AI')).toBeTruthy()
   })
 
   it('hands the region its wide flag and clamps expandSidebar to the collapsed state', () => {
@@ -370,7 +319,7 @@ describe('SidebarRoot shell', () => {
     b.rerender({ drawer: false, collapsed: true, width: 56 })
     expect(b.regionOwner().wide).toBe(false)
     expect(b.settingsOwner().wide).toBe(false)
-    expect(screen.getAllByRole('button', { name: 'New session' })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'New task' })).toHaveLength(1)
     const root = screen.getByTestId('region').closest<HTMLElement>('[class*="root"]')!
     expect(root.style.width).toBe('')
     expect(root.className).not.toMatch(/fading|railIn/)
@@ -416,9 +365,9 @@ it('keeps the macOS sidebar toggle in its top strip', () => {
   // The brand stays part of the logo row's window-drag surface: no button
   // role (the global no-drag rule would subtract it); only the dedicated
   // New Session capsule starts a session.
-  expect(screen.getAllByRole('button', { name: 'New session' })).toHaveLength(1)
+  expect(screen.getAllByRole('button', { name: 'New task' })).toHaveLength(1)
   expect(screen.getByTestId('custom-brand-mark')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'New session' }))
+  fireEvent.click(screen.getByRole('button', { name: 'New task' }))
   expect(shell.trackEntryClick).toHaveBeenCalledExactlyOnceWith({ menu_name: 'new_session', position: 'sidebar' })
 })
 
@@ -462,7 +411,7 @@ describe('Windows caption New Session analytics', () => {
   it('reports the collapsed caption New Session as a titlebar click', () => {
     document.documentElement.setAttribute('data-windows-titlebar', '')
     const b = mountShell({ collapsed: true, width: 0 })
-    fireEvent.click(screen.getByRole('button', { name: 'New session' }))
+    fireEvent.click(screen.getByRole('button', { name: 'New task' }))
     expect(b.startSession).toHaveBeenCalledOnce()
     expect(b.trackEntryClick).toHaveBeenCalledExactlyOnceWith({ menu_name: 'new_session', position: 'titlebar' })
   })
@@ -470,7 +419,7 @@ describe('Windows caption New Session analytics', () => {
   it('reports the expanded brand and New Session button as sidebar clicks', () => {
     document.documentElement.setAttribute('data-windows-titlebar', '')
     const b = mountShell()
-    const starters = screen.getAllByRole('button', { name: 'New session' })
+    const starters = screen.getAllByRole('button', { name: 'New task' })
     expect(starters).toHaveLength(2)
     for (const button of starters) fireEvent.click(button)
     expect(b.startSession).toHaveBeenCalledTimes(2)
@@ -504,7 +453,7 @@ describe('Windows caption tooltips', () => {
     vi.useFakeTimers()
     document.documentElement.setAttribute('data-windows-titlebar', '')
     mountShell({ collapsed: true, width: 0 })
-    hover(screen.getByRole('button', { name: 'New session' }))
+    hover(screen.getByRole('button', { name: 'New task' }))
     expect(screen.getByRole('tooltip').getAttribute('data-side')).toBe('bottom')
   })
 
@@ -592,7 +541,7 @@ it('moves focus to the rail toggle when the drawer opener unmounts', () => {
     opener.remove()
     h.rerender({ drawer: false, collapsed: true, width: 56 })
     act(() => { vi.advanceTimersByTime(150) })
-    expect(screen.getAllByRole('button', { name: 'New session' })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'New task' })).toHaveLength(1)
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Open sidebar' }))
   } finally {
     opener.remove()

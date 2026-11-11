@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react'
+import { Fragment, memo, useCallback, useMemo } from 'react'
 import type { InjectFace, PropsRenderSlots } from '@mammoth-ai/mmp-client-ui-slots'
 import type { ChatFileMentions, ChatNodeViewProps, PresentationInjected, TurnTailOwnerProps } from '../contract/slots.ts'
 import { AssistantMarkdown } from './AssistantMarkdown.tsx'
@@ -12,7 +12,7 @@ export interface AssistantNodeInjected extends PresentationInjected {
 }
 
 type AssistantNodeViewProps = ChatNodeViewProps<'assistant-step'> & InjectFace<AssistantNodeInjected>
-  & PropsRenderSlots<'conversation.chat.reasoning.body' | 'conversation.chat.message.images'>
+  & PropsRenderSlots<'conversation.chat.reasoning.body' | 'conversation.chat.message.images' | 'conversation.chat.assistant.expert'>
 
 /** Streaming, settled, and interrupted Assistant states share one keyed renderer instance. */
 export const AssistantNodeView = memo(function AssistantNodeView({
@@ -46,22 +46,30 @@ export const AssistantNodeView = memo(function AssistantNodeView({
       : turnProcess.spec.answerStep === data.step && turnProcess.spec.inlineReasoning)
     && !turnProcess.open
   const revealProcess = useCallback(() => { turnProcess?.setOpen(true) }, [turnProcess])
+  const turnNumber = turn?.turn
+  const answerStep = turnProcess?.spec.answerStep
+  const showExpert = turnNumber !== undefined
+    && groupPart !== 'reasoning'
+    && (turnProcess === undefined || answerStep == null || answerStep === data.step)
   return (
-    <AssistantMarkdown
-      blocks={data.blocks}
-      groupPart={groupPart}
-      useDisclosure={useDisclosure}
-      streaming={data.status === 'running'}
-      textInteractionSource={data.status === 'settled' && data.finalNode?.messageId !== undefined}
-      interrupted={data.status === 'interrupted'}
-      loadImage={loadImage}
-      reasoningHidden={reasoningHidden}
-      useGroupAction={useGroupAction}
-      usePresentation={usePresentation}
-      renderSlot={renderSlot}
-      revealProcess={revealProcess}
-      mentions={mentions}
-      t={t}
-    />
+    <Fragment>
+      {showExpert && renderSlot('conversation.chat.assistant.expert', { turn: turnNumber })}
+      <AssistantMarkdown
+        blocks={data.blocks}
+        groupPart={groupPart}
+        useDisclosure={useDisclosure}
+        streaming={data.status === 'running'}
+        textInteractionSource={data.status === 'settled' && data.finalNode?.messageId !== undefined}
+        interrupted={data.status === 'interrupted'}
+        loadImage={loadImage}
+        reasoningHidden={reasoningHidden}
+        useGroupAction={useGroupAction}
+        usePresentation={usePresentation}
+        renderSlot={renderSlot}
+        revealProcess={revealProcess}
+        mentions={mentions}
+        t={t}
+      />
+    </Fragment>
   )
 })

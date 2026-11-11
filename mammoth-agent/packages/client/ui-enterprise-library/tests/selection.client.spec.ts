@@ -26,6 +26,10 @@ describe('library selection', () => {
     expect(choiceBlock({ ...ready, parseStatus: 'FAILED', parseReason: null, versionId: 'ver-1', versionNo: null }).reason).toBe('FAILED')
     expect(choiceBlock({ ...ready, versionNo: null }).reason).toBe('READY')
     expect(choiceBlock({ ...ready, versionId: null, parseStatus: 'READY' }).disabled).toBe(true)
+    const photo = { ...ready, name: '小悟空.jpg', parseStatus: 'DOWNLOAD_ONLY', parseReason: '没有读出可引用的文字，仅保存原图' }
+    expect(choiceBlock(photo).disabled).toBe(false)
+    expect(addLibraryChip([], photo).chips).toEqual([expect.objectContaining({ name: '小悟空.jpg' })])
+    expect(choiceBlock({ ...photo, name: '小悟空.mp4' }).disabled).toBe(true)
   })
 
   it('serializes only a server-returned version', () => {

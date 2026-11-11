@@ -56,7 +56,35 @@ export function apply(ctx: Context): void {
   const browser = new BrowserLogin(url => authorizeUrlWithTheme(url, ctx.theme.getTheme().active.colorScheme))
   ctx.effect(() => () => { browser.dispose() }, 'account: pending browser window')
   const listeners = new Set<() => void>()
-  const publish = (value: AccountSnapshot) => { snapshot = value; for (const listener of listeners) listener() }
+  let welcomeSeen: boolean | null = null
+  const welcomeListeners = new Set<() => void>()
+  const setWelcomeSeen = (seen: boolean | null): void => {
+    if (welcomeSeen === seen) return
+    welcomeSeen = seen
+    for (const listener of welcomeListeners) listener()
+  }
+  /** Account flag for the web preview notice. Null while the profile is still loading. */
+  const syncWelcome = (): void => {
+    if (snapshot.view?.status !== 'credential-stored') {
+      setWelcomeSeen(null)
+      return
+    }
+    const profile = snapshot.details?.profile
+    if (profile?.status === 'ready') {
+      setWelcomeSeen(profile.value.welcomeSeen === false ? false : true)
+      return
+    }
+    if (profile?.status === 'failed') {
+      setWelcomeSeen(true)
+      return
+    }
+    setWelcomeSeen(null)
+  }
+  const publish = (value: AccountSnapshot): void => {
+    snapshot = value
+    syncWelcome()
+    for (const listener of listeners) listener()
+  }
   // 猛犸 Ground enterprise wallet + shared RechargeDialog state (Host proxy: ground-billing/*).
   const billing = createBillingStore()
   let billingSignedIn = false
@@ -102,6 +130,36 @@ export function apply(ctx: Context): void {
   ctx.effect(() => () => { notices.end() }, 'account: bonus notice lifetime')
   let revision = 0
   let refreshing: Promise<void> | undefined
+  const markWelcomeSeen = async (): Promise<boolean> => {
+    const result = await ctx.remote.account.acknowledgeWelcome()
+    if (!result.ok || result.value !== true) return false
+    const profile = snapshot.details?.profile
+    if (profile?.status === 'ready' && profile.value.welcomeSeen !== true) {
+      revision++
+      publish({
+        ...snapshot,
+        details: { ...snapshot.details, profile: { status: 'ready', value: { ...profile.value, welcomeSeen: true } } },
+      })
+    } else {
+      setWelcomeSeen(true)
+    }
+    return true
+  }
+  const welcomeBridge = {
+    getSnapshot: () => ({ seen: welcomeSeen }),
+    subscribe: (listener: () => void) => {
+      welcomeListeners.add(listener)
+      return () => { welcomeListeners.delete(listener) }
+    },
+    acknowledge: markWelcomeSeen,
+  }
+  const pageWindow = globalThis as typeof globalThis & { __MMP_ACCOUNT_WELCOME__?: typeof welcomeBridge }
+  pageWindow.__MMP_ACCOUNT_WELCOME__ = welcomeBridge
+  globalThis.dispatchEvent(new Event('mmp-account-welcome'))
+  ctx.effect(() => () => {
+    if (pageWindow.__MMP_ACCOUNT_WELCOME__ === welcomeBridge) delete pageWindow.__MMP_ACCOUNT_WELCOME__
+    globalThis.dispatchEvent(new Event('mmp-account-welcome'))
+  }, 'account: welcome bridge')
   const refresh = (): Promise<void> => {
     if (snapshot.view?.status !== 'credential-stored') return Promise.resolve()
     void billing.refresh()
@@ -263,20 +321,24 @@ export function apply(ctx: Context): void {
         subscribe: listener => ctx.on('theme/change', listener),
       },
     },
+    ...(desktop ? { submitPassword: async (phone: string, password: string) => {
+      const result = await ctx.remote.account.signInWithPassword(client(), phone, password)
+      if (!result.ok) throw new Error('unavailable')
+      if (!result.value.ok) throw new Error(result.value.message || result.value.reason)
+    } } : {}),
     async start() {
+      if (desktop) {
+        publish({ ...snapshot, loginVisible: true, loginFailed: false })
+        return
+      }
       const logoutUrl = snapshot.view?.links.logoutUrl
-      if (!desktop && logoutUrl !== undefined && new URL(logoutUrl, window.location.href).pathname === '/auth/ground/logout') {
+      if (logoutUrl !== undefined && new URL(logoutUrl, window.location.href).pathname === '/auth/ground/logout') {
         window.location.assign('/')
         return
       }
       publish({ ...snapshot, loginVisible: true, loginFailed: false })
-      const transport = (globalThis as typeof globalThis & {
-        __MMP_TRANSPORT__?: { streamBaseUrl?: string }
-      }).__MMP_TRANSPORT__
       const request = async () => {
-        const result = await ctx.remote.account.startSignIn(client(),
-          desktop && transport?.streamBaseUrl !== undefined ? new URL(transport.streamBaseUrl).origin : window.location.origin,
-          desktop ? 'desktop' : 'web')
+        const result = await ctx.remote.account.startSignIn(client(), window.location.origin, 'web')
         if (!result.ok) throw new Error('account start failed')
         return result.value
       }
@@ -299,10 +361,9 @@ export function apply(ctx: Context): void {
       const logoutUrl = snapshot.view?.links.logoutUrl
       const result = await ctx.remote.account.signOut(client())
       if (!result.ok) throw result.error
-      // Open Ground GET /api/auth/logout in the system browser so SSO cookies are cleared.
-      // Desktop routes window.open(http) through shell.openExternal (same jar as OIDC login).
-      if (logoutUrl !== undefined) {
-        if (!desktop && new URL(logoutUrl, window.location.href).origin === window.location.origin) {
+      // Web sign-out clears the browser cookie. Desktop sign-out keeps the browser session.
+      if (!desktop && logoutUrl !== undefined) {
+        if (new URL(logoutUrl, window.location.href).origin === window.location.origin) {
           window.location.assign(logoutUrl)
           return
         }
@@ -329,7 +390,13 @@ export function apply(ctx: Context): void {
     name: 'shell.overlay', id: 'desktop-onboarding', locale: 'settings.account',
     inject: (): DesktopOnboardingInjected => ({
       update: change => onboarding.update(change),
-      complete: reason => onboarding.complete(reason),
+      complete: async (reason) => {
+        const profile = snapshot.details?.profile
+        if (profile?.status === 'ready' && profile.value.welcomeSeen === false) {
+          if (!await markWelcomeSeen()) return false
+        }
+        return onboarding.complete(reason)
+      },
       retry: () => onboarding.retry(),
       setVisible: (visible) => { publish({ ...snapshot, desktopOnboardingVisible: visible }) },
       hooks: { onboarding: onboarding.state, account: operations.hooks.account },

@@ -105,8 +105,17 @@ describe('t174 actual native standard execution',()=>{
   const first=f.adapter.requests[0]!;expect(first.tools?.map(t=>t.name).sort()).toEqual(nativeNames)
   const final=JSON.stringify(f.adapter.requests[3]?.messages);expect(final).toContain('NATIVE_FILE_OK');expect(final).toContain('NATIVE_COMMAND_OK');expect(final).toContain('proof.txt')
   const prompt=JSON.stringify(first.messages);expect(prompt).toContain('STANDARD_SAFE_BASE');expect(prompt).toContain('PRIVATE_WORKSPACE_RULE_SENTINEL');expect(prompt).not.toContain('Host-enforced managed document profile')
-  if(kind==='expert')expect(prompt).toContain('EXPERT_ROLE_APPEND_ONLY')
+  if(kind==='expert'){
+    expect(prompt).toContain('EXPERT_ROLE_APPEND_ONLY')
+    expect(prompt).toContain('You are an AI agent powered by DeepSeek Harness.')
+    expect(prompt).not.toContain('猛犸AI')
+    expect(agent.session.snapshotEvents().some(e=>e.type==='official-gallery/answer-identity')).toBe(false)
+  }
   if(kind==='skill')expect(prompt).toContain('FROZEN_NATIVE_METHOD')
+  if(kind!=='expert'){
+    expect(prompt).toContain('你是猛犸AI')
+    expect(agent.session.snapshotEvents().some(e=>e.type==='official-gallery/answer-identity')).toBe(true)
+  }
   expect(f.privateReads.mock.calls.length).toBeGreaterThan(0)
   // Real adapter serializes the same tool list after native body budgeting; only HTTP/model are mocked.
   const cloud=new GroundLlmAdapter({providerId:'mammoth-ground',displayName:'fixture',origin:'https://fixture.invalid',account:()=>({resolveToken:async()=> 'synthetic-fixture-not-user-token'} as never)})

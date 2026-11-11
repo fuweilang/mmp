@@ -168,6 +168,27 @@ export interface OfficialGallerySourceState {
   readonly source: OfficialGallerySource | null
 }
 
+/** Expert shown above the reply for one turn. Display fields only. */
+export interface AnswerExpertView {
+  readonly name: string
+  readonly agentId: string
+}
+
+/** Byline for a turn that had no selected expert. It is not a catalog expert. */
+export const MAMMOTH_AI_ANSWER: AnswerExpertView = {
+  name: '猛犸AI',
+  agentId: 'mammoth-ai',
+}
+
+/**
+ * Answering expert for each turn.
+ * `pending` keeps the attempt until its turn number is known. The wire view is `byTurn`.
+ */
+export interface OfficialGalleryAnswerExpertState {
+  readonly pending: Readonly<Record<string, AnswerExpertView>>
+  readonly byTurn: Readonly<Record<string, AnswerExpertView>>
+}
+
 /** One skill painted on a sent user message. Portrait URLs are optional. `offset` is its place in the message text. */
 export interface SentSkillView {
   readonly name: string
@@ -192,6 +213,8 @@ declare module '@mammoth-ai/mmp-session-projection/types' {
     officialGallerySource: OfficialGallerySource | null
     /** Skills on each sent user message, keyed by the prompt request id. */
     officialGallerySentSkills: Readonly<Record<string, readonly SentSkillView[]>>
+    /** Expert who answered each turn, keyed by turn number. */
+    officialGalleryAnswerExpert: Readonly<Record<string, AnswerExpertView>>
   }
 }
 

@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import WebSocket from 'ws'
 import { parseRemoteStreamServerMessage, REMOTE_STREAM_MUX_PATH } from '@mammoth-ai/mmp-api-gateway/stream-protocol'
-import type { AccountClientMetadata, AccountView, SignInAttemptId } from '@mammoth-ai/mmp-deepseek-account/types'
+import type { AccountClientMetadata, AccountView, PasswordSignInResult, SignInAttemptId } from '@mammoth-ai/mmp-deepseek-account/types'
 
 /** Authenticated unary caller shared with native onboarding. */
 export type AccountInvoke = (request: { namespace: string; method: string; args: Record<string, unknown> }) => Promise<unknown>
@@ -64,6 +64,22 @@ export interface DesktopAccountBackend {
   /** @param client - this window's identity. @returns state after local sign-out. */
   signOut(client: AccountClientMetadata): Promise<AccountView>
   /**
+   * @param client - this window's identity.
+   * @param phone - enterprise phone number.
+   * @param password - account password.
+   * @returns whether the local session was stored.
+   */
+  signInWithPassword(client: AccountClientMetadata, phone: string, password: string): Promise<PasswordSignInResult>
+  /**
+   * @param client - this window's identity.
+   * @param input - enterprise registration fields.
+   * @returns whether the local session was stored. The browser cookie is not set.
+   */
+  registerWithPassword(
+    client: AccountClientMetadata,
+    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string },
+  ): Promise<PasswordSignInResult>
+  /**
    * @param listener - state recipient.
    * @param failed - stream failure recipient.
    * @param expired - live credential-expiry recipient.
@@ -83,6 +99,19 @@ export interface DesktopAccountBackend {
  * @param cookies - Electron session cookie reader.
  * @returns account operations; watch callers own their subscriptions.
  */
+function passwordResult(value: unknown): PasswordSignInResult {
+  if (typeof value !== 'object' || value === null || !('ok' in value) || typeof value.ok !== 'boolean') {
+    throw new Error('desktop account: invalid password result')
+  }
+  if (value.ok === true) return { ok: true }
+  const reason = 'reason' in value ? value.reason : undefined
+  if (reason !== 'credentials' && reason !== 'forbidden' && reason !== 'unavailable') {
+    throw new Error('desktop account: invalid password result')
+  }
+  const message = 'message' in value && typeof value.message === 'string' ? value.message : undefined
+  return { ok: false, reason, ...(message ? { message } : {}) }
+}
+
 export function desktopAccountBackend(origin: string, invoke: AccountInvoke, cookies: () => Promise<string>): DesktopAccountBackend {
   const call = async (method: string, args: Record<string, unknown> = {}): Promise<AccountView> =>
     accountView(await invoke({ namespace: 'account', method, args }))
@@ -90,6 +119,12 @@ export function desktopAccountBackend(origin: string, invoke: AccountInvoke, coo
     state: () => call('getState'),
     start: client => call('startSignIn', { client, callbackOrigin: new URL(origin).origin, loginSource: 'desktop' }),
     cancel: attemptId => call('cancelSignIn', { attemptId }), signOut: client => call('signOut', { client }),
+    signInWithPassword: async (client, phone, password) => passwordResult(await invoke({
+      namespace: 'account', method: 'signInWithPassword', args: { client, phone, password },
+    })),
+    registerWithPassword: async (client, input) => passwordResult(await invoke({
+      namespace: 'account', method: 'registerWithPassword', args: { client, input },
+    })),
     watch(listener, failed, expired, onAnalyticsEnabledChanged) {
       let closed = false
       let socket: WebSocket | undefined

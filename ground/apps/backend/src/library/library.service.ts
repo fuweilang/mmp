@@ -116,14 +116,17 @@ export type LibrarySearchHit = {
   versionNo: number;
   name: string;
   locator: string;
-  locatorKind: 'paragraph' | 'page';
+  locatorKind: 'paragraph' | 'page' | 'image';
   quote: string;
   matched: 'text' | 'name';
+  /** PNG、JPEG、WebP 或 GIF。调用方在模型接受图片时再取原图。 */
+  image?: true;
 };
 
 const SEARCH_HITS = 8;
 const SEARCH_FILES = 200;
 const SEARCH_SNIPPET = 400;
+const VIEWABLE_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
 
 /** 对话检索只看本人私人资料和已对企业共享、且可供引用的当前版本。企业管理员和平台管理身份不扩大这个范围。 */
 function quotableInChat(actor: Actor, node: NodeRecord): boolean {
@@ -298,7 +301,7 @@ export class LibraryService {
     return { items, breadcrumb, parentScope, total, page, pageSize: pageSize ?? total, ownerUserId: folderOwner };
   }
 
-  /** 按正文或文件名做字面检索。仅保存的图片、视频和未解析文件没有可供引用的摘录，不会出现。 */
+  /** 按正文或文件名做字面检索。视频和未解析的非图片文件不会出现。可查看的图片按文件名命中，即使没有抽出文字。 */
   async searchQuotes(actor: Actor, rawQuery: string) {
     this.requireMember(actor);
     const query = rawQuery.trim();
@@ -313,21 +316,25 @@ export class LibraryService {
       if (hits.length >= SEARCH_HITS || examined >= SEARCH_FILES) break;
       examined += 1;
       const version = await this.store.getVersion(node.currentVersionId!);
-      if (!version || version.parseStatus !== 'READY') continue;
-      const chunks = await this.store.listChunks(version.id);
+      if (!version) continue;
+      const viewable = (version.parseStatus === 'READY' || version.parseStatus === 'DOWNLOAD_ONLY')
+        && VIEWABLE_IMAGE_EXTENSIONS.has(fileExtension(version.originalName));
+      if (!viewable && version.parseStatus !== 'READY') continue;
+      const chunks = version.parseStatus === 'READY' ? await this.store.listChunks(version.id) : [];
       const textHit = chunks.find((row) => row.content.toLowerCase().includes(needle));
       const nameHit = node.name.toLowerCase().includes(needle);
       const source = textHit ?? (nameHit ? chunks[0] : undefined);
-      if (!source) continue;
+      if (!source && !(viewable && nameHit)) continue;
       hits.push({
         nodeId: node.id,
         versionId: version.id,
         versionNo: version.versionNo,
         name: node.name,
-        locator: source.locator,
-        locatorKind: source.locatorKind,
-        quote: excerptAround(source.content, needle),
+        locator: source?.locator ?? 'image',
+        locatorKind: source?.locatorKind ?? 'image',
+        quote: source ? excerptAround(source.content, needle) : '',
         matched: textHit ? 'text' : 'name',
+        ...(viewable ? { image: true as const } : {}),
       });
     }
     return { query, hits, truncated: hits.length >= SEARCH_HITS || examined < nodes.length && examined >= SEARCH_FILES };
@@ -746,7 +753,9 @@ export class LibraryService {
     this.requireMember(actor);
     const opened = await this.openBytes(actor, nodeId, versionId, false);
     if (!quotableInChat(actor, opened.node)) throw libraryNotFound();
-    if (opened.blocked || !opened.version || opened.version.parseStatus !== 'READY') throw new LibraryError(409, '资料当前不能加入任务', 'BLOCKED');
+    const ext = opened.version ? fileExtension(opened.version.originalName) : ''
+    const chatImage = ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext) && opened.version?.parseStatus === 'DOWNLOAD_ONLY'
+    if (opened.blocked || !opened.version || (opened.version.parseStatus !== 'READY' && !chatImage)) throw new LibraryError(409, '资料当前不能加入任务', 'BLOCKED');
     await this.touch(actor, opened.node);
     return { ok: true };
   }

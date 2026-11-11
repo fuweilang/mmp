@@ -89,6 +89,9 @@
         <el-table-column label="范围" width="110">
           <template #default="{ row }">{{ row.scope === 'PRIVATE' ? '仅自己' : '企业共享' }}</template>
         </el-table-column>
+        <el-table-column v-if="view === 'trash'" label="所有者" min-width="120">
+          <template #default="{ row }">{{ row.ownerName || '—' }}</template>
+        </el-table-column>
         <el-table-column label="处理状态" min-width="180">
           <template #default="{ row }">
             <span v-if="parseStatusMark(row)" class="library-type-option"><i class="library-type-dot" :style="{ background: parseStatusMark(row)!.color }" />{{ parseStatusMark(row)!.label }}</span>
@@ -194,7 +197,7 @@ import { getActivePinia } from 'pinia';
 import { useAuthStore } from '../stores/auth';
 import { libraryFileType, libraryFileTypeColor, libraryFileTypeOptions, libraryFolderLabel, libraryFolderTree, libraryListLocation, libraryParentPath, libraryParseStatusOption, libraryParseStatusOptions, libraryPreviewIsPdf } from '../utils/libraryPresentation';
 import '../styles/libraryDialogs.css';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, h, onBeforeUnmount, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   LibraryParseStatusLabel,
@@ -662,9 +665,26 @@ async function retry(row: LibraryItem) {
   await act(() => retryLibraryParse(row.id));
 }
 
+function noticeRecycled() {
+  ElMessage({
+    type: 'success',
+    duration: 6000,
+    showClose: true,
+    message: h('span', [
+      '已放入回收站。',
+      h('button', {
+        type: 'button',
+        class: 'el-button el-button--primary is-link',
+        onClick: () => { void router.push('/console/library/trash'); },
+      }, '打开回收站'),
+    ]),
+  });
+}
+
 async function recycleOne(row: LibraryItem) {
   if (!await confirmRecycle()) return;
   await act(() => recycleLibrary(row.id));
+  if (!actionError.value) noticeRecycled();
 }
 
 async function restoreOne(row: LibraryItem) {
@@ -687,6 +707,7 @@ async function runBatch(action: 'recycle' | 'restore' | 'purge') {
     const result = await batchLibrary(selected.value.map((row) => row.id), action);
     if (result.skipped) ElMessage.warning(`${result.skipped} 项当前不可见，已跳过`);
     if (result.failed.length) actionError.value = result.failed.map((row) => row.message).join('；');
+    if (action === 'recycle' && result.ok?.length) noticeRecycled();
     await reload();
   } catch (error) {
     actionError.value = error instanceof Error ? error.message : '批量操作失败';

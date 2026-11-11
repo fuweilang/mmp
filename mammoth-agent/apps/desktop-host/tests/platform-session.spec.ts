@@ -22,6 +22,9 @@ class Account extends DeepSeekAccount {
   override async getUnnotifiedBonuses() { return null }
   override async ackBonusNotified() { return false }
   override async startSignIn() { return state }
+  override async signInWithPassword() { return { ok: true } }
+  override async registerWithPassword() { return { ok: true } }
+  override async acknowledgeWelcome() { return false }
   override async cancelSignIn() { return state }
   override async signOut() { return state }
   override async rejectToken() {}

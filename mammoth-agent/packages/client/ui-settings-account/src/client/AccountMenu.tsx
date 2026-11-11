@@ -32,7 +32,7 @@ export type AccountMenuProps = PropsRuntime<'settings.launcher'> & PropsLocale<'
 export function AccountMenu({
   subscribeSessionExpired, subscribeModelSignInRequired, wide, settingsShortcut, openSettings, openOnboarding, settingsOpen,
   useAccount, useTheme, signOut, hasRunningAccountTasks, refreshAccount, bonusNoticeShown, bonusNoticeDismissed,
-  showLogin, start, cancel, avatarFailed, t, billingState, openRecharge, refreshBilling, openEnterpriseConsole,
+  showLogin, start, cancel, submitPassword, avatarFailed, t, billingState, openRecharge, refreshBilling, openEnterpriseConsole,
 }: AccountMenuProps) {
   const {
     enabled: billingEnabled, balanceCoins: billingCoins, canRecharge: billingCanRecharge,
@@ -148,7 +148,7 @@ export function AccountMenu({
       </>}
     </Menu>
     {account.loginVisible && !account.onboarding && <SignInDialog account={account} colorScheme={colorScheme}
-      start={start} cancel={cancel} t={t}
+      start={start} cancel={cancel} t={t} {...(submitPassword === undefined ? {} : { submitPassword })}
       close={() => { showLogin(false) }} useApiKey={() => { showLogin(false); openOnboarding('deepseek-official') }} />}
     {signedIn && signOutImpact !== undefined && <SignOutDialog running={signOutImpact} signOut={signOut}
       close={() => { setSignOutImpact(undefined) }} t={t} />}

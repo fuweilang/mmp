@@ -14,6 +14,11 @@ import type { Principal } from '@mammoth-ai/mmp-typert-protocol'
 import type { JsonValue } from '@mammoth-ai/mmp-util-values'
 import type { WorkspaceId } from '@mammoth-ai/mmp-workspace/types'
 
+/** One authorized library source admitted into a prompt. Images carry stored bytes. */
+export type LibraryPromptSource =
+  | TextBlock
+  | { readonly type: 'image'; readonly attachment: ImageAttachmentRef; readonly encodedBytes: number }
+
 declare module '@mammoth-ai/mmp-session-projection/types' {
   interface SessionProjectionMap {
     /** Persisted facts used to summarize a Session without activating it. */
@@ -745,13 +750,13 @@ declare module '@mammoth-ai/cordis' {
     'session/resolve-library-reference'(
       agent: Agent,
       part: Extract<PromptContentPart, { readonly type: 'library' }>,
-    ): Promise<TextBlock | undefined>
+    ): Promise<LibraryPromptSource | undefined>
     /**
      * Recheck the captured account for every original resolved source immediately before delivery.
      * @mode serial
      * @param agent - receiving Agent whose prompt is ready for synchronous delivery.
      * @param resolvedSources - original resolver blocks, before admission and message cloning.
      */
-    'session/validate-library-references'(agent: Agent, resolvedSources: readonly TextBlock[]): Promise<true | undefined>
+    'session/validate-library-references'(agent: Agent, resolvedSources: readonly LibraryPromptSource[]): Promise<true | undefined>
   }
 }

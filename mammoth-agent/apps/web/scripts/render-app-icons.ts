@@ -92,7 +92,7 @@ export const APP_ICON_VARIANTS: readonly AppIconVariant[] = [
 function croppedRoot(): string {
   return `<svg width="${String(TILE_EDGE)}" height="${String(TILE_EDGE)}"`
     + ` viewBox="${String(TILE_INSET.x)} ${String(TILE_INSET.y)} ${String(TILE_EDGE)} ${String(TILE_EDGE)}"`
-    + ' fill="none" xmlns="http://www.w3.org/2000/svg">'
+    + ' fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">'
 }
 
 /** A scale about the tile centre, so a masked crop stays symmetric. */

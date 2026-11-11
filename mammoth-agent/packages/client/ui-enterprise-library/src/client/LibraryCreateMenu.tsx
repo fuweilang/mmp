@@ -21,7 +21,7 @@ export function LibraryCreateMenu({ name, disabled, t, onCreate, prominent = fal
   }
   return <Menu className={prominent ? css.createMenu : undefined} open={open} onClose={() => { setOpen(false) }} portal align={prominent ? 'start' : 'end'} minWidthFromAnchor={prominent} autoFocus
     anchor={prominent
-      ? <Button className={css.createEntry} disabled={disabled} aria-label={t('new')} aria-haspopup="menu" aria-expanded={open} onClick={toggle} onKeyDown={openFromKey} icon={<IconPlusOutlineRegular size={16} />}><span>{t('new')}</span></Button>
+      ? <Button variant="primary" className={css.createEntry} disabled={disabled} aria-label={t('new')} aria-haspopup="menu" aria-expanded={open} onClick={toggle} onKeyDown={openFromKey} icon={<IconPlusOutlineRegular size={16} />}><span>{t('new')}</span></Button>
       : <Button size="sm" className={css.createButton} disabled={disabled} aria-label={`${t('new')} · ${name}`} aria-haspopup="menu" aria-expanded={open} onClick={toggle} onKeyDown={openFromKey}><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M10 3v14M3 10h14" /></svg></Button>}
     items={[
       { id: 'upload', label: t('upload'), icon: <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M10 13V3m-4 4 4-4 4 4M3 12v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4" /></svg> },

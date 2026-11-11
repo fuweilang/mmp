@@ -14,6 +14,7 @@ import { ReferenceChipNode } from '../src/client/input/editor/chip-node.tsx'
 import { TextRefNode } from '../src/client/input/editor/text-ref.ts'
 import { SessionInputShell } from '../src/client/input/facade.ts'
 import { InputHub } from '../src/client/input/hub.ts'
+import { readConversationDraft, readConversationViewPreference } from '../src/client/stores.ts'
 import { zh } from '../src/client/locales.ts'
 
 const mention = '@src/main.ts'
@@ -188,6 +189,51 @@ it('reuses one shell during synchronous catalog retention and restores its initi
   expect(reentered[0]?.draftSnapshot).toBe(first.draftSnapshot)
   expect(first.editor.getEditorState().read(() => $nodesOfType(ReferenceChipNode).length)).toBe(1)
   expect(localStorage.getItem(b.key)).toBe(b.raw)
+})
+
+it('drops a restored expert that the published selection has not caught up with', async () => {
+  const b = await fixture({
+    text: '',
+    references: [],
+    catalogSelection: {
+      protocol: 1,
+      selectionVersion: 4,
+      expertRef: { id: 'expert-b', versionId: 'v2', name: 'B专家' },
+      skillRefs: [],
+    },
+  })
+  expect(b.shell.snapshot.catalogSelection).toBeUndefined()
+  b.hub.clearCatalogSelection(b.binding)
+  expect(b.shell.snapshot.catalogSelection).toMatchObject({ expertRef: null, skillRefs: [], selectionVersion: 5 })
+  expect(readConversationDraft(b.id).catalogSelection?.expertRef).toBeNull()
+})
+
+it('drops a restored expert when New Task opens and keeps the typed text', async () => {
+  const b = await fixture({
+    text: '还没发出去',
+    references: [],
+    catalogSelection: {
+      protocol: 1,
+      selectionVersion: 4,
+      expertRef: { id: 'expert-b', versionId: 'v2', name: 'B专家' },
+      skillRefs: [{ id: 'skill-b', revision: 2, name: '技能B', key: 'skill-b' }],
+    },
+  })
+  b.hub.clearCatalogSelection(b.binding)
+  const cleared = b.shell.snapshot.catalogSelection
+  expect(cleared?.expertRef).toBeNull()
+  expect(cleared?.skillRefs).toEqual([])
+  expect(cleared?.selectionVersion).toBeGreaterThan(4)
+  expect(b.shell.snapshot.draft).toBe('还没发出去')
+  const stored = readConversationDraft(b.id)
+  expect(stored.text).toBe('还没发出去')
+  expect(stored.catalogSelection?.expertRef).toBeNull()
+  expect(stored.catalogSelection?.skillRefs).toEqual([])
+  expect(readConversationViewPreference(b.id)).toBe('trajectory')
+  const again = new InputHub(b.ctx, makeTranslate(zh, {}))
+  const restored = again.shellFor(b.binding)
+  expect(restored.draftSnapshot.catalogSelection?.expertRef).toBeNull()
+  expect(restored.draftSnapshot.text).toBe('还没发出去')
 })
 
 it('restores legacy text before a view and reuses the live draft on later shell lookups', async () => {

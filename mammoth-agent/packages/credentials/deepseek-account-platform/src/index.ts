@@ -8,7 +8,7 @@ import { promises as streamPromises } from 'node:stream'
 import { Context, Service } from '@mammoth-ai/cordis'
 import Schema from '@mammoth-ai/schemastery'
 import { z } from 'zod'
-import { DeepSeekAccount, installAccountTaskCancellation, mergePlatformCookies, platformClientHeaders, platformWireLocale, type AccountBonusBatch, type AccountBonusOrderId, type AccountClientMetadata, type AccountDetails, type AccountUserId, type AccountView, type PlatformSession, type SignInAttemptId, type SignInAttemptView } from '@mammoth-ai/mmp-deepseek-account'
+import { DeepSeekAccount, installAccountTaskCancellation, mergePlatformCookies, platformClientHeaders, platformWireLocale, type AccountBonusBatch, type AccountBonusOrderId, type AccountClientMetadata, type AccountDetails, type AccountProfile, type AccountUserId, type AccountView, type PasswordSignInResult, type PlatformSession, type SignInAttemptId, type SignInAttemptView } from '@mammoth-ai/mmp-deepseek-account'
 import { credentialKey } from '@mammoth-ai/mmp-credentials'
 import type { AuthorizationSession } from '@mammoth-ai/mmp-authorization'
 import { profile, readAccountDetail, readUnnotifiedBonuses, sendBonusNotified } from './details.ts'
@@ -20,12 +20,48 @@ import { installGroundBilling } from './ground-billing.ts'
 import { installGroundLibrary } from './ground-library.ts'
 import { installGroundLibraryPrompt } from './ground-library-prompt.ts'
 import { installGroundLibrarySearch } from './ground-library-search.ts'
+import { loggedFetch } from './http-log.ts'
 import { buildAuthorizeUrl, exchangeGroundCode, fetchGroundSessionMe, fetchGroundUserinfo, groundBrowserLogoutUrl, groundOidcDoneHtml, groundOidcEndpoints, groundSessionToken, groundSessionProfile } from './ground-oidc.ts'
 
 const KEY = credentialKey('deepseek-account-platform', 'default')
 const WEB_OWNER = credentialKey('ground-web-owner', 'default')
 const webOwner = z.object({ userId: z.string().min(1), tenantId: z.string().nullable() })
 const DEVICE = credentialKey('deepseek-account-platform', 'device')
+
+async function readErrorMessage(response: Response): Promise<string> {
+  try {
+    const body: unknown = await response.json()
+    const text = body && typeof body === 'object' && 'message' in body ? body.message : undefined
+    const raw = Array.isArray(text) ? text.filter((item): item is string => typeof item === 'string').join(' ')
+      : typeof text === 'string' ? text : ''
+    return raw.slice(0, 80)
+  } catch {
+    await response.body?.cancel()
+    return ''
+  }
+}
+
+async function readClientSession(response: Response): Promise<
+  | { ok: true; token: string; profile: AccountProfile }
+  | { ok: false; reason: 'unavailable' }
+> {
+  if (!response.ok) {
+    await response.body?.cancel()
+    return { ok: false, reason: 'unavailable' }
+  }
+  let payload: unknown
+  try { payload = await response.json() } catch { return { ok: false, reason: 'unavailable' } }
+  if (typeof payload !== 'object' || payload === null || typeof (payload as { token?: unknown }).token !== 'string') {
+    return { ok: false, reason: 'unavailable' }
+  }
+  const token = (payload as { token: string }).token
+  if (!token) return { ok: false, reason: 'unavailable' }
+  try {
+    return { ok: true, token, profile: groundSessionProfile((payload as { session?: unknown }).session) }
+  } catch {
+    return { ok: false, reason: 'unavailable' }
+  }
+}
 const grant = z.object({ version: z.literal(1), token: z.string().min(1), issuer: z.url() })
 const device = z.object({ id: z.uuid() })
 
@@ -118,6 +154,8 @@ interface Attempt {
   callback?: ServerResponse
   initialProfile?: { token: string; value: AccountDetails['profile'] }
   completionUrl?: string
+  /** Ground session already verified by password login. Never copied onto the client view. */
+  passwordSession?: { token: string; profile: AccountProfile }
 }
 
 /** The platform implementation owns login state and its opaque stored grant. */
@@ -186,7 +224,7 @@ export class PlatformAccount extends DeepSeekAccount {
       maxRetries: resolved.logoutMaxRetries, delayMs: resolved.logoutRetryDelayMs, requestTimeoutMs: this.requestTimeout,
     }
     ctx.authorization.registerFlow({
-      key: KEY, label: 'DeepSeek', methods: [{ id: 'browser', label: 'DeepSeek' }],
+      key: KEY, label: 'DeepSeek', methods: [{ id: 'browser', label: 'DeepSeek' }, { id: 'password', label: 'Password' }],
       run: (session) => {
         const attempt = this.attempt
         if (attempt === undefined) return Promise.reject(new PlatformAuthError('protocol'))
@@ -585,6 +623,156 @@ export class PlatformAccount extends DeepSeekAccount {
     return result.data.token
   }
 
+  override async acknowledgeWelcome(): Promise<boolean> {
+    if (this.authMode !== 'oidc') return true
+    const token = await this.groundSessionJwt()
+    if (token === undefined) return false
+    try {
+      const response = await loggedFetch(new URL('/api/auth/welcome-seen', this.origin).href, {
+        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(this.requestTimeout),
+        headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+      })
+      if (!response.ok) {
+        await response.body?.cancel()
+        return false
+      }
+      await response.body?.cancel()
+    } catch {
+      return false
+    }
+    const cached = this.lastProfile
+    if (cached?.token === token && cached.profile.status === 'ready') {
+      this.lastProfile = {
+        token,
+        profile: { status: 'ready', value: { ...cached.profile.value, welcomeSeen: true } },
+      }
+    }
+    return true
+  }
+
+  override async signInWithPassword(client: AccountClientMetadata, phone: string, password: string): Promise<PasswordSignInResult> {
+    if (this.authMode !== 'oidc' || this.webSso) throw new PlatformAuthError('protocol')
+    if (this.removing !== undefined) await this.removing
+    if (this.closed) throw new PlatformAuthError('protocol')
+    if (this.attempt !== undefined && ['initializing', 'waiting-browser', 'exchanging', 'committing'].includes(this.attempt.view.phase)) {
+      return { ok: false, reason: 'unavailable' }
+    }
+    const previous = this.attempt
+    if (previous !== undefined) {
+      await previous.done
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (this.closed) throw new PlatformAuthError('protocol')
+      if (this.attempt !== previous) return { ok: false, reason: 'unavailable' }
+    }
+    const verified = await this.requestClientLogin(phone, password)
+    if (!verified.ok) return verified
+    return this.commitClientSession(client, verified)
+  }
+
+  override async registerWithPassword(
+    client: AccountClientMetadata,
+    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string },
+  ): Promise<PasswordSignInResult> {
+    if (this.authMode !== 'oidc' || this.webSso) throw new PlatformAuthError('protocol')
+    if (this.removing !== undefined) await this.removing
+    if (this.closed) throw new PlatformAuthError('protocol')
+    if (this.attempt !== undefined && ['initializing', 'waiting-browser', 'exchanging', 'committing'].includes(this.attempt.view.phase)) {
+      return { ok: false, reason: 'unavailable' }
+    }
+    const previous = this.attempt
+    if (previous !== undefined) {
+      await previous.done
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (this.closed) throw new PlatformAuthError('protocol')
+      if (this.attempt !== previous) return { ok: false, reason: 'unavailable' }
+    }
+    const verified = await this.requestClientRegister(input)
+    if (!verified.ok) return verified
+    return this.commitClientSession(client, verified)
+  }
+
+  private async commitClientSession(
+    client: AccountClientMetadata,
+    verified: { token: string; profile: AccountProfile },
+  ): Promise<PasswordSignInResult> {
+    const attempt: Attempt = {
+      origin: this.origin, loginSource: 'desktop',
+      locale: platformWireLocale(client.locale),
+      clientHeaders: platformClientHeaders(this.platform, client),
+      view: { id: randomUUID() as SignInAttemptId, phase: 'initializing' },
+      controller: new AbortController(), done: Promise.resolve(), running: Promise.resolve(),
+      passwordSession: { token: verified.token, profile: verified.profile },
+    }
+    this.attempt = attempt
+    attempt.done = this.ctx.authorization.begin({
+      key: KEY, method: 'password', signal: attempt.controller.signal,
+      interaction: { notify: () => undefined, prompt: () => Promise.reject(new PlatformAuthError('protocol')) },
+    }).then((outcome) => {
+      this.update(attempt, { phase: outcome.status === 'authorized' ? 'succeeded' : 'cancelled' })
+    }).catch((error: unknown) => {
+      const code = error instanceof PlatformAuthError ? error.code : 'protocol'
+      this.update(attempt, { phase: code === 'expired' ? 'expired' : 'failed', errorCode: code })
+    }).then(async () => {
+      await attempt.running.catch(() => undefined)
+    })
+    this.changed()
+    await attempt.done
+    const state = await this.getState()
+    return state.status === 'credential-stored' ? { ok: true } : { ok: false, reason: 'unavailable' }
+  }
+
+  private async requestClientRegister(input: {
+    name: string
+    phone: string
+    password: string
+    enterpriseName: string
+    slug: string
+  }): Promise<
+    | { ok: true; token: string; profile: AccountProfile }
+    | { ok: false; reason: 'credentials' | 'forbidden' | 'unavailable'; message?: string }
+  > {
+    let response: Response
+    try {
+      response = await loggedFetch(new URL('/api/auth/client-register', this.origin).href, {
+        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(this.requestTimeout),
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify(input),
+      })
+    } catch {
+      return { ok: false, reason: 'unavailable' }
+    }
+    if (response.status === 409 || response.status === 400) {
+      const message = await readErrorMessage(response)
+      return { ok: false, reason: 'forbidden', ...(message ? { message } : {}) }
+    }
+    return readClientSession(response)
+  }
+
+  private async requestClientLogin(phone: string, password: string): Promise<
+    | { ok: true; token: string; profile: AccountProfile }
+    | { ok: false; reason: 'credentials' | 'forbidden' | 'unavailable'; message?: string }
+  > {
+    let response: Response
+    try {
+      response = await loggedFetch(new URL('/api/auth/client-login', this.origin).href, {
+        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(this.requestTimeout),
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ phone, password }),
+      })
+    } catch {
+      return { ok: false, reason: 'unavailable' }
+    }
+    if (response.status === 401) {
+      await response.body?.cancel()
+      return { ok: false, reason: 'credentials' }
+    }
+    if (response.status === 403) {
+      const message = await readErrorMessage(response)
+      return { ok: false, reason: 'forbidden', ...(message ? { message } : {}) }
+    }
+    return readClientSession(response)
+  }
+
   override async startSignIn(client: AccountClientMetadata, callbackOrigin: string, loginSource: 'web' | 'desktop'): Promise<AccountView> {
     if (this.webSso) throw new PlatformAuthError('protocol')
     if (this.removing !== undefined) await this.removing
@@ -715,6 +903,15 @@ export class PlatformAccount extends DeepSeekAccount {
   }
 
   private async run(session: AuthorizationSession, attempt: Attempt): Promise<void> {
+    if (session.method === 'password') {
+      const ready = attempt.passwordSession
+      if (ready === undefined) throw new PlatformAuthError('protocol')
+      attempt.initialProfile = { token: ready.token, value: { status: 'ready', value: ready.profile } }
+      this.update(attempt, { phase: 'committing' })
+      try { await session.commit({ kind: 'grant', payload: { version: 1, token: ready.token, issuer: this.origin } }) }
+      catch { throw new PlatformAuthError('storage') }
+      return
+    }
     const webServer = this.ctx.get('webServer')
     if (webServer === undefined) throw new PlatformAuthError('protocol')
     const verifier = randomBytes(32).toString('base64url')

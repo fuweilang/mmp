@@ -745,7 +745,7 @@ describe('t196 real primitive status menu', () => {
     fireEvent.pointerDown(screen.getByRole('button', { name: zh.searchPlaceholder }));
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
   });
-  it('puts unfinished and stored-only files in the not-for-AI filter', async () => {
+  it('puts unfinished files in the not-for-AI filter and keeps stored photos available', async () => {
     const fetchImpl = vi.fn(async () => Response.json({ items: [
       { id: 'wait', name: '等待.pdf', kind: 'FILE', currentVersion: { id: 'vw', versionNo: 1, parseStatus: 'PENDING' } },
       { id: 'work', name: '解析.docx', kind: 'FILE', currentVersion: { id: 'vx', versionNo: 1, parseStatus: 'PROCESSING' } },
@@ -755,16 +755,24 @@ describe('t196 real primitive status menu', () => {
     ] }));
     render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
     await listing().findByRole('button', { name: '等待.pdf' });
+    expect(listing().getByRole('button', { name: '图片.png' })).toBeTruthy();
     expect(listing().queryByRole('button', { name: '失败.txt' })).toBeNull();
     const trigger = screen.getByRole('button', { name: zh.filterStatus });
     fireEvent.click(trigger);
     fireEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: zh.statusDownloadOnly }));
     await waitFor(() => {
-      expect(listing().getByRole('button', { name: '图片.png' })).toBeTruthy();
+      expect(listing().queryByRole('button', { name: '图片.png' })).toBeNull();
       expect(listing().getByRole('button', { name: '等待.pdf' })).toBeTruthy();
       expect(listing().getByRole('button', { name: '解析.docx' })).toBeTruthy();
       expect(listing().queryByRole('button', { name: '制度.md' })).toBeNull();
       expect(listing().queryByRole('button', { name: '失败.txt' })).toBeNull();
+    });
+    fireEvent.click(screen.getByRole('button', { name: zh.filterStatus }));
+    fireEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: zh.statusReady }));
+    await waitFor(() => {
+      expect(listing().getByRole('button', { name: '图片.png' })).toBeTruthy();
+      expect(listing().getByRole('button', { name: '制度.md' })).toBeTruthy();
+      expect(listing().queryByRole('button', { name: '等待.pdf' })).toBeNull();
     });
     expect(screen.getByRole('button', { name: zh.refresh }).textContent).toBe('');
   });

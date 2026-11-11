@@ -65,7 +65,7 @@ it('registers account sign-in in a plain browser without the Desktop-only surfac
     if (reload) await c.reload(SELF)
     await c.mock.streams.opened('account/watch', reload ? 2 : 1)
     expect(c.ctx.slots.entries('settings.launcher')).toHaveLength(1)
-    expect(c.ctx.slots.entries('settings.models.sign-in')).toHaveLength(1)
+    expect(c.ctx.slots.entries('settings.models.sign-in')).toHaveLength(0)
     expect(quotaNoticeEntry(c)).toBeDefined()
     expect(platformHostEntry(c)).toBeUndefined()
     expect(c.ctx.slots.entries('shell.overlay').some(entry => entry.options.id === 'desktop-onboarding')).toBe(true)
@@ -101,7 +101,7 @@ it('shares account actions across seats, publishes dialog ownership, and opens c
   vi.stubGlobal('mmpDesktop', {})
   const c = await start()
   const actions = operations(c)
-  expect(c.ctx.slots.entries('settings.models.sign-in')[0]!.inject!()).toBe(actions)
+  expect(c.ctx.slots.entries('settings.launcher')[0]!.inject!()).toBe(actions)
   // The account UI follows the live theme service through the framework hook channel.
   const theme = c.ctx.get('theme') as ThemeRuntime
   const onTheme = vi.fn()
@@ -132,7 +132,7 @@ it('shares account actions across seats, publishes dialog ownership, and opens c
   await vi.waitFor(() => { expect(actions.hooks.account.getSnapshot().details?.profile).toEqual(profile) })
   const entry = c.ctx.slots.entries('settings.section').find(entry => entry.options.id === 'account')!
   expect(entry.inject!()).toBe(actions)
-  expect(resolveSlotLabel(entry.options.label)).toBe('Account')
+  expect(resolveSlotLabel(entry.options.label)).toBe('账号与余额')
   actions.contactUs()
   const support = new URL(String(open.mock.calls.at(-1)![0]))
   expect(support.searchParams.get('prefill_uid')).toBe('account-user')
@@ -328,14 +328,24 @@ for (const desktop of [false, true]) it(`uses the browser or Desktop login carri
   const actions = operations(c)
   mock.remote.account.startSignIn.mockResolvedValue(ok(view))
   await actions.start()
-  expect(mock.remote.account.startSignIn).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en', version: '0.0.0-test' }),
-    window.location.origin, desktop ? 'desktop' : 'web')
+  if (desktop) {
+    expect(mock.remote.account.startSignIn).not.toHaveBeenCalled()
+    expect(actions.hooks.account.getSnapshot()).toMatchObject({ loginVisible: true, loginFailed: false })
+  } else {
+    expect(mock.remote.account.startSignIn).toHaveBeenCalledWith(expect.objectContaining({ locale: 'zh', version: '0.0.0-test' }),
+      window.location.origin, 'web')
+  }
   // Only a plain browser preopens the authorization tab during the click.
   expect(open).toHaveBeenCalledTimes(desktop ? 0 : 1)
   const failure = { ok: false as const, error: new RemoteError('gateway/internal', 'offline', {}) }
   mock.remote.account.startSignIn.mockResolvedValueOnce(failure)
-  await expect(actions.start()).rejects.toThrow('account start failed')
-  expect(actions.hooks.account.getSnapshot()).toMatchObject({ loginVisible: true, loginFailed: true })
+  if (desktop) {
+    await actions.start()
+    expect(mock.remote.account.startSignIn).not.toHaveBeenCalled()
+  } else {
+    await expect(actions.start()).rejects.toThrow('account start failed')
+    expect(actions.hooks.account.getSnapshot()).toMatchObject({ loginVisible: true, loginFailed: true })
+  }
   const id = 'cancel-me' as SignInAttemptId
   mock.remote.account.cancelSignIn.mockResolvedValueOnce(ok(view)).mockResolvedValueOnce(failure)
   await actions.cancel(id)
@@ -392,7 +402,8 @@ it('uses the Desktop stream origin and exposes the native platform bridge', asyn
   expect(owner).toHaveBeenCalledExactlyOnceWith('returned')
   mock.remote.account.startSignIn.mockResolvedValue(ok(view))
   await actions.start()
-  expect(mock.remote.account.startSignIn).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en' }), 'http://localhost:9876', 'desktop')
+  expect(mock.remote.account.startSignIn).not.toHaveBeenCalled()
+  expect(actions.hooks.account.getSnapshot()).toMatchObject({ loginVisible: true })
 }, 60_000)
 
 
@@ -486,12 +497,12 @@ it('reads the unnotified bonus in the active locale and acknowledges only after 
   await vi.waitFor(() => {
     expect(actions.hooks.account.getSnapshot().notices?.[0]).toMatchObject({ orderId, message: 'Awarded 5.00' })
   })
-  expect(c.mock.remote.account.getUnnotifiedBonuses).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en' }))
+  expect(c.mock.remote.account.getUnnotifiedBonuses).toHaveBeenCalledWith(expect.objectContaining({ locale: 'zh' }))
   // A successful read is not a display, so nothing may be acknowledged yet.
   expect(c.mock.remote.account.ackBonusNotified).not.toHaveBeenCalled()
   actions.bonusNoticeShown(orderId as AccountBonusOrderId)
   await vi.waitFor(() => {
-    expect(c.mock.remote.account.ackBonusNotified).toHaveBeenCalledWith('account-user', orderId, expect.objectContaining({ locale: 'en' }))
+    expect(c.mock.remote.account.ackBonusNotified).toHaveBeenCalledWith('account-user', orderId, expect.objectContaining({ locale: 'zh' }))
   })
   actions.bonusNoticeDismissed(orderId as AccountBonusOrderId)
   expect(actions.hooks.account.getSnapshot().notices?.[0]).toBeUndefined()
@@ -578,7 +589,7 @@ it('refreshes balances and the bonus read on one Settings entry, without polling
   expect(c.mock.remote.account.getBalance).toHaveBeenCalledTimes(balances + 1)
   expect(c.mock.remote.account.getUnnotifiedBonuses).toHaveBeenCalledTimes(2)
   // The bonus read carries the active UI language.
-  expect(c.mock.remote.account.getUnnotifiedBonuses).toHaveBeenLastCalledWith(expect.objectContaining({ locale: 'en' }))
+  expect(c.mock.remote.account.getUnnotifiedBonuses).toHaveBeenLastCalledWith(expect.objectContaining({ locale: 'zh' }))
 }, 60_000)
 
 it('publishes a failed balance from a Settings entry without dropping the bonus read', async ({ start }) => {
@@ -633,13 +644,13 @@ it('samples the build version, language, and UTC offset for every account call',
   c.mock.streams.push('account/watch', stored)
   await vi.waitFor(() => { expect(c.mock.remote.account.getUnnotifiedBonuses).toHaveBeenCalledTimes(1) })
   expect(c.mock.remote.account.getUnnotifiedBonuses).toHaveBeenLastCalledWith({
-    version: '0.0.0-test', locale: 'en', timezoneOffsetSeconds: -28_800,
+    version: '0.0.0-test', locale: 'zh', timezoneOffsetSeconds: -28_800,
   })
   // The next call reads the zone again instead of reusing the first sample.
   offset.mockReturnValue(-300)
   await actions.refreshAccount()
   expect(c.mock.remote.account.getUnnotifiedBonuses).toHaveBeenLastCalledWith({
-    version: '0.0.0-test', locale: 'en', timezoneOffsetSeconds: 18_000,
+    version: '0.0.0-test', locale: 'zh', timezoneOffsetSeconds: 18_000,
   })
 }, 60_000)
 

@@ -15,7 +15,7 @@ import type {} from '@mammoth-ai/mmp-client-file-upload'
 import {
   ReasoningEffortId, createUserMessage, freezeMessage,
 } from '@mammoth-ai/mmp-llm'
-import type { MessageSource, TextBlock } from '@mammoth-ai/mmp-llm'
+import type { MessageSource } from '@mammoth-ai/mmp-llm'
 import { buildForkSeed } from '@mammoth-ai/mmp-session/fork'
 import { SessionLogOffset, SessionSeq } from '@mammoth-ai/mmp-session'
 import type { SessionEvent, SessionHeader, SessionId, UserMessage } from '@mammoth-ai/mmp-session'
@@ -23,6 +23,7 @@ import { SessionQueryError, type SessionObservation } from '@mammoth-ai/mmp-sess
 import { SessionTitleInvalidError } from '@mammoth-ai/mmp-session-title'
 import { assertNever } from '@mammoth-ai/mmp-util-values'
 import { RemoteError, remoteErrorOf } from '@mammoth-ai/mmp-typert-protocol'
+import type { LibraryPromptSource } from './types.ts'
 import type { Workspace } from '@mammoth-ai/mmp-workspace'
 import {
   ApiSessionAgentController,
@@ -397,9 +398,9 @@ export class SessionCommandController {
     return this.agents.serializeImageAdmission(agent, admit)
   }
 
-  private async resolveLibraryReferences(agent: Agent, content: SessionPromptRequest['content']): Promise<{ readonly content: readonly ResolvedLibraryPromptPart[]; readonly sources: readonly TextBlock[] }> {
+  private async resolveLibraryReferences(agent: Agent, content: SessionPromptRequest['content']): Promise<{ readonly content: readonly ResolvedLibraryPromptPart[]; readonly sources: readonly LibraryPromptSource[] }> {
     const resolved: ResolvedLibraryPromptPart[] = []
-    const sources: TextBlock[] = []
+    const sources: LibraryPromptSource[] = []
     for (const part of content) {
       if (part.type !== 'library') { resolved.push(part); continue }
       try {
@@ -618,7 +619,7 @@ export class SessionCommandController {
   }
 }
 
-type ResolvedLibraryPromptPart = Exclude<SessionPromptRequest['content'][number], { readonly type: 'library' }> | TextBlock
+type ResolvedLibraryPromptPart = Exclude<SessionPromptRequest['content'][number], { readonly type: 'library' }> | LibraryPromptSource
 
 /** Replace each file part with the file or image its staged receipt names. */
 function resolvePromptFileReceipts(

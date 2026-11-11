@@ -145,9 +145,53 @@ export class OfficialAgentService {
     this.requireActiveAccount(user);const f=catalogQuery(query,'expert');const filters:Prisma.OfficialAgentWhereInput[]=[{status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}}];
     if(f.capability!=='all'||f.industry!=='all')filters.push(catalogDiscoveryWhere('expert',f.capability,f.industry));
     if(f.q)filters.push({OR:[{key:{contains:f.q,mode:'insensitive'}},{onlineVersion:{is:{OR:[{name:{contains:f.q,mode:'insensitive'}},{summary:{contains:f.q,mode:'insensitive'}}]}}},...Object.entries(DESCRIPTIONS).filter(([,v])=>v.summary.toLocaleLowerCase().includes(f.q.toLocaleLowerCase())).map(([key,v])=>({key,onlineVersion:{is:{summary:v.expectedOriginal}}}))]});
-    const where:Prisma.OfficialAgentWhereInput={AND:filters};const [total,rows]=await this.prisma.$transaction([this.prisma.officialAgent.count({where}),this.prisma.officialAgent.findMany({where:{AND:[where,...f.after?[{key:{gt:f.after}}]:[]]},orderBy:{key:'asc'},take:21,select:CATALOG_EXPERT_SELECT})],{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
-    const page=rows.slice(0,20);const items=await Promise.all(page.map(async row=>({...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),summary:displaySummary(row.key,row.onlineVersion!.summary),discovery:discoveryOf('expert',row.key,row.category),linkedSkills:await this.versionLinkedSkills(row.id,row.onlineVersion!)})));
+    const where:Prisma.OfficialAgentWhereInput={AND:filters};
+    const [total,rows]=await Promise.all([this.prisma.officialAgent.count({where}),this.prisma.officialAgent.findMany({where:{AND:[where,...f.after?[{key:{gt:f.after}}]:[]]},orderBy:{key:'asc'},take:21,select:CATALOG_EXPERT_SELECT})]);
+    const page=rows.slice(0,20);
+    const linked=await this.linkedSkillsByAgent(page.flatMap(row=>row.onlineVersion?[{id:row.id,expertDefinition:row.onlineVersion.expertDefinition,linkedSkillSummaries:row.onlineVersion.linkedSkillSummaries}]:[]));
+    const items=page.map(row=>({...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),summary:displaySummary(row.key,row.onlineVersion!.summary),discovery:discoveryOf('expert',row.key,row.category),linkedSkills:linked.get(row.id)??[]}));
     return {items,total,hasMore:rows.length>20,nextCursor:rows.length>20?nextCatalogCursor(page[page.length-1]!.key,f.signature):null};
+  }
+
+  /** One enabled-skill lookup for the whole page. A remote catalog cannot afford one query per card. */
+  private async linkedSkillsByAgent(rows: Array<{ id: string; expertDefinition: Prisma.JsonValue; linkedSkillSummaries: Prisma.JsonValue }>): Promise<Map<string, SkillSummary[]>> {
+    const legacyIds: string[] = [];
+    const frozen = new Map<string, Prisma.JsonObject[]>();
+    for (const row of rows) {
+      const definition = row.expertDefinition;
+      if (!definition || typeof definition !== 'object' || Array.isArray(definition) || definition.schemaVersion !== 1) {
+        legacyIds.push(row.id);
+        continue;
+      }
+      frozen.set(row.id, (Array.isArray(row.linkedSkillSummaries) ? row.linkedSkillSummaries : []).filter((item): item is Prisma.JsonObject => !!item && typeof item === 'object' && !Array.isArray(item)));
+    }
+    const linkRows = legacyIds.length
+      ? await this.prisma.officialAgentSkillLink.findMany({ where: { agentId: { in: legacyIds } }, select: { agentId: true, skillId: true }, orderBy: { createdAt: 'asc' } })
+      : [];
+    const legacySkillIds = new Map<string, string[]>();
+    for (const link of linkRows) {
+      const list = legacySkillIds.get(link.agentId) ?? [];
+      list.push(link.skillId);
+      legacySkillIds.set(link.agentId, list);
+    }
+    const wanted = new Set<string>();
+    for (const id of legacyIds) for (const skillId of legacySkillIds.get(id) ?? []) wanted.add(skillId);
+    for (const items of frozen.values()) for (const item of items) if (typeof item.id === 'string') wanted.add(item.id);
+    const enabledById = new Map((await this.officialSkills.summarizeEnabledSkills([...wanted])).map(item => [item.id, item]));
+    const out = new Map<string, SkillSummary[]>();
+    for (const row of rows) {
+      const items = frozen.get(row.id);
+      if (items) {
+        out.set(row.id, items.filter(item => typeof item.id === 'string' && enabledById.has(item.id) && typeof item.key === 'string' && typeof item.name === 'string' && typeof item.summary === 'string' && typeof item.packageRevision === 'number').map(item => ({
+          id: item.id as string, key: item.key as string, name: item.name as string, summary: item.summary as string,
+          category: typeof item.category === 'string' ? item.category as SkillSummary['category'] : null,
+          packageRevision: item.packageRevision as number, enabledAt: typeof item.enabledAt === 'string' ? item.enabledAt : null,
+        })));
+      } else {
+        out.set(row.id, (legacySkillIds.get(row.id) ?? []).flatMap(id => { const skill = enabledById.get(id); return skill ? [skill] : []; }));
+      }
+    }
+    return out;
   }
 
   /** New versions use their frozen summaries; legacy versions retain their existing compatibility path. */

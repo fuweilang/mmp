@@ -53,6 +53,8 @@ model User {
   status           String      @default("active")
   peecaiUserId     String?     @unique @map("peecai_user_id")
   createdAt        DateTime    @default(now()) @map("created_at")
+  /// Set when this account dismisses the one-time welcome. Null only for accounts created after the backfill.
+  welcomeSeenAt    DateTime?   @map("welcome_seen_at")
   updatedAt        DateTime    @updatedAt @map("updated_at")
   memberships      OrgMember[]
   agentGrants      AgentGrant[]

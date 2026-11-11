@@ -22,6 +22,19 @@ function options(messages: GenerateOptions['messages'] | readonly object[], extr
 }
 
 describe('toOpenAiMessages', () => {
+  it('sends a pasted image as an OpenAI image part', () => {
+    const messages = toOpenAiMessages(options([
+      { role: 'user', content: [{ type: 'text', text: '描述这张图' }, image] },
+    ]), new Map([[image.attachment.attachmentId, { mediaType: 'image/jpeg', base64: 'aW1n' }]]))
+    expect(messages).toEqual([{
+      role: 'user',
+      content: [
+        { type: 'text', text: '描述这张图' },
+        { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,aW1n' } },
+      ],
+    }])
+  })
+
   it('projects system, user, assistant reasoning, tools, and omitted attachments', () => {
     expect(toOpenAiMessages(options([
       { role: 'system', content: [{ type: 'text', text: 'sys' }] },

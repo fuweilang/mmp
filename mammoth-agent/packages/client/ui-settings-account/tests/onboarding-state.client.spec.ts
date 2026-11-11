@@ -550,3 +550,38 @@ it.each(['current', 'invalidated', 'disposed'] as const)('contains a rejected %s
   expect(h.mutate).not.toHaveBeenCalled()
   expect(h.controller.state.getSnapshot().progress.step).toBe('welcome')
 })
+
+function withWelcome(seen: boolean) {
+  return {
+    profile: {
+      status: 'ready' as const,
+      value: { id: null, name: null, contact: null, welcomeSeen: seen },
+    },
+  }
+}
+
+it('skips desktop onboarding when the account already saw the welcome', async () => {
+  vi.stubGlobal('mmpDesktop', {})
+  try {
+    const h = await harness({ status: 'credential-stored', progress: { step: 'welcome' } })
+    h.account.set({ ...h.account.getSnapshot(), details: withWelcome(true) })
+    expect(h.controller.state.getSnapshot()).toMatchObject({ visible: false, progress: { step: 'welcome' } })
+    expect(h.mutate).not.toHaveBeenCalled()
+  } finally {
+    vi.unstubAllGlobals()
+  }
+})
+
+it('reopens desktop onboarding for a new account on an install that already finished', async () => {
+  vi.stubGlobal('mmpDesktop', {})
+  try {
+    const h = await harness({ status: 'credential-stored', progress: { step: 'done', completion: 'completed' } })
+    expect(h.controller.state.getSnapshot().visible).toBe(false)
+    h.account.set({ ...h.account.getSnapshot(), details: withWelcome(false) })
+    await vi.waitFor(() => {
+      expect(h.controller.state.getSnapshot()).toMatchObject({ visible: true, progress: { step: 'welcome' } })
+    })
+  } finally {
+    vi.unstubAllGlobals()
+  }
+})

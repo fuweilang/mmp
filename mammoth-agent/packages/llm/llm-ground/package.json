@@ -29,7 +29,8 @@
     "@mammoth-ai/mmp-llm": "workspace:*",
     "@mammoth-ai/mmp-deepseek-account": "workspace:*",
     "@mammoth-ai/mmp-session": "workspace:*",
-    "@mammoth-ai/mmp-brand": "workspace:*"
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/mmp-attachment": "workspace:*"
   },
   "devDependencies": {
     "@mammoth-ai/cordis": "workspace:~",
@@ -37,6 +38,7 @@
     "@mammoth-ai/mmp-llm": "workspace:*",
     "@mammoth-ai/mmp-deepseek-account": "workspace:*",
     "@mammoth-ai/mmp-session": "workspace:*",
-    "@mammoth-ai/mmp-brand": "workspace:*"
+    "@mammoth-ai/mmp-brand": "workspace:*",
+    "@mammoth-ai/mmp-attachment": "workspace:*"
   }
 }

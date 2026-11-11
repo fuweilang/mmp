@@ -2,7 +2,7 @@
 import { defineStore, type EngineStoreHandle } from '@mammoth-ai/mmp-client-store'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import type { ConversationStoreState } from './contract/views.ts'
-import type { DraftInput, DraftSnapshot } from './contract/draft-editor.ts'
+import type { CatalogDraftSelection, DraftInput, DraftSnapshot } from './contract/draft-editor.ts'
 import { parseStoredDraft } from './draft.ts'
 
 const CONVERSATION_STORE_KEY = 'mmp.conversation'
@@ -52,6 +52,29 @@ export function readConversationDraft(sessionId: SessionId): DraftSnapshot {
   } catch (_error: unknown) {
     // Unavailable browser storage or malformed JSON has no usable saved draft.
     return empty
+  }
+}
+
+/**
+ * Replace only the saved expert and skills. Typed text and the selected view stay.
+ * @param sessionId - Session-scoped persistence suffix.
+ * @param selection - explicit empty selection New Task leaves behind.
+ */
+export function writeConversationDraftCatalog(sessionId: SessionId, selection: CatalogDraftSelection): void {
+  if (typeof localStorage === 'undefined') return
+  const key = `${CONVERSATION_STORE_KEY}.${sessionId}`
+  try {
+    const raw = localStorage.getItem(key)
+    const stored: unknown = raw === null ? { view: null, viewRequest: null } : JSON.parse(raw)
+    if (typeof stored !== 'object' || stored === null || Array.isArray(stored)) return
+    const record = stored as { draft?: unknown }
+    const draft = record.draft
+    if (typeof draft === 'string') record.draft = { text: draft, references: [], catalogSelection: selection }
+    else if (typeof draft === 'object' && draft !== null) record.draft = { ...draft, catalogSelection: selection }
+    else record.draft = { text: '', references: [], catalogSelection: selection }
+    localStorage.setItem(key, JSON.stringify(stored))
+  } catch (_error: unknown) {
+    // Storage failures leave the in-memory clear in place.
   }
 }
 

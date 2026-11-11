@@ -81,7 +81,7 @@ export function apply(ctx: ClientContext): void {
           const binding = ctx.sessions.binding(request.sessionId)
           if (!binding || requestedPicker !== request) throw new Error(t('sessionUnavailable'))
           const references = items.map((item) => {
-            if (item.kind !== 'FILE' || item.versionId === null || item.parseStatus !== 'READY') throw new Error(t('attachFailed'))
+            if (item.kind !== 'FILE' || item.versionId === null || choiceBlock(item).disabled) throw new Error(t('attachFailed'))
             return { source: 'library', ref: libraryRef({ nodeId: item.nodeId, versionId: item.versionId }),
               label: item.name, appearance: 'file' as const, clipboardText: item.name }
           })

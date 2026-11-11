@@ -64,6 +64,27 @@ it('discards an in-flight result when its provider is disposed', async () => {
   await expect(h.resolve()).rejects.toThrow('LIBRARY_PROVIDER_DISPOSED')
 })
 
+it('admits a stored library photo instead of a text excerpt', async () => {
+  const jpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10])
+  const ctx = new Context()
+  const saved = { attachmentId: 'sha256:photo', mediaType: 'image/jpeg' as const, bytes: jpeg.byteLength, width: 1, height: 1, name: '小悟空.jpg' }
+  const saveImages = vi.fn(async () => [saved])
+  ctx.provide('attachments', { saveImages } as never)
+  const upstream = vi.fn(async () => new Response(jpeg, { status: 200 }))
+  vi.stubGlobal('fetch', upstream)
+  installGroundLibraryPrompt(ctx, 'https://ground.test', async () => 'account-a', async () => {}, 1000)
+  const photo = { type: 'library' as const, nodeId: 'node/1', versionId: 'version-1', name: '小悟空.jpg' }
+  try {
+    const block = await ctx.serial('session/resolve-library-reference', {} as Agent, photo)
+    expect(block).toEqual({ type: 'image', attachment: saved, encodedBytes: jpeg.byteLength })
+    expect(saveImages).toHaveBeenCalledWith([expect.objectContaining({ mediaType: 'image/jpeg', name: '小悟空.jpg', data: jpeg })])
+    const [url, init] = upstream.mock.calls[0]!
+    expect(String(url)).toBe('https://ground.test/api/library/nodes/node%2F1/download?versionId=version-1&inline=1')
+    expect(init).toMatchObject({ method: 'GET', headers: { authorization: 'Bearer account-a' } })
+    await expect(ctx.serial('session/validate-library-references', {} as Agent, [block!])).resolves.toBe(true)
+  } finally { await ctx.fiber.dispose() }
+})
+
 it('rejects mixed-account sources and a switch after source preparation at final admission', async () => {
   const h = await harness()
   try {

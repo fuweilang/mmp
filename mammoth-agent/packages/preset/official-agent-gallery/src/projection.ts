@@ -1,7 +1,10 @@
 import { z } from 'zod'
 import type { ProjectionDefinition } from '@mammoth-ai/mmp-session-projection'
+import { MAMMOTH_AI_ANSWER } from './types.ts'
 import type {
+  AnswerExpertView,
   OfficialAgentBindingState,
+  OfficialGalleryAnswerExpertState,
   OfficialGallerySentSkillsState,
   OfficialGallerySourceState,
   OfficialSkillBindingState,
@@ -181,6 +184,77 @@ export const officialGallerySentSkillsProjection = {
     view: (state: OfficialGallerySentSkillsState) => state.byRequest,
   },
 } satisfies ProjectionDefinition<'officialGallerySentSkills', OfficialGallerySentSkillsState>
+
+const answerExpertSchema = z.object({
+  name: z.string().min(1),
+  agentId: z.string().min(1),
+}).strict()
+
+const answerExpertStateSchema = z.object({
+  pending: z.record(z.string(), answerExpertSchema),
+  byTurn: z.record(z.string(), answerExpertSchema),
+}).strict()
+
+function answerExpertOf(data: unknown): { requestId: string; expert: AnswerExpertView } | undefined {
+  if (!data || typeof data !== 'object') return undefined
+  const record = data as { requestId?: unknown; expert?: unknown }
+  if (typeof record.requestId !== 'string' || record.requestId === '') return undefined
+  if (record.expert === null) return { requestId: record.requestId, expert: MAMMOTH_AI_ANSWER }
+  if (!record.expert || typeof record.expert !== 'object') return undefined
+  const expert = record.expert as { name?: unknown; agentId?: unknown }
+  if (typeof expert.name !== 'string' || expert.name === '' || typeof expert.agentId !== 'string' || expert.agentId === '') return undefined
+  return { requestId: record.requestId, expert: { name: expert.name, agentId: expert.agentId } }
+}
+
+function answerIdentityTurn(data: unknown): number | undefined {
+  if (!data || typeof data !== 'object') return undefined
+  const turn = (data as { turn?: unknown }).turn
+  if (!Number.isSafeInteger(turn) || Number(turn) < 0) return undefined
+  return Number(turn)
+}
+
+function answerTurnOf(data: unknown): { requestId: string; turn: number } | undefined {
+  if (!data || typeof data !== 'object') return undefined
+  const record = data as { requestId?: unknown; turn?: unknown }
+  if (typeof record.requestId !== 'string' || record.requestId === '' || !Number.isSafeInteger(record.turn) || Number(record.turn) < 0) return undefined
+  return { requestId: record.requestId, turn: Number(record.turn) }
+}
+
+function sameAnswerExpert(left: AnswerExpertView | undefined, right: AnswerExpertView): boolean {
+  return left !== undefined && left.name === right.name && left.agentId === right.agentId
+}
+
+/**
+ * Expert shown above each reply. The name comes from the attempt.
+ * The turn number arrives when that attempt is claimed. Role text stays on the Host.
+ */
+export const officialGalleryAnswerExpertProjection = {
+  key: 'officialGalleryAnswerExpert',
+  stateSchema: answerExpertStateSchema as z.ZodType<OfficialGalleryAnswerExpertState>,
+  stateVersion: 1,
+  init: (): OfficialGalleryAnswerExpertState => ({ pending: {}, byTurn: {} }),
+  apply: (state: OfficialGalleryAnswerExpertState, event: { type: string; data?: unknown }): OfficialGalleryAnswerExpertState => {
+    if (event.type === 'official-gallery/answer-identity') {
+      const turn = answerIdentityTurn(event.data)
+      if (turn === undefined || state.byTurn[String(turn)] !== undefined) return state
+      return { ...state, byTurn: { ...state.byTurn, [String(turn)]: MAMMOTH_AI_ANSWER } }
+    }
+    if (event.type === 'official-gallery/attempt') {
+      const next = answerExpertOf(event.data)
+      if (next === undefined || sameAnswerExpert(state.pending[next.requestId], next.expert)) return state
+      return { ...state, pending: { ...state.pending, [next.requestId]: next.expert } }
+    }
+    if (event.type !== 'official-gallery/attempt-start') return state
+    const started = answerTurnOf(event.data)
+    const expert = started === undefined ? undefined : state.pending[started.requestId]
+    if (started === undefined || expert === undefined || sameAnswerExpert(state.byTurn[String(started.turn)], expert)) return state
+    return { ...state, byTurn: { ...state.byTurn, [String(started.turn)]: expert } }
+  },
+  wire: {
+    viewSchema: z.record(z.string(), answerExpertSchema) as z.ZodType<OfficialGalleryAnswerExpertState['byTurn']>,
+    view: (state: OfficialGalleryAnswerExpertState) => state.byTurn,
+  },
+} satisfies ProjectionDefinition<'officialGalleryAnswerExpert', OfficialGalleryAnswerExpertState>
 
 /** Host-only skill freeze for Task 5 on-demand loading; never wire the body. */
 export const officialSkillBindingProjection = {

@@ -1,6 +1,6 @@
 /** Product-wide, versioned preview notice. */
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { SnapshotStore } from '@mammoth-ai/mmp-client-store'
 import type { InjectFace, PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
@@ -26,8 +26,23 @@ export interface WelcomeNoticeInjected {
 export type WelcomeNoticeProps =
   PropsRuntime<'settings.onboarding'> & InjectFace<WelcomeNoticeInjected>
 
+/** Account-owned welcome flag. Absent bridge keeps the local version acknowledgement. */
+interface AccountWelcomeBridge {
+  getSnapshot(): { seen: boolean | null }
+  subscribe(listener: () => void): () => void
+  acknowledge(): Promise<boolean>
+}
+
+const WELCOME_BRIDGE = '__MMP_ACCOUNT_WELCOME__'
+const WELCOME_BRIDGE_EVENT = 'mmp-account-welcome'
+
+function readAccountWelcomeBridge(): AccountWelcomeBridge | undefined {
+  return (globalThis as typeof globalThis & { [WELCOME_BRIDGE]?: AccountWelcomeBridge })[WELCOME_BRIDGE]
+}
+
 /**
  * Render the current notice until its exact copy version is acknowledged.
+ * When the account bridge is installed, that flag decides instead: null waits, false shows, true skips.
  * @param props - settings-shell owner state and welcome dependencies.
  * @returns the welcome modal or null while the step decides not to show.
  */
@@ -35,6 +50,12 @@ export function WelcomeNotice(props: WelcomeNoticeProps): ReactNode {
   const { complete, controller, useWelcome, t } = props
   const state = useWelcome(snapshot => snapshot)
   const finished = useRef(false)
+  const [accountSeen, setAccountSeen] = useState<boolean | null | undefined>(() => {
+    const bridge = readAccountWelcomeBridge()
+    return bridge === undefined ? undefined : bridge.getSnapshot().seen
+  })
+  const [accountError, setAccountError] = useState(false)
+  const [accountSaving, setAccountSaving] = useState(false)
   const finish = useCallback((): void => {
     if (finished.current) return
     finished.current = true
@@ -46,27 +67,64 @@ export function WelcomeNotice(props: WelcomeNoticeProps): ReactNode {
   }, [controller, state.status])
 
   useEffect(() => {
-    if (state.acknowledged) finish()
-  }, [finish, state.acknowledged])
+    let stop: (() => void) | undefined
+    const sync = (): void => {
+      stop?.()
+      const bridge = readAccountWelcomeBridge()
+      if (bridge === undefined) {
+        setAccountSeen(undefined)
+        return
+      }
+      setAccountSeen(bridge.getSnapshot().seen)
+      stop = bridge.subscribe(() => { setAccountSeen(bridge.getSnapshot().seen) })
+    }
+    sync()
+    globalThis.addEventListener(WELCOME_BRIDGE_EVENT, sync)
+    return () => {
+      stop?.()
+      globalThis.removeEventListener(WELCOME_BRIDGE_EVENT, sync)
+    }
+  }, [])
 
-  if (state.status === 'idle' || state.status === 'loading' || state.acknowledged) return null
+  useEffect(() => {
+    if (accountSeen === true) finish()
+    else if (accountSeen === undefined && state.acknowledged) finish()
+  }, [accountSeen, finish, state.acknowledged])
+
+  const bridgeActive = accountSeen !== undefined
+  if (bridgeActive ? accountSeen !== false : state.status === 'idle' || state.status === 'loading' || state.acknowledged) return null
 
   const acknowledge = async (): Promise<void> => {
+    const bridge = readAccountWelcomeBridge()
+    if (bridge !== undefined) {
+      setAccountSaving(true)
+      setAccountError(false)
+      const ok = await bridge.acknowledge()
+      setAccountSaving(false)
+      if (!ok) {
+        setAccountError(true)
+        return
+      }
+      void controller.acknowledge()
+      finish()
+      return
+    }
     if (await controller.acknowledge()) finish()
   }
   const paragraphs = t('welcomeBody').split('\n\n')
+  const failed = accountError || state.error !== null
 
   return (
     <OnboardingModal title={t('welcomeTitle')} focusTitle>
       <div className={css.copy}>
         {paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
       </div>
-      {state.error === null ? null : <p className={css.error} role="alert">{t('welcomeError')}</p>}
+      {failed ? <p className={css.error} role="alert">{t('welcomeError')}</p> : null}
       <div className={css.actions}>
         <Button
           variant="primary"
           className={css.primary}
-          disabled={state.status === 'saving'}
+          disabled={accountSaving || state.status === 'saving'}
           onClick={() => { void acknowledge() }}
         >
           {t('welcomeContinue')}

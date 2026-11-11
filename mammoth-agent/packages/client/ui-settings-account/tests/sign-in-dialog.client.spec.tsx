@@ -24,9 +24,11 @@ function mount(attempt: AccountView['attempt'], copy: typeof en | typeof zh = en
 it.each([en, zh])('offers sign in or the existing API key editor', async (copy) => {
   const props = mount(null, copy)
   await expect(`${screen.getByRole('dialog').textContent}\n`).toMatchFileSnapshot(`./expected/login-${copy === en ? 'en' : 'zh'}.txt`)
-  fireEvent.click(screen.getByRole('button', { name: copy.addApiKey }))
-  expect(props.useApiKey).toHaveBeenCalledOnce()
-  expect(props.start).not.toHaveBeenCalled()
+  const apiKey = [...document.querySelectorAll('button')].find(item => item.textContent === copy.addApiKey)
+  expect(apiKey?.hidden).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: copy.signIn }))
+  expect(props.start).toHaveBeenCalledOnce()
+  expect(props.useApiKey).not.toHaveBeenCalled()
 })
 it.each([en, zh])('requires a user action after timeout', async (copy) => {
   const props = mount({ id, phase: 'expired', errorCode: 'expired' }, copy)
@@ -187,8 +189,7 @@ it('does not report workspace login views or login choices', async () => {
   view.rerender(<SignInDialog {...props} colorScheme="light" />)
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: en.signIn })) })
   expect(props.start).toHaveBeenCalledOnce()
-  await act(async () => { fireEvent.click(screen.getByRole('button', { name: en.addApiKey })) })
-  expect(props.useApiKey).toHaveBeenCalledOnce()
+  expect(props.useApiKey).not.toHaveBeenCalled()
   expect(track).not.toHaveBeenCalled()
 })
 

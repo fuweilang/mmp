@@ -2,7 +2,7 @@
 import { contextMenuHook } from '@mammoth-ai/mmp-client-test-runtime'
 import type { GlobalStandardProps } from '@mammoth-ai/mmp-client-ui-slots'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { allowAllAccess, bindSnapshotSelector, RemoteError } from '@mammoth-ai/mmp-client-test-runtime'
 import { Context } from '@mammoth-ai/cordis'
 import { SettingsSchemaService } from '@mammoth-ai/mmp-client-ui-settings/src/client/schema.ts'
@@ -30,9 +30,14 @@ const WELCOME_NOTICE_COPY = {
   zh: { title: zh.welcomeTitle, body: zh.welcomeBody, continueLabel: zh.welcomeContinue },
 }
 
+beforeEach(() => {
+  delete (globalThis as { __MMP_ACCOUNT_WELCOME__?: unknown }).__MMP_ACCOUNT_WELCOME__
+})
+
 afterEach(() => {
   cleanup()
   document.getElementById('root')?.remove()
+  delete (globalThis as { __MMP_ACCOUNT_WELCOME__?: unknown }).__MMP_ACCOUNT_WELCOME__
 })
 
 /** The settings namespace answers over the Remote carrier, which has no envelope. */
@@ -166,6 +171,46 @@ describe('WelcomeNotice', () => {
       error: new RemoteError('settings/rejected', 'read only', { ns: WELCOME_NOTICE_SETTINGS_NAMESPACE }),
     })
     expect((await screen.findByRole('alert')).textContent).toBe(zh.welcomeError)
+    expect(h.complete).not.toHaveBeenCalled()
+  })
+
+  it('shows the notice for a new account even when this browser already acknowledged the copy', async () => {
+    const acknowledge = vi.fn(async () => true)
+    ;(globalThis as { __MMP_ACCOUNT_WELCOME__?: unknown }).__MMP_ACCOUNT_WELCOME__ = {
+      getSnapshot: () => ({ seen: false }),
+      subscribe: () => () => {},
+      acknowledge,
+    }
+    const h = mount(WELCOME_NOTICE_VERSION)
+    await screen.findByRole('dialog', { name: WELCOME_NOTICE_COPY.zh.title })
+    expect(h.complete).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: WELCOME_NOTICE_COPY.zh.continueLabel }))
+    await act(async () => { await Promise.resolve() })
+    expect(acknowledge).toHaveBeenCalledOnce()
+    expect(h.complete).toHaveBeenCalledOnce()
+  })
+
+  it('skips the notice when the account already saw the welcome', async () => {
+    ;(globalThis as { __MMP_ACCOUNT_WELCOME__?: unknown }).__MMP_ACCOUNT_WELCOME__ = {
+      getSnapshot: () => ({ seen: true }),
+      subscribe: () => () => {},
+      acknowledge: async () => true,
+    }
+    const h = mount()
+    await act(async () => { await Promise.resolve() })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(h.complete).toHaveBeenCalledOnce()
+  })
+
+  it('waits without skipping while the account profile is still loading', async () => {
+    ;(globalThis as { __MMP_ACCOUNT_WELCOME__?: unknown }).__MMP_ACCOUNT_WELCOME__ = {
+      getSnapshot: () => ({ seen: null }),
+      subscribe: () => () => {},
+      acknowledge: async () => true,
+    }
+    const h = mount(WELCOME_NOTICE_VERSION)
+    await act(async () => { await Promise.resolve() })
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(h.complete).not.toHaveBeenCalled()
   })
 })

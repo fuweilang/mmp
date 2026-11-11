@@ -1723,3 +1723,57 @@ it('OIDC SSO returns an empty ready balance without hitting DeepSeek wallet APIs
   expect(await account.getBalance(clientMetadata())).toEqual({ status: 'ready', value: [], bonusWallets: [] })
   expect(await account.getProfile(clientMetadata())).toMatchObject({ status: 'ready', value: { id: 'oidc-user' } })
 })
+
+it('stores a desktop password login without opening a browser or setting a cookie', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'mmp-account-password-'))
+  cleanups.push(() => rm(home, { recursive: true, force: true }))
+  const seen: { cookie?: string; body?: string } = {}
+  const ground = createServer((req, res) => {
+    if (req.url === '/api/auth/client-login' && req.method === 'POST') {
+      const chunks: Buffer[] = []
+      req.on('data', (chunk: Buffer) => { chunks.push(chunk) })
+      req.on('end', () => {
+        seen.body = Buffer.concat(chunks).toString('utf8')
+        seen.cookie = res.getHeader('set-cookie') === undefined ? undefined : 'set'
+        const parsed = JSON.parse(seen.body) as { password?: string }
+        if (parsed.password !== 'secret') {
+          res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ message: '账号或密码错误' }))
+          return
+        }
+        res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({
+          token: 'client-session-token',
+          session: { user: { id: 'client-user', name: '客户端', phone: '13800138000' } },
+        }))
+      })
+      return
+    }
+    res.writeHead(404).end()
+  })
+  await new Promise<void>(resolve => ground.listen(0, '127.0.0.1', resolve))
+  const address = ground.address()
+  if (address === null || typeof address === 'string') throw new Error('expected TCP address')
+  const groundOrigin = `http://127.0.0.1:${address.port}`
+  cleanups.push(() => new Promise<void>((resolve, reject) => ground.close(error => error ? reject(error) : resolve())))
+  const ctx = new Context()
+  const web = ctx.plugin(WebServer, { host: '127.0.0.1', port: 0 })
+  await web
+  const credentials = ctx.plugin(LocalCredentialProvider, { path: join(home, 'credentials.yaml'), watch: false })
+  await credentials
+  const authorization = ctx.plugin(AuthorizationService)
+  await authorization
+  const provider = ctx.plugin(PlatformAccount, {
+    authMode: 'oidc', platformOrigin: groundOrigin, allowLoopbackHttp: true,
+    inferenceOrigin: 'https://api.deepseek.com', logoutRetryDelayMs: 1,
+  })
+  await provider
+  cleanups.push(async () => { await provider.dispose(); await authorization.dispose(); await credentials.dispose(); await web.dispose() })
+  const account = ctx.deepseekAccount as PlatformAccount
+  expect(await account.signInWithPassword(clientMetadata(), '13800138000', 'nope')).toEqual({ ok: false, reason: 'credentials' })
+  expect(await account.getState()).toMatchObject({ status: 'signed-out' })
+  expect(await account.signInWithPassword(clientMetadata(), '13800138000', 'secret')).toEqual({ ok: true })
+  expect(seen.cookie).toBeUndefined()
+  expect(JSON.parse(seen.body ?? '{}')).toEqual({ phone: '13800138000', password: 'secret' })
+  expect(await account.getState()).toMatchObject({ status: 'credential-stored', attempt: { phase: 'succeeded' } })
+  const record = await ctx.credentials.readRecord(credentialKey('deepseek-account-platform', 'default'))
+  expect(record).toMatchObject({ kind: 'grant', payload: { token: 'client-session-token', issuer: groundOrigin } })
+})

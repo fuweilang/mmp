@@ -109,12 +109,12 @@ it('t175 + expert/skill choose removable tags; cancelling preserves user text an
  await waitFor(()=>expect(f.input.state.getSnapshot().phase).toBe('plain'))
  expect(f.input.state.getSnapshot().draft).toBe('')
  expect(f.input.state.getSnapshot().catalogSelection?.skillRefs).toEqual([])
- expect(f.input.state.getSnapshot().catalogSelection?.expertRef).toBeNull()
+ expect(f.input.state.getSnapshot().catalogSelection?.expertRef?.id).toBe(expert.id)
  await act(async()=>{f.input.setDraft('原始问题')})
  fireEvent.click(f.view.getByRole('button',{name:'发送消息'}))
  await waitFor(()=>expect(f.prompt).toHaveBeenCalledTimes(2))
  const cleared=f.prompt.mock.calls[1] as readonly unknown[]
- expect(cleared[4]).toMatchObject({expertRef:null,skillRefs:[]})
+ expect(cleared[4]).toMatchObject({expertRef:{id:expert.id,versionId:expert.versionId},skillRefs:[]})
 })
 it('picker keeps the current rows and sends one catalog search after typing pauses',async()=>{
  const pageExperts=vi.fn(async(query:{q?:string})=>query.q==='文案大师'

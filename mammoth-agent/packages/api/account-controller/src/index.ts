@@ -3,7 +3,7 @@ import { Context } from '@mammoth-ai/cordis'
 import { Remote, TypertRemoteService } from '@mammoth-ai/mmp-typert-protocol'
 import { isRunningAccountTask } from '@mammoth-ai/mmp-deepseek-account'
 import type {} from '@mammoth-ai/mmp-agent'
-import type { AccountBonusBatch, AccountBonusOrderId, AccountClientMetadata, AccountDetails, AccountUserId } from '@mammoth-ai/mmp-deepseek-account/types'
+import type { AccountBonusBatch, AccountBonusOrderId, AccountClientMetadata, AccountDetails, AccountUserId, PasswordSignInResult } from '@mammoth-ai/mmp-deepseek-account/types'
 import type { AccountView, SignInAttemptId } from './types.ts'
 
 /** Account commands and reconnect-safe state stream. */
@@ -65,6 +65,38 @@ export class AccountController extends TypertRemoteService {
   @Remote
   startSignIn(client: AccountClientMetadata, callbackOrigin: string, loginSource: 'web' | 'desktop'): Promise<AccountView> {
     return this.ctx.deepseekAccount.startSignIn(client, callbackOrigin, loginSource)
+  }
+  /**
+   * Sign the desktop client in with a phone and password. Does not open a browser.
+   * @param client - identity of the requesting UI.
+   * @param phone - enterprise phone number.
+   * @param password - account password, forwarded to Ground and not stored.
+   * @returns whether the local session was stored.
+   */
+  @Remote
+  signInWithPassword(client: AccountClientMetadata, phone: string, password: string): Promise<PasswordSignInResult> {
+    return this.ctx.deepseekAccount.signInWithPassword(client, phone, password)
+  }
+  /**
+   * Register on the desktop client without opening a browser or setting its cookie.
+   * @param client - identity of the requesting UI.
+   * @param input - enterprise registration fields. The password is not returned.
+   * @returns whether the local grant was stored.
+   */
+  @Remote
+  registerWithPassword(
+    client: AccountClientMetadata,
+    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string },
+  ): Promise<PasswordSignInResult> {
+    return this.ctx.deepseekAccount.registerWithPassword(client, input)
+  }
+  /**
+   * Mark the current account's one-time welcome as seen.
+   * @returns true once the account flag is stored.
+   */
+  @Remote
+  acknowledgeWelcome(): Promise<boolean> {
+    return this.ctx.deepseekAccount.acknowledgeWelcome()
   }
   /**
    * Cancel the named local attempt.

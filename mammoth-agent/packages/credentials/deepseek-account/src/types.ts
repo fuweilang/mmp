@@ -35,10 +35,15 @@ export interface AccountLinks {
   readonly topUpUrl: string
   /**
    * Browser URL that clears the IdP session cookie (Ground GET /api/auth/logout).
-   * Present for OIDC; UI opens it after local sign-out so the next login shows /login.
+   * Present for OIDC. The web app opens it after sign-out. The desktop client does not,
+   * so a client sign-out leaves the browser session in place.
    */
   readonly logoutUrl?: string
 }
+/** Result of a desktop password login. The session JWT never crosses this projection. */
+export type PasswordSignInResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly reason: 'credentials' | 'forbidden' | 'unavailable'; readonly message?: string }
 /** Stored-account presence is not a claim that the server has validated its token. */
 export interface AccountView {
   readonly status: 'signed-out' | 'credential-stored'
@@ -55,6 +60,11 @@ export interface AccountProfile {
   readonly contact: string | null
   /** Profile image URL supplied by Platform, absent when no picture is configured. */
   readonly avatarUrl?: string | null
+  /**
+   * Whether this account already dismissed the one-time welcome.
+   * Absent means already seen, so an older session payload does not show the welcome again.
+   */
+  readonly welcomeSeen?: boolean
 }
 /** Platform recharge or bonus wallet balance; decimal strings retain server precision. */
 export interface AccountWallet {

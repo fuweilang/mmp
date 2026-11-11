@@ -5,6 +5,7 @@
 import type {} from '@mammoth-ai/cordis-plugin-loader'
 import type { Context } from '@mammoth-ai/cordis'
 import type {} from '@mammoth-ai/mmp-deepseek-account'
+import type {} from '@mammoth-ai/mmp-attachment'
 import { Config, resolveGroundOrigin } from './config.ts'
 import { LlmError } from '@mammoth-ai/mmp-llm'
 import { GroundLlmAdapter } from './adapter.ts'
@@ -40,6 +41,7 @@ export function apply(ctx: Context, config: Config): void {
     origin,
     account: () => ctx.get('deepseekAccount'),
     officialFor: sessionId => attribution.officialFor(sessionId),
+    attachments: () => ctx.get('attachments'),
   })
 
   // Cloud route only: do not register as configurable (no BYOK / settings key form).

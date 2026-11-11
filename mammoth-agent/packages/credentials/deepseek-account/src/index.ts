@@ -1,7 +1,7 @@
 /** Account Service Definition shared by platform, API, and model consumers. */
 import { Context, Service } from '@mammoth-ai/cordis'
-import type { AccountBonusBatch, AccountBonusOrderId, AccountClientMetadata, AccountDetails, AccountUserId, AccountView, SignInAttemptId } from './types.ts'
-export type { AccountBonusBatch, AccountBonusNotification, AccountBonusOrderId, AccountClientMetadata, AccountDetails, AccountProfile, AccountUserId, AccountWallet, AccountLinks, AccountView, SignInAttemptId, SignInAttemptView, SignInErrorCode } from './types.ts'
+import type { AccountBonusBatch, AccountBonusOrderId, AccountClientMetadata, AccountDetails, AccountUserId, AccountView, PasswordSignInResult, SignInAttemptId } from './types.ts'
+export type { AccountBonusBatch, AccountBonusNotification, AccountBonusOrderId, AccountClientMetadata, AccountDetails, AccountProfile, AccountUserId, AccountWallet, AccountLinks, AccountView, PasswordSignInResult, SignInAttemptId, SignInAttemptView, SignInErrorCode } from './types.ts'
 export { isRunningAccountTask, installAccountTaskCancellation } from './account-tasks.ts'
 
 declare module '@mammoth-ai/cordis' {
@@ -73,6 +73,30 @@ export abstract class DeepSeekAccount extends Service {
    * @returns the initial snapshot without waiting for browser approval.
    */
   abstract startSignIn(client: AccountClientMetadata, callbackOrigin: string, loginSource: 'web' | 'desktop'): Promise<AccountView>
+  /**
+   * Sign the desktop client in with a phone and password. The browser is not opened and its cookie is not read.
+   * @param client - identity of the requesting UI.
+   * @param phone - enterprise phone number.
+   * @param password - account password. It is sent to Ground and is not stored.
+   * @returns whether the local grant was stored. A refusal names a safe reason and never includes the password.
+   */
+  abstract signInWithPassword(client: AccountClientMetadata, phone: string, password: string): Promise<PasswordSignInResult>
+  /**
+   * Register an enterprise on the desktop client and store its session.
+   * The browser is not opened and its cookie is not set.
+   * @param client - identity of the requesting UI.
+   * @param input - name, phone, password, enterprise name, and brand slug. The password is not stored locally.
+   * @returns whether the local grant was stored. A refusal names a safe reason and never includes the password.
+   */
+  abstract registerWithPassword(
+    client: AccountClientMetadata,
+    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string },
+  ): Promise<PasswordSignInResult>
+  /**
+   * Mark the signed-in account's one-time welcome as seen. Does not open a browser.
+   * @returns true once Ground records it, or when this provider has no welcome flag. False when the grant is missing or the write fails.
+   */
+  abstract acknowledgeWelcome(): Promise<boolean>
   /**
    * Cancel only the named attempt; committing attempts settle before returning.
    * @param id - attempt identity from this Host.

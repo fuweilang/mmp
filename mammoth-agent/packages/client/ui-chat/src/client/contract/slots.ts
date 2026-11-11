@@ -68,6 +68,11 @@ export interface AssistantActionOwnerProps {
   messageId: MessageId
 }
 
+/** Turn whose accepted prompt froze the expert shown above the reply. */
+export interface AssistantExpertOwnerProps {
+  readonly turn: number
+}
+
 /** Stable quota failure codes retained in the Session log; both raise the frame-wide notice. */
 export type QuotaNoticeCode = 'QUOTA' | 'ACCOUNT_QUOTA'
 
@@ -529,6 +534,11 @@ declare module '@mammoth-ai/mmp-client-ui-slots' {
      * that entry. With no entries, the standard action row remains unchanged.
      */
     'conversation.chat.assistant-actions': { kind: 'list'; scope: 'session'; owner: AssistantActionOwnerProps }
+    /**
+     * Expert who answered one turn, drawn above that turn's reply.
+     * Chat supplies the turn number. The gallery reads the attempt frozen for that turn.
+     */
+    'conversation.chat.assistant.expert': { kind: 'single'; scope: 'session'; owner: AssistantExpertOwnerProps }
     /**
      * Frame-wide quota notice chain. The Chat-owned host in `shell.overlay`
      * offers the one live notice; the first entry whose selector claims its

@@ -17,10 +17,32 @@ export class AuthController {
     return this.auth.login(dto.phone, dto.password, res, req.ip);
   }
 
+  /** Desktop password login. The session JWT is in the body; no browser cookie is set. */
+  @Post('client-login')
+  @HttpCode(200)
+  clientLogin(@Body() dto: LoginDto, @Req() req: Request) {
+    return this.auth.clientLogin(dto.phone, dto.password, req.ip);
+  }
+
+  /** Desktop registration. The session JWT is in the body; no browser cookie is set. */
+  @Post('client-register')
+  @HttpCode(200)
+  clientRegister(@Body() dto: RegisterDto, @Req() req: Request) {
+    return this.auth.clientRegister(dto, req.ip);
+  }
+
   @Post('register')
   @HttpCode(200)
   register(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     return this.auth.register(dto, res, req.ip);
+  }
+
+  /** Cookie or Bearer. Marks the one-time welcome seen for this account. */
+  @Post('welcome-seen')
+  @HttpCode(200)
+  @UseGuards(JwtGuard)
+  welcomeSeen(@CurrentUser() user: User) {
+    return this.auth.markWelcomeSeen(user);
   }
 
   @Post('provision')

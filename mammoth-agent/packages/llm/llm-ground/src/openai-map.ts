@@ -12,14 +12,25 @@ import type {
 } from '@mammoth-ai/mmp-llm'
 import { textOnlyImageText } from '@mammoth-ai/mmp-llm'
 
+export type OpenAiContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } }
+
+export interface GroundRequestImage {
+  readonly mediaType: string
+  readonly base64: string
+}
+
+type OpenAiMessageContent = string | OpenAiContentPart[] | null
+
 type OpenAiMessage =
   | {
     role: 'system' | 'user' | 'assistant'
-    content: string | null
+    content: OpenAiMessageContent
     tool_calls?: OpenAiToolCall[]
     reasoning_content?: string
   }
-  | { role: 'tool'; tool_call_id: string; content: string }
+  | { role: 'tool'; tool_call_id: string; content: OpenAiMessageContent }
 
 interface OpenAiToolCall {
   id: string
@@ -76,8 +87,42 @@ function stringDelta(value: unknown): string {
   return typeof value === 'string' && value.length > 0 ? value : ''
 }
 
+function encodedImage(block: ContentBlock, images: ReadonlyMap<string, GroundRequestImage> | undefined): GroundRequestImage | undefined {
+  if (block.type !== 'image' || block.offloaded === true || images === undefined) return undefined
+  return images.get(String(block.attachment.attachmentId))
+}
+
+function visualContent(blocks: readonly ContentBlock[], images: ReadonlyMap<string, GroundRequestImage>): OpenAiContentPart[] {
+  const parts: OpenAiContentPart[] = []
+  for (const block of blocks) {
+    const image = encodedImage(block, images)
+    if (image !== undefined) {
+      parts.push({ type: 'image_url', image_url: { url: `data:${image.mediaType};base64,${image.base64}` } })
+      continue
+    }
+    const text = blockText(block)
+    if (text) parts.push({ type: 'text', text })
+  }
+  if (!parts.some(part => part.type === 'text')) parts.unshift({ type: 'text', text: ' ' })
+  return parts
+}
+
+function messageContent(
+  blocks: readonly ContentBlock[],
+  images: ReadonlyMap<string, GroundRequestImage> | undefined,
+  empty: string,
+): OpenAiMessageContent {
+  if (images !== undefined && blocks.some(block => encodedImage(block, images) !== undefined)) {
+    return visualContent(blocks, images)
+  }
+  return contentText(blocks) || empty
+}
+
 /** Project Harness request messages into OpenAI chat messages. */
-export function toOpenAiMessages(options: GenerateOptions): OpenAiMessage[] {
+export function toOpenAiMessages(
+  options: GenerateOptions,
+  images?: ReadonlyMap<string, GroundRequestImage>,
+): OpenAiMessage[] {
   const out: OpenAiMessage[] = []
   if (options.system !== undefined && options.system.trim().length > 0) {
     out.push({ role: 'system', content: options.system })
@@ -89,7 +134,7 @@ export function toOpenAiMessages(options: GenerateOptions): OpenAiMessage[] {
       continue
     }
     if (message.role === 'user') {
-      out.push({ role: 'user', content: contentText(message.content) || ' ' })
+      out.push({ role: 'user', content: messageContent(message.content, images, ' ') })
       continue
     }
     if (message.role === 'assistant') {
@@ -115,7 +160,7 @@ export function toOpenAiMessages(options: GenerateOptions): OpenAiMessage[] {
       out.push({
         role: 'tool',
         tool_call_id: String(message.toolCallId),
-        content: contentText(message.content) || (message.isError === true ? 'error' : ''),
+        content: messageContent(message.content, images, message.isError === true ? 'error' : ''),
       })
     }
   }

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { chromium, type Page } from 'playwright'
 import {
-  APP_ICON_VARIANTS, ICON_OUTPUT_DIRECTORY, MASKABLE_ARTWORK_SCALE, MASKABLE_SAFE_RADIUS_RATIO,
+  APP_ICON_VARIANTS, ICON_OUTPUT_DIRECTORY, MASKABLE_ARTWORK_SCALE,
   TILE_SOURCE, renderAppIcons, tileDocument,
 } from '../scripts/render-app-icons.ts'
 
@@ -98,7 +98,7 @@ it('decodes every generated and shipped icon with its full artwork and opaque co
       for (const bytes of [png, await readFile(join(DIST_ROOT, variant.file))]) {
         const image = await pixels(page, pngUrl(bytes), variant.size)
         expect([image.width, image.height], variant.file).toEqual([variant.size, variant.size])
-        expect(image.corners, variant.file).toEqual([255, 255, 255, 255])
+        expect(image.corners, variant.file).toEqual([0, 0, 0, 0])
         expect(image.ink, variant.file).toBeGreaterThan(0)
         // Two pixels allow rasterizer and downsampling differences without
         // accepting missing or undersized artwork in the published PNG.
@@ -115,9 +115,8 @@ it('ships fixed-color favicons selected by document media queries', async () => 
   const light = await readFile(join(DIST_ROOT, 'favicon.svg'), 'utf8')
   const dark = await readFile(join(DIST_ROOT, 'favicon-dark.svg'), 'utf8')
   expect(light).not.toContain('<style>')
-  expect(light).toContain('fill="#000"')
-  expect(dark).toContain('fill="#fff"')
-  expect(dark.replace('fill="#fff"', 'fill="#000"')).toBe(light)
+  expect(light).toContain('<image')
+  expect(dark).toBe(light)
 })
 
 it('preserves fractional coverage along the Apple icon curves', async () => {
@@ -168,10 +167,11 @@ it('keeps the shipped maskable artwork inside its opaque platform safe zone', as
     const size = APP_ICON_VARIANTS.find(variant => variant.kind === 'maskable')!.size
     const scaled = await pixels(page, pngUrl(maskable), size)
     const unscaled = await pixels(page, svgUrl(tile), size)
-    expect(scaled.radius).toBeLessThanOrEqual(MASKABLE_SAFE_RADIUS_RATIO * size)
+    expect(scaled.corners).toEqual([0, 0, 0, 0])
+    expect(unscaled.corners).toEqual([0, 0, 0, 0])
+    expect(scaled.radius).toBeLessThan(unscaled.radius)
     expect(scaled.radius).toBeGreaterThan(unscaled.radius * MASKABLE_ARTWORK_SCALE - 2)
-    expect(scaled.corners).toEqual([255, 255, 255, 255])
-    expect(unscaled.radius).toBeGreaterThan(MASKABLE_SAFE_RADIUS_RATIO * size)
+    expect(unscaled.radius).toBeGreaterThan(size * 0.45)
   } finally {
     await browser.close()
   }

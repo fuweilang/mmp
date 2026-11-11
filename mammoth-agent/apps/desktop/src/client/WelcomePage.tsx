@@ -6,7 +6,7 @@ import { StateDot } from '@mammoth-ai/mmp-client-ui-primitives/src/StateDot.tsx'
 import type { AccountView } from '@mammoth-ai/mmp-deepseek-account/types'
 import type { WelcomeApi } from '../welcome-api.ts'
 
-type Page = 'entry' | 'key' | 'account'
+type Page = 'entry' | 'key' | 'account' | 'login'
 
 /**
  * Render the standalone welcome flow using shell-owned operations and localized copy.
@@ -17,9 +17,18 @@ type Page = 'entry' | 'key' | 'account'
 export function Welcome({ api }: { api: WelcomeApi }) {
   const { messages: m } = api
   const [expiryNotice, setExpiryNotice] = useState(false)
-  const [page, setPage] = useState<Page>('entry')
-  const pageRef = useRef<Page>('entry')
-  const visiblePage = useRef<Page>('entry')
+  const [page, setPage] = useState<Page>('login')
+  const pageRef = useRef<Page>('login')
+  const visiblePage = useRef<Page>('login')
+  const [phone, setPhone] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [authMode, setAuthMode] = useState<'password' | 'register'>('password')
+  const [name, setName] = useState('')
+  const [enterpriseName, setEnterpriseName] = useState('')
+  const [slug, setSlug] = useState('')
+  const [agree, setAgree] = useState(true)
+  const phoneInput = useRef<HTMLInputElement>(null)
   const [attempt, setAttempt] = useState<AccountView['attempt']>(null)
   const attemptRef = useRef<AccountView['attempt']>(null)
   const [starting, setStarting] = useState(false)
@@ -41,12 +50,12 @@ export function Welcome({ api }: { api: WelcomeApi }) {
     setPage(next)
   }
   function showAccount(state: AccountView) {
-    if (pageRef.current === 'key' || (state.attempt === null && pageRef.current === 'entry')) return
+    if (pageRef.current === 'key' || (state.attempt === null && (pageRef.current === 'entry' || pageRef.current === 'login'))) return
     attemptRef.current = state.attempt
     setAttempt(state.attempt)
     setStarting(false)
     setCopyFeedback({ status: 'idle' })
-    navigate(state.attempt === null || state.attempt.phase === 'cancelled' ? 'entry' : 'account')
+    navigate(state.attempt === null || state.attempt.phase === 'cancelled' ? 'login' : 'account')
   }
 
   useEffect(() => {
@@ -70,13 +79,13 @@ export function Welcome({ api }: { api: WelcomeApi }) {
   }, [api, m.welcomeTitle])
 
   useEffect(() => {
-    if (page === 'entry' && visiblePage.current !== 'entry') void api.analytics?.('auth_page_view', {})
+    if ((page === 'entry' || page === 'login') && visiblePage.current !== page) void api.analytics?.('auth_page_view', {})
     visiblePage.current = page
     if (page === 'key') input.current?.focus()
-    else if (page === 'entry' && focusEntry.current) {
+    else if ((page === 'entry' || page === 'login') && focusEntry.current) {
       focusEntry.current = false
       keyButton.current?.focus()
-    }
+    } else if (page === 'login') phoneInput.current?.focus()
   }, [page, api])
 
   useEffect(() => {
@@ -120,6 +129,55 @@ export function Welcome({ api }: { api: WelcomeApi }) {
       if (mounted.current) setDraft('')
     } catch {
       if (mounted.current) setError(m.welcomeContinueFailed)
+    } finally {
+      busyRef.current = false
+      if (mounted.current) setBusy(false)
+    }
+  }
+  function cleanText(value: string, max: number) {
+    return value.replace(/[\u0000-\u001f]/g, '').slice(0, max)
+  }
+  async function submitPassword(event: FormEvent) {
+    event.preventDefault()
+    if (busyRef.current) return
+    void api.analytics?.('auth_page_click', { button_name: 'sign_in' })
+    if (authMode === 'register') {
+      if (name.trim() === '') { setLoginError(m.welcomeNameRequired); return }
+      if (!/^1\d{10}$/.test(phone)) { setLoginError(m.welcomePhoneInvalid); phoneInput.current?.focus(); return }
+      if (enterpriseName.trim() === '') { setLoginError(m.welcomeEnterpriseRequired); return }
+      if (slug.trim() === '') { setLoginError(m.welcomeSlugRequired); return }
+      if (loginPassword === '') { setLoginError(m.welcomeLoginFailed); return }
+      if (!agree) return
+      busyRef.current = true
+      setBusy(true)
+      setLoginError('')
+      try {
+        const result = await api.registerWithPassword({
+          name: name.trim(), phone, password: loginPassword, enterpriseName: enterpriseName.trim(), slug: slug.trim(),
+        })
+        if (!mounted.current) return
+        if (!result.ok) setLoginError(result.message || m.welcomeRegisterFailed)
+        else setLoginPassword('')
+      } catch {
+        if (mounted.current) setLoginError(m.welcomeRegisterFailed)
+      } finally {
+        busyRef.current = false
+        if (mounted.current) setBusy(false)
+      }
+      return
+    }
+    if (!/^1\d{10}$/.test(phone)) { setLoginError(m.welcomePhoneInvalid); phoneInput.current?.focus(); return }
+    if (loginPassword === '') { setLoginError(m.welcomeLoginFailed); return }
+    busyRef.current = true
+    setBusy(true)
+    setLoginError('')
+    try {
+      const result = await api.signInWithPassword(phone, loginPassword)
+      if (!mounted.current) return
+      if (!result.ok) setLoginError(result.reason === 'credentials' ? m.welcomeLoginFailed : result.message || m.welcomeLoginUnavailable)
+      else setLoginPassword('')
+    } catch {
+      if (mounted.current) setLoginError(m.welcomeLoginUnavailable)
     } finally {
       busyRef.current = false
       if (mounted.current) setBusy(false)
@@ -169,7 +227,7 @@ export function Welcome({ api }: { api: WelcomeApi }) {
   const title = phase === 'initializing' ? m.welcomeAuthStarting
     : waiting ? m.welcomeAuthWaiting : phase === 'expired' ? m.welcomeAuthExpired
       : phase === 'failed' ? m.welcomeAuthFailed : m.welcomeAuthExchanging
-  const heading = page === 'entry' ? 'welcome-heading' : page === 'key' ? 'key-title' : 'auth-status'
+  const heading = page === 'entry' ? 'welcome-heading' : page === 'login' ? 'login-title' : page === 'key' ? 'key-title' : 'auth-status'
 
   return <>
     {expiryNotice && <Toast text={m.welcomeSessionExpired} onDone={() => { setExpiryNotice(false) }} />}
@@ -180,6 +238,53 @@ export function Welcome({ api }: { api: WelcomeApi }) {
         <h1 id="welcome-heading"><span>{m.welcomeTaglineBefore}</span><em>{m.welcomeTaglineBrand}</em><span>{m.welcomeTaglineAfter}</span></h1>
         <p id="welcome-description">{m.welcomeDescription}</p>
       </div>
+      <form id="login-form" className={`login-card${authMode === 'register' ? ' login-card--register' : ''}`} hidden={page !== 'login'} noValidate onSubmit={(event) => { void submitPassword(event) }} aria-busy={busy}>
+        <header className="login-head">
+          <h1 id="login-title">{m.welcomeLoginTitle}</h1>
+          <p id="login-subtitle">{authMode === 'register' ? m.welcomeRegisterSubtitle : m.welcomeLoginSubtitle}</p>
+        </header>
+        <div className="mode-switch" role="tablist">
+          <button type="button" role="tab" aria-selected={authMode === 'password'} onClick={() => { setAuthMode('password'); setLoginError('') }}>{m.welcomeLoginTab}</button>
+          <button type="button" role="tab" aria-selected={authMode === 'register'} onClick={() => { setAuthMode('register'); setLoginError('') }}>{m.welcomeRegisterTab}</button>
+        </div>
+        <label className="login-field" hidden={authMode !== 'register'}>
+          <span>{m.welcomeName}</span>
+          <input id="register-name" name="name" autoComplete="name" maxLength={40} value={name} disabled={busy}
+            placeholder={m.welcomeNamePlaceholder}
+            onChange={(event) => { setName(cleanText(event.target.value, 40)); setLoginError('') }} />
+        </label>
+        <label className="login-field">
+          <span>{m.welcomePhone}</span>
+          <input ref={phoneInput} id="login-phone" name="phone" inputMode="numeric" autoComplete="username" maxLength={11} required
+            placeholder={m.welcomePhonePlaceholder} value={phone} disabled={busy}
+            onChange={(event) => { setPhone(event.target.value.replace(/\D/g, '').slice(0, 11)); setLoginError('') }} />
+        </label>
+        <label className="login-field" hidden={authMode !== 'register'}>
+          <span>{m.welcomeEnterprise}</span>
+          <input id="register-enterprise" name="enterprise" maxLength={80} value={enterpriseName} disabled={busy}
+            placeholder={m.welcomeEnterprisePlaceholder}
+            onChange={(event) => { setEnterpriseName(cleanText(event.target.value, 80)); setLoginError('') }} />
+        </label>
+        <label className="login-field" hidden={authMode !== 'register'}>
+          <span>{m.welcomeSlug}</span>
+          <input id="register-slug" name="slug" maxLength={40} value={slug} disabled={busy}
+            placeholder={m.welcomeSlugPlaceholder}
+            onChange={(event) => { setSlug(cleanText(event.target.value, 40)); setLoginError('') }} />
+        </label>
+        <label className="login-field">
+          <span>{authMode === 'register' ? m.welcomeSetPassword : m.welcomePassword}</span>
+          <input id="login-password" name="password" type="password" autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} required
+            placeholder={authMode === 'register' ? m.welcomeSetPasswordPlaceholder : m.welcomePasswordPlaceholder} value={loginPassword} disabled={busy}
+            onChange={(event) => { setLoginPassword(event.target.value); setLoginError('') }} />
+        </label>
+        <label className="login-agreement" hidden={authMode !== 'register'}>
+          <input id="register-agree" type="checkbox" checked={agree} disabled={busy} onChange={(event) => { setAgree(event.target.checked) }} />
+          <span>{m.welcomeAgreement}</span>
+        </label>
+        <p id="login-error" className="login-error" role="alert" hidden={loginError === ''}>{loginError}</p>
+        <button id="sign-in" className="primary" type="submit" hidden={authMode !== 'password'} disabled={busy || phone === '' || loginPassword === ''}>{m.welcomeSignIn}</button>
+        <button id="register" className="primary" type="submit" hidden={authMode !== 'register'} disabled={busy || !agree || name.trim() === '' || phone === '' || enterpriseName.trim() === '' || slug.trim() === '' || loginPassword === ''}>{m.welcomeRegisterSubmit}</button>
+      </form>
       <form id="key-form" className="key-form" hidden={page !== 'key'} noValidate onSubmit={(event) => { void saveKey(event) }} aria-busy={busy}>
         <header className="key-heading"><h1 id="key-title">{m.welcomeKeyTitle}</h1><p id="key-description">{m.welcomeKeyDescription}</p></header>
         <div className="key-field">
@@ -202,14 +307,20 @@ export function Welcome({ api }: { api: WelcomeApi }) {
         <button id="auth-loading" className="primary" type="button" hidden={failed} disabled aria-label={m.welcomeAuthExchanging}>
           <StateDot state="ongoing" size={16} className="welcome-loading" />
         </button>
-        <button id="auth-retry" className="primary" type="button" hidden style={{ display: 'none' }} onClick={() => { void api.analytics?.('auth_page_click', { button_name: 'sign_in' }); void start() }}>{m.welcomeAuthRetry}</button>
+        <button id="auth-retry" className="primary" type="button" hidden={!failed} onClick={() => {
+          void api.analytics?.('auth_page_click', { button_name: 'sign_in' })
+          setStarting(false)
+          setAttempt(null)
+          attemptRef.current = null
+          navigate('login')
+        }}>{m.welcomeAuthRetry}</button>
         <button id="auth-api-key" className="secondary" type="button" hidden={!failed} onClick={() => { void api.analytics?.('auth_page_click', { button_name: 'api-key' }); navigate('key') }}>{m.welcomeApiKey}</button>
         <button id="auth-cancel" className="secondary" type="button" hidden={failed}
           disabled={cancelling || phase === 'committing' || phase === 'succeeded' || (phase === 'initializing' && !attempt?.id)}
           onClick={() => { void cancel() }}>{m.welcomeAuthCancel}</button>
       </div>
       <div id="entry-actions" className="actions" hidden={page !== 'entry'}>
-        <button id="sign-in" className="primary" type="button" onClick={() => { void api.analytics?.('auth_page_click', { button_name: 'sign_in' }); void start() }}>{m.welcomeSignIn}</button>
+        <button id="entry-sign-in" className="primary" type="button" onClick={() => { void api.analytics?.('auth_page_click', { button_name: 'sign_in' }); void start() }}>{m.welcomeSignIn}</button>
         <button ref={keyButton} id="api-key" className="secondary" type="button" hidden style={{ display: 'none' }} onClick={() => { void api.analytics?.('auth_page_click', { button_name: 'api-key' }); navigate('key') }}>{m.welcomeApiKey}</button>
       </div>
       <div id="key-actions" className="actions" hidden={page !== 'key'}>
@@ -217,7 +328,7 @@ export function Welcome({ api }: { api: WelcomeApi }) {
         <button id="skip-key" className="secondary" type="button" disabled={busy} onClick={() => { void skip() }}>{m.welcomeKeyLater}</button>
         <button id="back-to-login" className="back" type="button" disabled={busy} onClick={() => {
           if (busyRef.current) return
-          setDraft(''); setError(''); focusEntry.current = true; navigate('entry')
+          setDraft(''); setError(''); focusEntry.current = true; navigate('login')
         }}>{m.welcomeKeyBack}</button>
       </div>
     </main>

@@ -11,6 +11,11 @@
 .primaryButton { padding: 0 16px; font-weight: 500; }
 .secondaryButton { padding: 0 14px; --mmp-button-outline-color: var(--dsw-alias-border-l2); }
 .description { margin: 0; padding: 0 24px; font-size: 14px; line-height: 22px; color: var(--dsw-alias-label-primary); }
+.field { display: grid; gap: 6px; margin: 12px 24px 0; color: var(--dsw-alias-label-secondary); font-size: 13px; }
+.field input { box-sizing: border-box; width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 0; background: var(--dsw-alias-bg-primary); color: var(--dsw-alias-label-primary); font: inherit; }
+.field input:focus { outline: none; border-color: var(--dsw-alias-brand-primary); }
+.formError { margin: 8px 24px 0; color: var(--dsw-alias-danger, #d92d20); font-size: 13px; line-height: 20px; }
+.formError[hidden] { display: none; }
 .link { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
 .spinner { flex: none; animation: spin 1s linear infinite; }
 .primaryButton:has(.spinner) { opacity: 1; }

@@ -1,5 +1,6 @@
 /** Account authorization dialog; errors allow retry after cancelling any active attempt. */
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { Button, IconCloseOutlineRegular, IconLoadingOutlineRegular, Modal } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { AccountSnapshot } from './AccountSection.tsx'
 import type { SignInAttemptId } from '@mammoth-ai/mmp-deepseek-account/types'
@@ -8,16 +9,21 @@ import { authorizeUrlWithTheme } from './authorize-url.ts'
 import css from './SignInDialog.module.css'
 
 /** @param props - safe account state, localized copy, and user actions. @returns login dialog. */
-export function SignInDialog({ account, colorScheme, start, cancel, close, useApiKey, t }: {
+export function SignInDialog({ account, colorScheme, start, cancel, submitPassword, close, useApiKey, t }: {
   account: AccountSnapshot
   /** Resolved scheme of the active application theme; the copied link carries it. */
   colorScheme: 'light' | 'dark'
   start: () => Promise<void>
   cancel: (id: SignInAttemptId) => Promise<void>
+  /** Desktop password login. When set, this dialog does not open a browser. */
+  submitPassword?: (phone: string, password: string) => Promise<void>
   close: () => void
   useApiKey: () => void
   t: (key: AccountKey) => string
 }) {
+  const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
+  const [formError, setFormError] = useState('')
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
   const [copyResult, setCopyResult] = useState<{ messageKey: 'copiedLink' | 'copyFailed' } | null>(null)
@@ -60,6 +66,48 @@ export function SignInDialog({ account, colorScheme, start, cancel, close, useAp
     } catch { setCopyResult({ messageKey: 'copyFailed' }) }
   }
   const title = error ? t('failureTitle') : active ? t('browserTitle') : expired ? t('timeoutTitle') : t('loginTitle')
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    if (submitPassword === undefined || busy) return
+    if (!/^1\d{10}$/.test(phone)) { setFormError(t('phoneInvalid')); return }
+    if (password === '') { setFormError(t('credentialsFailed')); return }
+    void run(async () => {
+      try {
+        await submitPassword(phone, password)
+        setPassword('')
+        setFormError('')
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : ''
+        setFormError(message === 'credentials' ? t('credentialsFailed')
+          : message === 'unavailable' || message === 'forbidden' || message === '' ? t('loginUnavailable') : message)
+      }
+    })
+  }
+  if (submitPassword !== undefined) return <Modal open headless title={t('loginTitle')} onClose={dismiss} className={css.dialog as string}>
+    <form className={css.content} onSubmit={submit}>
+      <div className={css.header}>
+        <h2 className={css.title}>{t('loginTitle')}</h2>
+        <button type="button" className={css.close} aria-label={t('close')} onClick={dismiss}>
+          <IconCloseOutlineRegular size={14} />
+        </button>
+      </div>
+      <p className={css.description}>{t('loginSubtitle')}</p>
+      <label className={css.field}><span>{t('phone')}</span>
+        <input id="account-phone" name="phone" autoComplete="username" inputMode="numeric" maxLength={11} value={phone} disabled={busy}
+          placeholder={t('phonePlaceholder')} onChange={(event) => { setPhone(event.target.value.replace(/\D/g, '').slice(0, 11)); setFormError('') }} />
+      </label>
+      <label className={css.field}><span>{t('password')}</span>
+        <input id="account-password" name="password" type="password" autoComplete="current-password" value={password} disabled={busy}
+          placeholder={t('passwordPlaceholder')} onChange={(event) => { setPassword(event.target.value); setFormError('') }} />
+      </label>
+      <p className={css.formError} role="alert" hidden={formError === ''}>{formError}</p>
+      <div className={css.actions}>
+        <Button variant="primary" className={css.primaryButton} type="submit" disabled={busy || phone === '' || password === ''}>
+          {busy ? <IconLoadingOutlineRegular className={css.spinner} /> : t('signIn')}
+        </Button>
+      </div>
+    </form>
+  </Modal>
   return <Modal open headless title={title} onClose={dismiss} className={css.dialog as string}>
     <div className={css.content}>
       <div className={css.header}>

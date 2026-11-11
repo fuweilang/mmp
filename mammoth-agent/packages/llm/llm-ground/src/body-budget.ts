@@ -62,7 +62,7 @@ function shrinkToolText(content: string): string {
 }
 
 function shrinkMessagePayload(message: OpenAiMessage): OpenAiMessage {
-  if (message.role === 'tool') {
+  if (message.role === 'tool' && typeof message.content === 'string') {
     return { ...message, content: shrinkToolText(message.content) }
   }
   if (message.role === 'assistant') {
@@ -204,7 +204,7 @@ function fitChatCompletionsByMetric<T extends { messages: OpenAiMessage[] }>(
   // Pass 4: last resort — hard-slice remaining large strings.
   if (value > maxValue) {
     messages = messages.map(message => {
-      if (message.role === 'tool' && message.content.length > 256) {
+      if (message.role === 'tool' && typeof message.content === 'string' && message.content.length > 256) {
         trimmed = true
         return { ...message, content: `${message.content.slice(0, 128)}…` }
       }

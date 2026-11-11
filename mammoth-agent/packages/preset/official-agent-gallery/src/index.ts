@@ -25,11 +25,13 @@ import type {} from '@mammoth-ai/mmp-skill'
 import { GroundOfficialAgentClient } from './ground.ts'
 import {
   officialAgentBindingProjection,
+  officialGalleryAnswerExpertProjection,
   officialGallerySentSkillsProjection,
   officialGallerySourceProjection,
   officialSkillBindingProjection,
 } from './projection.ts'
 import { installOfficialGallerySkills } from './skill-provider.ts'
+import { MAMMOTH_AI_ANSWER } from './types.ts'
 import type {
   OfficialAgentBinding,
   OfficialAgentBindingState,
@@ -62,6 +64,11 @@ declare module '@mammoth-ai/mmp-session/types' {
      * @param data - type/name chip fields; never includes skill instruction body.
      */
     'official-gallery/source': OfficialGallerySource
+    /**
+     * A turn answered with no selected expert. The reply is signed 猛犸AI.
+     * @param data - turn number. No catalog id and no role text.
+     */
+    'official-gallery/answer-identity': { readonly turn: number }
     /**
      * Host-only skill freeze: sessionSource + summary_only loadPolicy.
      * Task 5 loads instruction bodies on demand from loadPolicy.contentPath.
@@ -140,10 +147,12 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     this.skillProjection = await this.ctx.sessionProjections.register(officialSkillBindingProjection)
     await this.ctx.sessionProjections.register(officialGallerySourceProjection)
     await this.ctx.sessionProjections.register(officialGallerySentSkillsProjection)
+    await this.ctx.sessionProjections.register(officialGalleryAnswerExpertProjection)
     await this.ctx.sessionProjections.register(managedRuntimeProjection)
     this.ctx.on('task/check-queue-steer',async(agent,message)=>{if(attemptForMessage(agent.session,message.id))throw new Error('TASK_SELECTION_REQUIRES_NEXT_TURN_QUEUE')})
     this.ctx.on('task/prepare-prompt', async (agent, request, message) => this.prepareTaskPrompt(agent, request, message))
     this.ctx.on('agent/created', async ({ agent }) => {
+      this.installProductIdentity(agent)
       const binding = this.bindingFor(agent.session)
       const selected=this.skillBindingFor(agent.session)
       if(binding===null&&selected===null&&!agent.session.snapshotEvents().some(e=>e.type==='official-gallery/attempt'))return
@@ -354,6 +363,45 @@ export default class OfficialAgentGallery extends TypertRemoteService {
   /** Public published card only; role instructions remain Host-only. */
   @Remote
   expertCard(id:string):Promise<OfficialAgentCard> { return this.ground.getCard(id) }
+
+  /**
+   * No selected expert speaks as 猛犸AI. A selected expert keeps that expert's role,
+   * and the registry opener stays in place for that turn.
+   */
+  private installProductIdentity(agent: Agent): void {
+    const opener = 'You are an AI agent powered by DeepSeek Harness.'
+    agent.ctx.systemPrompt.section({
+      name: 'harness:identity',
+      order: agent.ctx.systemPrompt.getSectionOrder('HARNESS_IDENTITY'),
+      interpolate: false,
+      text: () => this.productIdentity(agent) ?? opener,
+    })
+    agent.ctx.on('agent/inbox/claimed', ({ message, turn }) => {
+      if (attemptForMessage(agent.session, message.id)) return
+      if (!this.unnamedAfterClaim(agent)) return
+      if (agent.session.snapshotEvents().some(event => event.type === 'official-gallery/answer-identity' && event.data.turn === turn)) return
+      agent.session.append('official-gallery/answer-identity', { turn })
+    })
+  }
+
+  /**
+   * True when this claim has no catalog expert.
+   * A recorded attempt drops the creation expert. The creation expert still
+   * answers until the first attempt exists.
+   */
+  private unnamedAfterClaim(agent: Agent): boolean {
+    if (this.runtimes.get(agent.id) === undefined) return this.bindingFor(agent.session) === null
+    if (agent.session.snapshotEvents().some(event => event.type === 'official-gallery/attempt')) return true
+    return this.projection.stateOf(agent.session).binding === null
+  }
+
+  /** 猛犸AI while this turn has no expert. Undefined lets the registry opener stay. */
+  private productIdentity(agent: Agent): string | undefined {
+    const active = this.runtimes.get(agent.id)?.active
+    const unnamed = active !== undefined ? active.expert === null : this.bindingFor(agent.session) === null
+    if (!unnamed) return undefined
+    return `你是${MAMMOTH_AI_ANSWER.name}。用户问你是谁或使用什么模型时，只回答你是${MAMMOTH_AI_ANSWER.name}。不要提及底层服务商或模型名称。`
+  }
 
   private bindingFor(session: Parameters<ProjectionHandle<OfficialAgentBindingState>['stateOf']>[0]): OfficialAgentBinding | null {
     const active=this.runtimes.get(session.id)?.active

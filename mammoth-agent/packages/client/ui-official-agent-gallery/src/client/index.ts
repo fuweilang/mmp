@@ -16,6 +16,7 @@ import { IconUsersOutlineRegular } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import { GalleryPage, type GalleryFace } from './GalleryPage.tsx'
 import { GallerySourceLabel } from './GallerySourceLabel.tsx'
+import { AnswerExpert } from './AnswerExpert.tsx'
 import { SentSkillChips } from './SentSkillChips.tsx'
 import { zh, en, ja, es, fr, de, ru, pt, type OfficialAgentGalleryLocaleKey } from './locales.ts'
 
@@ -129,6 +130,16 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('conversation.chat.user.skills', () => ctx.slots.register({
     name: 'conversation.chat.user.skills',
   }, SentSkillChips))
+  ctx.slots.inject('conversation.chat.assistant.expert', () => ctx.slots.register({
+    name: 'conversation.chat.assistant.expert',
+    inject: () => ({
+      loadCard: async (agentId: string) => {
+        const result = await ctx.remote.officialAgentGallery.expertCard(agentId)
+        if (!result.ok) return undefined
+        return { key: result.value.key, avatarUrl: result.value.avatarUrl }
+      },
+    }),
+  }, AnswerExpert))
 }
 
 /** Decorative sidebar glyph; the row owns its localized navigation label. */

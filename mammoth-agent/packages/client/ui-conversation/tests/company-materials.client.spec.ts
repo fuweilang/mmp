@@ -102,7 +102,7 @@ it('t166 draft selection is independent text, session-isolated and atomically ca
  const id=SessionId('t166-other-draft');await f.sessions.add({id});const other=f.sessions.retain(id);await other.ready;onTestFinished(()=>other.release());const input=f.hub.shellFor(other.binding)
  expect(input.snapshot.catalogSelection).toBeUndefined();expect(f.shell.snapshot.catalogSelection).toEqual(placed)
 })
-it('accepted send clears the expert and the skill chips', async () => {
+it('accepted send keeps the expert and clears the skill chips', async () => {
   const f = await fixture()
   const selected = {
     protocol: 1 as const, selectionVersion: 3,
@@ -117,7 +117,7 @@ it('accepted send clears the expert and the skill chips', async () => {
   expect(sent.expertRef?.id).toBe('expert-a')
   expect(sent.skillRefs.map(skill => skill.id)).toEqual(['skill-b', 'skill-c'])
   expect(f.shell.snapshot.draft).toBe('')
-  expect(f.shell.snapshot.catalogSelection?.expertRef).toBeNull()
+  expect(f.shell.snapshot.catalogSelection?.expertRef?.id).toBe('expert-a')
   expect(f.shell.snapshot.catalogSelection?.skillRefs).toEqual([])
   expect(f.shell.snapshot.catalogSelection?.selectionVersion).toBe(3)
 })

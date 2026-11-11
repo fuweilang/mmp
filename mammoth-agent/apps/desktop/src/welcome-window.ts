@@ -66,7 +66,7 @@ export async function openWelcomeWindow(locale: DesktopLocale, operations: Welco
     active = false
     for (const channel of [
       WELCOME_IPC.analyticsEnabled, WELCOME_IPC.analytics, WELCOME_IPC.takeNotice, WELCOME_IPC.saveApiKey,
-      WELCOME_IPC.skip, WELCOME_IPC.start, WELCOME_IPC.cancel, WELCOME_IPC.copyLink,
+      WELCOME_IPC.skip, WELCOME_IPC.start, WELCOME_IPC.cancel, WELCOME_IPC.copyLink, WELCOME_IPC.password, WELCOME_IPC.register,
     ]) {
       ipcMain.removeHandler(channel)
     }
@@ -112,6 +112,28 @@ export async function openWelcomeWindow(locale: DesktopLocale, operations: Welco
     assertSender(event)
     if (typeof id !== 'string') throw new Error('desktop welcome: invalid attempt')
     return operations.copySignInLink(id as SignInAttemptId)
+  })
+  ipcMain.handle(WELCOME_IPC.password, async (event, phone: unknown, password: unknown) => {
+    assertSender(event)
+    if (typeof phone !== 'string' || !/^1\d{10}$/.test(phone) || typeof password !== 'string' || password.length < 1 || password.length > 200) {
+      return { ok: false, reason: 'credentials' }
+    }
+    return operations.signInWithPassword(phone, password)
+  })
+  ipcMain.handle(WELCOME_IPC.register, async (event, input: unknown) => {
+    assertSender(event)
+    if (typeof input !== 'object' || input === null) return { ok: false, reason: 'credentials' }
+    const row = input as Record<string, unknown>
+    const name = typeof row.name === 'string' ? row.name.trim() : ''
+    const phone = typeof row.phone === 'string' ? row.phone : ''
+    const password = typeof row.password === 'string' ? row.password : ''
+    const enterpriseName = typeof row.enterpriseName === 'string' ? row.enterpriseName.trim() : ''
+    const slug = typeof row.slug === 'string' ? row.slug.trim() : ''
+    if (name.length < 1 || name.length > 40 || !/^1\d{10}$/.test(phone) || password.length < 1 || password.length > 200
+      || enterpriseName.length < 1 || enterpriseName.length > 80 || slug.length < 1 || slug.length > 40) {
+      return { ok: false, reason: 'credentials' }
+    }
+    return operations.registerWithPassword({ name, phone, password, enterpriseName, slug })
   })
   window.once('closed', disposeHandlers)
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
