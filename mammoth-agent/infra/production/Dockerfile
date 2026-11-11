@@ -9,13 +9,17 @@ RUN npm config set registry https://registry.npmmirror.com \
   && pnpm config set registry https://registry.npmmirror.com
 WORKDIR /app
 # Dependencies come before the sources: this layer only depends on the workspace manifests
-# staged into __manifests__/, so editing code reuses the installed modules instead of
-# re-running a full workspace install (~2-3 min) on every release.
+# staged into __manifests__/, so editing code reuses the installed modules. Lifecycle
+# scripts are deferred because some of them read package sources.
 COPY __manifests__/ ./
 RUN --mount=type=cache,target=/pnpm-store,sharing=locked \
   pnpm config set store-dir /pnpm-store \
-  && pnpm install --frozen-lockfile --prefer-offline
+  && pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 COPY . .
+# Resolve the deferred lifecycle scripts now that their sources exist. The store is warm
+# and the links already exist, so this only runs the pending scripts.
+RUN --mount=type=cache,target=/pnpm-store,sharing=locked \
+  pnpm install --frozen-lockfile --prefer-offline
 ENV MMP_BUILD_TARGET=web
 RUN pnpm run build:artifacts
 RUN pnpm exec tsdown --no-config scripts/serve-ground-web.ts --format esm --platform node --out-dir runtime --no-dts --no-clean
