@@ -1,0 +1,87 @@
+# 猛犸桌面客户端 · Windows x64 安装包（未签名）
+#
+# 仓库根目录的 workflow 是 GitHub Actions 唯一识别的入口；mammoth-agent/.github
+# 下的同名流水线依赖自托管 runner，本文件只用于在 GitHub 托管 runner 上产出一份
+# 未签名 Windows 安装包，供宝塔下载页分发（不生成更新 feed、不签名、不发布到 COS）。
+name: Package Desktop · Windows x64 (unsigned, Baota)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: '打包源码分支或 tag；默认 5.0'
+        type: string
+        default: '5.0'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-baota-package
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: mammoth-agent
+    env:
+      CI: '1'
+      MMP_TELEMETRY_DISABLED: '1'
+      # 未签名包：避免 electron-builder 尝试发现证书
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.2'
+          cache: pnpm
+          cache-dependency-path: mammoth-agent/pnpm-lock.yaml
+
+      - name: Show versions
+        run: |
+          node -v
+          corepack pnpm -v
+          git rev-parse HEAD
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Package Windows x64 (unsigned)
+        run: corepack pnpm --dir apps/desktop run package:win:x64:unsigned
+
+      - name: Collect installer
+        run: |
+          $dir = 'apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts'
+          Get-ChildItem -Recurse $dir | Select-Object FullName,Length
+          $exe = Get-ChildItem -Path $dir -Filter '*-win-x64-unsigned.exe' -Recurse | Select-Object -First 1
+          if (-not $exe) { throw "no unsigned win-x64 installer in $dir" }
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+          "INSTALLER=$($exe.FullName)"
+          "BYTES=$($exe.Length)"
+          "SHA256=$hash"
+          New-Item -ItemType Directory -Force -Path ../../windows-artifact | Out-Null
+          Copy-Item $exe.FullName "../../windows-artifact/$($exe.Name)"
+          Copy-Item "$dir/*.blockmap" ../../windows-artifact/ -ErrorAction SilentlyContinue
+          Copy-Item "$dir/latest.yml" ../../windows-artifact/ -ErrorAction SilentlyContinue
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mammoth-agent-win-x64-unsigned
+          path: windows-artifact/*
+          if-no-files-found: error
+          retention-days: 14
