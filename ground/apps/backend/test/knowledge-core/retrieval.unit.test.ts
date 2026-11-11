@@ -92,3 +92,13 @@ test('adjacency reserves distinct same-heading continuation before unrelated nei
  assert.equal(rows[4].chunkId,'aida-middle');assert.ok(rows.slice(0,4).every((row,i)=>row===ranked[i]));
  assert.ok(!selectEvidenceWithNeighbors(ranked,[{...continuation,contentHash:'intro'}]).some(row=>row.chunkId==='aida-middle'));
 });
+
+import { focusNamedHeadings } from '../../src/knowledge-core/retrieval';
+test('named acronym headings distinguish exact methods from similar acronyms without changing unrelated ranking',()=>{
+ const hit=(id:string,title:string)=>({chunkId:id,locator:{headingPath:[title]}}) as any;
+ const rows=[hit('aidma','AIDMA模型'),hit('other','营销理论'),hit('aida','AIDA模型升级版')];
+ for(const query of ['按AIDA方法写文案','请解释 AIDA:','请解释 AIDA.'])
+  assert.deepEqual(focusNamedHeadings(rows,query).map(x=>x.chunkId),['aida','aidma','other']);
+ assert.deepEqual(focusNamedHeadings(rows,'根据知识库解释营销').map(x=>x.chunkId),['aidma','other','aida']);
+ assert.deepEqual(focusNamedHeadings(rows,'按AIDMA方法解释').map(x=>x.chunkId),['aidma','other','aida']);
+});

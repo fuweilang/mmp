@@ -9,7 +9,7 @@ import { KnowledgeHttpAdapter } from './provider';
 import { KnowledgeCoreError, safeKnowledgeError } from './errors';
 import { KnowledgeCandidateStore, type Candidate, type CandidateScope } from './candidate-store';
 import { planKnowledgeQueries } from './query-plan';
-import { reciprocalRankFusion, buildEvidenceContext, selectEvidenceWithNeighbors } from './retrieval';
+import { reciprocalRankFusion, buildEvidenceContext, selectEvidenceWithNeighbors, focusNamedHeadings } from './retrieval';
 import type { KnowledgeAccess, KnowledgeRetrievalInput, KnowledgeSourceReference } from './retrieval-access';
 import type { RetrievalResult, RetrievalEvidence, EvidenceContext } from './types';
 export interface KnowledgeRetrievalResponse extends RetrievalResult {
@@ -299,6 +299,10 @@ export class KnowledgeRetrievalService {
         Object.assign(diagnostics.counts, {
           denseGlobalCandidates: dense.length, lexicalGlobalCandidates: lexical.length, mergedCandidates: merged.length, rerankCandidates: 0
         });
+      const focused = focusNamedHeadings(merged, input.query);
+      if (focused.some((row, index) => row.chunkId !== merged[index].chunkId))
+        result.queryStrategy += '+EXACT_HEADING_FOCUS';
+      merged = focused;
       if (input.rerankProfileId && merged.length) {
         const from = performance.now();
         try {

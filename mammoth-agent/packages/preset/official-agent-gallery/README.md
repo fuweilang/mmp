@@ -52,3 +52,5 @@ Exact historical source text checks are deduplicated and serial, followed by one
 Engineering checks use synthetic Ground/model responses. Live provider semantic quality, supplier invoices and customer-account acceptance require separate verification. Legacy knowledge preview requires migration to new knowledge releases or explicit KNOWLEDGE_CORE/OFF; existing published legacy experts retain their old retrieval path. Internal Ground delegation to new REQUIRED/AUTO knowledge children remains unsupported.
 
 Recorded coverage includes the shipped `sdk` profile scenario `snapshots/sdk/official-expert-knowledge` and the Python SDK `sdk-official-expert` smoke projection. Both restore a recorded expert binding and use the real runtime with external account/Ground/model boundaries mocked.
+
+When a user names a method or framework but current evidence does not define it, the citation policy asks for a focused lookup by that name within the remaining lookup budget before applying it; missing support must still be disclosed.

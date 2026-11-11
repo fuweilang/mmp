@@ -99,7 +99,7 @@ export class ExpertKnowledgeRuntime {
         agent.ctx.systemPrompt.section({ name: 'OFFICIAL_EXPERT_CITATION_POLICY', order: 901, interpolate: false, text: () => {
             const policy = this.binding()?.executionConfig;
             return policy?.route === 'KNOWLEDGE_CORE' && policy.retrievalPolicy !== 'OFF'
-                ? 'Cite document facts and methods with their exact returned labels in square brackets next to each supported statement. File names, headings and guessed URLs are not citations. Never quote or reconstruct a passage absent from the returned evidence; disclose missing support. Distinguish creative examples and user-provided product assumptions from source facts.'
+                ? 'Cite document facts and methods with their exact returned labels in square brackets next to each supported statement. File names, headings and guessed URLs are not citations. Never quote or reconstruct a passage absent from the returned evidence; disclose missing support. If the user names a method or framework and the returned evidence does not define it, use lookupOfficialKnowledge with that method name as a focused query before explaining or applying it, when a lookup remains. If still unsupported, say so rather than treating similar templates as that method. Distinguish creative examples and user-provided product assumptions from source facts.'
                 : '';
         } });
         agent.ctx.systemPrompt.context({ name: 'OFFICIAL_EXPERT_KNOWLEDGE', order: 900, required: true, interpolate: false, text: () => this.currentText() });

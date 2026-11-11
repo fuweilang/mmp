@@ -120,7 +120,7 @@ test('soft base archive revokes pinned source without deleting immutable release
 test('same revision adjacency contributes context inside final6 even when more ranked hits exist',async()=>{
  const release=await core.getRelease(releaseId,{type:'PLATFORM'}),indexId=release.items[0].indexRevisionId;
  const chunks=await db.knowledgeChunk.findMany({where:{indexRevisionId:indexId},orderBy:{ordinal:'asc'}});
- const tail=chunks.at(-1)!,previous=chunks.at(-2)!;
+ const tail=chunks.at(-1)!,previous=chunks.at(-2)!,secondPrevious=chunks.at(-3)!;
  const scope={releaseId,scope:{type:'PLATFORM'} as const,indexIds:[indexId]};
  const ranked=await Promise.all([tail,...chunks.slice(0,6)].map(async row=>(await store.exact(scope,row.id))[0]));
  const boundedStore={lexical:async()=>[],dense:async()=>ranked,exact:store.exact.bind(store),neighbors:store.neighbors.bind(store)} as any;
@@ -128,6 +128,7 @@ test('same revision adjacency contributes context inside final6 even when more r
  const result=await scoped.retrieve(access(),{query:'MMP-CN-2026-0909',mode:'required'});
  assert.equal(result.status,'READY');assert.ok(result.evidence.length<=6);
  assert.ok(result.evidence.some(row=>row.chunkId===previous.id));
+ assert.ok((await store.neighbors(scope,indexId,tail.ordinal)).some(row=>row.chunkId===secondPrevious.id),'bounded two-chunk window includes middle method steps');
  assert.ok(result.evidence.every(row=>row.indexRevisionId===indexId&&row.knowledgeReleaseId===releaseId));
 });
 test('real tenant membership and active tenant are required for TENANT release content',async()=>{

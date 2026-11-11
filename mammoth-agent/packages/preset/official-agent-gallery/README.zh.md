@@ -54,3 +54,5 @@ Host通过 `packageFormat=2` 向Ground请求完整包。v2版本声明每项文�
 工程验证使用模拟 Ground 与模型响应。真实供应商语义质量、账单和客户账号验收需另行验证。旧知识预览必须迁移至新知识发布版本或显式使用 KNOWLEDGE_CORE/OFF；已有已发布旧专家继续使用原路径。Ground 内部直接委派新 REQUIRED/AUTO 知识专家仍不受支持。
 
 Ground 发送前完成 body fitting 后，会由会话所有者再次核对有日志的完整证据段；证据缺失或被改动时阻止 HTTP，绝不发送未记录的节选。录制验证包含 `snapshots/sdk/official-expert-knowledge` 正式 `sdk` profile 场景和 Python SDK 的 `sdk-official-expert` 投影。两者恢复已录制的专家绑定，运行真实 Harness，仅模拟外部账号、Ground 与模型边界。
+
+用户指定方法或框架、但当前证据没有其定义时，引用策略要求在剩余检索次数内按该名称定向查询，再解释或应用；仍缺依据时必须说明。

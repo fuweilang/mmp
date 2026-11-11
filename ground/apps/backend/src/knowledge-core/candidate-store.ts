@@ -63,6 +63,6 @@ export class KnowledgeCandidateStore {
   }
   exact(scope: CandidateScope, chunkId: string) { return this.read([scope], Prisma.sql`c.id=${chunkId}`, Prisma.sql`0`, 1); }
   neighbors(scope: CandidateScope, indexId: string, ordinal: number) {
-    return this.read([scope], Prisma.sql`c.index_revision_id=${indexId} AND c.ordinal IN (${ordinal - 1},${ordinal + 1})`, Prisma.sql`0`, 2);
+    return this.read([scope], Prisma.sql`c.index_revision_id=${indexId} AND c.ordinal IN (${ordinal - 2},${ordinal - 1},${ordinal + 1},${ordinal + 2})`, Prisma.sql`-abs(c.ordinal - ${ordinal})`, 4);
   }
 }

@@ -19,6 +19,18 @@ export function reciprocalRankFusion<T extends { chunkId: string }>(rankings: re
   return [...merged.values()].sort((a, b) => b.rrfScore - a.rrfScore);
 }
 
+/** Explicit uppercase method/identifier names must not lose to similarly named frameworks. Scores remain RRF scores. */
+export function focusNamedHeadings<T extends RetrievalEvidence>(rows: readonly T[], query: string): T[] {
+  const trim = (term: string) => term.replace(/^[.:/]+|[.:/]+$/g, '');
+  const terms = new Set((query.match(/[A-Za-z0-9_.:/-]+/g) ?? [])
+    .map(trim).filter(term => /^[A-Z][A-Z0-9_.:/-]{2,63}$/.test(term)).slice(0, 8).map(term => term.toLowerCase()));
+  if (!terms.size) return [...rows];
+  const matches = (row: T) => new Set((row.locator.headingPath?.join(' ').match(/[A-Za-z0-9_.:/-]+/g) ?? [])
+    .map(term => trim(term).toLowerCase()).filter(term => terms.has(term))).size;
+  return rows.map((row, index) => ({ row, index, matches: matches(row) }))
+    .sort((a, b) => b.matches - a.matches || a.index - b.index).map(item => item.row);
+}
+
 /** Reserve two distinct neighbors; prefer continuation of a selected section over cross-heading context. */
 export function selectEvidenceWithNeighbors<T extends RetrievalEvidence>(ranked: readonly T[], neighbors: readonly T[]): T[] {
   const key = (row: T) => row.contentHash ?? row.text;
