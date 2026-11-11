@@ -64,6 +64,16 @@ const WITHHELD_RESPONSE_HEADERS = [
 /** Host routes whose responses carry immutable cache headers keyed by a per-process revision. */
 const PLUGIN_BUNDLE_PATH = /^\/plugins\//u
 
+/** True when the owned Host closed or never accepted the forwarded connection. */
+function hostTransportClosed(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false
+  if ('name' in error && error.name === 'AbortError') return true
+  if (error instanceof AggregateError) return error.errors.some(hostTransportClosed)
+  const code = 'code' in error && typeof error.code === 'string' ? error.code : undefined
+  if (code === 'UND_ERR_SOCKET' || code === 'UND_ERR_CLOSED' || code === 'ECONNRESET' || code === 'ECONNREFUSED' || code === 'EPIPE') return true
+  return 'cause' in error && hostTransportClosed(error.cause)
+}
+
 /**
  * Forward local application requests to its authenticated Host, preserving streaming and cancellation.
  * Plugin bundle responses lose their `cache-control` for `no-store`: the Host marks them immutable
@@ -85,7 +95,15 @@ export async function forwardWebRequest(request: Request, host: string, cookie: 
   for (const name of ['host', 'origin', 'cookie', 'sec-fetch-site']) headers.delete(name)
   headers.set('cookie', cookie)
   const init = { method: request.method, headers, body: request.body, signal: request.signal, duplex: 'half', redirect: 'manual' as const }
-  const response = await fetch(target, init)
+  let response: Response
+  try {
+    response = await fetch(target, init)
+  } catch (error) {
+    // Replacing the Host closes its port while the page is still loading.
+    // Electron logs a rejected protocol handler; a 503 lets the next Host own the retry.
+    if (hostTransportClosed(error)) return new Response(null, { status: 503 })
+    throw error
+  }
   const outgoing = new Headers(response.headers)
   for (const name of WITHHELD_RESPONSE_HEADERS) outgoing.delete(name)
   if (PLUGIN_BUNDLE_PATH.test(source.pathname)) outgoing.set('cache-control', 'no-store')

@@ -86,6 +86,16 @@ describe('generated tsconfig package aliases', () => {
     expect(uncoveredPackages(names, mappedSpecifiers(config))).toEqual([])
   })
 
+  it('does not repeat a hand-written alias inside the generated region', () => {
+    const config = readFileSync(resolve(root, 'tsconfig.base.json'), 'utf8')
+    const begin = config.indexOf('BEGIN generated package aliases')
+    const end = config.indexOf('END generated package aliases')
+    const keys = (text: string) => [...text.matchAll(/^\s*"(@mammoth-ai\/[^"]+)":/gm)].map(match => match[1] ?? '')
+    const hand = new Set(keys(config.slice(0, begin)))
+    const generated = keys(config.slice(begin, end))
+    expect(generated.filter(key => hand.has(key))).toEqual([])
+  })
+
   it('leaves no wildcard that probes every package group', () => {
     const config = readFileSync(resolve(root, 'tsconfig.base.json'), 'utf8')
     // A wildcard lists one candidate per group, so resolving a package late in

@@ -23,12 +23,7 @@ import { ApplicationLog } from '../logging/application-log.service';
 import { LlmHealthService } from './llm-health.service';
 import { LlmConcurrencyService } from './llm-concurrency.service';
 import { modelCapabilities } from './model-capabilities';
-<<<<<<< HEAD
-import { estimateInputTokens, promptFitsContext } from './prompt-tokens';
-import { decryptApiKey } from './llm-key-crypto';
-=======
 import { resolveChatProviderConfiguration } from './provider-configuration';
->>>>>>> origin/4.0
 
 interface UpstreamUsage {
   cacheWrite5mTokens?: number;
@@ -128,7 +123,7 @@ export class LlmChatGatewayService {
       const capabilities=modelCapabilities(row);
       if(body&&requestHasTools(body)&&!capabilities.tools)return false;
       if(body&&requestHasImages(body)&&!capabilities.vision)return false;
-      if(body&&!promptFitsContext(body.messages,Number(body.max_tokens??8192),capabilities.contextWindow))return false;
+      if(body&&Math.ceil(JSON.stringify(body.messages??[]).length/2)+Number(body.max_tokens??8192)>capabilities.contextWindow)return false;
       try{await this.billing.quoteModel(row.provider.name,row.modelId);return true;}
       catch(error){this.operationLog.event('warn','model.price.unavailable',{modelId:row.id,error});return false;}
     }));
@@ -712,12 +707,12 @@ function requestHasTools(body: Record<string, unknown>): boolean {
 }
 
 /**
- * 冻结用估算上限：文字仍按 JSON 字符数/2，每张图按固定视觉开销，
- * 与 candidates 的上下文估算一致。输出 = max_tokens（缺省 8192）。
- * 全部按非缓存价折算，保证覆盖实际成本。
+ * 冻结用估算上限：输入 ≈ JSON 字符数/2（与 candidates 的上下文估算一致），
+ * 输出 = max_tokens（缺省 8192）。全部按非缓存价折算，保证覆盖实际成本。
  */
 function estimateRequestTokens(body: ChatBody): { input: number; output: number } {
-  const input = estimateInputTokens(body.messages, body.tools);
+  const text = JSON.stringify(body.messages ?? []) + (body.tools ? JSON.stringify(body.tools) : '');
+  const input = Math.ceil(text.length / 2);
   const rawOut = Number(body.max_tokens ?? 8192);
   const output = Number.isFinite(rawOut) && rawOut > 0 ? Math.floor(rawOut) : 8192;
   return { input, output };

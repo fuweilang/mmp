@@ -213,7 +213,6 @@ export function apply(ctx: ClientContext): void {
     id: 'official-gallery-input-source',
     order: -9,
     locale: NS,
-<<<<<<< HEAD
     inject: () => ({
       download: async (sessionId: string, id: string) => {
         const result = await ctx.remote.officialAgentGallery.downloadArtifact(sessionId as Parameters<typeof ctx.remote.officialAgentGallery.downloadArtifact>[0], id)
@@ -221,9 +220,6 @@ export function apply(ctx: ClientContext): void {
         return result.value
       },
     }),
-=======
-    inject: () => ({ skillAvailability: readSkillAvailability(ctx),openKnowledgeSource:async(sessionId:string,recordId:string,label:string)=>{const result=await ctx.remote.officialAgentGallery.openKnowledgeSource(sessionId as SessionId,recordId,label);if(!result.ok)throw Error(result.error.message);return result.value} }),
->>>>>>> origin/4.0
   }, GallerySourceLabel))
   ctx.slots.inject('conversation.chat.user.skills', () => ctx.slots.register({
     name: 'conversation.chat.user.skills',

@@ -207,21 +207,13 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       const skillBinding = this.skillBindingFor(agent.session)
       if (skillBinding === null) return
     })
-    this.ctx.on('agent/pre-step', async ({agent,signal,turn,step,messages,modelSelection},next):Promise<PreStepDecision>=>{
+    this.ctx.on('agent/pre-step', async ({agent,signal,turn,step},next):Promise<PreStepDecision>=>{
       const runtime=this.runtimes.get(agent.id);if(!runtime)return next()
       if(runtime.turn!==turn){runtime.attempt=randomUUID();runtime.turn=turn;runtime.step=step;this.receipt(agent,'preparing')}else runtime.step=step
       try{
         await this.authorize(agent,signal)
-<<<<<<< HEAD
         for(const selected of this.activeSkills(agent.session)){
           if(runtime.bodies.has(selected.sessionSource.key))continue
-=======
-        const fixed=this.bindingFor(agent.session)?.executionConfig?.generationModel
-        if(fixed?.mode==='FIXED'&&(modelSelection.provider!=='mammoth-ground'||modelSelection.model!==fixed.modelRef))throw Error('EXPERT_FIXED_MODEL_REQUIRED: reselect the expert')
-        await this.knowledge.get(agent.id)?.prepare(turn,messages,signal)
-        const selected=this.skillBindingFor(agent.session)
-        if(selected&&!runtime.bodies.has(selected.sessionSource.key)){
->>>>>>> origin/4.0
           this.receipt(agent,'fetching')
           const directory=agent.ctx.get('workingDirectory')
           const cwd=directory?await directory.ensure(agent,signal):undefined
@@ -232,12 +224,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       }catch(error){this.receipt(agent,signal.aborted?'cancelled':'failed',{reason:error instanceof Error?error.message.split(':')[0]??'GALLERY_FAILED':'GALLERY_PREPARE_FAILED'});throw error}
     })
     this.ctx.on('agent/disposed', ({ agent }) => {
-<<<<<<< HEAD
       this.ctx.groundRequestAttribution.unbind(agent.id)
-=======
-      if (this.bindingFor(agent.session) !== null) this.ctx.groundRequestAttribution.unbind(agent.id)
-      this.knowledge.delete(agent.id)
->>>>>>> origin/4.0
       this.runtimes.delete(agent.id)
       this.expertTools.delete(agent.id)
       this.ownedTasks.delete(agent.id)
@@ -548,13 +535,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     let expert:OfficialAgentBinding|null=null,skills:OfficialSkillBinding[]=[],skillHashes:string[]=[]
     if(previous){expert=previous.expert;skills=Array.isArray(previous.skills)?[...previous.skills]:previous.skill?[previous.skill]:[];skillHashes=Array.isArray(previous.skillHashes)?[...previous.skillHashes]:previous.skillHash?[previous.skillHash]:[]}
     else {
-<<<<<<< HEAD
       if(selection.expertRef){const card=await this.ground.getCard(selection.expertRef.id);if(!card.executionGranted)throw new Error('TASK_EXPERT_ACCESS_CHANGED');const execution=await this.ground.resolve(selection.expertRef.id,selection.expertRef.versionId);if(execution.agentId!==selection.expertRef.id||execution.versionId!==selection.expertRef.versionId)throw new Error('TASK_EXPERT_REVISION_CHANGED');expert={agentId:execution.agentId,versionId:execution.versionId,kind:execution.kind,name:card.name,systemPrompt:execution.systemPrompt,toolScope:execution.toolScope,...execution.linkedSkills?{linkedSkills:execution.linkedSkills}:{}}}
       for(const ref of selectionSkills(selection)){const skill=await this.ground.beginSkillSession(ref.id,ref.revision);if(skill.sessionSource.id!==ref.id||skill.sessionSource.packageRevision!==ref.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');if(skills.some(existing=>existing.sessionSource.key===skill.sessionSource.key))throw new Error('TASK_SELECTION_DUPLICATE_SKILL');const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision);if(content.id!==ref.id||content.key!==skill.sessionSource.key||content.packageRevision!==ref.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');skills.push(skill);skillHashes.push(sha(content.instruction))}
-=======
-      if(selection.expertRef){const card=await this.ground.getCard(selection.expertRef.id);if(!card.executionGranted)throw new Error('TASK_EXPERT_ACCESS_CHANGED');const execution=await this.ground.resolve(selection.expertRef.id,selection.expertRef.versionId);if(execution.agentId!==selection.expertRef.id||execution.versionId!==selection.expertRef.versionId)throw new Error('TASK_EXPERT_REVISION_CHANGED');expert={agentId:execution.agentId,versionId:execution.versionId,kind:execution.kind,name:card.name,systemPrompt:execution.systemPrompt,toolScope:execution.toolScope,...this.executionFields(execution),...execution.linkedSkills?{linkedSkills:execution.linkedSkills}:{}}}
-      if(selection.skillRef){skill=await this.ground.beginSkillSession(selection.skillRef.id,selection.skillRef.revision);if(skill.sessionSource.id!==selection.skillRef.id||skill.sessionSource.packageRevision!==selection.skillRef.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision);if(content.id!==selection.skillRef.id||content.key!==skill.sessionSource.key||content.packageRevision!==selection.skillRef.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');skillHash=sha(content.instruction)}
->>>>>>> origin/4.0
     }
     if(expert)await this.resolveBinding(expert)
     const latest=attemptForRequest(agent.session,request.requestId)
@@ -574,22 +556,12 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     const preset=await this.ctx.agentPresets.resolve('standard');if(preset.broken)throw new Error(`GALLERY_STANDARD_UNAVAILABLE: ${preset.broken}`)
   }
   private async authorize(agent:Agent,signal?:AbortSignal):Promise<void>{
-<<<<<<< HEAD
     signal?.throwIfAborted();const active=this.runtimes.get(agent.id)?.active;const chosen=this.activeSkills(agent.session);if(active&&!active.expert&&chosen.length===0)return;if(active){const scope=await this.ground.currentScope();if(scope.userId!==active.authScope.userId||scope.scope!==active.authScope.scope)throw new Error('TASK_AUTH_SCOPE_CHANGED')}const binding=this.bindingFor(agent.session)
-    if(binding)await this.ground.resolve(binding.agentId,binding.versionId,signal)
+    if(binding?.versionId)await this.ground.resolve(binding.agentId,binding.versionId,signal)
     if(chosen.length>0){
       const frozen=skillStepAccess(Boolean(active))==='snapshot'
       if(frozen&&active){
         for(const skill of chosen){const pin=this.attemptPins(active).find(item=>item.key===skill.sessionSource.key);if(pin?.hash){const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision,signal);if(sha(content.instruction)!==pin.hash)throw new Error('TASK_SKILL_SNAPSHOT_CHANGED')}}
-=======
-    signal?.throwIfAborted();await this.runtimes.get(agent.id)?.skillsCleanup;const active=this.runtimes.get(agent.id)?.active;if(active&&!active.expert&&!active.skill)return;if(active){const scope=await this.ground.currentScope();if(scope.userId!==active.authScope.userId||scope.scope!==active.authScope.scope)throw new Error('TASK_AUTH_SCOPE_CHANGED')}const binding=this.bindingFor(agent.session),selected=this.skillBindingFor(agent.session)
-    if(binding)await this.resolveBinding(binding,signal)
-    if(selected){
-      const active=this.runtimes.get(agent.id)?.active
-      const frozen=skillStepAccess(Boolean(active?.skill))==='snapshot'
-      if(frozen){
-        if(active?.skillHash){const content=await this.ground.fetchSkillContent(selected.sessionSource.id,selected.sessionSource.packageRevision,signal);if(sha(content.instruction)!==active.skillHash)throw new Error('TASK_SKILL_SNAPSHOT_CHANGED')}
->>>>>>> origin/4.0
       }else{
         for(const skill of chosen)await this.ground.beginSkillSession(skill.sessionSource.id,skill.sessionSource.packageRevision,signal)
       }
@@ -626,12 +598,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     agent.ctx.systemPrompt.section({name:'OFFICIAL_GALLERY_REQUIRED_SKILLS',order:899,interpolate:false,text:()=>this.requiredContext(runtime)??''})
     agent.ctx.systemPrompt.section({name:'OFFICIAL_EXPERT_ROLE',order:898,interpolate:false,text:()=>runtime.active ? '' : this.bindingFor(agent.session)?.systemPrompt??''})
     this.replaceExpertTools(agent,this.bindingFor(agent.session))
-<<<<<<< HEAD
-    runtime.invalidateSkills=this.installSessionSkills(agent.ctx,()=>{const expert=this.bindingFor(agent.session),skills=this.activeSkills(agent.session);return [...new Map([...expert?.linkedSkills??[],...skills.map(skill=>this.skillSummaryFromBinding(skill))].map(summary=>[summary.key,summary])).values()]},agent)
-=======
-    runtime.invalidateSkills=this.installSessionSkills(agent.ctx,()=>{const expert=this.bindingFor(agent.session),skill=this.skillBindingFor(agent.session);return [...new Map([...expert?.linkedSkills??[],...skill?[this.skillSummaryFromBinding(skill)]:[]].map(summary=>[summary.key,summary])).values()]},agent)
-    const resetSkills=()=>{runtime.skillsCleanup=runtime.invalidateSkills();void runtime.skillsCleanup.catch(()=>{})}
->>>>>>> origin/4.0
+    const resetSkills=this.installSessionSkills(agent.ctx,()=>{const expert=this.bindingFor(agent.session),skills=this.activeSkills(agent.session);return [...new Map([...expert?.linkedSkills??[],...skills.map(skill=>this.skillSummaryFromBinding(skill))].map(summary=>[summary.key,summary])).values()]},agent)
+    runtime.invalidateSkills=resetSkills
     agent.ctx.on('agent/inbox/claimed',({message,turn})=>{
       const frozen=attemptForMessage(agent.session,message.id)
       if(!frozen){runtime.epoch++;runtime.active=undefined;runtime.used=false;runtime.bodies.clear();resetSkills();runtime.turn=turn;runtime.step=1;runtime.attempt=randomUUID();this.ctx.groundRequestAttribution.unbind(agent.id);this.replaceExpertTools(agent,null);const original=this.bindingFor(agent.session);if(original){this.ctx.groundRequestAttribution.bind(agent.id,this.attributionFor(original));this.selectFixedModel(agent,original);this.replaceExpertTools(agent,original)}return}

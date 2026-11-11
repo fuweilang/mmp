@@ -242,13 +242,16 @@ export default defineConfig({
     // through its own package.json exports from the importer's directory, and
     // CSS still rides Vite's pipeline because the client build preset emits it
     // beside the bundle. Plugin packages never enter this graph; they arrive as
-    // runtime bundles through the client module system. The node:module alias
-    // supports Loader initialization; its filesystem resolver's other Node
-    // imports must stay default imports for Vite's browser-external stubs.
-    // Browser boot supplies loader.internal before importing plugin entries,
-    // so the filesystem resolver is never invoked in the browser.
+    // runtime bundles through the client module system. Browser boot supplies
+    // loader.internal before importing plugin entries, so the filesystem
+    // resolver is never invoked. These aliases keep that path from importing
+    // Node built-ins into the browser bundle.
     alias: [
       { find: /^node:module$/, replacement: src('./src/node-module-stub.ts') },
+      { find: /^node:fs$/, replacement: src('./src/node-builtin-stub.ts') },
+      { find: /^node:fs\/promises$/, replacement: src('./src/node-builtin-stub.ts') },
+      { find: /^node:path$/, replacement: src('./src/node-builtin-stub.ts') },
+      { find: /^node:url$/, replacement: src('./src/node-builtin-stub.ts') },
     ],
   },
   define: {

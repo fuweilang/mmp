@@ -573,16 +573,12 @@ export class LibraryService {
     if (node.state !== 'RECYCLED') {
       throw new LibraryError(400, '请先回收到回收站再彻底删除', 'BAD_STATE');
     }
-<<<<<<< HEAD
+    if (node.kind === 'FILE') throw new LibraryError(409, FILE_PURGE_BLOCKED_REASON, 'REFERENCE_UNVERIFIED');
     const descendants = this.recycledSubtree(await this.store.listNodes(actor.tenantId), node.id);
     if (descendants.some(row => row.state === 'ACTIVE')) throw new LibraryError(400, '目录不为空', 'FOLDER_NONEMPTY');
     for (const child of descendants) {
       if (child.state === 'RECYCLED') await this.purgeStored(child);
     }
-=======
-    if (node.kind === 'FILE') throw new LibraryError(409, FILE_PURGE_BLOCKED_REASON, 'REFERENCE_UNVERIFIED');
-    await this.assertNoLiveChildren(actor.tenantId, node.id);
->>>>>>> origin/4.0
     await this.purgeStored(node);
     await this.writeAudit(actor, 'library_purge', { nodeId: node.id });
     return { ok: true, code: 'SOURCE_GONE' as const };

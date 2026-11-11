@@ -4,8 +4,9 @@ import type { LibraryKey } from './locales.ts'
 import css from './LibraryPanel.module.css'
 
 type Row = { id: string; file: File; status: 'queued' | 'uploading' | 'success' | 'failed'; error?: string | undefined }
-export function LibraryUploadDialog({ t, accept, single, maxFileBytes, loadLimits, uploadFile, onSaved, onClose }: {
+export function LibraryUploadDialog({ t, accept, single, maxFileBytes, hint, loadLimits, uploadFile, onSaved, onClose }: {
   t: (key: LibraryKey) => string; accept: string; single: boolean; maxFileBytes?: number | undefined
+  hint?: string | undefined
   loadLimits: () => Promise<{ maxFileBytes: number; allowedExtensions: readonly string[] }>
   uploadFile: (file: File) => Promise<void>; onSaved: () => void; onClose: () => void
 }) {
@@ -57,6 +58,7 @@ export function LibraryUploadDialog({ t, accept, single, maxFileBytes, loadLimit
         add(Array.from(event.dataTransfer.files))
       }}><p>{t('uploadDrop')}</p><Button data-modal-autofocus variant="outline" disabled={running} onClick={() => { input.current?.click() }}>{t('uploadChoose')}</Button><input hidden ref={input} type="file" multiple={!single} accept={accept} aria-label={t('uploadChoose')} onChange={event => { add(Array.from(event.target.files ?? [])); event.target.value = '' }} /></div>
       <p className={css.uploadNote}>{t(single ? 'uploadSingleHint' : 'uploadBatchHint')}{maxFileBytes !== undefined ? ` · ${t('uploadLimit')} ${fileSizeText(maxFileBytes)}` : ''}</p>
+      {hint && <p className={css.uploadNote}>{hint}</p>}
       {running && <p role="status">{t('uploadBusyHint')}</p>}{error && <p role="alert" className={css.error}>{error}</p>}
       <ul className={css.uploadList}>{rows.map(row => <li key={row.id}><strong>{row.file.name}</strong><span>{fileSizeText(row.file.size)}</span>{row.status === 'queued' ? <Button size="sm" aria-label={`${t('uploadRemove')} · ${row.file.name}`} disabled={running} onClick={() => { setRows(previous => previous.filter(item => item.id !== row.id)) }} icon={<IconCloseOutlineRegular size={14} />} /> : <span role="status">{t(row.status === 'uploading' ? 'uploading' : row.status === 'success' ? 'uploadSuccess' : 'uploadFailure')}</span>}{row.error && <p role="alert">{row.error}</p>}{row.status === 'failed' && <Button size="sm" disabled={running} onClick={() => { void run([row]) }}>{t('uploadRetryOne')}</Button>}</li>)}</ul>
     </div>

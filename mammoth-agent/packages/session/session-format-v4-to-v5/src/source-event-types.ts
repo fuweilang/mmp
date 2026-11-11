@@ -29,6 +29,7 @@ export const RELEASED_V4_EVENT_TYPES: ReadonlySet<string> = new Set([
   'model/selection',
   'official-agent/bound',
   'official-agent/knowledge',
+  'official-gallery/answer-identity',
   'official-gallery/artifact',
   'official-gallery/attempt',
   'official-gallery/attempt-start',

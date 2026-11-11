@@ -11,5 +11,5 @@ export default defineConfig(({ env }) => env?.MMP_BUILD_FACE === 'client' ? [] :
   dts: false,
   clean: false,
   deps: { alwaysBundle: [/^@botiverse\/oar(?:\/|$)/] },
-  outputOptions: { inlineDynamicImports: true },
+  outputOptions: { codeSplitting: false },
 }])

@@ -49,12 +49,7 @@ export class LibraryAdminService {
   const rows=filtered.slice((query.page-1)*query.pageSize,query.page*query.pageSize).map(n=>{
    const v=byVersion.get(n.currentVersionId??'');
    const path:string[]=[];const seen=new Set([n.id]);let parent=byId.get(n.parentId??'');while(parent&&!seen.has(parent.id)&&path.length<32){path.unshift(parent.name);seen.add(parent.id);parent=byId.get(parent.parentId??'');}
-<<<<<<< HEAD
-   return {id:n.id,name:n.name,kind:n.kind,scope:n.scope,state:n.state,parentId:n.parentId,parentPath:path,ownerUserId:n.ownerUserId,ownerName:byOwner.get(n.ownerUserId)??null,updatedAt:n.updatedAt.toISOString(),currentVersion:v?brief(v):null,fileType:fileType(n,v),canRead:true,canWrite,purgeBlockedReason:n.kind==='FILE'?'无法核实任务活动使用，暂不开放文件彻底删除；可回收并恢复。':null};
-=======
-   const targetScope=n.scope==='PRIVATE'?'ENTERPRISE':'PRIVATE';const target={...n,scope:targetScope} as LibraryNode;const scopeGrant=grants.find(g=>g.powers==='CRUD'&&this.covers(user,target,g));
-   return {id:n.id,name:n.name,kind:n.kind,scope:n.scope,state:n.state,parentId:n.parentId,parentPath:path,ownerUserId:n.ownerUserId,ownerName:byOwner.get(n.ownerUserId)??null,updatedAt:n.updatedAt.toISOString(),currentVersion:v?brief(v):null,fileType:fileType(n,v),readGrantId:read?.id??null,writeGrantId:write?.id??null,targetScopeGrantId:scopeGrant?.id??null,purgeBlockedReason:n.kind==='FILE'?FILE_PURGE_BLOCKED_REASON:null};
->>>>>>> origin/4.0
+   return {id:n.id,name:n.name,kind:n.kind,scope:n.scope,state:n.state,parentId:n.parentId,parentPath:path,ownerUserId:n.ownerUserId,ownerName:byOwner.get(n.ownerUserId)??null,updatedAt:n.updatedAt.toISOString(),currentVersion:v?brief(v):null,fileType:fileType(n,v),canRead:true,canWrite,purgeBlockedReason:n.kind==='FILE'?FILE_PURGE_BLOCKED_REASON:null};
   });return {items:rows,total:filtered.length,page:query.page,pageSize:query.pageSize};
  }
  async detail(user: Platform, tenantId: string, nodeId: string) {

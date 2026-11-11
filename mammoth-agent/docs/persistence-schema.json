@@ -5,11 +5,7 @@
     {"key":"JsonlHeaderLine","kind":"header","digest":"dd498b6fce7c7a0258d68c99d24e522dacdffd8cae534a63cc7991808d59b1d9"},
     {"key":"SessionEventEnvelope","kind":"envelope","digest":"5776e5553ff2dfe3f5bc202dbb1e7c9f93e35a531aebb7764c23b2b6153b2ccc"},
     {"key":"event:agent-preset/selected","kind":"event","event":"agent-preset/selected","surface":false,"digest":"a10c17474eaf2ddab7095a099e0fe3d046fc18e56c3e344fc8894c05ff9ef97b"},
-<<<<<<< HEAD
-    {"key":"event:agent/inbox/spliced","kind":"event","event":"agent/inbox/spliced","surface":false,"digest":"f8fb99b6d7e3857299141b6a8902a4e6395ee9f2866631677e68683956c2338a"},
-=======
     {"key":"event:agent/inbox/spliced","kind":"event","event":"agent/inbox/spliced","surface":false,"digest":"5ffefdd4271e74cc13b7689e476aea129ba5d60ac19e89068757f916c677a0bb"},
->>>>>>> origin/4.0
     {"key":"event:approval/asked","kind":"event","event":"approval/asked","surface":false,"digest":"3bfeb47b58606f4661904bc723da612782214c463d01e6d61cd6d6193d7374e1"},
     {"key":"event:approval/decided","kind":"event","event":"approval/decided","surface":false,"digest":"bb1ab3d08f49a9f3b265f844cd78d5c49813062a7b34b54904b426f85d0ff6e3"},
     {"key":"event:approval/policy","kind":"event","event":"approval/policy","surface":false,"digest":"26718e15e7e395bce9642dba5bbe09b3b1a4ce2213d20d566cd9207d7fc5fb78"},
@@ -22,11 +18,7 @@
     {"key":"event:compaction/start","kind":"event","event":"compaction/start","surface":false,"digest":"db874d463b0fdec77e9da1c4568f37cb70bd6596781eb93800db44fb8a116965"},
     {"key":"event:compaction/summary","kind":"event","event":"compaction/summary","surface":false,"digest":"aacbf02ae1aefc458e88a072e75caba1980e59118159cbafa8dd07a5f671d847"},
     {"key":"event:deliverables/presented","kind":"event","event":"deliverables/presented","surface":false,"digest":"13d3d180f977bf78081d487ffa0ecb75857349bcab29a5a3fb48189fca2a6176"},
-<<<<<<< HEAD
-    {"key":"event:developer/message","kind":"event","event":"developer/message","surface":true,"digest":"89fd66f990a09691fe0b11ab1187140a4dcbda9b3897a8e4964abc0c87700ea7"},
-=======
     {"key":"event:developer/message","kind":"event","event":"developer/message","surface":true,"digest":"d051c01264c55963d57369a817d37c80f4ff0e3d160da01d9dea490133b139aa"},
->>>>>>> origin/4.0
     {"key":"event:feedback/message-delete","kind":"event","event":"feedback/message-delete","surface":false,"digest":"3ee93b06f3a125850337602bcdf155d2538c43a5c944ec55b1b3c365152d6796"},
     {"key":"event:feedback/message-put","kind":"event","event":"feedback/message-put","surface":false,"digest":"b5086d249e8502e9ead1d39156bb8d559bde7951cac0f14ce150345b4e42a2bf"},
     {"key":"event:feedback/record","kind":"event","event":"feedback/record","surface":false,"digest":"b54940ff095c17e874c5be03815f4c2145a256cf3a1d34dae4ab2f7769dfffe8"},
@@ -39,25 +31,15 @@
     {"key":"event:llm/retry","kind":"event","event":"llm/retry","surface":false,"digest":"525254db03b1d1e6b74cf55aced52817568331ac1f96c0818728910b6692e336"},
     {"key":"event:llm/retry-started","kind":"event","event":"llm/retry-started","surface":false,"digest":"48e5c9861f16ac07e78cb7b5ae9dabdf7bb85c58baed5a51b4ad275050ea58e3"},
     {"key":"event:model/selection","kind":"event","event":"model/selection","surface":false,"digest":"35203ba7ad5ef6f97d556b85df20ae98f04f09c65748cecdf8eefdb8b6405ffc"},
-<<<<<<< HEAD
-    {"key":"event:official-agent/bound","kind":"event","event":"official-agent/bound","surface":false,"digest":"d353934f506267d27036a07695ffab470276b78d9b9fbd6bd971b055b363913e"},
-    {"key":"event:official-gallery/answer-identity","kind":"event","event":"official-gallery/answer-identity","surface":false,"digest":"99e3cb7e9d50f60231b303ffa85bc806dc5c5a6cf552ae36be9ab943da0fbc34"},
-    {"key":"event:official-gallery/artifact","kind":"event","event":"official-gallery/artifact","surface":false,"digest":"24a686c65b6d7a102392380299db74ba1ee83816673cbcaceb3fbd62278ad256"},
-    {"key":"event:official-gallery/attempt","kind":"event","event":"official-gallery/attempt","surface":false,"digest":"95f70ec2849bddbdc23d06eabb870d66924e776ef392494b13c9b655d1d0929d"},
-    {"key":"event:official-gallery/attempt-start","kind":"event","event":"official-gallery/attempt-start","surface":false,"digest":"d8ea0e46117898bf37a0226fc86c90e46ef1e5456cfc581b5253cf5a047927e6"},
-    {"key":"event:official-gallery/composition","kind":"event","event":"official-gallery/composition","surface":false,"digest":"faef4f599756d8c0fba47e10e596664ad7581f58808c88422b5c348d70cd8a26"},
-    {"key":"event:official-gallery/receipt","kind":"event","event":"official-gallery/receipt","surface":false,"digest":"2bbda8fc1c9fb8dc831b7451b07fb3c0daaa5c5ad830968fda0bac2d3ffb5c93"},
-    {"key":"event:official-gallery/source","kind":"event","event":"official-gallery/source","surface":false,"digest":"9a1b5bf0c1e0cb7bfb0ab81503a576ddcc5fe7670ba4f682c4475e8738baf963"},
-=======
     {"key":"event:official-agent/bound","kind":"event","event":"official-agent/bound","surface":false,"digest":"54ecf97a058fe0f76babc8eeb831cfbed140f7d34951f394c623d831190e8550"},
     {"key":"event:official-agent/knowledge","kind":"event","event":"official-agent/knowledge","surface":false,"digest":"717647cef155fed2dd95871c28fca9a27d3734b83b52ac291121bcabb7eb489d"},
+    {"key":"event:official-gallery/answer-identity","kind":"event","event":"official-gallery/answer-identity","surface":false,"digest":"99e3cb7e9d50f60231b303ffa85bc806dc5c5a6cf552ae36be9ab943da0fbc34"},
     {"key":"event:official-gallery/artifact","kind":"event","event":"official-gallery/artifact","surface":false,"digest":"24a686c65b6d7a102392380299db74ba1ee83816673cbcaceb3fbd62278ad256"},
-    {"key":"event:official-gallery/attempt","kind":"event","event":"official-gallery/attempt","surface":false,"digest":"dde85adc136b2ee03b595d611286ad4a55568eca6a1a91bf3c5e019b62d4d085"},
+    {"key":"event:official-gallery/attempt","kind":"event","event":"official-gallery/attempt","surface":false,"digest":"157c314af05c8219dd4aeae23e193fe6221319f2c26858a83f2cc48968087bc3"},
     {"key":"event:official-gallery/attempt-start","kind":"event","event":"official-gallery/attempt-start","surface":false,"digest":"d8ea0e46117898bf37a0226fc86c90e46ef1e5456cfc581b5253cf5a047927e6"},
     {"key":"event:official-gallery/composition","kind":"event","event":"official-gallery/composition","surface":false,"digest":"faef4f599756d8c0fba47e10e596664ad7581f58808c88422b5c348d70cd8a26"},
     {"key":"event:official-gallery/receipt","kind":"event","event":"official-gallery/receipt","surface":false,"digest":"2bbda8fc1c9fb8dc831b7451b07fb3c0daaa5c5ad830968fda0bac2d3ffb5c93"},
     {"key":"event:official-gallery/source","kind":"event","event":"official-gallery/source","surface":false,"digest":"839b8efe978262d1b952284aed2f2b777f6149a0534fd8bb01dbab958ab09942"},
->>>>>>> origin/4.0
     {"key":"event:official-skill/bound","kind":"event","event":"official-skill/bound","surface":false,"digest":"ef12505e392a725c334441c001f3825cb9e95cf1fb50bfbaa7061428c18aa810"},
     {"key":"event:permission/preset","kind":"event","event":"permission/preset","surface":false,"digest":"5c45bf4c544a7211dcd8ba6ba7e5f1bc39b49e7a9df9d5cbdc8e87c22771b37b"},
     {"key":"event:plan/mode","kind":"event","event":"plan/mode","surface":false,"digest":"a7cf43ce7c2a4c038feed1885cd7a00d5c6ee2d90a7e0d56b46f78a3e1ca327f"},
@@ -68,11 +50,7 @@
     {"key":"event:session-log-deepseek/delivery-accepted","kind":"event","event":"session-log-deepseek/delivery-accepted","surface":false,"digest":"d63b8b8ffad9c02fd80c43a17df4f240c1fe8118ecca9de34f9d5871838ab5b9"},
     {"key":"event:session/end-seed","kind":"event","event":"session/end-seed","surface":false,"digest":"5e6db6e24948d4a853c71cb9fabd252ad051ce93d4672c1266cf837c1c17b84e"},
     {"key":"event:session/title","kind":"event","event":"session/title","surface":false,"digest":"1b912703e2d64f91c99c675b8f805b01076c8325b905c1218ad81ef0b24909d5"},
-<<<<<<< HEAD
-    {"key":"event:session/title-llm-request","kind":"event","event":"session/title-llm-request","surface":false,"digest":"30bc81693d6749d673f23c186dac995ed689703750b9df31cf27009a79458514"},
-=======
     {"key":"event:session/title-llm-request","kind":"event","event":"session/title-llm-request","surface":false,"digest":"6e69ff57747c05d1d873f494e6027e9235401087b6025988d3931b0b7af805e5"},
->>>>>>> origin/4.0
     {"key":"event:step/end","kind":"event","event":"step/end","surface":false,"digest":"e0a787e6ec76c7c94fecbc501b489164ab0293db05bc947914077ad01e674f05"},
     {"key":"event:step/start","kind":"event","event":"step/start","surface":false,"digest":"4513e088d43e6c68425be30451b9f961cc264fe7318ca62681c41d4d78615986"},
     {"key":"event:subagent/catalog","kind":"event","event":"subagent/catalog","surface":false,"digest":"53750b9abf61efb7992b0aadc3e247ec927449c63266df28230fd1139f5590ac"},
@@ -94,11 +72,7 @@
     {"key":"event:tool/result","kind":"event","event":"tool/result","surface":true,"digest":"45c090ae794957a480b9ef98db5e8d1df234b432d40af5b8f0dcc156ceb97078"},
     {"key":"event:turn/end","kind":"event","event":"turn/end","surface":false,"digest":"0f8512903d94f57a4748fa1a2092e64342856796684e6b8343db685b192745ce"},
     {"key":"event:turn/start","kind":"event","event":"turn/start","surface":false,"digest":"aa0957eca50aeb28bcd2e6930b95809926edacb550c8c340ba526ba6b861b3d8"},
-<<<<<<< HEAD
-    {"key":"event:user/message","kind":"event","event":"user/message","surface":true,"digest":"07a9324c8f62b6fcdcb86a364ebdb493503a8e3e44bf579b0ec1fddbf954667d"},
-=======
     {"key":"event:user/message","kind":"event","event":"user/message","surface":true,"digest":"82b42620a050367f8e464ef5d5d42264ec569c4b9829ae366d18f252dd25e80d"},
->>>>>>> origin/4.0
     {"key":"event:web/deepseek-search-llm-request","kind":"event","event":"web/deepseek-search-llm-request","surface":false,"digest":"0c556c9b9f2a96238a6b9bbb99e748206cbff2ed6203041c9571f04ae5802f52"},
     {"key":"event:working-directory/change","kind":"event","event":"working-directory/change","surface":false,"digest":"124aa62078ca3311353b39cc3bf6c75da281338be6bbf672f8b361d828cddca3"},
     {"key":"event:workspace/changes","kind":"event","event":"workspace/changes","surface":false,"digest":"e308ccf867a5398e316e0af8cb6ce238a8d33a63b9b384c8250a686786285f72"}
@@ -118,7 +92,6 @@
     {"digest":"05a2796621b1ee6c03ef7abe560b25116bb4da4d592312117242a78415a32b04","names":[],"sources":[]},
     {"digest":"05d2ae1e0c7f8770f83f9a09047afb39a335d8ac986df3193659aa1e581472cf","names":["packages/interaction/user-approval/src/index.ts#ApprovalPolicy"],"sources":["packages/interaction/user-approval/src/index.ts:68"]},
     {"digest":"0657d3ca5ac4e7bf79b00bcf860b1c7159d01a9da137497221ec2f1776e365f7","names":["packages/core/session/src/types.ts#SessionSeq"],"sources":["packages/core/session/src/types.ts:33"]},
-    {"digest":"07a9324c8f62b6fcdcb86a364ebdb493503a8e3e44bf579b0ec1fddbf954667d","names":[],"sources":[]},
     {"digest":"07e1a58c58b593f507b8e7f25723bb0aa42baae6e00f5ecfddf28cb1e64d3235","names":["packages/session/session-title/src/types.ts#SessionTitleModelIdentity","packages/subagent/tool-subagent/src/model-selection.ts#AllowedModelRoute"],"sources":["packages/session/session-title/src/types.ts:20","packages/subagent/tool-subagent/src/model-selection.ts:9"]},
     {"digest":"07eccc9ea2f9b5439d76cc77d5e062936677d43f07a23da749819b0a22ee36b7","names":[],"sources":[]},
     {"digest":"09655b34d7f3cf1e9005974de2357de2d4a60deea165d16dac1eadaa6ec539a8","names":[],"sources":[]},
@@ -157,10 +130,7 @@
     {"digest":"124aa62078ca3311353b39cc3bf6c75da281338be6bbf672f8b361d828cddca3","names":[],"sources":[]},
     {"digest":"12a0cfa619ac4a5fc6c3e8e359c8dae15769edc61497a575935c78d5842f8e42","names":[],"sources":[]},
     {"digest":"12d5808fac1996b9b3c2afa806e03022252ba2d7b88f835862ae1896591f60c7","names":["packages/llm/llm/src/types.ts#ImageBlock"],"sources":["packages/llm/llm/src/types.ts:88"]},
-<<<<<<< HEAD
-=======
     {"digest":"12dcee7075841763e9a59c6b17eca639a40dd069b71c7e22e631c16f40b185ea","names":[],"sources":[]},
->>>>>>> origin/4.0
     {"digest":"1314bbb94b9e99b0cba02033b0fe5b0529f35f27fc60e0acced71e9b90124fc7","names":[],"sources":[]},
     {"digest":"1379f0b72275994d20f1ddca2d60a96ab16ec80397ca9f1af21bdc67ba5c269c","names":[],"sources":[]},
     {"digest":"137ac60e26bcb192210d9a32a704b73b0924ed34019323defa1b787be95bd45e","names":[],"sources":[]},
@@ -171,6 +141,7 @@
     {"digest":"1528539c63db8b23506f0209a99ce77d8ad138adfbfcee3d4769b7382d93756c","names":[],"sources":["packages/deliverables/tool-present/src/types.ts:15"]},
     {"digest":"15495614ccfa9cbdeefb0ec2abd76406435f4c6ff3dae42acae8e09ef42025c9","names":[],"sources":[]},
     {"digest":"1571525adc95a24e5d25b5a6440df401cd7cdd881b745178e85f5a333435cd1b","names":[],"sources":[]},
+    {"digest":"157c314af05c8219dd4aeae23e193fe6221319f2c26858a83f2cc48968087bc3","names":[],"sources":[]},
     {"digest":"16d0507cb94b4cfc84a87446b1ba7652d6ec1d65ee1684789e747e30d542800e","names":[],"sources":[]},
     {"digest":"17aae616ef020b8b9f011ec398ec935450fb06d3e2a0722c456f63aeaf5ff728","names":[],"sources":[]},
     {"digest":"17b3f9396f9911425d5ee512c9aa551b88ec64af3fbafae6ace8ef3ffbc4e53f","names":[],"sources":[]},
@@ -190,10 +161,7 @@
     {"digest":"1b912703e2d64f91c99c675b8f805b01076c8325b905c1218ad81ef0b24909d5","names":[],"sources":[]},
     {"digest":"1c2686c0682e7bc51d61117b2652bd4a80707e331aa276d6ef915ae32534a330","names":[],"sources":[]},
     {"digest":"1c5a58f4599bd4a9711712551ffe2442a5e5fcd0758bafe630cc4ead850bdaa7","names":[],"sources":[]},
-<<<<<<< HEAD
-=======
     {"digest":"1c6e5bf41196bb55d2fdf04505a9122baf819ccd132b542f8d5fa9472bf614b0","names":[],"sources":[]},
->>>>>>> origin/4.0
     {"digest":"1cde1bedde79c5e8a56aee9c05c8e0a579cf5bc611deb85b93fa331a16ca978f","names":["packages/compaction/compaction-image-offload/src/projection.ts#ImageOffloadTarget"],"sources":["packages/compaction/compaction-image-offload/src/projection.ts:9"]},
     {"digest":"1d5f04a03ea75fc8eeece544129eba0f49f0c82046e9c404461920390135c7b2","names":[],"sources":[]},
     {"digest":"1d76406cbb2ddadb0dbbb51e9d8bc6cf678fed455cf8eb512f36f7c86d37a62f","names":[],"sources":["packages/llm/llm/src/types.ts:166"]},
@@ -226,10 +194,7 @@
     {"digest":"26c879bdd130e8b8683a6ce588414fad2244783d6573ca399fa0de184a2b0bb1","names":[],"sources":[]},
     {"digest":"2765e9119edf5816ac1ab4c95c5ee32c90403f3742962eff11544f7752d59d2e","names":[],"sources":[]},
     {"digest":"277b61f9c6f8170425fa6ffe06cfa14376757a896a4749cb82a687d7364c4fc9","names":[],"sources":[]},
-<<<<<<< HEAD
-=======
     {"digest":"277ebd140ae7ef03383c2de2472076d272e940ffdc6c980a4e91535b65dc7583","names":[],"sources":[]},
->>>>>>> origin/4.0
     {"digest":"27f03442f5d7afa097fb38db9901a1702b517abf695c458940d0689b681517de","names":[],"sources":[]},
     {"digest":"283de561b153b1be0cbd973bcc6a1d688a0fe0bee02edfd61b5e320cf2298d9b","names":[],"sources":[]},
     {"digest":"287211846beea1eccb5f9acee00d20388a38fcb2e95858fa2332d6f58529379a","names":[],"sources":["packages/llm/llm/src/types.ts:167"]},
@@ -255,11 +220,7 @@
     {"digest":"2f3f201c8846e19c20bb75c02280e3d4eb3c57509e4715f0c0a4d1d4f91a7a06","names":[],"sources":[]},
     {"digest":"2f77529cdc90bf62d7ff54b91ebed642d087a677e396ba27ddc607d37f96bf46","names":[],"sources":[]},
     {"digest":"2fe5026daf14bd4ff2b7bfb7cf9791c302d9cbba06802178b6dfec00b892698f","names":["packages/core/tool-executor-ptc/src/types.ts#PtcDispatchStartEventData"],"sources":["packages/core/tool-executor-ptc/src/types.ts:12"]},
-<<<<<<< HEAD
-    {"digest":"30bc81693d6749d673f23c186dac995ed689703750b9df31cf27009a79458514","names":[],"sources":[]},
-=======
     {"digest":"30a4ee48c6961544937c5cc410022fe72440fd1707970f6e48b8c4d343593321","names":[],"sources":[]},
->>>>>>> origin/4.0
     {"digest":"30d5a537b296685770b1241c4b4bbde19d5a31ff81aa23df73fab5e90b8fc65f","names":["packages/session/session-title/src/types.ts#SessionTitleSource"],"sources":["packages/session/session-title/src/types.ts:28"]},
     {"digest":"3122defcdbed78c2adc738bd5c3bbb1928c2ca9c2786144c256a5be837546818","names":["packages/preset/official-agent-gallery/src/types.ts#OfficialGallerySource"],"sources":["packages/preset/official-agent-gallery/src/types.ts:124"]},
     {"digest":"312aee2f0c42aabbae6cc60d92d596d8453c0aeb061c5868d1755a69ef49e69a","names":[],"sources":[]},
@@ -267,10 +228,6 @@
     {"digest":"3247e566f4340029325b70e4366b56fa9719977f1e39033b769a2ec221ab22a9","names":[],"sources":[]},
     {"digest":"326a9bfda27dda5882fb3cbe6e715df41dae2298fdae3d66437457268a665693","names":["packages/llm/llm/src/call-config.ts#LlmCallConfigAdapterDefaults"],"sources":["packages/llm/llm/src/call-config.ts:54"]},
     {"digest":"3305a4bb6b6c29b482ba91d59c60b47e8f98282d3dacc8c29e4a4c2712209bdd","names":[],"sources":[]},
-<<<<<<< HEAD
-    {"digest":"3318b24ef69b3e729267930523366c082338430dd5195e6039b08658073409e7","names":["packages/preset/official-agent-gallery/src/types.ts#OfficialAgentBinding"],"sources":["packages/preset/official-agent-gallery/src/types.ts:93"]},
-=======
->>>>>>> origin/4.0
     {"digest":"335e242de1fcc17b6ca920fc420d71bec2d76e53e37955c00948b65ab77f05c5","names":["packages/core/session/src/types.ts#SurfaceOp"],"sources":["packages/core/session/src/types.ts:470"]},
     {"digest":"347de3380f2da308d0c74e08821f9e85559f55af4c5010795b110d00f7fc9dbd","names":[],"sources":[]},
     {"digest":"34d1ab5c5df378186d6054b1a1beea9a41e41965d6f336f0bc0025c441a82e66","names":[],"sources":[]},
@@ -279,10 +236,7 @@
     {"digest":"367a1839b864a2d7853ab18c8663d8e9755feedd645cd1beabc5b3d20de90b50","names":[],"sources":[]},
     {"digest":"36d6a9a871d949ea4f3edd919d81d66aa69218bebef38899d2a1282c39420a1f","names":[],"sources":[]},
     {"digest":"37184378c6439257d105c4e2022d80fc9c3a3f7c7f6ac661b00bc9f18d871006","names":[],"sources":[]},
-<<<<<<< HEAD
-=======
     {"digest":"371f45ecfc04d7ef24a41584b74a6fed05e5e6331216b15f198febc2b1cd3805","names":[],"sources":[]},
->>>>>>> origin/4.0
     {"digest":"3747d66cadfdf36f7c9ce3fedf41ac2e7dd1cec85dcfe5fe4f4a48074d8994e2","names":[],"sources":[]},
     {"digest":"374fdd68aee5ff844e378c0cbdd961d247a0f22e4ade0bb03d800cd2a46a2b8b","names":[],"sources":["packages/llm/llm-retry/src/types.ts:30"]},
     {"digest":"378f90f9f6022a0991928a1eaf7991094ea1920fe89a9248358a1da106e1a970","names":[],"sources":[]},
@@ -341,16 +295,10 @@
     {"digest":"4b1e632e05776982a2d21c25a50c7c04c199d311c5675218fa73ff9fe30d22cd","names":["packages/schedule/schedule/src/types.ts#LegacyScheduleRecord"],"sources":["packages/schedule/schedule/src/types.ts:185"]},
     {"digest":"4b7ddaf3710b88ff9b8df66304f5f97bf03688fd19730eedc2e9535203c820ea","names":[],"sources":[]},
     {"digest":"4bb451330ff699f36b45539ceb0eb2606ead72084e2c5bb637c36cc80e2252db","names":[],"sources":["packages/core/session/src/types.ts:198"]},
-<<<<<<< HEAD
-    {"digest":"4cd48f3e5108bd6ebedf7301c3638839b8b2b9db8dbd493974177fbdeb91a01b","names":["packages/api/session-controller/src/types.ts#SessionRequestId","packages/attachment/attachment/src/brand.ts#AttachmentId","packages/compaction/compaction/src/brand.ts#CompactionId","packages/core/session/src/types.ts#SessionId","packages/experimental/agent-team/src/types.ts#TeamId","packages/experimental/agent-team/src/types.ts#TeamMessageId","packages/experimental/agent-team/src/types.ts#TeamTaskId","packages/experimental/webhook/src/brand.ts#WebhookDeliveryId","packages/experimental/webhook/src/brand.ts#WebhookRuleId","packages/experimental/webhook/src/brand.ts#WebhookSourceId","packages/feedback/message-feedback/src/types.ts#MessageFeedbackVersion","packages/goal/goal/src/types.ts#GoalId","packages/interaction/commands/src/brand.ts#CommandId","packages/interaction/user-approval/src/types.ts#ApprovalRequestId","packages/jobs/jobs/src/brand.ts#JobId","packages/llm/llm-retry/src/brand.ts#RetryId","packages/llm/llm/src/brand.ts#MessageId","packages/llm/llm/src/brand.ts#ProviderRequestId","packages/llm/llm/src/brand.ts#ReasoningEffortId","packages/llm/llm/src/brand.ts#ToolCallId","packages/schedule/schedule/src/types.ts#ScheduleId","packages/session/session-title/src/index.ts#SessionTitleProviderId","packages/session/session-title/src/types.ts#SessionTitleProviderId","packages/workflow/workflow/src/types.ts#WorkflowRunId"],"sources":["packages/api/session-controller/src/types.ts:404","packages/attachment/attachment/src/brand.ts:6","packages/compaction/compaction/src/brand.ts:4","packages/core/session/src/types.ts:21","packages/experimental/agent-team/src/types.ts:21","packages/experimental/agent-team/src/types.ts:33","packages/experimental/agent-team/src/types.ts:9","packages/experimental/webhook/src/brand.ts:12","packages/experimental/webhook/src/brand.ts:6","packages/experimental/webhook/src/brand.ts:9","packages/feedback/message-feedback/src/types.ts:14","packages/goal/goal/src/types.ts:17","packages/interaction/commands/src/brand.ts:31","packages/interaction/user-approval/src/types.ts:17","packages/jobs/jobs/src/brand.ts:19","packages/llm/llm-retry/src/brand.ts:4","packages/llm/llm/src/brand.ts:16","packages/llm/llm/src/brand.ts:31","packages/llm/llm/src/brand.ts:43","packages/llm/llm/src/brand.ts:67","packages/schedule/schedule/src/types.ts:14","packages/session/session-title/src/index.ts:42","packages/session/session-title/src/types.ts:17","packages/workflow/workflow/src/types.ts:13"]},
-    {"digest":"4ce5b794ef74a235d8f6b41ee7872cb4d3bf00d33c13c47e09479d93018c2f17","names":[],"sources":["packages/preset/official-agent-gallery/src/types.ts:77"]},
-=======
-    {"digest":"4cd48f3e5108bd6ebedf7301c3638839b8b2b9db8dbd493974177fbdeb91a01b","names":["packages/api/session-controller/src/types.ts#SessionRequestId","packages/attachment/attachment/src/brand.ts#AttachmentId","packages/compaction/compaction/src/brand.ts#CompactionId","packages/core/session/src/types.ts#SessionId","packages/experimental/agent-team/src/types.ts#TeamId","packages/experimental/agent-team/src/types.ts#TeamMessageId","packages/experimental/agent-team/src/types.ts#TeamTaskId","packages/experimental/webhook/src/brand.ts#WebhookDeliveryId","packages/experimental/webhook/src/brand.ts#WebhookRuleId","packages/experimental/webhook/src/brand.ts#WebhookSourceId","packages/feedback/message-feedback/src/types.ts#MessageFeedbackVersion","packages/goal/goal/src/types.ts#GoalId","packages/interaction/commands/src/brand.ts#CommandId","packages/interaction/user-approval/src/types.ts#ApprovalRequestId","packages/jobs/jobs/src/brand.ts#JobId","packages/llm/llm-retry/src/brand.ts#RetryId","packages/llm/llm/src/brand.ts#MessageId","packages/llm/llm/src/brand.ts#ProviderRequestId","packages/llm/llm/src/brand.ts#ReasoningEffortId","packages/llm/llm/src/brand.ts#ToolCallId","packages/schedule/schedule/src/types.ts#ScheduleId","packages/session/session-title/src/index.ts#SessionTitleProviderId","packages/session/session-title/src/types.ts#SessionTitleProviderId","packages/workflow/workflow/src/types.ts#WorkflowRunId"],"sources":["packages/api/session-controller/src/types.ts:400","packages/attachment/attachment/src/brand.ts:6","packages/compaction/compaction/src/brand.ts:4","packages/core/session/src/types.ts:21","packages/experimental/agent-team/src/types.ts:21","packages/experimental/agent-team/src/types.ts:33","packages/experimental/agent-team/src/types.ts:9","packages/experimental/webhook/src/brand.ts:12","packages/experimental/webhook/src/brand.ts:6","packages/experimental/webhook/src/brand.ts:9","packages/feedback/message-feedback/src/types.ts:14","packages/goal/goal/src/types.ts:17","packages/interaction/commands/src/brand.ts:31","packages/interaction/user-approval/src/types.ts:17","packages/jobs/jobs/src/brand.ts:19","packages/llm/llm-retry/src/brand.ts:4","packages/llm/llm/src/brand.ts:16","packages/llm/llm/src/brand.ts:31","packages/llm/llm/src/brand.ts:43","packages/llm/llm/src/brand.ts:67","packages/schedule/schedule/src/types.ts:14","packages/session/session-title/src/index.ts:42","packages/session/session-title/src/types.ts:17","packages/workflow/workflow/src/types.ts:13"]},
+    {"digest":"4cd48f3e5108bd6ebedf7301c3638839b8b2b9db8dbd493974177fbdeb91a01b","names":["packages/api/session-controller/src/types.ts#SessionRequestId","packages/attachment/attachment/src/brand.ts#AttachmentId","packages/compaction/compaction/src/brand.ts#CompactionId","packages/core/session/src/types.ts#SessionId","packages/experimental/agent-team/src/types.ts#TeamId","packages/experimental/agent-team/src/types.ts#TeamMessageId","packages/experimental/agent-team/src/types.ts#TeamTaskId","packages/experimental/webhook/src/brand.ts#WebhookDeliveryId","packages/experimental/webhook/src/brand.ts#WebhookRuleId","packages/experimental/webhook/src/brand.ts#WebhookSourceId","packages/feedback/message-feedback/src/types.ts#MessageFeedbackVersion","packages/goal/goal/src/types.ts#GoalId","packages/interaction/commands/src/brand.ts#CommandId","packages/interaction/user-approval/src/types.ts#ApprovalRequestId","packages/jobs/jobs/src/brand.ts#JobId","packages/llm/llm-retry/src/brand.ts#RetryId","packages/llm/llm/src/brand.ts#MessageId","packages/llm/llm/src/brand.ts#ProviderRequestId","packages/llm/llm/src/brand.ts#ReasoningEffortId","packages/llm/llm/src/brand.ts#ToolCallId","packages/schedule/schedule/src/types.ts#ScheduleId","packages/session/session-title/src/index.ts#SessionTitleProviderId","packages/session/session-title/src/types.ts#SessionTitleProviderId","packages/workflow/workflow/src/types.ts#WorkflowRunId"],"sources":["packages/api/session-controller/src/types.ts:409","packages/attachment/attachment/src/brand.ts:6","packages/compaction/compaction/src/brand.ts:4","packages/core/session/src/types.ts:21","packages/experimental/agent-team/src/types.ts:21","packages/experimental/agent-team/src/types.ts:33","packages/experimental/agent-team/src/types.ts:9","packages/experimental/webhook/src/brand.ts:12","packages/experimental/webhook/src/brand.ts:6","packages/experimental/webhook/src/brand.ts:9","packages/feedback/message-feedback/src/types.ts:14","packages/goal/goal/src/types.ts:17","packages/interaction/commands/src/brand.ts:31","packages/interaction/user-approval/src/types.ts:17","packages/jobs/jobs/src/brand.ts:19","packages/llm/llm-retry/src/brand.ts:4","packages/llm/llm/src/brand.ts:16","packages/llm/llm/src/brand.ts:31","packages/llm/llm/src/brand.ts:43","packages/llm/llm/src/brand.ts:67","packages/schedule/schedule/src/types.ts:14","packages/session/session-title/src/index.ts:42","packages/session/session-title/src/types.ts:17","packages/workflow/workflow/src/types.ts:13"]},
     {"digest":"4ce5b794ef74a235d8f6b41ee7872cb4d3bf00d33c13c47e09479d93018c2f17","names":[],"sources":["packages/preset/official-agent-gallery/src/types.ts:78"]},
->>>>>>> origin/4.0
     {"digest":"4d60dddaa65d3da8d4cd014d85ce3d2c2875664dd0433e331d8e9d395289686b","names":["packages/experimental/liveshare/src/host/viewer-principal.ts#ShareViewerPrincipal"],"sources":["packages/experimental/liveshare/src/host/viewer-principal.ts:24"]},
     {"digest":"4e011753f8263f436efaabfbb3b4db53a98fc55342c5ded2daf7208b217be159","names":[],"sources":[]},
-    {"digest":"4e3206c923d0f198989c17b2247c50c46139e698a49ae57a0ee85cbb734f4a38","names":[],"sources":["packages/core/agent/src/types.ts:110"]},
     {"digest":"4e44c9118152f6829634bfd508e47669ab0497caffa380c94b4be91f9390d35d","names":[],"sources":[]},
     {"digest":"4e887768586528565381dadbddee6cef555874148089f4579e0b4b1ad096fc9c","names":[],"sources":["packages/web/web-search-deepseek/src/provider.ts:66"]},
     {"digest":"4e97c3d85c0fc817ee58873c38c25a2474abaaa0af4839311b50b68db3b8cf1a","names":["packages/subagent/subagent/src/continuation-messages.ts#SubagentSettledMessageSource"],"sources":["packages/subagent/subagent/src/continuation-messages.ts:29"]},
@@ -373,16 +321,10 @@
     {"digest":"53750b9abf61efb7992b0aadc3e247ec927449c63266df28230fd1139f5590ac","names":[],"sources":[]},
     {"digest":"53b398fd16ec45c2ab261d7da185345f9419eec91b97f57eaee9462db067ec46","names":[],"sources":[]},
     {"digest":"53cf1704ae0709c7678bcf070c83c619fc48ca1b5c173b74cfa8702f22a8e492","names":[],"sources":[]},
-<<<<<<< HEAD
-    {"digest":"557e148d30b79ee48645850832b30c717d7c3b64641deb5d6133b8b4e91ee0b8","names":[],"sources":[]},
-    {"digest":"5592f1a843c28d8623bd2d00e43d91abab41c690f3e3a0e44e47edcea37b59a9","names":[],"sources":[]},
-    {"digest":"55c61b0c4922a2f92fe616fba6782cbb162e877ae6b1c5b77a845e42ce45f248","names":[],"sources":[]},
-=======
     {"digest":"54ecf97a058fe0f76babc8eeb831cfbed140f7d34951f394c623d831190e8550","names":[],"sources":[]},
     {"digest":"557e148d30b79ee48645850832b30c717d7c3b64641deb5d6133b8b4e91ee0b8","names":[],"sources":[]},
     {"digest":"5592f1a843c28d8623bd2d00e43d91abab41c690f3e3a0e44e47edcea37b59a9","names":[],"sources":[]},
     {"digest":"560532c3feb6976e736db4dbf12c572ea53b32fb9c39f64daa69ebab23a4a1c9","names":[],"sources":[]},
->>>>>>> origin/4.0
     {"digest":"5654685d7557ec747e74887237065e626a5bdfa426ca43f7fbb0b6fee9b0916c","names":[],"sources":[]},
     {"digest":"56b7c047694875a843ba020dfea3c8380d54ae4ff88ab349e72004dc21e07c23","names":[],"sources":["packages/core/session/src/types.ts:227"]},
     {"digest":"570e85022434613394418ad33e77e9f1f7a05699b33d0b62eae0677a638c3833","names":[],"sources":[]},
@@ -395,6 +337,7 @@
     {"digest":"589d0d91239681f89ee485459dc8c2f73ea47183b5534289d966637024a2c35d","names":[],"sources":[]},
     {"digest":"58f94390b982f8a5ac1f4f235ba612557f4a1dc4a995d8b1cec63ce7639decb0","names":[],"sources":[]},
     {"digest":"5a27ad49a676252101c82a09419bccc1171a53e75de3f0b7b66aa47004a1cf83","names":["packages/llm/llm/src/message.ts#AssistantMessage"],"sources":["packages/llm/llm/src/message.ts:167"]},
+    {"digest":"5a63846cf01bb3d1b818f8f99e6c4f8dee8b4dcd42ab10c0ff418d28ad85b30e","names":["packages/preset/official-agent-gallery/src/task-composition.ts#CatalogAttempt"],"sources":["packages/preset/official-agent-gallery/src/task-composition.ts:16"]},
     {"digest":"5abab3a27fd2736660ecddd94b28d6bbf114986dd894880153bd1be3ccacb563","names":[],"sources":[]},
     {"digest":"5b232a9b9bfcc0fc6794dab7865bcf203a65785c5de5aa647a51228bff628413","names":[],"sources":[]},
     {"digest":"5b46bc41ee36158fe7eac77a654eaaa42bd3343d19ccb3911a62ebddd9505764","names":[],"sources":[]},
@@ -472,7 +415,6 @@
     {"digest":"7180844e1066230c5e891f1b9ccd942423b0fe48aac6ded7eef2a285b288a732","names":[],"sources":[]},
     {"digest":"719c51f67074f97034a6c94297fe1f4b5d3c8d392c57586dab732aa5398c7a91","names":["packages/llm/llm/src/message.ts#ModelMessageSource"],"sources":["packages/llm/llm/src/message.ts:24"]},
     {"digest":"71bb3254ec8f1e491ce63b762a7b5f18709de23aa4e8abcc8b886f4b6ce051dd","names":[],"sources":["packages/llm/llm/src/assistant-stream.ts:28"]},
-    {"digest":"72236bdf55da15d72e9e429403b8e8815f2365e51168b3321b35a27ca83b1a8c","names":["packages/preset/official-agent-gallery/src/task-composition.ts#CatalogAttempt"],"sources":["packages/preset/official-agent-gallery/src/task-composition.ts:12"]},
     {"digest":"72abeb3feb50ceb6a11ea239144faa7c1f59cdffecfeaca810e2913b5a9e3009","names":[],"sources":[]},
     {"digest":"72ec79127a9c0d0241b1106a74cc2b24c81ce467170f1c3c93f7b71a9496d227","names":[],"sources":[]},
     {"digest":"7382c4fc95fe8c5db65ca4d9da572b115d0dbb818b7f32c22ab040318ffbb4bc","names":[],"sources":[]},
@@ -533,14 +475,9 @@
     {"digest":"87714f74e6bce945fa483191d1c37186f449d305c925331365e0b2e70c2b316a","names":["packages/session/session-title-llm/src/index.ts#SessionTitleLlmRequestEventData"],"sources":["packages/session/session-title-llm/src/index.ts:43"]},
     {"digest":"87a51be3d4e985ed37640a4dca51e87219a3a71e99e9fac9034d8a48617b6556","names":[],"sources":[]},
     {"digest":"87b1a33564b9a4d63b00988a524c12259243953aebb9c9a05127d87b27464df9","names":[],"sources":[]},
-    {"digest":"87b7bd1fbcc26d99c2ed8be23bcd8facf44f784aad8c96e23cee4add68228fc6","names":["packages/llm/llm/src/message.ts#UserMessage"],"sources":["packages/llm/llm/src/message.ts:162"]},
     {"digest":"88841202942c7683b3b7e5ea6a796047ec326b6701ac23e58cc236d85613b9fa","names":[],"sources":[]},
     {"digest":"88a610b831be6d92612a464be5c7d0b88ec24d97bd299837bf74bf7672183c9a","names":[],"sources":["packages/llm/llm/src/types.ts:502"]},
     {"digest":"88ee1c332dfa99474656678e805772c4dd1c9e7d5b7267aec6b44890d75e4987","names":["packages/llm/llm/src/types.ts#StreamChunk"],"sources":["packages/llm/llm/src/types.ts:498"]},
-<<<<<<< HEAD
-    {"digest":"89fd66f990a09691fe0b11ab1187140a4dcbda9b3897a8e4964abc0c87700ea7","names":[],"sources":[]},
-=======
->>>>>>> origin/4.0
     {"digest":"8a046b52331959aa3394680d6acbe09b8a5447c6b61375f263445bfcef19b7f1","names":[],"sources":[]},
     {"digest":"8a6e1ec9e8db346b0e02f027db73c07a94f067a26d40c1aef1abd09c47ce7ba0","names":[],"sources":[]},
     {"digest":"8a9c990773f798eac10ca8878e6bcc531ee080bc589cac956730e462cc6a09ad","names":[],"sources":["packages/interaction/permission-presets/src/index.ts:53"]},
@@ -570,18 +507,12 @@
     {"digest":"93e83f99a6cdc0ba3dfa04c9461a47a369b4ec9d11045fc3553a112d9a30075d","names":[],"sources":[]},
     {"digest":"94c56aeb1564ad735eb773d88636b40761d063efa1610f1308004d32923f5378","names":[],"sources":[]},
     {"digest":"95080295115fbd83544520ba247b68a03790131f6a2eac323d388758cb542f65","names":[],"sources":["packages/llm/llm/src/types.ts:500"]},
-<<<<<<< HEAD
-    {"digest":"956a7b2da002bc5d6256b833da6d9ff279d29ee9aa413c259cc2456ae812b4ae","names":[],"sources":["packages/preset/official-agent-gallery/src/types.ts:154"]},
-=======
     {"digest":"956a7b2da002bc5d6256b833da6d9ff279d29ee9aa413c259cc2456ae812b4ae","names":[],"sources":["packages/preset/official-agent-gallery/src/types.ts:157"]},
->>>>>>> origin/4.0
     {"digest":"95a3ffccbf3c8afcf9a2f3b355f724da8e07e98dc47ee741166dde7f9ea058bd","names":[],"sources":[]},
     {"digest":"95c0e88fcf0bafb2087f912ad9e2369de6ae6530cc0c4c2772c96205b57f7f60","names":[],"sources":[]},
-    {"digest":"95f70ec2849bddbdc23d06eabb870d66924e776ef392494b13c9b655d1d0929d","names":[],"sources":[]},
     {"digest":"9645cf93769a6dfb227bd400bd6cb9fa7bab9140f4a851e4ae92514ade6e3114","names":[],"sources":[]},
     {"digest":"966f1cec81d90851033f2f2eba1c8a1521134c992cb0c837296d8a2c6f5cddfc","names":[],"sources":[]},
     {"digest":"96bfb916a727cd4445a594df264c523fc039749a31bfed924b8cc7bb308a5bb0","names":[],"sources":[]},
-    {"digest":"96deca438443bfca7898d18bef4feb7064666f7c75ddcd41af03222d4467116c","names":[],"sources":["packages/core/session/src/types.ts:317"]},
     {"digest":"96f4a9c81fc0f940ef71528a8cc66731ae4cf1f40d79680c5fe3c39f96d7723c","names":["packages/core/agent/src/types.ts#InboxTarget"],"sources":["packages/core/agent/src/types.ts:40"]},
     {"digest":"974792776ffdb6729afd107062e92a7e67946a06b11b1e59cb9655bec7e667cc","names":[],"sources":["packages/core/session/src/types.ts:317"]},
     {"digest":"9890113e97dd3541787bfe6704f2b223d3a890b5325ca0acae2b0398909b413e","names":[],"sources":["packages/sandbox/sandbox-policy/src/session-mode.ts:33"]},
@@ -591,7 +522,6 @@
     {"digest":"99e3cb7e9d50f60231b303ffa85bc806dc5c5a6cf552ae36be9ab943da0fbc34","names":[],"sources":[]},
     {"digest":"99e7e7d7fed55ae6a3a648b35192f16ab1248ddcb0179a0e275128ac1487d7c7","names":[],"sources":[]},
     {"digest":"99f0e98184709ad10f27bfdeaafb4457d9d2b413f402331764798cdb7d3cbe4d","names":[],"sources":[]},
-    {"digest":"9a1b5bf0c1e0cb7bfb0ab81503a576ddcc5fe7670ba4f682c4475e8738baf963","names":[],"sources":[]},
     {"digest":"9a2a9029f8d7ede05336980d8342737557f487b913bfd28853d0ab5214600ab5","names":[],"sources":["packages/web/web-search-deepseek/src/provider.ts:64"]},
     {"digest":"9a410ddf56792b2b7cd4a224a2e54dc4dee30a8e8e6b1c2b9a1d19992b217adc","names":["packages/workflow/tool-workflow/src/types.ts#ToolWorkflowAgentStartData"],"sources":["packages/workflow/tool-workflow/src/types.ts:20"]},
     {"digest":"9a7dfbd561905b313fab1e64db8f2ebf829748c0a99aca0eaac5f7accfdf4966","names":[],"sources":[]},
@@ -624,11 +554,7 @@
     {"digest":"a3c6f1ea38e9a61d7a9706057ba65aabe02dfe6d9dd90d4736aa62325d874531","names":[],"sources":[]},
     {"digest":"a3edd1efd1fef21b72c55e213c8a8b24196b091abde2b89db52be0b2aaae3cfa","names":[],"sources":[]},
     {"digest":"a40d12070f6f4a124f32fb3cc86e7857554702e32f0eda3080a25c4b9ac9b18c","names":[],"sources":["packages/experimental/agent-team/src/types.ts:232"]},
-<<<<<<< HEAD
-    {"digest":"a4afec59b75aad5d13ef82d6931f35cc2d98918503916cf069355b77c5e42302","names":[],"sources":["packages/api/session-controller/src/types.ts:413"]},
-=======
-    {"digest":"a4afec59b75aad5d13ef82d6931f35cc2d98918503916cf069355b77c5e42302","names":[],"sources":["packages/api/session-controller/src/types.ts:409"]},
->>>>>>> origin/4.0
+    {"digest":"a4afec59b75aad5d13ef82d6931f35cc2d98918503916cf069355b77c5e42302","names":[],"sources":["packages/api/session-controller/src/types.ts:418"]},
     {"digest":"a6567ccb2e530606b775371eb4fa31468d72084339968e8b0440a516a23b39dc","names":[],"sources":[]},
     {"digest":"a6b41f5bede8094d7bf635be5d69b1bd7a25e006ca9cf9415bceb9322f1a7feb","names":["packages/experimental/hook-protocol/src/types.ts#HookDialect"],"sources":["packages/experimental/hook-protocol/src/types.ts:48"]},
     {"digest":"a6da9ad5d42ae83a6833a8288b076688e8e0801633ea36cbdd8a30a6d9f3160c","names":["packages/workflow/tool-workflow/src/types.ts#ToolWorkflowRunStartData"],"sources":["packages/workflow/tool-workflow/src/types.ts:14"]},
@@ -641,10 +567,7 @@
     {"digest":"a8a2b9011fc067862df7ce40748868467e5778283d7ac193c13f77684a914c57","names":[],"sources":[]},
     {"digest":"a9059a81430b320792bbb7c2ee1f8f6c77ff71e40ee44c18aec72e157c522694","names":[],"sources":[]},
     {"digest":"a926dc71814edd01a4f041eb5fc766d153db3407ef4704e98f4c1b6527309ebb","names":["packages/schedule/schedule/src/types.ts#LegacyEveryScheduleRecord"],"sources":["packages/schedule/schedule/src/types.ts:173"]},
-<<<<<<< HEAD
-=======
     {"digest":"a96e075aafe684cbdaa7f994f057d5419b03e14b992b074f8e0639a4d12375c2","names":["packages/preset/official-agent-gallery/src/knowledge-protocol.ts#ExpertExecutionConfig"],"sources":["packages/preset/official-agent-gallery/src/knowledge-protocol.ts:23"]},
->>>>>>> origin/4.0
     {"digest":"a99f76fd149051c363f960bfeeb5b9509587ecaf7591a42797e4bfe810d8987a","names":["packages/todo/tool-todo/src/types.ts#TodoItem"],"sources":["packages/todo/tool-todo/src/types.ts:23"]},
     {"digest":"aa0957eca50aeb28bcd2e6930b95809926edacb550c8c340ba526ba6b861b3d8","names":[],"sources":[]},
     {"digest":"aa0b237911697f15553c70bd466693b52de06229e82ae796eae74f9a8b58a261","names":[],"sources":[]},
@@ -656,20 +579,11 @@
     {"digest":"aacda84a69739238aa782eea902d3073017d9d74b9808de2bf5a83c9738cbdc6","names":[],"sources":[]},
     {"digest":"aad9cee3a07d604c928c1d1ccff788971684c02656456ebe3d82fac1083b08b2","names":[],"sources":[]},
     {"digest":"aae343bc3d663c83f2e8b5e1c7eea5d509dc7a5361bc8bd8b5ac3bb8d3b1ed56","names":[],"sources":[]},
-<<<<<<< HEAD
-    {"digest":"ab144c02da8a67e318004ce53e7a2836bb186097d3ef869be63c93de01f35816","names":["packages/preset/official-agent-gallery/src/types.ts#OfficialGallerySource"],"sources":["packages/preset/official-agent-gallery/src/types.ts:121"]},
-    {"digest":"ab7ec5f9eb2c6dfacca5da4c37cf7ba85d04172053ee6b1ebf1709ffcd99c1a7","names":[],"sources":["packages/core/session/src/types.ts:220","packages/llm/llm/src/types.ts:168"]},
-    {"digest":"aba175fb20ffc71112c55efe70458ff5d7dbfb83501892b4ba8d077f0ea5d7ba","names":[],"sources":[]},
-    {"digest":"abd6ca62a5ab166553848324a23fef90eed7f59c8021bd63e7ea5bc6fd666b0c","names":["packages/web/web-search-deepseek/src/provider.ts#DeepSeekSearchLlmRequest"],"sources":["packages/web/web-search-deepseek/src/provider.ts:55"]},
-    {"digest":"acb11da247ab969575c8853c88eade85fedd8d4b9e3248beb5fe8cca682c5083","names":[],"sources":["packages/preset/official-agent-gallery/src/types.ts:129","packages/preset/official-agent-gallery/src/types.ts:140"]},
-=======
-    {"digest":"ab3329b7034aab878980d1083c82a77626c55854e055377004a7861a525d849c","names":["packages/preset/official-agent-gallery/src/task-composition.ts#CatalogSelection"],"sources":["packages/preset/official-agent-gallery/src/task-composition.ts:7"]},
     {"digest":"ab7ec5f9eb2c6dfacca5da4c37cf7ba85d04172053ee6b1ebf1709ffcd99c1a7","names":[],"sources":["packages/core/session/src/types.ts:220","packages/llm/llm/src/types.ts:168"]},
     {"digest":"aba175fb20ffc71112c55efe70458ff5d7dbfb83501892b4ba8d077f0ea5d7ba","names":[],"sources":[]},
     {"digest":"abd6ca62a5ab166553848324a23fef90eed7f59c8021bd63e7ea5bc6fd666b0c","names":["packages/web/web-search-deepseek/src/provider.ts#DeepSeekSearchLlmRequest"],"sources":["packages/web/web-search-deepseek/src/provider.ts:55"]},
     {"digest":"ac52e70fc4c29ff2e3214d97112a9c47c82cbb9699ccdc839ece6edb61139b7f","names":[],"sources":[]},
     {"digest":"acb11da247ab969575c8853c88eade85fedd8d4b9e3248beb5fe8cca682c5083","names":[],"sources":["packages/preset/official-agent-gallery/src/types.ts:132","packages/preset/official-agent-gallery/src/types.ts:143"]},
->>>>>>> origin/4.0
     {"digest":"ad0c38a0adb82a94c925456df41586d9b5f9202fca18593eae2213d4445b4585","names":[],"sources":["packages/core/session/src/types.ts:398"]},
     {"digest":"ad22a5ca5bbaab2e1440779cd3648e85ddfc6f73b5207394eda699555cf31430","names":[],"sources":[]},
     {"digest":"ad3b56aa2fc1ad4250e7399295d34a8eae592e1907e85852e2291b2e498a30bc","names":[],"sources":[]},
@@ -680,12 +594,7 @@
     {"digest":"ae6f4487515e010d3ac6a2b4e454e31a4933456927064ea7a76cbd7c6e04af1f","names":[],"sources":[]},
     {"digest":"aec150797b655c5f15ebb7a501454b0c208fbaccec9ace49d7de2171fc02f47d","names":[],"sources":[]},
     {"digest":"af0750d32d97d47b12b7361a587db41894b17e04c9a805fe212f0114aa2248c7","names":[],"sources":[]},
-<<<<<<< HEAD
-    {"digest":"af6e173f7be819bcd0a5c8d77918649c10ce761d8a184ff472f2e01ce64eb2e0","names":[],"sources":[]},
     {"digest":"af70c38f9fc73802c96698adb85e15fa1ef8237668b2e7943c6c7b7745c3c6c1","names":[],"sources":["packages/preset/official-agent-gallery/src/task-composition.ts:76"]},
-=======
-    {"digest":"af70c38f9fc73802c96698adb85e15fa1ef8237668b2e7943c6c7b7745c3c6c1","names":[],"sources":["packages/preset/official-agent-gallery/src/task-composition.ts:41"]},
->>>>>>> origin/4.0
     {"digest":"afeb5fa07690bc03263385d95ae8a0bb7fae84bce65ca8f3a911dbf1dcb34b3b","names":[],"sources":["packages/core/session/src/types.ts:383"]},
     {"digest":"aff60ef947c18b012644852bdd0d5bfe72065e061dd563787c76c646b4a10f6b","names":[],"sources":[]},
     {"digest":"b0127044ab31a702bddfd785d345f5abd7a70876746e895ce443afa3e60ddf2d","names":[],"sources":[]},
@@ -701,12 +610,7 @@
     {"digest":"b2d2a01e51341a3bfec809198952c8c830a7899f4cb6ecd3c1dc0b5d9a2af943","names":["packages/experimental/agent-team/src/types.ts#TeamTaskStatus"],"sources":["packages/experimental/agent-team/src/types.ts:72"]},
     {"digest":"b3681c026a0b98e98b103f057dfd217fbe904129c090efd668253ec9aea7fece","names":[],"sources":[]},
     {"digest":"b38f206d59bad891fa58c89f97a0036987b3defe7685acbd318fa55eb85f9751","names":[],"sources":[]},
-<<<<<<< HEAD
-    {"digest":"b38fb001309b4570f125af6b704218174c73957214a50d6e1c9769d860476178","names":["packages/preset/official-agent-gallery/src/task-composition.ts#CatalogAttempt"],"sources":["packages/preset/official-agent-gallery/src/task-composition.ts:16"]},
-    {"digest":"b4ce9713f4ffc5d2e5acc80b36532d83eaeb6e3570ed4e3e2baba6ac937f8574","names":["packages/preset/official-agent-gallery/src/types.ts#OfficialSkillBinding"],"sources":["packages/preset/official-agent-gallery/src/types.ts:139"]},
-=======
     {"digest":"b4ce9713f4ffc5d2e5acc80b36532d83eaeb6e3570ed4e3e2baba6ac937f8574","names":["packages/preset/official-agent-gallery/src/types.ts#OfficialSkillBinding"],"sources":["packages/preset/official-agent-gallery/src/types.ts:142"]},
->>>>>>> origin/4.0
     {"digest":"b4ec0af39fd52ed971990e42f04e5be3204882e555c409eb330f8238eec21569","names":[],"sources":[]},
     {"digest":"b5086d249e8502e9ead1d39156bb8d559bde7951cac0f14ce150345b4e42a2bf","names":[],"sources":[]},
     {"digest":"b54940ff095c17e874c5be03815f4c2145a256cf3a1d34dae4ab2f7769dfffe8","names":[],"sources":[]},
@@ -743,21 +647,14 @@
     {"digest":"bbc5696e3f13c758237b316e3cf08cda0b9fd51ffe672539883457769faa185d","names":[],"sources":[]},
     {"digest":"bcf0caf62d964b2fcf5404bd5c909cfa9a21c3f3c96e6b7e36d9e33565223825","names":[],"sources":["packages/core/session/src/types.ts:472"]},
     {"digest":"bd499eac047efe091a4df7382eadd06d25cf0cb31fee3981e8b24d85762841cd","names":[],"sources":[]},
-<<<<<<< HEAD
-    {"digest":"be25004981e6fbdc3266e78075cc02232fcb3844df72fe929b39e0e96a414649","names":[],"sources":[]},
-=======
     {"digest":"bdc1f691ad4b8c99d03f4ae7e1aa18a81f90f3f943f743d56d744293e1fb0f14","names":[],"sources":[]},
->>>>>>> origin/4.0
+    {"digest":"be25004981e6fbdc3266e78075cc02232fcb3844df72fe929b39e0e96a414649","names":[],"sources":[]},
     {"digest":"bf06c865a7f7fe352c79d069c0a7d65d59e4026ec3b9644a331b26be19cb3921","names":[],"sources":[]},
     {"digest":"bf16d2e98a7f13894ded2cffe5ce857bf473954a0e3c0ed9bc7739e2e1c7b78a","names":[],"sources":[]},
     {"digest":"c0ea97bc89dfc46fa94eab956f5c3ee6af2f964aa7db6327cb18b451f207bef7","names":["packages/workflow/tool-workflow/src/types.ts#ToolWorkflowAgentEndData"],"sources":["packages/workflow/tool-workflow/src/types.ts:29"]},
     {"digest":"c170da8ab7c37635b10867b2571811d9e317ac3ec394e8ff8efe53f902fc41c1","names":["packages/llm/llm-retry/src/types.ts#LlmRetryEventData"],"sources":["packages/llm/llm-retry/src/types.ts:16"]},
-<<<<<<< HEAD
-    {"digest":"c1853e0dbba1a4e633a6071bc62c35f93179061ded1e6edc79fd504197943b72","names":[],"sources":["packages/preset/official-agent-gallery/src/types.ts:149"]},
-=======
     {"digest":"c1853e0dbba1a4e633a6071bc62c35f93179061ded1e6edc79fd504197943b72","names":[],"sources":["packages/preset/official-agent-gallery/src/types.ts:152"]},
     {"digest":"c19c4f814bcab6ba86d2d04c6d6be55ef6105697d8dc0619f5a031964b31166b","names":["packages/llm/llm/src/message.ts#UserMessage"],"sources":["packages/llm/llm/src/message.ts:162"]},
->>>>>>> origin/4.0
     {"digest":"c1f0f17b6493b85db6453bb30e01b208d703731b25bc1e68e5d4fc72eea9cdea","names":["packages/llm/llm/src/types.ts#ToolCallBlock"],"sources":["packages/llm/llm/src/types.ts:114"]},
     {"digest":"c1f9e0405de6d18cabb9ee70782a027f9bbdc57e5abec9dcccdd56119e2e9058","names":[],"sources":[]},
     {"digest":"c219efbdfd53b836786202ab4532913d555798f0a8615a4e9629736e3799fb70","names":[],"sources":[]},
@@ -771,7 +668,6 @@
     {"digest":"c589e938cc0e4989df8b82abef6339de621f0dc4fe62c230d145b94996af7f92","names":[],"sources":[]},
     {"digest":"c592ce75aab73fcab19c1d7845684c72cf402b78d2e1f2833a58ecf9f3598ed6","names":["packages/util/values/src/index.ts#JsonValue"],"sources":["packages/util/values/src/index.ts:4"]},
     {"digest":"c6299bdf2e8ba76aae69ce16dbe438eb2d907d398b4fd10ece3a7453c4901660","names":[],"sources":[]},
-    {"digest":"c662d6dc4d0c193d2fbf0eb77aef13ce464e8ce2c84135efc5206f64cfa86a2e","names":["packages/session/session-title-llm/src/index.ts#SessionTitleLlmRequestEventData"],"sources":["packages/session/session-title-llm/src/index.ts:43"]},
     {"digest":"c748fb42c80a120038a8c587af80ec39924803c401364db11c8974d5bf6d0262","names":[],"sources":[]},
     {"digest":"c7780cb00e555f4111b1b26cf996b87dfe204979f7c25a587b9fd5ee05839398","names":[],"sources":[]},
     {"digest":"c8a39690de7eec986748da1d940895f6c00c01f4fcaf4eb160de84d44d2af7cf","names":[],"sources":[]},
@@ -790,10 +686,7 @@
     {"digest":"cdca80b8dad24d4e7b1d5a288a8475ba8d8d46be385bd2da85f122ee836f1670","names":[],"sources":[]},
     {"digest":"cdcf96fbccaf3e5a4c1a8933b1ff4ec6b68490213fff2058ef67997e79c2cdbb","names":[],"sources":[]},
     {"digest":"cdee10e87dbed8440d8b6935888624884878efc7af95402e94171b29f173dced","names":[],"sources":["packages/llm/llm-retry/src/types.ts:17"]},
-<<<<<<< HEAD
-=======
     {"digest":"ce14b98b1530aec723182cced4b2db37764f9a5fbeaccc7acb053531888f2f85","names":[],"sources":["packages/preset/official-agent-gallery/src/types.ts:125"]},
->>>>>>> origin/4.0
     {"digest":"cfb9850f32c789ede7647f972b8cad283974342aa4b9e1f601bb1a2cc13d64b7","names":["packages/experimental/agent-team/src/types.ts#TeamMessageSnapshot"],"sources":["packages/experimental/agent-team/src/types.ts:129"]},
     {"digest":"cffcdc19881ab61ec0a9ce18743996f7ac44ac8889f34dfac36ae745574aa22f","names":["packages/goal/goal/src/domain.ts#GoalClearChangeMeta"],"sources":["packages/goal/goal/src/domain.ts:35"]},
     {"digest":"d051c01264c55963d57369a817d37c80f4ff0e3d160da01d9dea490133b139aa","names":[],"sources":[]},
@@ -802,16 +695,9 @@
     {"digest":"d15665d1479d64a6f205543af2510aed61c965799ecc40aacd46a06db876e9a0","names":[],"sources":[]},
     {"digest":"d16c6ac2a6a04c2108682fbba758e609066b6da5cadb76f3329ff93556bca0d2","names":[],"sources":[]},
     {"digest":"d28765f87d6b6ab408e0b2f3e7e297791b004b806d8e302c49903ebae815feb2","names":[],"sources":[]},
-<<<<<<< HEAD
-    {"digest":"d353934f506267d27036a07695ffab470276b78d9b9fbd6bd971b055b363913e","names":[],"sources":[]},
-    {"digest":"d4c799e3d51cae1040362ba4968efc484739e14416c9c1df20c2f108b4ef2eb5","names":[],"sources":[]},
-    {"digest":"d4e4d575abeb4b72d616dc65c17ac0eaa943cc135609395044c38d5afcb10e31","names":[],"sources":[]},
-    {"digest":"d4fdeca8534ff8ea844ac423d63720848bc20f33aa989563b49a43e60f27d175","names":["packages/llm/llm/src/message.ts#Message"],"sources":["packages/llm/llm/src/message.ts:196"]},
-=======
     {"digest":"d44bc0b69747d8ebb506331cce5924be4ce5063d7b6161fb4eefd4abb0a1ca8c","names":[],"sources":[]},
     {"digest":"d4c799e3d51cae1040362ba4968efc484739e14416c9c1df20c2f108b4ef2eb5","names":[],"sources":[]},
     {"digest":"d4e4d575abeb4b72d616dc65c17ac0eaa943cc135609395044c38d5afcb10e31","names":[],"sources":[]},
->>>>>>> origin/4.0
     {"digest":"d595ec73b32b016a6055333c67a5d646032b22e672da1d4a09c5b1ae398a093a","names":[],"sources":[]},
     {"digest":"d63b8b8ffad9c02fd80c43a17df4f240c1fe8118ecca9de34f9d5871838ab5b9","names":[],"sources":[]},
     {"digest":"d6a120bab617d3b84905dacc8fc2e5a162bf71beb3e6a19bf39bc921bbabd205","names":[],"sources":[]},
@@ -819,10 +705,7 @@
     {"digest":"d85590a5675c6e2fd8164e5792a6cceac714605b8ac228adae5ee668facb1490","names":[],"sources":[]},
     {"digest":"d8ea0e46117898bf37a0226fc86c90e46ef1e5456cfc581b5253cf5a047927e6","names":[],"sources":[]},
     {"digest":"d9196086e41e4dd5c2ce87f5c25529c8112a1731d258cf0728747d41a9ee3241","names":[],"sources":[]},
-<<<<<<< HEAD
-=======
     {"digest":"d9218471dab3ccc70829547fe8a1dc15d44dfe212cfbe7e3c7a8343fe0eccd0a","names":[],"sources":["packages/core/agent/src/types.ts:110"]},
->>>>>>> origin/4.0
     {"digest":"d9c462b9f62fdd3efc76a44b9524dc8781f6b91cd9c7e584b17d971defafebab","names":["packages/llm/llm/src/message.ts#ToolMessageSource"],"sources":["packages/llm/llm/src/message.ts:29"]},
     {"digest":"d9edf1862e4471d6ad8a106a3f4160e0643874368707d50ecd8e27e5ee7a2567","names":[],"sources":[]},
     {"digest":"da60ed58a8fa23d7aa4920ab5c1f4e3d28109cb0797ef9e5c8b125721b847582","names":[],"sources":["packages/session/working-directory/src/index.ts:36"]},
@@ -832,7 +715,6 @@
     {"digest":"db874d463b0fdec77e9da1c4568f37cb70bd6596781eb93800db44fb8a116965","names":[],"sources":[]},
     {"digest":"db973d3748efe232f21100e13ea6903ac550cd6626e5f0f9b31a705665fc7d90","names":[],"sources":[]},
     {"digest":"dba54c09c6e7aafc9acbed7792ecc920d99f92d0784aeeed10af55f7fe0bc8cd","names":[],"sources":["packages/core/tool-executor-ptc/src/types.ts:68"]},
-    {"digest":"dba7cf308ab127be88dc23b766dffd1cef4c9faceafef2bd948b45a7bb6f99a4","names":[],"sources":[]},
     {"digest":"dbdafceb9a900183cccc80596498d386f3bf7bddead2b8cfde68453aa4739edc","names":[],"sources":[]},
     {"digest":"dceb465940cae42f201201932de1dc0b9f16671c5d02b86f190175b19896c474","names":["packages/preset/official-agent-gallery/src/knowledge-runtime.ts#KnowledgeRecord"],"sources":["packages/preset/official-agent-gallery/src/knowledge-runtime.ts:16"]},
     {"digest":"dd00cdccd0ba487b92362ef67db58cd264f48c1bfd368291424a1da9a899489a","names":[],"sources":[]},
@@ -841,7 +723,6 @@
     {"digest":"dd5ee8762bd8a14b6c6bffedd1753e4e78505bb0f9ea1621018d03a54eef59d5","names":[],"sources":[]},
     {"digest":"dd6cc2bb2a8f28248347021ad93565360b196a042360b4cd16b569d3a2a91f2d","names":[],"sources":[]},
     {"digest":"dde0cdf9d426768b649b5a9783d2144e7f900c35ef65229cd89036dbf411d1b0","names":[],"sources":[]},
-    {"digest":"dde85adc136b2ee03b595d611286ad4a55568eca6a1a91bf3c5e019b62d4d085","names":[],"sources":[]},
     {"digest":"de25352d2dc4196309bd84b5bac6319f6d5c898ea0e82bb5ae66c5738d0d426f","names":[],"sources":[]},
     {"digest":"de30b1fa12c75f81df6aa4096e1595296d2d04e2be14a7c29849cf8028b79048","names":[],"sources":[]},
     {"digest":"deaae5cd30987d4f49398e8f9d994c125907e7f928300745fb1dbf15f145d0e7","names":[],"sources":[]},
@@ -880,10 +761,7 @@
     {"digest":"e95f957154b2b1b58692af53d4131180b6dd19e2264869f876dbaa959991494e","names":[],"sources":[]},
     {"digest":"e9f0b33444d9c6b2ff2578d9fa131a277ab7eb7d82b36eeccbe74738a566666c","names":["packages/llm/llm/src/types.ts#ContentBlock"],"sources":["packages/llm/llm/src/types.ts:159"]},
     {"digest":"ea04e8c50188b87a934c56074e38dfbf99a7b354b45e2633d5f5f00d82494e87","names":[],"sources":[]},
-<<<<<<< HEAD
-=======
     {"digest":"ea4853e570dfa834512f8b7cfc32b7bd330693eb115c12501f016c729813ae39","names":["packages/llm/llm/src/message.ts#DeveloperMessage"],"sources":["packages/llm/llm/src/message.ts:157"]},
->>>>>>> origin/4.0
     {"digest":"eaa71be0fbf0f702df8ea6c11d0aa2f9782263d45a10d0fb14eda662f4bfe04c","names":[],"sources":["packages/core/session/src/types.ts:201"]},
     {"digest":"ebb768d85ec87fb68e42fc14fd7d8535b5ac11791b14d04c6770180f0a719bf8","names":[],"sources":[]},
     {"digest":"ebd151c91f072a7623f469822dfcfaeac64a2275c36bf75535c5d2f021dddbe1","names":[],"sources":[]},
@@ -913,7 +791,6 @@
     {"digest":"f4a66f654996c093aae700ea4c434ff2ee3569fea9c0e5813ccf6afdccabd163","names":[],"sources":[]},
     {"digest":"f5520c1d261ca86ea03735799c311a0a9ede8babb588cf0a65422576d2ee0ad1","names":[],"sources":[]},
     {"digest":"f56c5b59ca0161310c338d31dd16cf14287ccd602ff4181058df178c1c286d7f","names":["packages/context/session-reference/src/types.ts#SessionReferenceSource"],"sources":["packages/context/session-reference/src/types.ts:13"]},
-    {"digest":"f5bae890c72e7e97c6035c5e16706f376b258a6c3634c46139b7bccfc277981b","names":["packages/llm/llm/src/message.ts#DeveloperMessage"],"sources":["packages/llm/llm/src/message.ts:157"]},
     {"digest":"f6329fb30c7ea8013e8975ca5e78284fb7685cc6bd620e8aa4e9a99bc81d45eb","names":[],"sources":[]},
     {"digest":"f634871d1e18b1eb199497ac8ab72d3964f48d03fbf611dc7521a1970cf429d9","names":[],"sources":[]},
     {"digest":"f6605d6c57933aeaaf10911b5fbd6c61e655baa181af7192d3240f49d255b90d","names":[],"sources":[]},
@@ -924,12 +801,7 @@
     {"digest":"f731ffe80810b0289b3e694d8f40af6f01865c02a622ee457be90ca808b66e87","names":["packages/subagent/subagent/src/catalog.ts#SubagentCatalogEvent"],"sources":["packages/subagent/subagent/src/catalog.ts:28"]},
     {"digest":"f789af5ab844827eb5a4f357c0afae1eeed108c6c22d8ca1a56e586b349a7c85","names":[],"sources":[]},
     {"digest":"f88f1b7b6bb733f685f5fb6a8744a5db9199fa53c90463ea1a33bad51153671d","names":[],"sources":[]},
-<<<<<<< HEAD
-    {"digest":"f8fb99b6d7e3857299141b6a8902a4e6395ee9f2866631677e68683956c2338a","names":[],"sources":[]},
-    {"digest":"f90eb4ab2d3897bc20c521a038e3119d581f791ec974b1a0004f63a8ab9e232d","names":[],"sources":["packages/core/session/src/types.ts:294","packages/deliverables/workspace-changes/src/types.ts:106","packages/preset/official-agent-gallery/src/index.ts:71"]},
-=======
-    {"digest":"f90eb4ab2d3897bc20c521a038e3119d581f791ec974b1a0004f63a8ab9e232d","names":[],"sources":["packages/core/session/src/types.ts:294","packages/deliverables/workspace-changes/src/types.ts:106"]},
->>>>>>> origin/4.0
+    {"digest":"f90eb4ab2d3897bc20c521a038e3119d581f791ec974b1a0004f63a8ab9e232d","names":[],"sources":["packages/core/session/src/types.ts:294","packages/deliverables/workspace-changes/src/types.ts:106","packages/preset/official-agent-gallery/src/index.ts:75"]},
     {"digest":"f92a0c978419f84b3dd53dd970a3d924f54d3d9523f05ef6f008aa5981c2f1de","names":[],"sources":["packages/core/session/src/types.ts:338"]},
     {"digest":"f97f47b0eb87905ed77cc27c5e4ed75ef805cb372c98905253709de1aab9b63c","names":[],"sources":[]},
     {"digest":"f9cfc89e8fe085b4fcc9cd32b74b6f103608c54d7d8cd97b47c01de34f252ba3","names":[],"sources":[]},
@@ -963,7 +835,6 @@
     "05a2796621b1ee6c": {"kind":"literal","value":"unknown"},
     "05d2ae1e0c7f8770": {"kind":"union","types":["1571525adc95a24e","9e07693fd7cd9bab"]},
     "0657d3ca5ac4e7bf": {"kind":"primitive","type":"number"},
-    "07a9324c8f62b6fc": {"kind":"object","properties":[{"name":"data","type":"87b7bd1fbcc26d99","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"sourceEventSeqs","type":"5d03ba38734809bc","optional":true},{"name":"surfaceOp","type":"335e242de1fcc17b","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"de25352d2dc41963","optional":false}],"indices":[]},
     "07e1a58c58b593f5": {"kind":"object","properties":[{"name":"model","type":"4cd48f3e5108bd6e","optional":false},{"name":"provider","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
     "07eccc9ea2f9b543": {"kind":"literal","value":"security-privacy-permission"},
     "09655b34d7f3cf1e": {"kind":"literal","value":"system-prompt"},
@@ -1013,6 +884,7 @@
     "1528539c63db8b23": {"kind":"object","properties":[{"name":"callId","type":"4cd48f3e5108bd6e","optional":false},{"name":"files","type":"1d9cb3caa96100b1","optional":false},{"name":"turn","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
     "15495614ccfa9cbd": {"kind":"literal","value":"codex"},
     "1571525adc95a24e": {"kind":"literal","value":"never"},
+    "157c314af05c8219": {"kind":"object","properties":[{"name":"data","type":"5a63846cf01bb3d1","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"7a13823fc0f28755","optional":false}],"indices":[]},
     "16d0507cb94b4cfc": {"kind":"literal","value":"relay"},
     "17aae616ef020b8b": {"kind":"literal","value":"at"},
     "17b3f9396f991142": {"kind":"literal","value":"official-gallery/answer-identity"},
@@ -1032,10 +904,7 @@
     "1b912703e2d64f91": {"kind":"object","properties":[{"name":"data","type":"b56f6a885da3dc39","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"7a651f3b672c52fb","optional":false}],"indices":[]},
     "1c2686c0682e7bc5": {"kind":"literal","value":"session/end-seed"},
     "1c5a58f4599bd4a9": {"kind":"literal","value":"system/message"},
-<<<<<<< HEAD
-=======
     "1c6e5bf41196bb55": {"kind":"literal","value":"official-agent/knowledge"},
->>>>>>> origin/4.0
     "1cde1bedde79c5e8": {"kind":"object","properties":[{"name":"imageIndexes","type":"5d03ba38734809bc","optional":false},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
     "1d5f04a03ea75fc8": {"kind":"literal","value":"model/selection"},
     "1d76406cbb2ddadb": {"kind":"object","properties":[{"name":"kind","type":"57f3f606ff8b6c84","optional":false}],"indices":[]},
@@ -1068,10 +937,7 @@
     "26c879bdd130e8b8": {"kind":"literal","value":"dispatch"},
     "2765e9119edf5816": {"kind":"literal","value":"model"},
     "277b61f9c6f81704": {"kind":"literal","value":"file"},
-<<<<<<< HEAD
-=======
     "277ebd140ae7ef03": {"kind":"array","element":"7a9da11deb76c163"},
->>>>>>> origin/4.0
     "27f03442f5d7afa0": {"kind":"array","element":"5ca1cda77d8a49d7"},
     "283de561b153b1be": {"kind":"object","properties":[{"name":"form","type":"e8de0f457fed5b9f","optional":false},{"name":"kind","type":"c7780cb00e555f41","optional":false},{"name":"summary","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
     "287211846beea1ec": {"kind":"object","properties":[{"name":"kind","type":"6c1cccb433ddc153","optional":false}],"indices":[]},
@@ -1097,11 +963,7 @@
     "2f3f201c8846e19c": {"kind":"literal","value":"tool-goal"},
     "2f77529cdc90bf62": {"kind":"object","properties":[{"name":"data","type":"f92a0c978419f84b","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"sourceEventSeqs","type":"5d03ba38734809bc","optional":true},{"name":"surfaceOp","type":"335e242de1fcc17b","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"1c5a58f4599bd4a9","optional":false}],"indices":[]},
     "2fe5026daf14bd4f": {"kind":"object","properties":[{"name":"arguments","type":"bbc5696e3f13c758","optional":false},{"name":"name","type":"4cd48f3e5108bd6e","optional":false},{"name":"parentCallId","type":"4cd48f3e5108bd6e","optional":false},{"name":"rootCallId","type":"4cd48f3e5108bd6e","optional":false},{"name":"subCallId","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
-<<<<<<< HEAD
-    "30bc81693d6749d6": {"kind":"object","properties":[{"name":"data","type":"c662d6dc4d0c193d","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"587bb11da730e06a","optional":false}],"indices":[]},
-=======
     "30a4ee48c6961544": {"kind":"object","properties":[{"name":"baseId","type":"4cd48f3e5108bd6e","optional":false},{"name":"indexes","type":"0fd800e427ea8d52","optional":false},{"name":"releaseId","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
->>>>>>> origin/4.0
     "30d5a537b2966857": {"kind":"union","types":["1b5649238876e288","ada310bf0bdb8fed","b81e9de81a481b24"]},
     "3122defcdbed78c2": {"kind":"union","types":["acb11da247ab9695","ce14b98b1530aec7"]},
     "312aee2f0c42aabb": {"kind":"object","properties":[{"name":"form","type":"e8de0f457fed5b9f","optional":false},{"name":"kind","type":"d9edf1862e4471d6","optional":false},{"name":"summary","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
@@ -1109,10 +971,6 @@
     "3247e566f4340029": {"kind":"object","properties":[{"name":"form","type":"6f9e00383836275e","optional":false},{"name":"kind","type":"05205074b24d8340","optional":false},{"name":"sections","type":"c748fb42c80a1200","optional":false},{"name":"through","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
     "326a9bfda27dda58": {"kind":"object","properties":[{"name":"maxTokens","type":"dacf3d5f3e4ff619","optional":true},{"name":"reasoningEffort","type":"dacf3d5f3e4ff619","optional":true}],"indices":[]},
     "3305a4bb6b6c29b4": {"kind":"union","types":["0341d4c3dfcd5325","07eccc9ea2f9b543","5bd310104cfe448e","7180844e1066230c","9d80129e13edfb6f","e4cac694f8b6e1d5","f05fb85e715af4ab"]},
-<<<<<<< HEAD
-    "3318b24ef69b3e72": {"kind":"object","properties":[{"name":"agentId","type":"4cd48f3e5108bd6e","optional":false},{"name":"kind","type":"a173f805035c8885","optional":false},{"name":"linkedSkills","type":"bf06c865a7f7fe35","optional":true},{"name":"name","type":"4cd48f3e5108bd6e","optional":false},{"name":"systemPrompt","type":"4cd48f3e5108bd6e","optional":false},{"name":"toolScope","type":"93c33d9687613293","optional":false},{"name":"versionId","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
-=======
->>>>>>> origin/4.0
     "335e242de1fcc17b": {"kind":"union","types":["bcf0caf62d964b2f","e438a9d4fb883b3e"]},
     "347de3380f2da308": {"kind":"literal","value":"job/settled"},
     "34d1ab5c5df37818": {"kind":"literal","value":"resume"},
@@ -1121,10 +979,7 @@
     "367a1839b864a2d7": {"kind":"union","types":["3fe3a400a8d398b5","938f7c7357bc403e"]},
     "36d6a9a871d949ea": {"kind":"literal","value":"approval/policy"},
     "37184378c6439257": {"kind":"object","properties":[{"name":"data","type":"a853902cfab417b8","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"f1996af2602e6f62","optional":false}],"indices":[]},
-<<<<<<< HEAD
-=======
     "371f45ecfc04d7ef": {"kind":"union","types":["2358b5564d6582c3","72abeb3feb50ceb6"]},
->>>>>>> origin/4.0
     "3747d66cadfdf36f": {"kind":"literal","value":"library"},
     "374fdd68aee5ff84": {"kind":"object","properties":[{"name":"delayMs","type":"0657d3ca5ac4e7bf","optional":false},{"name":"failure","type":"5f2117d1856a5ab4","optional":false},{"name":"mode","type":"142c37d302aa22a0","optional":false},{"name":"policyKey","type":"4cd48f3e5108bd6e","optional":false},{"name":"provider","type":"4cd48f3e5108bd6e","optional":false},{"name":"retry","type":"0657d3ca5ac4e7bf","optional":false},{"name":"retryId","type":"4cd48f3e5108bd6e","optional":false},{"name":"step","type":"0657d3ca5ac4e7bf","optional":false},{"name":"turn","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
     "378f90f9f6022a09": {"kind":"literal","value":"approval/decided"},
@@ -1187,7 +1042,6 @@
     "4ce5b794ef74a235": {"kind":"object","properties":[{"name":"capability","type":"4cd48f3e5108bd6e","optional":false},{"name":"industries","type":"93c33d9687613293","optional":false}],"indices":[]},
     "4d60dddaa65d3da8": {"kind":"object","properties":[{"name":"actor","type":"0a92c5bdfa06c2e2","optional":false},{"name":"kind","type":"6ba7edb6447b6a3e","optional":false},{"name":"shareId","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
     "4e011753f8263f43": {"kind":"literal","value":"team/message/queued"},
-    "4e3206c923d0f198": {"kind":"object","properties":[{"name":"inserted","type":"dba7cf308ab127be","optional":false},{"name":"outcome","type":"d4e4d575abeb4b72","optional":true},{"name":"removedCount","type":"0657d3ca5ac4e7bf","optional":true},{"name":"start","type":"0657d3ca5ac4e7bf","optional":false},{"name":"target","type":"96f4a9c81fc0f940","optional":false}],"indices":[]},
     "4e44c9118152f682": {"kind":"literal","value":"text"},
     "4e88776858652856": {"kind":"object","properties":[{"name":"text","type":"4cd48f3e5108bd6e","optional":false},{"name":"type","type":"4e44c9118152f682","optional":false}],"indices":[]},
     "4e97c3d85c0fc817": {"kind":"object","properties":[{"name":"form","type":"e8de0f457fed5b9f","optional":false},{"name":"kind","type":"bf16d2e98a7f1389","optional":false},{"name":"senderSessionId","type":"4cd48f3e5108bd6e","optional":false},{"name":"summary","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
@@ -1210,16 +1064,10 @@
     "53750b9abf61efb7": {"kind":"object","properties":[{"name":"data","type":"f731ffe80810b028","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"44c8c77aa9aa100b","optional":false}],"indices":[]},
     "53b398fd16ec45c2": {"kind":"literal","value":"LEGACY"},
     "53cf1704ae0709c7": {"kind":"object","properties":[{"name":"form","type":"fee1caf8ab6a65c1","optional":false},{"name":"kind","type":"99e7e7d7fed55ae6","optional":false}],"indices":[]},
-<<<<<<< HEAD
-    "557e148d30b79ee4": {"kind":"literal","value":"agent-preset/selected"},
-    "5592f1a843c28d86": {"kind":"union","types":["0b6d718c693fdf7f","938f7c7357bc403e"]},
-    "55c61b0c4922a2f9": {"kind":"array","element":"d4fdeca8534ff8ea"},
-=======
     "54ecf97a058fe0f7": {"kind":"object","properties":[{"name":"data","type":"3fe3a400a8d398b5","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"995c1d38f844372e","optional":false}],"indices":[]},
     "557e148d30b79ee4": {"kind":"literal","value":"agent-preset/selected"},
     "5592f1a843c28d86": {"kind":"union","types":["0b6d718c693fdf7f","938f7c7357bc403e"]},
     "560532c3feb6976e": {"kind":"object","properties":[{"name":"agentId","type":"4cd48f3e5108bd6e","optional":false},{"name":"preview","type":"5f847b06e026da4f","optional":true},{"name":"versionId","type":"799231ac91869a66","optional":false}],"indices":[]},
->>>>>>> origin/4.0
     "5654685d7557ec74": {"kind":"object","properties":[{"name":"form","type":"6f9e00383836275e","optional":false},{"name":"kind","type":"f68c335306535a00","optional":false},{"name":"sections","type":"c748fb42c80a1200","optional":false}],"indices":[]},
     "56b7c047694875a8": {"kind":"object","properties":[{"name":"kind","type":"69d238a6e9b08d67","optional":false}],"indices":[]},
     "570e850224346133": {"kind":"literal","value":"tool/result"},
@@ -1232,6 +1080,7 @@
     "589d0d91239681f8": {"kind":"literal","value":"developer"},
     "58f94390b982f8a5": {"kind":"literal","value":"image/png"},
     "5a27ad49a6762521": {"kind":"object","properties":[{"name":"content","type":"93e83f99a6cdc0ba","optional":false},{"name":"id","type":"4cd48f3e5108bd6e","optional":false},{"name":"role","type":"95c0e88fcf0bafb2","optional":false},{"name":"source","type":"719c51f67074f970","optional":false}],"indices":[]},
+    "5a63846cf01bb3d1": {"kind":"object","properties":[{"name":"authScope","type":"756a5cfa437fd1c1","optional":false},{"name":"compositionHash","type":"4cd48f3e5108bd6e","optional":false},{"name":"expert","type":"367a1839b864a2d7","optional":false},{"name":"inputHash","type":"4cd48f3e5108bd6e","optional":false},{"name":"messageId","type":"4cd48f3e5108bd6e","optional":false},{"name":"protocol","type":"f88f1b7b6bb733f6","optional":false},{"name":"requestId","type":"4cd48f3e5108bd6e","optional":false},{"name":"selection","type":"aa6cf462480ea0d7","optional":false},{"name":"selectionHash","type":"4cd48f3e5108bd6e","optional":false},{"name":"skill","type":"aa0b237911697f15","optional":false},{"name":"skillHash","type":"799231ac91869a66","optional":false},{"name":"skillHashes","type":"93c33d9687613293","optional":true},{"name":"skillMarks","type":"5d03ba38734809bc","optional":true},{"name":"skills","type":"ae6f4487515e010d","optional":true}],"indices":[]},
     "5abab3a27fd27366": {"kind":"literal","value":"text-delta"},
     "5b232a9b9bfcc0fc": {"kind":"literal","value":"after"},
     "5b46bc41ee36158f": {"kind":"literal","value":"GENERAL"},
@@ -1309,7 +1158,6 @@
     "7180844e1066230c": {"kind":"literal","value":"service-stability"},
     "719c51f67074f970": {"kind":"object","properties":[{"name":"kind","type":"2765e9119edf5816","optional":false},{"name":"model","type":"4cd48f3e5108bd6e","optional":false},{"name":"provider","type":"4cd48f3e5108bd6e","optional":false},{"name":"replayState","type":"bbc5696e3f13c758","optional":true}],"indices":[]},
     "71bb3254ec8f1e49": {"kind":"object","properties":[{"name":"dt","type":"5d03ba38734809bc","optional":false},{"name":"index","type":"0657d3ca5ac4e7bf","optional":false},{"name":"texts","type":"93c33d9687613293","optional":false},{"name":"time0","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"688e853dc149f0d3","optional":false}],"indices":[]},
-    "72236bdf55da15d7": {"kind":"object","properties":[{"name":"authScope","type":"756a5cfa437fd1c1","optional":false},{"name":"compositionHash","type":"4cd48f3e5108bd6e","optional":false},{"name":"expert","type":"367a1839b864a2d7","optional":false},{"name":"inputHash","type":"4cd48f3e5108bd6e","optional":false},{"name":"messageId","type":"4cd48f3e5108bd6e","optional":false},{"name":"protocol","type":"f88f1b7b6bb733f6","optional":false},{"name":"requestId","type":"4cd48f3e5108bd6e","optional":false},{"name":"selection","type":"ab3329b7034aab87","optional":false},{"name":"selectionHash","type":"4cd48f3e5108bd6e","optional":false},{"name":"skill","type":"aa0b237911697f15","optional":false},{"name":"skillHash","type":"799231ac91869a66","optional":false}],"indices":[]},
     "72abeb3feb50ceb6": {"kind":"object","properties":[{"name":"type","type":"4f528bf9ae322805","optional":false}],"indices":[]},
     "72ec79127a9c0d02": {"kind":"array","element":"c592ce75aab73fca"},
     "7382c4fc95fe8c5d": {"kind":"literal","value":"remove"},
@@ -1370,14 +1218,9 @@
     "87714f74e6bce945": {"kind":"object","properties":[{"name":"maxTokens","type":"0657d3ca5ac4e7bf","optional":false},{"name":"messageSeqs","type":"5d03ba38734809bc","optional":false},{"name":"messages","type":"0058761d90cb77c0","optional":false},{"name":"reasoningEffort","type":"4cd48f3e5108bd6e","optional":true},{"name":"route","type":"07e1a58c58b593f5","optional":false},{"name":"system","type":"4cd48f3e5108bd6e","optional":false},{"name":"titleProvider","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
     "87a51be3d4e985ed": {"kind":"union","types":["b85d237f8fbd60e5","b8b58ba6e936f0e6","c3b082e6a048a58c"]},
     "87b1a33564b9a4d6": {"kind":"object","properties":[{"name":"form","type":"383cf73ae4748e5b","optional":false},{"name":"kind","type":"a9059a81430b3207","optional":false}],"indices":[]},
-    "87b7bd1fbcc26d99": {"kind":"object","properties":[{"name":"content","type":"93e83f99a6cdc0ba","optional":false},{"name":"id","type":"4cd48f3e5108bd6e","optional":false},{"name":"role","type":"68f44f59e91c4139","optional":false},{"name":"source","type":"4ad1c8496db0d974","optional":false,"compatibility":{"version":1,"policy":"session-source-attribution","binding":"session.user-message.source","discriminator":"kind","unknownKinds":"preserve","attributionKinds":["action-cards","tmux-context","user-question-reply","working-directory"]}}],"indices":[]},
     "88841202942c7683": {"kind":"object","properties":[{"name":"form","type":"6f9e00383836275e","optional":false},{"name":"kind","type":"bb94f3217aa56c88","optional":false},{"name":"sections","type":"c748fb42c80a1200","optional":false}],"indices":[]},
     "88a610b831be6d92": {"kind":"object","properties":[{"name":"argumentsDelta","type":"4cd48f3e5108bd6e","optional":false},{"name":"id","type":"4cd48f3e5108bd6e","optional":false},{"name":"index","type":"0657d3ca5ac4e7bf","optional":false},{"name":"name","type":"4cd48f3e5108bd6e","optional":true},{"name":"type","type":"9b4fd974c124c837","optional":false}],"indices":[]},
     "88ee1c332dfa9947": {"kind":"union","types":["2abb711460e6238d","2c55796f9a2ca608","3bec87f9e6ab3da0","88a610b831be6d92","95080295115fbd83","a2b49331716ba0a7","f1a96afe7503ac18"]},
-<<<<<<< HEAD
-    "89fd66f990a09691": {"kind":"object","properties":[{"name":"data","type":"96deca438443bfca","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"sourceEventSeqs","type":"5d03ba38734809bc","optional":true},{"name":"surfaceOp","type":"335e242de1fcc17b","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"1379f0b72275994d","optional":false}],"indices":[]},
-=======
->>>>>>> origin/4.0
     "8a046b52331959aa": {"kind":"object","properties":[{"name":"kind","type":"78a9be340090b735","optional":false}],"indices":[]},
     "8a6e1ec9e8db346b": {"kind":"object","properties":[{"name":"data","type":"119abe2b9c0b2f46","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"b9305f0ea75ccd6a","optional":false}],"indices":[]},
     "8a9c990773f798ea": {"kind":"object","properties":[{"name":"preset","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
@@ -1410,11 +1253,9 @@
     "956a7b2da002bc5d": {"kind":"object","properties":[{"name":"contentPath","type":"4cd48f3e5108bd6e","optional":false},{"name":"initialContext","type":"020ee19776208097","optional":false},{"name":"instructionOnDemand","type":"dacf3d5f3e4ff619","optional":false}],"indices":[]},
     "95a3ffccbf3c8afc": {"kind":"literal","value":"owner"},
     "95c0e88fcf0bafb2": {"kind":"literal","value":"assistant"},
-    "95f70ec2849bddbd": {"kind":"object","properties":[{"name":"data","type":"b38fb001309b4570","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"7a13823fc0f28755","optional":false}],"indices":[]},
     "9645cf93769a6dfb": {"kind":"literal","value":"user-question-reply"},
     "966f1cec81d90851": {"kind":"literal","value":"expertise"},
     "96bfb916a727cd44": {"kind":"object","properties":[{"name":"form","type":"383cf73ae4748e5b","optional":false},{"name":"kind","type":"24b10f7cdae64928","optional":false}],"indices":[]},
-    "96deca438443bfca": {"kind":"object","properties":[{"name":"headerSeq","type":"0657d3ca5ac4e7bf","optional":true},{"name":"message","type":"f5bae890c72e7e97","optional":false},{"name":"step","type":"0657d3ca5ac4e7bf","optional":false},{"name":"turn","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
     "96f4a9c81fc0f940": {"kind":"union","types":["3e2ece4967cfebe9","62ecb62dc0fe1b5e"]},
     "974792776ffdb672": {"kind":"object","properties":[{"name":"headerSeq","type":"0657d3ca5ac4e7bf","optional":true},{"name":"message","type":"ea4853e570dfa834","optional":false},{"name":"step","type":"0657d3ca5ac4e7bf","optional":false},{"name":"turn","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
     "9890113e97dd3541": {"kind":"object","properties":[{"name":"mode","type":"fab2bb09bc5e3b9d","optional":false},{"name":"source","type":"76632533f67879dc","optional":true}],"indices":[]},
@@ -1424,7 +1265,6 @@
     "99e3cb7e9d50f602": {"kind":"object","properties":[{"name":"data","type":"f90eb4ab2d3897bc","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"17b3f9396f991142","optional":false}],"indices":[]},
     "99e7e7d7fed55ae6": {"kind":"literal","value":"tool-jobs"},
     "99f0e98184709ad1": {"kind":"object","properties":[{"name":"form","type":"aec150797b655c5f","optional":false},{"name":"kind","type":"bb94f3217aa56c88","optional":false}],"indices":[]},
-    "9a1b5bf0c1e0cb7b": {"kind":"object","properties":[{"name":"data","type":"ab144c02da8a67e3","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"583b5a8fe5f8976f","optional":false}],"indices":[]},
     "9a2a9029f8d7ede0": {"kind":"object","properties":[{"name":"content","type":"8f6d609794bf5afc","optional":false},{"name":"role","type":"68f44f59e91c4139","optional":false}],"indices":[]},
     "9a410ddf56792b2b": {"kind":"object","properties":[{"name":"childId","type":"4cd48f3e5108bd6e","optional":false},{"name":"label","type":"4cd48f3e5108bd6e","optional":false},{"name":"phase","type":"4cd48f3e5108bd6e","optional":true},{"name":"runId","type":"4cd48f3e5108bd6e","optional":false},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
     "9a7dfbd561905b31": {"kind":"union","types":["038143630bc9fcf3","0b7a446e825c135e","11a6645208815f08","1314bbb94b9e99b0","191f0754dd53acb6","193fb781fec8fcb8","2d3d45f6e9489d7a","513b85654d10ff30","642ffe522179bf62","69a36d2224454fbd","81cec112cc37f2d1","847de97d9ff31dff","938f7c7357bc403e","966f1cec81d90851","aad9cee3a07d604c","b7c06361f41f2043","b8f151b5f51c81c7","d07b71b074cb265f","d16c6ac2a6a04c21"]},
@@ -1470,10 +1310,7 @@
     "a8a2b9011fc06786": {"kind":"literal","value":"team/message/delivered"},
     "a9059a81430b3207": {"kind":"literal","value":"hooks-claude-code"},
     "a926dc71814edd01": {"kind":"object","properties":[{"name":"everySeconds","type":"0657d3ca5ac4e7bf","optional":false},{"name":"id","type":"4cd48f3e5108bd6e","optional":false},{"name":"kind","type":"e42b0f40b5d0b628","optional":false},{"name":"prompt","type":"4cd48f3e5108bd6e","optional":false},{"name":"scheduledAt","type":"4cd48f3e5108bd6e","optional":false},{"name":"title","type":"4cd48f3e5108bd6e","optional":true}],"indices":[]},
-<<<<<<< HEAD
-=======
     "a96e075aafe684cb": {"kind":"object","properties":[{"name":"budgetTokens","type":"0657d3ca5ac4e7bf","optional":false},{"name":"builtinToolRevision","type":"4cd48f3e5108bd6e","optional":false},{"name":"generationModel","type":"2d7ca1924ab4d658","optional":false},{"name":"knowledge","type":"4a37c55bd620b31f","optional":false},{"name":"releaseIds","type":"93c33d9687613293","optional":false},{"name":"rerankProfileId","type":"4cd48f3e5108bd6e","optional":true},{"name":"retrievalPolicy","type":"87a51be3d4e985ed","optional":false},{"name":"route","type":"3c927c9689218693","optional":false},{"name":"skillPackages","type":"277ebd140ae7ef03","optional":false}],"indices":[]},
->>>>>>> origin/4.0
     "a99f76fd149051c3": {"kind":"object","properties":[{"name":"content","type":"4cd48f3e5108bd6e","optional":false},{"name":"status","type":"fd0d91a1f9dd2efb","optional":false}],"indices":[]},
     "aa0957eca50aeb28": {"kind":"object","properties":[{"name":"data","type":"f90eb4ab2d3897bc","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"0af3ecfb8c60d416","optional":false}],"indices":[]},
     "aa0b237911697f15": {"kind":"union","types":["938f7c7357bc403e","b4ce9713f4ffc5d2"]},
@@ -1485,14 +1322,10 @@
     "aacda84a69739238": {"kind":"literal","value":"subagent"},
     "aad9cee3a07d604c": {"kind":"literal","value":"content"},
     "aae343bc3d663c83": {"kind":"object","properties":[{"name":"form","type":"383cf73ae4748e5b","optional":false},{"name":"kind","type":"9ac52f0f84fec2eb","optional":false}],"indices":[]},
-    "ab144c02da8a67e3": {"kind":"union","types":["579fb090a295bd01","acb11da247ab9695"]},
     "ab7ec5f9eb2c6dfa": {"kind":"object","properties":[{"name":"kind","type":"68141cbe3994a5ff","optional":false}],"indices":[]},
     "aba175fb20ffc711": {"kind":"array","element":"83079c8a3f733ac3"},
     "abd6ca62a5ab1665": {"kind":"object","properties":[{"name":"apiVersion","type":"4cd48f3e5108bd6e","optional":false},{"name":"body","type":"9c001ecb5e1d3c38","optional":false},{"name":"endpoint","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
-<<<<<<< HEAD
-=======
     "ac52e70fc4c29ff2": {"kind":"literal","value":"TENANT"},
->>>>>>> origin/4.0
     "acb11da247ab9695": {"kind":"object","properties":[{"name":"avatarUrl","type":"799231ac91869a66","optional":true},{"name":"id","type":"4cd48f3e5108bd6e","optional":false},{"name":"key","type":"4cd48f3e5108bd6e","optional":false},{"name":"name","type":"4cd48f3e5108bd6e","optional":false},{"name":"packageRevision","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"41d0671eac86848f","optional":false}],"indices":[]},
     "ad0c38a0adb82a94": {"kind":"object","properties":[{"name":"header","type":"9a930283b91d493d","optional":false},{"name":"reason","type":"530da6c0267813bb","optional":false},{"name":"startsSeries","type":"dacf3d5f3e4ff619","optional":true}],"indices":[]},
     "ad22a5ca5bbaab2e": {"kind":"literal","value":"edit"},
@@ -1520,10 +1353,6 @@
     "b2d2a01e51341a3b": {"kind":"union","types":["1ebc6f9ff3aa9e3a","234142ee4f996f38","94c56aeb1564ad73","e7e8f1318170b828"]},
     "b3681c026a0b98e9": {"kind":"object","properties":[{"name":"form","type":"e8de0f457fed5b9f","optional":false},{"name":"kind","type":"78a9be340090b735","optional":false},{"name":"summary","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
     "b38f206d59bad891": {"kind":"literal","value":"disposed"},
-<<<<<<< HEAD
-    "b38fb001309b4570": {"kind":"object","properties":[{"name":"authScope","type":"756a5cfa437fd1c1","optional":false},{"name":"compositionHash","type":"4cd48f3e5108bd6e","optional":false},{"name":"expert","type":"a010b5692a8f8407","optional":false},{"name":"inputHash","type":"4cd48f3e5108bd6e","optional":false},{"name":"messageId","type":"4cd48f3e5108bd6e","optional":false},{"name":"protocol","type":"f88f1b7b6bb733f6","optional":false},{"name":"requestId","type":"4cd48f3e5108bd6e","optional":false},{"name":"selection","type":"aa6cf462480ea0d7","optional":false},{"name":"selectionHash","type":"4cd48f3e5108bd6e","optional":false},{"name":"skill","type":"aa0b237911697f15","optional":false},{"name":"skillHash","type":"799231ac91869a66","optional":false},{"name":"skillHashes","type":"93c33d9687613293","optional":true},{"name":"skillMarks","type":"5d03ba38734809bc","optional":true},{"name":"skills","type":"ae6f4487515e010d","optional":true}],"indices":[]},
-=======
->>>>>>> origin/4.0
     "b4ce9713f4ffc5d2": {"kind":"object","properties":[{"name":"loadPolicy","type":"956a7b2da002bc5d","optional":false},{"name":"sessionSource","type":"acb11da247ab9695","optional":false},{"name":"skill","type":"8ed8bccb743a8ae6","optional":false},{"name":"standardCapabilities","type":"c1853e0dbba1a4e6","optional":false}],"indices":[]},
     "b4ec0af39fd52ed9": {"kind":"object","properties":[{"name":"kind","type":"bb94f3217aa56c88","optional":false}],"indices":[]},
     "b5086d249e8502e9": {"kind":"object","properties":[{"name":"data","type":"aa7bc2817014ca6c","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"6cda0d6d3b4336d8","optional":false}],"indices":[]},
@@ -1561,11 +1390,8 @@
     "bbc5696e3f13c758": {"kind":"opaque","reason":"unknown"},
     "bcf0caf62d964b2f": {"kind":"object","properties":[{"name":"endSeq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"op","type":"f6cb462f808309e3","optional":false},{"name":"startSeq","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
     "bd499eac047efe09": {"kind":"literal","value":"finish"},
-<<<<<<< HEAD
-    "be25004981e6fbdc": {"kind":"array","element":"0b6d718c693fdf7f"},
-=======
     "bdc1f691ad4b8c99": {"kind":"object","properties":[{"name":"headingPath","type":"93c33d9687613293","optional":true},{"name":"page","type":"0657d3ca5ac4e7bf","optional":true},{"name":"paragraph","type":"0657d3ca5ac4e7bf","optional":true},{"name":"rowEnd","type":"0657d3ca5ac4e7bf","optional":true},{"name":"rowStart","type":"0657d3ca5ac4e7bf","optional":true},{"name":"sectionId","type":"4cd48f3e5108bd6e","optional":true}],"indices":[]},
->>>>>>> origin/4.0
+    "be25004981e6fbdc": {"kind":"array","element":"0b6d718c693fdf7f"},
     "bf06c865a7f7fe35": {"kind":"array","element":"e58d449d05b1f226"},
     "bf16d2e98a7f1389": {"kind":"literal","value":"subagent-settled"},
     "c0ea97bc89dfc46f": {"kind":"object","properties":[{"name":"outcome","type":"c2deb7c9183735d4","optional":false},{"name":"runId","type":"4cd48f3e5108bd6e","optional":false},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
@@ -1585,7 +1411,6 @@
     "c589e938cc0e4989": {"kind":"literal","value":"tool/call"},
     "c592ce75aab73fca": {"kind":"union","types":["0657d3ca5ac4e7bf","4cd48f3e5108bd6e","529e0ccd0e34079a","72ec79127a9c0d02","938f7c7357bc403e","aa93010d0e521ad7"]},
     "c6299bdf2e8ba76a": {"kind":"literal","value":"managed-documents"},
-    "c662d6dc4d0c193d": {"kind":"object","properties":[{"name":"maxTokens","type":"0657d3ca5ac4e7bf","optional":false},{"name":"messageSeqs","type":"5d03ba38734809bc","optional":false},{"name":"messages","type":"55c61b0c4922a2f9","optional":false},{"name":"reasoningEffort","type":"4cd48f3e5108bd6e","optional":true},{"name":"route","type":"07e1a58c58b593f5","optional":false},{"name":"system","type":"4cd48f3e5108bd6e","optional":false},{"name":"titleProvider","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
     "c748fb42c80a1200": {"kind":"array","element":"86e1e384495ee09a"},
     "c7780cb00e555f41": {"kind":"literal","value":"mmp-session-title-llm"},
     "c8a39690de7eec98": {"kind":"object","properties":[{"name":"data","type":"a72268c582cb226d","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"4e011753f8263f43","optional":false}],"indices":[]},
@@ -1604,10 +1429,7 @@
     "cdca80b8dad24d4e": {"kind":"literal","value":"tool-workflow/run-start"},
     "cdcf96fbccaf3e5a": {"kind":"object","properties":[{"name":"form","type":"fee1caf8ab6a65c1","optional":false},{"name":"kind","type":"c7780cb00e555f41","optional":false}],"indices":[]},
     "cdee10e87dbed844": {"kind":"object","properties":[{"name":"delayMs","type":"0657d3ca5ac4e7bf","optional":false},{"name":"failure","type":"5f2117d1856a5ab4","optional":false},{"name":"maxRetries","type":"0657d3ca5ac4e7bf","optional":false},{"name":"mode","type":"3bc287e765d58dc3","optional":false},{"name":"policyKey","type":"4cd48f3e5108bd6e","optional":false},{"name":"provider","type":"4cd48f3e5108bd6e","optional":false},{"name":"retry","type":"0657d3ca5ac4e7bf","optional":false},{"name":"retryId","type":"4cd48f3e5108bd6e","optional":false},{"name":"step","type":"0657d3ca5ac4e7bf","optional":false},{"name":"turn","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
-<<<<<<< HEAD
-=======
     "ce14b98b1530aec7": {"kind":"object","properties":[{"name":"id","type":"4cd48f3e5108bd6e","optional":false},{"name":"key","type":"4cd48f3e5108bd6e","optional":false},{"name":"name","type":"4cd48f3e5108bd6e","optional":false},{"name":"type","type":"ea04e8c50188b87a","optional":false},{"name":"versionId","type":"799231ac91869a66","optional":false}],"indices":[]},
->>>>>>> origin/4.0
     "cfb9850f32c789ed": {"kind":"object","properties":[{"name":"content","type":"93e83f99a6cdc0ba","optional":false},{"name":"id","type":"4cd48f3e5108bd6e","optional":false},{"name":"senderId","type":"4cd48f3e5108bd6e","optional":false},{"name":"senderName","type":"4cd48f3e5108bd6e","optional":false},{"name":"targetId","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
     "cffcdc19881ab61e": {"kind":"object","properties":[{"name":"cleared","type":"0b6d718c693fdf7f","optional":false},{"name":"clearedAt","type":"0657d3ca5ac4e7bf","optional":false},{"name":"kind","type":"237c004c73b6b288","optional":false},{"name":"operation","type":"e7e154d47d5fbc53","optional":false},{"name":"version","type":"f88f1b7b6bb733f6","optional":false}],"indices":[]},
     "d051c01264c55963": {"kind":"object","properties":[{"name":"data","type":"974792776ffdb672","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"sourceEventSeqs","type":"5d03ba38734809bc","optional":true},{"name":"surfaceOp","type":"335e242de1fcc17b","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"1379f0b72275994d","optional":false}],"indices":[]},
@@ -1616,16 +1438,9 @@
     "d15665d1479d64a6": {"kind":"union","types":["413c8597fc18be3c","f193b45016ac30e1"]},
     "d16c6ac2a6a04c21": {"kind":"literal","value":"search"},
     "d28765f87d6b6ab4": {"kind":"literal","value":"one-shot"},
-<<<<<<< HEAD
-    "d353934f506267d2": {"kind":"object","properties":[{"name":"data","type":"3318b24ef69b3e72","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"995c1d38f844372e","optional":false}],"indices":[]},
-    "d4c799e3d51cae10": {"kind":"literal","value":"working-directory/change"},
-    "d4e4d575abeb4b72": {"kind":"literal","value":"canceled"},
-    "d4fdeca8534ff8ea": {"kind":"union","types":["429ed246d859dd4b","5a27ad49a6762521","87b7bd1fbcc26d99","e3e59a0390516fbe","f5bae890c72e7e97"]},
-=======
     "d44bc0b69747d8eb": {"kind":"array","element":"c19c4f814bcab6ba"},
     "d4c799e3d51cae10": {"kind":"literal","value":"working-directory/change"},
     "d4e4d575abeb4b72": {"kind":"literal","value":"canceled"},
->>>>>>> origin/4.0
     "d595ec73b32b016a": {"kind":"object","properties":[{"name":"data","type":"a40d12070f6f4a12","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"b57ae1b37e52bee0","optional":false}],"indices":[]},
     "d63b8b8ffad9c02f": {"kind":"object","properties":[{"name":"data","type":"8bb8c3751a6ce64b","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"47e5d84f1a93450a","optional":false}],"indices":[]},
     "d6a120bab617d3b8": {"kind":"literal","value":"wire"},
@@ -1633,10 +1448,7 @@
     "d85590a5675c6e2f": {"kind":"object","properties":[{"name":"form","type":"aec150797b655c5f","optional":false},{"name":"kind","type":"1f1385dbc3e875c0","optional":false}],"indices":[]},
     "d8ea0e46117898bf": {"kind":"object","properties":[{"name":"data","type":"af70c38f9fc73802","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"528c862f2ffaf27f","optional":false}],"indices":[]},
     "d9196086e41e4dd5": {"kind":"literal","value":"complete"},
-<<<<<<< HEAD
-=======
     "d9218471dab3ccc7": {"kind":"object","properties":[{"name":"inserted","type":"d44bc0b69747d8eb","optional":false},{"name":"outcome","type":"d4e4d575abeb4b72","optional":true},{"name":"removedCount","type":"0657d3ca5ac4e7bf","optional":true},{"name":"start","type":"0657d3ca5ac4e7bf","optional":false},{"name":"target","type":"96f4a9c81fc0f940","optional":false}],"indices":[]},
->>>>>>> origin/4.0
     "d9c462b9f62fdd3e": {"kind":"object","properties":[{"name":"callId","type":"4cd48f3e5108bd6e","optional":false},{"name":"kind","type":"a13d8f379222ece8","optional":false}],"indices":[]},
     "d9edf1862e4471d6": {"kind":"literal","value":"schedule"},
     "da60ed58a8fa23d7": {"kind":"object","properties":[{"name":"cwd","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
@@ -1646,7 +1458,6 @@
     "db874d463b0fdec7": {"kind":"object","properties":[{"name":"data","type":"3e4e7683b0192c9f","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"e2d0367e5716bc18","optional":false}],"indices":[]},
     "db973d3748efe232": {"kind":"literal","value":"standard"},
     "dba54c09c6e7aafc": {"kind":"object","properties":[{"name":"kind","type":"4edec1b770e8ec4c","optional":false}],"indices":[]},
-    "dba7cf308ab127be": {"kind":"array","element":"87b7bd1fbcc26d99"},
     "dbdafceb9a900183": {"kind":"literal","value":"hook"},
     "dceb465940cae42f": {"kind":"object","properties":[{"name":"authScope","type":"756a5cfa437fd1c1","optional":false},{"name":"binding","type":"560532c3feb6976e","optional":false},{"name":"budgetMethod","type":"51cad36e69a01cf3","optional":false},{"name":"budgetTokens","type":"0657d3ca5ac4e7bf","optional":false},{"name":"bytes","type":"0657d3ca5ac4e7bf","optional":false},{"name":"context","type":"4cd48f3e5108bd6e","optional":false},{"name":"evidence","type":"61346e09176a9084","optional":false},{"name":"id","type":"4cd48f3e5108bd6e","optional":false},{"name":"lookup","type":"0657d3ca5ac4e7bf","optional":false},{"name":"messageId","type":"4cd48f3e5108bd6e","optional":false},{"name":"query","type":"4cd48f3e5108bd6e","optional":false},{"name":"retrievalId","type":"4cd48f3e5108bd6e","optional":false},{"name":"status","type":"4cd48f3e5108bd6e","optional":false},{"name":"truncated","type":"aa93010d0e521ad7","optional":false},{"name":"turn","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
     "dd00cdccd0ba487b": {"kind":"object","properties":[{"name":"form","type":"aec150797b655c5f","optional":false},{"name":"kind","type":"05205074b24d8340","optional":false},{"name":"through","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
@@ -1655,7 +1466,6 @@
     "dd5ee8762bd8a14b": {"kind":"object","properties":[{"name":"form","type":"aec150797b655c5f","optional":false},{"name":"kind","type":"99e7e7d7fed55ae6","optional":false}],"indices":[]},
     "dd6cc2bb2a8f2824": {"kind":"object","properties":[{"name":"form","type":"383cf73ae4748e5b","optional":false},{"name":"kind","type":"99e7e7d7fed55ae6","optional":false}],"indices":[]},
     "dde0cdf9d426768b": {"kind":"object","properties":[{"name":"kind","type":"05205074b24d8340","optional":false},{"name":"through","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
-    "dde85adc136b2ee0": {"kind":"object","properties":[{"name":"data","type":"72236bdf55da15d7","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"7a13823fc0f28755","optional":false}],"indices":[]},
     "de25352d2dc41963": {"kind":"literal","value":"user/message"},
     "de30b1fa12c75f81": {"kind":"literal","value":"image/gif"},
     "deaae5cd30987d4f": {"kind":"object","properties":[{"name":"form","type":"16d0507cb94b4cfc","optional":false},{"name":"kind","type":"0fe52387f6505270","optional":false}],"indices":[]},
@@ -1694,10 +1504,7 @@
     "e95f957154b2b1b5": {"kind":"literal","value":"assistant/attempt"},
     "e9f0b33444d9c6b2": {"kind":"union","types":["0c89675597380ba3","12d5808fac1996b9","43e311235aa537df","814d9434e1ddf907","8e611bf46821e500","c1f0f17b6493b85d","f2da0f27c1e6add5"]},
     "ea04e8c50188b87a": {"kind":"literal","value":"expert"},
-<<<<<<< HEAD
-=======
     "ea4853e570dfa834": {"kind":"object","properties":[{"name":"content","type":"93e83f99a6cdc0ba","optional":false},{"name":"id","type":"4cd48f3e5108bd6e","optional":false},{"name":"role","type":"589d0d91239681f8","optional":false},{"name":"source","type":"83c7c9b407252db2","optional":false,"compatibility":{"version":1,"policy":"session-source-attribution","binding":"session.developer-message.source","discriminator":"kind","unknownKinds":"preserve","attributionKinds":["action-cards","tmux-context","user-question-reply","working-directory"]}}],"indices":[]},
->>>>>>> origin/4.0
     "eaa71be0fbf0f702": {"kind":"object","properties":[{"name":"kind","type":"ad3b56aa2fc1ad42","optional":false}],"indices":[]},
     "ebb768d85ec87fb6": {"kind":"literal","value":"image/webp"},
     "ebd151c91f072a76": {"kind":"literal","value":"official-gallery/receipt"},
@@ -1727,7 +1534,6 @@
     "f4a66f654996c093": {"kind":"object","properties":[{"name":"kind","type":"0fe52387f6505270","optional":false}],"indices":[]},
     "f5520c1d261ca86e": {"kind":"object","properties":[{"name":"data","type":"e3056e0dda3a379e","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"24a8188c4d61b70a","optional":false}],"indices":[]},
     "f56c5b59ca016131": {"kind":"object","properties":[{"name":"form","type":"383cf73ae4748e5b","optional":false},{"name":"kind","type":"7f13860ee89a2d35","optional":false},{"name":"references","type":"df843efd87c78cf8","optional":false},{"name":"version","type":"f88f1b7b6bb733f6","optional":false}],"indices":[]},
-    "f5bae890c72e7e97": {"kind":"object","properties":[{"name":"content","type":"93e83f99a6cdc0ba","optional":false},{"name":"id","type":"4cd48f3e5108bd6e","optional":false},{"name":"role","type":"589d0d91239681f8","optional":false},{"name":"source","type":"4ad1c8496db0d974","optional":false,"compatibility":{"version":1,"policy":"session-source-attribution","binding":"session.developer-message.source","discriminator":"kind","unknownKinds":"preserve","attributionKinds":["action-cards","tmux-context","user-question-reply","working-directory"]}}],"indices":[]},
     "f6329fb30c7ea801": {"kind":"object","properties":[{"name":"form","type":"383cf73ae4748e5b","optional":false},{"name":"kind","type":"0fe52387f6505270","optional":false}],"indices":[]},
     "f634871d1e18b1eb": {"kind":"literal","value":"plan/mode"},
     "f6605d6c57933aea": {"kind":"object","properties":[{"name":"form","type":"fee1caf8ab6a65c1","optional":false},{"name":"kind","type":"9ac52f0f84fec2eb","optional":false}],"indices":[]},
@@ -1738,7 +1544,6 @@
     "f731ffe80810b028": {"kind":"union","types":["0e10d7c096b47e61","5d542ac7bdf13310","a0f25b5aeeebf2bf","b6896938660a1dfe","cbbe8377ee744964","e2ad8f5bcd813f26"]},
     "f789af5ab844827e": {"kind":"literal","value":"change"},
     "f88f1b7b6bb733f6": {"kind":"literal","value":1},
-    "f8fb99b6d7e38572": {"kind":"object","properties":[{"name":"data","type":"4e3206c923d0f198","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"829a2fb3be6efd4b","optional":false}],"indices":[]},
     "f90eb4ab2d3897bc": {"kind":"object","properties":[{"name":"turn","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
     "f92a0c978419f84b": {"kind":"object","properties":[{"name":"message","type":"429ed246d859dd4b","optional":false},{"name":"step","type":"0657d3ca5ac4e7bf","optional":false},{"name":"turn","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]},
     "f97f47b0eb87905e": {"kind":"object","properties":[{"name":"form","type":"16d0507cb94b4cfc","optional":false},{"name":"kind","type":"78a9be340090b735","optional":false}],"indices":[]},

@@ -79,6 +79,19 @@ it('replaces the immutable cache header of plugin bundles with no-store and leav
   expect(asset.headers.get('cache-control')).toBe(immutable)
 })
 
+it('answers 503 when the Host closes the socket during a page load', async () => {
+  const cause = Object.assign(new Error('other side closed'), { code: 'UND_ERR_SOCKET' })
+  const fetch = vi.fn().mockRejectedValue(new TypeError('fetch failed', { cause }))
+  vi.stubGlobal('fetch', fetch)
+  const closed = await forwardWebRequest(new Request('mmp-app://app/api/models'), 'http://127.0.0.1:64851/', 'session=owned')
+  expect(closed.status).toBe(503)
+  fetch.mockRejectedValueOnce(new DOMException('The operation was aborted', 'AbortError'))
+  const aborted = await forwardWebRequest(new Request('mmp-app://app/assets/app.js'), 'http://127.0.0.1:64851/', 'session=owned')
+  expect(aborted.status).toBe(503)
+  fetch.mockRejectedValueOnce(new Error('desktop forward failed'))
+  await expect(forwardWebRequest(new Request('mmp-app://app/api/models'), 'http://127.0.0.1:64851/', 'session=owned')).rejects.toThrow('desktop forward failed')
+})
+
 it('refuses another page origin without forwarding its request', async () => {
   const fetch = vi.fn()
   vi.stubGlobal('fetch', fetch)

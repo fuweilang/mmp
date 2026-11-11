@@ -78,7 +78,7 @@ export default defineConfig([{
   clean: false,
   noExternal: [/.*/],
   plugins: [moduleProxyPlugin, shellParserOnlyPlugin],
-  outputOptions: { inlineDynamicImports: true },
+  outputOptions: { codeSplitting: false },
 }, {
   // Page half: an ordinary browser ES module the deployment's page imports. It
   // is not a `mmp.client` graph row — it installs the module loader the graph is

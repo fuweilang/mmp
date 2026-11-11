@@ -41,11 +41,8 @@ export function apply(ctx: Context, config: Config): void {
     origin,
     account: () => ctx.get('deepseekAccount'),
     officialFor: sessionId => attribution.officialFor(sessionId),
-<<<<<<< HEAD
     attachments: () => ctx.get('attachments'),
-=======
     validateWire: (request, body) => attribution.validateWire(request, body),
->>>>>>> origin/4.0
   })
 
   // Cloud route only: do not register as configurable (no BYOK / settings key form).

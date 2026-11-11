@@ -32,13 +32,10 @@ export interface GroundAdapterOptions {
   account: () => DeepSeekAccount | undefined
   /** Official version bound to the requesting Session, when this is an official Agent run. */
   officialFor?: (sessionId: SessionId) => GroundOfficialAttribution | undefined
-<<<<<<< HEAD
   /** Durable image bytes for vision requests. Text-only routes never read it. */
   attachments?: () => AttachmentStore | undefined
-=======
   /** Validates logged Session invariants after final fitting and before HTTP. */
   validateWire?: GroundWireGuard
->>>>>>> origin/4.0
 }
 
 async function readSseOrJsonError(response: Response): Promise<string> {

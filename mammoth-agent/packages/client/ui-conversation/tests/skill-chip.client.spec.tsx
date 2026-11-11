@@ -3,11 +3,7 @@
 /** @jsxImportSource react */
 import { expect, it, onTestFinished } from 'vitest'
 import { render, fireEvent } from '@testing-library/react'
-<<<<<<< HEAD
 import { $createParagraphNode, $getRoot, $isElementNode, $isRangeSelection, $getSelection, KEY_BACKSPACE_COMMAND } from 'lexical'
-=======
-import { $createParagraphNode, $isElementNode, $getRoot, $isRangeSelection, $getSelection, KEY_BACKSPACE_COMMAND } from 'lexical'
->>>>>>> origin/4.0
 import { DraftEditorRuntime } from '../src/client/input/editor/runtime.ts'
 import { $createCommandChipNode } from '../src/client/input/editor/command-chip-node.tsx'
 import { $skillChips, SkillChipNode } from '../src/client/input/editor/skill-chip-node.tsx'
@@ -66,11 +62,7 @@ it('adds another skill at the caret and keeps the typed question', () => {
 
 it('puts the skill chip after a leading command chip', () => {
   const editor = runtime()
-<<<<<<< HEAD
   const claim: CommandClaim = { name: 'goal', token: '/goal ', submit: async () => ({ kind: 'success' as const }) }
-=======
-  const claim: CommandClaim = { name: 'goal', token: '/goal ', submit: async () => ({ kind: 'success' }) }
->>>>>>> origin/4.0
   editor.editor.update(() => {
     const paragraph = $createParagraphNode()
     paragraph.append($createCommandChipNode(claim))
@@ -78,13 +70,8 @@ it('puts the skill chip after a leading command chip', () => {
   }, { discrete: true })
   editor.syncSkillChip(skill)
   const order = editor.editor.getEditorState().read(() => {
-<<<<<<< HEAD
     const first = $getRoot().getFirstChild()
     return $isElementNode(first) ? first.getChildren().map((node) => node.getType()) : []
-=======
-    const paragraph = $getRoot().getFirstChild()
-    return $isElementNode(paragraph) ? paragraph.getChildren().map(node => node.getType()) : []
->>>>>>> origin/4.0
   })
   expect(order[0]).toBe('command-chip')
   expect(order[1]).toBe('skill-chip')
