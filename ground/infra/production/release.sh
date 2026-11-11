@@ -372,10 +372,11 @@ rm -f packages/credentials/deepseek-account-platform/tests/ground-history.integr
 # Dependency layer input: manifests only, so a source-only change reuses the cached install.
 rm -rf __manifests__ && mkdir -p __manifests__
 find . -type d \( -name node_modules -o -name .git -o -name .desktop-build -o -name __manifests__ \) -prune \
-  -o -type f \( -name package.json -o -name pnpm-lock.yaml -o -name pnpm-workspace.yaml -o -name .npmrc \) -print \
+  -o -type f \( -name package.json -o -name pnpm-lock.yaml -o -name pnpm-workspace.yaml -o -name .npmrc -o -path './patches/*' \) -print \
   | while read -r f; do mkdir -p "__manifests__/$(dirname "$f")"; cp "$f" "__manifests__/$f"; done
 test -s __manifests__/package.json
 test -s __manifests__/pnpm-lock.yaml
+test -d __manifests__/patches
 echo "manifest-files=$(find __manifests__ -name package.json | wc -l)"
 test -s scripts/release/process.ts
 test -s packages/llm/llm-ground/lib/types/index.js
