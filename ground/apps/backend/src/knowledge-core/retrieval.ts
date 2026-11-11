@@ -20,14 +20,30 @@ export function reciprocalRankFusion<T extends { chunkId: string }>(rankings: re
 }
 
 /** Explicit uppercase method/identifier names must not lose to similarly named frameworks. Scores remain RRF scores. */
-export function focusNamedHeadings<T extends RetrievalEvidence>(rows: readonly T[], query: string): T[] {
+/**
+ * Extract bounded exact heading terms from a visible retrieval question.
+ * @param query - Visible user question or focused method lookup.
+ * @returns Distinct nonempty terms used to find explicitly named headings.
+ */
+export function namedHeadingTerms(query: string): string[] {
+  return [...new Set((query.match(/[A-Za-z0-9_.:/-]+/g) ?? [])
+    .map(term => term.replace(/^[.:/]+|[.:/]+$/g, ''))
+    .filter(term => /^[A-Z][A-Z0-9_.:/-]{2,63}$/.test(term)).slice(0, 8).map(term => term.toLowerCase()))];
+}
+/**
+ * Count named query terms present in a chunk's recorded heading path.
+ * @param row - Candidate evidence locator with its original heading path.
+ * @param query - Visible user question or focused method lookup.
+ * @returns The number of matching bounded heading terms.
+ */
+export function namedHeadingScore(row: Pick<RetrievalEvidence, 'locator'>, query: string): number {
   const trim = (term: string) => term.replace(/^[.:/]+|[.:/]+$/g, '');
-  const terms = new Set((query.match(/[A-Za-z0-9_.:/-]+/g) ?? [])
-    .map(trim).filter(term => /^[A-Z][A-Z0-9_.:/-]{2,63}$/.test(term)).slice(0, 8).map(term => term.toLowerCase()));
-  if (!terms.size) return [...rows];
-  const matches = (row: T) => new Set((row.locator.headingPath?.join(' ').match(/[A-Za-z0-9_.:/-]+/g) ?? [])
+  const terms = new Set(namedHeadingTerms(query));
+  return new Set((row.locator.headingPath?.join(' ').match(/[A-Za-z0-9_.:/-]+/g) ?? [])
     .map(term => trim(term).toLowerCase()).filter(term => terms.has(term))).size;
-  return rows.map((row, index) => ({ row, index, matches: matches(row) }))
+}
+export function focusNamedHeadings<T extends RetrievalEvidence>(rows: readonly T[], query: string): T[] {
+  return rows.map((row, index) => ({ row, index, matches: namedHeadingScore(row, query) }))
     .sort((a, b) => b.matches - a.matches || a.index - b.index).map(item => item.row);
 }
 

@@ -54,3 +54,5 @@ Replacing superseded evidence snapshots changes the request series and may reduc
 - Recorded coverage includes the shipped `sdk` profile scenario `snapshots/sdk/official-expert-knowledge` and the Python SDK `sdk-official-expert` smoke projection. Both restore a recorded expert binding and use the real runtime with external account/Ground/model boundaries mocked.
 
 - When a user names a method or framework but current evidence does not define it, the citation policy asks for a focused lookup by that name within the remaining lookup budget before applying it; missing support must still be disclosed.
+
+- Product-copy examples may use only the specifications actually supplied by the user, without inventing performance claims or attributing imagined features to the user.

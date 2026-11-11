@@ -221,3 +221,35 @@ test('cancellation at final neighbor, final authorization, empty dense or trace 
   const persisted=await db.knowledgeRetrievalTrace.findUniqueOrThrow({where:{id:result.retrievalId}});assert.equal(persisted.status,'CANCELLED',phase);assert.deepEqual(persisted.evidence,[],phase);
  });
 });
+
+test('explicit named method admits its bounded complete section without mixing a similarly named framework',async()=>{
+ const base=await core.createBase({type:'PLATFORM'},'Named section regression');
+ const paragraphs=['Attention','Interest','Desire','Action'].map(name=>`${name}: ${Array.from({length:18},(_,i)=>`step${i}`).join(' ')} ${name}-END`);
+ const job=await core.upload(base.id,{type:'PLATFORM'},{bytes:Buffer.from('# AIDA模型\n\n'+paragraphs.join('\n\n')+'\n\n# AIDMA模型\n\nFOREIGN-FRAMEWORK'),originalName:'method.md',profileId,idempotencyKey:randomUUID(),indexConfig:{targetTokens:40,maxTokens:60,overlapTokens:0}});
+ await worker.runOnce();const release=await core.createRelease(base.id,{type:'PLATFORM'},[job.indexRevisionId]);
+ const methodChunks=(await db.knowledgeChunk.findMany({where:{indexRevisionId:job.indexRevisionId},orderBy:{ordinal:'asc'}})).filter(row=>(row.locator as any).headingPath?.[0]==='AIDA模型');
+ assert.ok(methodChunks.length>2&&methodChunks.length<=6);
+ const scopedAccess=access({authorize:async()=>[{releaseId:release.id,scope:{type:'PLATFORM'}}]});
+ const result=await service.retrieve(scopedAccess,{query:'请解释 AIDA:',mode:'required'});
+ assert.equal(result.status,'READY');assert.ok(result.queryStrategy.includes('NAMED_SECTION_CONTEXT'));
+ assert.deepEqual(result.evidence.map(row=>row.chunkId),methodChunks.map(row=>row.id));
+ assert.ok(result.evidence.every(row=>row.indexRevisionId===job.indexRevisionId&&!row.text.includes('FOREIGN-FRAMEWORK')));
+ assert.ok(result.context.tokenCount<=8000);
+ for(const row of result.evidence)assert.equal((await service.openSource(scopedAccess,row)).text,row.text);
+ const comparison=await service.retrieve(scopedAccess,{query:'比较 AIDA 和 AIDMA',mode:'required'});
+ assert.ok(!comparison.queryStrategy.includes('NAMED_SECTION_CONTEXT'),'comparison must not force one named section');
+ await db.knowledgeBase.update({where:{id:base.id},data:{enabled:false}});
+ assert.equal((await service.retrieve(scopedAccess,{query:'AIDA',mode:'required'})).status,'FORBIDDEN');
+});
+
+test('long named sections retain a relevant tail hit instead of replacing it with their first six chunks',async()=>{
+ const base=await core.createBase({type:'PLATFORM'},'Long named section regression');
+ const text='# AIDA模型\n\n'+Array.from({length:35},(_,i)=>`步骤${i}：常规方法说明。重复的背景信息和基本说明。`).join('\n\n')+'\n\nActionTail 最后步骤的独有依据。';
+ const job=await core.upload(base.id,{type:'PLATFORM'},{bytes:Buffer.from(text),originalName:'long-method.md',profileId,idempotencyKey:randomUUID(),indexConfig:{targetTokens:25,maxTokens:45,overlapTokens:0}});
+ await worker.runOnce();const release=await core.createRelease(base.id,{type:'PLATFORM'},[job.indexRevisionId]);
+ const chunks=await db.knowledgeChunk.findMany({where:{indexRevisionId:job.indexRevisionId},orderBy:{ordinal:'asc'}});assert.ok(chunks.length>6);
+ const tail=chunks.find(row=>row.text.includes('ActionTail'))!;
+ const result=await service.retrieve(access({authorize:async()=>[{releaseId:release.id,scope:{type:'PLATFORM'}}]}),{query:'AIDA ActionTail',mode:'required'});
+ assert.equal(result.status,'READY');assert.ok(result.evidence.some(row=>row.chunkId===tail.id),'retain the already retrieved tail evidence');
+ assert.ok(result.evidence.length<=6&&result.context.tokenCount<=8000);
+});

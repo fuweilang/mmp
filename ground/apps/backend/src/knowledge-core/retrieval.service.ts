@@ -9,7 +9,7 @@ import { KnowledgeHttpAdapter } from './provider';
 import { KnowledgeCoreError, safeKnowledgeError } from './errors';
 import { KnowledgeCandidateStore, type Candidate, type CandidateScope } from './candidate-store';
 import { planKnowledgeQueries } from './query-plan';
-import { reciprocalRankFusion, buildEvidenceContext, selectEvidenceWithNeighbors, focusNamedHeadings } from './retrieval';
+import { reciprocalRankFusion, buildEvidenceContext, selectEvidenceWithNeighbors, focusNamedHeadings, namedHeadingScore, namedHeadingTerms } from './retrieval';
 import type { KnowledgeAccess, KnowledgeRetrievalInput, KnowledgeSourceReference } from './retrieval-access';
 import type { RetrievalResult, RetrievalEvidence, EvidenceContext } from './types';
 export interface KnowledgeRetrievalResponse extends RetrievalResult {
@@ -374,7 +374,21 @@ export class KnowledgeRetrievalService {
         adjacent.push(...await this.candidates.neighbors(current, row.indexRevisionId, row.ordinal));
         this.abort(input.signal);
       }
-      const rows = selectEvidenceWithNeighbors(final, adjacent);
+      let rows = selectEvidenceWithNeighbors(final, adjacent);
+      // An explicitly named section is a bounded parent context, not six unrelated matches.
+      const named = namedHeadingTerms(input.query).length === 1 ? final.find(row => namedHeadingScore(row, input.query) > 0) : undefined;
+
+      if (named?.locator.headingPath?.length) {
+        const current = (await this.retrievalScopes(access)).find(scope => scope.releaseId === named.knowledgeReleaseId && scope.indexIds.includes(named.indexRevisionId));
+        this.abort(input.signal);
+        if (!current) throw new KnowledgeCoreError('KNOWLEDGE_FORBIDDEN');
+        const section = await this.candidates.section(current, named.indexRevisionId, named.locator.headingPath);
+        this.abort(input.signal);
+        if (section.length && section.length <= 6) {
+          rows = section.filter((row, index, all) => all.findIndex(other => (other.contentHash ?? other.text) === (row.contentHash ?? row.text)) === index).slice(0, 6);
+          result.queryStrategy += '+NAMED_SECTION_CONTEXT';
+        } else if (section.length > 6) result.degradation.push('NAMED_SECTION_TOO_LONG_NEIGHBORS');
+      }
       await this.revalidateCandidates(access, rows);
       this.abort(input.signal);
       result.context = buildEvidenceContext(rows.map(row => this.evidence(row)), budget);

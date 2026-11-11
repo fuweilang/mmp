@@ -62,6 +62,9 @@ export class KnowledgeCandidateStore {
     return this.read(Array.isArray(scopes) ? scopes : [scopes], Prisma.sql`(${matches})>0`, score, 30);
   }
   exact(scope: CandidateScope, chunkId: string) { return this.read([scope], Prisma.sql`c.id=${chunkId}`, Prisma.sql`0`, 1); }
+  section(scope: CandidateScope, indexId: string, headingPath: string[]) {
+    return this.read([scope], Prisma.sql`c.index_revision_id=${indexId} AND c.locator->'headingPath'=${JSON.stringify(headingPath)}::jsonb`, Prisma.sql`-c.ordinal`, 7);
+  }
   neighbors(scope: CandidateScope, indexId: string, ordinal: number) {
     return this.read([scope], Prisma.sql`c.index_revision_id=${indexId} AND c.ordinal IN (${ordinal - 2},${ordinal - 1},${ordinal + 1},${ordinal + 2})`, Prisma.sql`-abs(c.ordinal - ${ordinal})`, 4);
   }
