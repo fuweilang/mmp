@@ -61,7 +61,7 @@
     "2152caf1a71e588e": {"kind":"object","properties":[{"name":"kind","type":"2e4debca12f2c449","optional":false},{"name":"messageId","type":"4cd48f3e5108bd6e","optional":false},{"name":"senderId","type":"4cd48f3e5108bd6e","optional":false},{"name":"senderName","type":"4cd48f3e5108bd6e","optional":false},{"name":"teamId","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
     "21fb6a90d5068f6a": {"kind":"object","properties":[{"name":"data","type":"ea08ec1df0c33108","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"4e011753f8263f43","optional":false}],"indices":[]},
     "224aa11d4d5f88c4": {"kind":"object","properties":[{"name":"form","type":"fee1caf8ab6a65c1","optional":false},{"name":"kind","type":"23af3759678a30de","optional":false}],"indices":[]},
-    "23af3759678a30de": {"kind":"literal","value":"mmp-session-title-llm"},
+    "23af3759678a30de": {"kind":"literal","value":"dsh-session-title-llm"},
     "24b10f7cdae64928": {"kind":"literal","value":"runtime-context"},
     "24ce31aa528272e5": {"kind":"object","properties":[{"name":"kind","type":"99e7e7d7fed55ae6","optional":false}],"indices":[]},
     "254dce209e735f9c": {"kind":"literal","value":"blocked"},

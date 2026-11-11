@@ -1,0 +1,32 @@
+# Shipped SDK profile, restored official binding, mocked account/Ground/supplier boundary only.
+- id: time-context
+  disabled: true
+- id: deepseek-account
+  disabled: true
+- id: skill-filesystem
+  config:
+    includeDefaultRoots: false
+- id: session-persistence-jsonl
+  config:
+    root: !!js mmpHomePath('sessions')
+    compression: none
+- id: llm-ground
+  config:
+    groundOrigin: https://rag.snapshot.invalid
+    catalogPollIntervalMs: 0
+- id: session-log-deepseek
+  config:
+    enabled: false
+- id: sdk-jsonrpc-server
+  inject: [sdkAppStartup, loader, officialKnowledgeSnapshot, officialAgentGallery]
+- insert:
+    - id: official-knowledge-snapshot
+      name: './ground-fixture.mjs'
+    - id: agent-preset-registry
+      name: '@mammoth-ai/mmp-agent-preset-registry'
+      config:
+        default: standard
+    - id: official-agent-gallery
+      name: '@mammoth-ai/mmp-official-agent-gallery'
+      config:
+        groundOrigin: https://rag.snapshot.invalid

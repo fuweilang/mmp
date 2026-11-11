@@ -4491,6 +4491,9 @@ importers:
       '@mammoth-ai/mmp-client-locale':
         specifier: workspace:*
         version: link:../locale
+      '@mammoth-ai/mmp-client-ui-chat':
+        specifier: workspace:*
+        version: link:../ui-chat
       '@mammoth-ai/mmp-client-ui-commands':
         specifier: workspace:*
         version: link:../ui-commands
@@ -4992,6 +4995,9 @@ importers:
       '@mammoth-ai/mmp-api-remotes':
         specifier: workspace:*
         version: link:../../api/remotes
+      '@mammoth-ai/mmp-api-workspace-controller':
+        specifier: workspace:*
+        version: link:../../api/workspace-controller
       '@mammoth-ai/mmp-client-locale':
         specifier: workspace:*
         version: link:../locale
@@ -14143,6 +14149,9 @@ importers:
       '@mammoth-ai/mmp-client-connection':
         specifier: workspace:*
         version: link:../../client/connection
+      '@mammoth-ai/mmp-compaction-basic':
+        specifier: workspace:*
+        version: link:../../compaction/compaction-basic
       '@mammoth-ai/mmp-deepseek-account':
         specifier: workspace:*
         version: link:../../credentials/deepseek-account
@@ -14185,6 +14194,9 @@ importers:
       '@mammoth-ai/mmp-typert-registry':
         specifier: workspace:*
         version: link:../../typert/registry
+      '@mammoth-ai/mmp-working-directory':
+        specifier: workspace:*
+        version: link:../../session/working-directory
       '@mammoth-ai/mmp-workspace':
         specifier: workspace:*
         version: link:../../workspace/workspace
@@ -14912,6 +14924,9 @@ importers:
       '@mammoth-ai/mmp-session-format-v3-to-v4':
         specifier: workspace:*
         version: link:../session-format-v3-to-v4
+      '@mammoth-ai/mmp-session-format-v4-to-v5':
+        specifier: workspace:*
+        version: link:../session-format-v4-to-v5
     devDependencies:
       '@mammoth-ai/cordis':
         specifier: workspace:~
@@ -14989,6 +15004,22 @@ importers:
       '@mammoth-ai/cordis':
         specifier: workspace:~
         version: link:../../../vendor/cordis
+
+  packages/session/session-format-v4-to-v5:
+    dependencies:
+      '@mammoth-ai/mmp-session-format':
+        specifier: workspace:*
+        version: link:../session-format
+      '@mammoth-ai/mmp-session-format-v3-to-v4':
+        specifier: workspace:*
+        version: link:../session-format-v3-to-v4
+    devDependencies:
+      '@mammoth-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@mammoth-ai/mmp-session':
+        specifier: workspace:*
+        version: link:../../core/session
 
   packages/session/session-log-deepseek:
     dependencies:
@@ -15075,6 +15106,9 @@ importers:
       '@mammoth-ai/mmp-session-format-v3-to-v4':
         specifier: workspace:*
         version: link:../session-format-v3-to-v4
+      '@mammoth-ai/mmp-session-format-v4-to-v5':
+        specifier: workspace:*
+        version: link:../session-format-v4-to-v5
       '@mammoth-ai/node-addon-system':
         specifier: workspace:~
         version: link:../../../native/system/packages/entry

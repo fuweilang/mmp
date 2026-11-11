@@ -1,26 +1,17 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import JSZip from 'jszip';
+import { parseDocument } from 'yaml';
+import { readSkillZip } from './skill-zip';
+import { indexSkillFiles, isSkillPackagePath, skillPackageDigest, skillPackageLimits, skillPackageStats, type SkillPackageFile, type SkillPackageLimits } from './skill-package-format';
 import { mkdir, writeFile, rm } from 'fs/promises';
 import { dirname, join, posix } from 'path';
 import { officialSkillPackageRelDir, uploadRoot } from '../knowledge/storage';
 
 export const SKILL_PACKAGE_MAX_UNCOMPRESSED = 10 * 1024 * 1024;
-export const SKILL_PACKAGE_MAX_FILES = 50;
+export const SKILL_PACKAGE_MAX_FILES = 500;
 export const SKILL_MD_MAX_BYTES = 100 * 1024;
 export const SKILL_RESOURCE_MAX_BYTES = 1 * 1024 * 1024;
 export const SKILL_NAME_MAX_CHARS = 40;
 export const SKILL_SUMMARY_MAX_CHARS = 140;
-
-const ALLOWED_RESOURCE_EXT = new Set([
-  '.md',
-  '.txt',
-  '.json',
-  '.csv',
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.webp',
-]);
 
 export const OFFICIAL_SKILL_CATEGORIES = ['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle'] as const;
 export type OfficialSkillCategoryKey = (typeof OFFICIAL_SKILL_CATEGORIES)[number];
@@ -114,6 +105,10 @@ export type SkillManifest = {
   license?: string;
   source?: string;
   references?: SkillReference[];
+  packageFormat?: 2;
+  files?: SkillPackageFile[];
+  packageDigest?: string;
+  limits?: SkillPackageLimits;
 };
 
 export type ParsedSkillPackage = {
@@ -204,37 +199,31 @@ function clipChars(value: string, max: number) {
   return [...String(value || '').trim()].slice(0, max).join('');
 }
 
-/** Read only flat `key: value` frontmatter. Does not evaluate YAML. */
-export function readSkillFrontmatter(markdown: string): {
-  name?: string;
-  description?: string;
-  license?: string;
-} {
+/** Read inert YAML display metadata while preserving the original Markdown bytes. */
+export function readSkillFrontmatter(markdown: string): { name?: string; description?: string; license?: string } {
   const text = String(markdown || '').replace(/^\uFEFF/, '');
   const found: { name?: string; description?: string; license?: string } = {};
   const licenseComment = /License:\s*([A-Za-z0-9.+-]{1,80})/.exec(text.slice(0, 800));
   if (licenseComment?.[1]) found.license = licenseComment[1];
-  if (!text.startsWith('---')) return found;
-  const end = text.indexOf('\n---', 3);
-  if (end < 0) return found;
-  const block = text.slice(3, end);
-  for (const line of block.split(/\r?\n/)) {
-    const match = /^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/.exec(line.trim());
-    if (!match) continue;
-    let value = match[2].trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1).trim();
-    }
-    if (!value) continue;
-    const key = match[1].toLowerCase();
-    if (key === 'name') found.name = value;
-    if (key === 'description') found.description = value;
-    if (key === 'license') found.license = value;
+  const match = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(text);
+  if (!match) {
+    if (text.startsWith('---')) throw skillPackageError('SKILL_PACKAGE_INVALID', 'SKILL.md 的 YAML 说明头未闭合');
+    return found;
   }
-  return found;
+  try {
+    const document = parseDocument(match[1], { schema: 'core', customTags: [], resolveKnownTags: false });
+    if (document.errors.length || document.warnings.length) throw new Error(document.errors[0]?.message || document.warnings[0]?.message);
+    const value: unknown = document.toJS({ maxAliasCount: 10 });
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('说明头必须是字段对象');
+    const record = value as Record<string, unknown>;
+    for (const key of ['name', 'description', 'license'] as const) {
+      if (record[key] !== undefined && typeof record[key] !== 'string') throw new Error(`${key} 必须是文本`);
+      if (typeof record[key] === 'string' && record[key].trim()) found[key] = record[key].trim();
+    }
+    return found;
+  } catch (error) {
+    throw skillPackageError('SKILL_PACKAGE_INVALID', `SKILL.md 的 YAML 格式错误：${error instanceof Error ? error.message : '无法解析'}`);
+  }
 }
 
 function manifestRecord(manifest: SkillManifest): Record<string, unknown> {
@@ -259,7 +248,7 @@ function writeManifestFile(files: Map<string, Buffer>, manifest: SkillManifest) 
 export function retargetPackageKey(parsed: ParsedSkillPackage, key: string) {
   parsed.manifest.key = assertSkillKey(key);
   parsed.keyDerived = false;
-  writeManifestFile(parsed.files, parsed.manifest);
+  if (parsed.manifest.packageFormat !== 2) writeManifestFile(parsed.files, parsed.manifest);
 }
 
 function extOf(path: string) {
@@ -271,55 +260,13 @@ function extOf(path: string) {
 
 /** Directory that contains the single executable SKILL.md, after junk is ignored. */
 export function locateSkillPackageRoot(paths: string[]): string {
-  const skillMds = paths.filter((path) => path === 'SKILL.md' || path.endsWith('/SKILL.md'));
-  const primary = skillMds.filter((path) => !/(^|\/)(references|resources)\//.test(path));
-  if (!primary.length) {
-    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包缺少 SKILL.md');
-  }
-  if (primary.length > 1) {
-    throw skillPackageError(
-      'SKILL_PACKAGE_INVALID',
-      '技能包有多个 SKILL.md 入口，无法确定使用哪一个',
-    );
-  }
-  const only = primary[0]!;
-  return only === 'SKILL.md' ? '' : only.slice(0, -'/SKILL.md'.length);
-}
-
-async function readZipEntries(buffer: Buffer) {
-  let archive: JSZip;
-  try {
-    archive = await JSZip.loadAsync(buffer, { createFolders: false });
-  } catch {
-    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包已损坏，无法解压');
-  }
-  const entries: Array<{ path: string; file: JSZip.JSZipObject }> = [];
-  archive.forEach((relativePath, file) => {
-    if (file.dir) return;
-    const path = normalizeZipPath(relativePath);
-    if (!path) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包包含不安全路径');
-    }
-    if (isIgnorableZipPath(path)) return;
-    entries.push({ path, file });
-  });
-  if (entries.length > SKILL_PACKAGE_MAX_FILES) {
-    throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包文件数量超过限制');
-  }
-  let uncompressed = 0;
-  const files = new Map<string, Buffer>();
-  for (const entry of entries) {
-    const data = Buffer.from(await entry.file.async('nodebuffer'));
-    uncompressed += data.length;
-    if (uncompressed > SKILL_PACKAGE_MAX_UNCOMPRESSED) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包解压后超过 10MB 限制');
-    }
-    if (files.has(entry.path)) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包存在重复文件');
-    }
-    files.set(entry.path, data);
-  }
-  return files;
+  if (paths.includes('SKILL.md')) return '';
+  const candidates = paths.filter(path => path.endsWith('/SKILL.md'));
+  if (!candidates.length) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包缺少 SKILL.md');
+  const roots = candidates.map(path => path.slice(0, -'/SKILL.md'.length));
+  const primary = roots.filter(root => paths.every(path => path.startsWith(`${root}/`)));
+  if (primary.length !== 1) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包有多个 SKILL.md 入口，请选择一个技能单独上传');
+  return primary[0]!;
 }
 
 function parseManifest(raw: Buffer): SkillManifest {
@@ -356,7 +303,7 @@ function parseManifest(raw: Buffer): SkillManifest {
         throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包无法识别，请换一个包再试');
       }
       const path = normalizeZipPath(String((item as { path?: unknown }).path ?? ''));
-      if (!path || !path.startsWith('references/')) {
+      if (!path || !isSkillPackagePath(path)) {
         throw skillPackageError('SKILL_PACKAGE_INVALID', 'skill.json 引用了不存在的 references 路径');
       }
       references.push({ path });
@@ -383,123 +330,60 @@ function optionalMeta(value: unknown, max: number) {
   return text || undefined;
 }
 
-/**
- * Parse and validate a managed skill ZIP into a normalized in-memory package.
- * Accepts either flat root or a single top-level directory (optionally matching key).
- * Maps resources/* → references/* for storage/manifest consistency.
- */
+/** Parse a complete, bounded single-skill ZIP without rewriting any admitted file. */
 export async function parseSkillZip(buffer: Buffer): Promise<ParsedSkillPackage> {
   if (!buffer?.length) throw skillPackageError('SKILL_PACKAGE_INVALID', '请选择技能包');
-  const rawFiles = await readZipEntries(buffer);
-  const rootPrefix = locateSkillPackageRoot([...rawFiles.keys()]);
-  const rooted = new Map<string, Buffer>();
-  for (const [norm, data] of rawFiles) {
-    if (!rootPrefix) {
-      rooted.set(norm, data);
-      continue;
-    }
-    if (norm === rootPrefix) continue;
-    if (!norm.startsWith(`${rootPrefix}/`)) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包包含技能目录以外的文件');
-    }
-    rooted.set(norm.slice(rootPrefix.length + 1), data);
+  const limits = skillPackageLimits();
+  const archive = await readSkillZip(buffer, limits);
+  const rootPrefix = locateSkillPackageRoot([...archive.files.keys()]);
+  const files = new Map<string, Buffer>(), executable = new Set<string>();
+  for (const [path, bytes] of archive.files) {
+    const relative = rootPrefix ? path.slice(rootPrefix.length + 1) : path;
+    files.set(relative, bytes);
+    if (archive.executable.has(path)) executable.add(relative);
   }
-
-  const skillMd = rooted.get('SKILL.md');
+  const skillMd = files.get('SKILL.md');
   if (!skillMd) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包缺少 SKILL.md');
-  if (skillMd.length > SKILL_MD_MAX_BYTES) {
-    throw skillPackageError('SKILL_PACKAGE_INVALID', 'SKILL.md 超过 100KB');
-  }
-  const instruction = skillMd.toString('utf8');
+  if (skillMd.length > limits.maxInstructionBytes) throw skillPackageError('SKILL_PACKAGE_INVALID', 'SKILL.md 超过 100KB 限制');
+  let instruction: string;
+  try { instruction = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(skillMd); }
+  catch { throw skillPackageError('SKILL_PACKAGE_INVALID', 'SKILL.md 必须是 UTF-8 文本'); }
   if (!instruction.trim()) throw skillPackageError('SKILL_PACKAGE_INVALID', 'SKILL.md 内容为空');
-
   const frontmatter = readSkillFrontmatter(instruction);
-  const manifestBuf = rooted.get('skill.json');
-  let manifest: SkillManifest;
-  let keyDerived = false;
-  if (manifestBuf) {
-    manifest = parseManifest(manifestBuf);
-  } else {
-    keyDerived = true;
-    const folder = rootPrefix.split('/').filter(Boolean).pop() || '';
+  const sourceManifest = files.get('skill.json');
+  let manifest: SkillManifest | undefined;
+  if (sourceManifest) {
+    let value: unknown;
+    try { value = JSON.parse(sourceManifest.toString('utf8')); }
+    catch { throw skillPackageError('SKILL_PACKAGE_INVALID', 'skill.json 无法解析'); }
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw skillPackageError('SKILL_PACKAGE_INVALID', 'skill.json 必须是 JSON 对象');
+    const obj = value as Record<string, unknown>, owns = (key: string) => Object.prototype.hasOwnProperty.call(obj, key);
+    if (owns('key') && owns('name') && (owns('description') || owns('summary')) && (obj.entry === undefined || obj.entry === 'SKILL.md')) {
+      manifest = parseManifest(sourceManifest);
+    }
+  }
+  const keyDerived = manifest === undefined;
+  if (!manifest) {
+    const folder = rootPrefix.split('/').pop() || '';
     const heading = /^#\s+(.+)$/m.exec(instruction)?.[1]?.trim() || '';
     const name = clipChars(frontmatter.name || heading || folder || '未命名技能', SKILL_NAME_MAX_CHARS);
-    const description = clipChars(frontmatter.description || '', SKILL_SUMMARY_MAX_CHARS);
-    const key = slugSkillKey(frontmatter.name || folder || name) || 'skill-import';
     manifest = {
-      key,
+      key: slugSkillKey(frontmatter.name || folder || name) || 'skill-import',
       name: assertSkillDisplayName(name),
-      description: assertSkillSummary(description),
+      description: assertSkillSummary(clipChars(frontmatter.description || '', SKILL_SUMMARY_MAX_CHARS)),
       entry: 'SKILL.md',
-      ...(frontmatter.license ? { license: clipChars(frontmatter.license, 80) } : {}),
     };
   }
-  if (!manifest.license && frontmatter.license) {
-    manifest = { ...manifest, license: clipChars(frontmatter.license, 80) };
+  if (!manifest.license && frontmatter.license) manifest.license = clipChars(frontmatter.license, 80);
+  for (const reference of manifest.references ?? []) {
+    if (!files.has(reference.path)) throw skillPackageError('SKILL_PACKAGE_INVALID', `技能包声明的文件不存在：${reference.path}`);
   }
-
-  const outFiles = new Map<string, Buffer>();
-  outFiles.set('SKILL.md', skillMd);
-
-  // Collect resources/ → references/
-  const resourceFiles: Array<{ rel: string; data: Buffer }> = [];
-  for (const [rel, data] of rooted) {
-    if (rel === 'skill.json' || rel === 'SKILL.md') continue;
-    if (rel.startsWith('resources/')) {
-      const rest = rel.slice('resources/'.length);
-      if (!rest || rest.includes('..')) {
-        throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包包含不安全路径');
-      }
-      resourceFiles.push({ rel: `references/${rest}`, data });
-      continue;
-    }
-    if (rel.startsWith('references/')) {
-      resourceFiles.push({ rel, data });
-      continue;
-    }
-    throw skillPackageError('SKILL_PACKAGE_INVALID', `技能包包含无法识别的文件：${rel}`);
-  }
-
-  const declared = new Set((manifest.references ?? []).map((r) => r.path));
-  const seen = new Set<string>();
-  for (const item of resourceFiles) {
-    if (seen.has(item.rel)) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包存在重复文件');
-    }
-    seen.add(item.rel);
-    if (item.data.length > SKILL_RESOURCE_MAX_BYTES) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', '引用资源单文件不能超过 1MB');
-    }
-    const ext = extOf(item.rel);
-    if (!ALLOWED_RESOURCE_EXT.has(ext)) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', `技能包包含不支持的文件类型：${item.rel}`);
-    }
-    outFiles.set(item.rel, item.data);
-  }
-
-  // If manifest declares references, every declared path must exist; undeclared resources are allowed and folded into manifest.
-  for (const path of declared) {
-    if (!outFiles.has(path)) {
-      throw skillPackageError('SKILL_PACKAGE_INVALID', `技能包声明的文件不存在：${path}`);
-    }
-  }
-  const references = [...outFiles.keys()]
-    .filter((p) => p.startsWith('references/'))
-    .sort()
-    .map((path) => ({ path }));
-  const finalManifest: SkillManifest = {
-    ...manifest,
-    references: references.length ? references : undefined,
-  };
-  writeManifestFile(outFiles, finalManifest);
-
-  return {
-    manifest: finalManifest,
-    instruction,
-    files: outFiles,
-    resourceCount: references.length,
-    keyDerived,
-  };
+  const index = indexSkillFiles(files, executable);
+  Object.assign(manifest, {
+    packageFormat: 2, files: index, packageDigest: skillPackageDigest(index), limits,
+    references: index.filter(f => /^(references|resources)\//.test(f.path)).map(({ path }) => ({ path })),
+  });
+  return { manifest, instruction, files, resourceCount: index.length - 1, keyDerived };
 }
 
 /** Build equivalent package from admin form fields (no ZIP). */
@@ -517,7 +401,8 @@ export function buildSkillPackageFromForm(input: {
   const instruction = String(input.instruction || '');
   if (!instruction.trim()) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能指令不能为空');
   const instructionBuf = Buffer.from(instruction, 'utf8');
-  if (instructionBuf.length > SKILL_MD_MAX_BYTES) {
+  const limits = skillPackageLimits();
+  if (instructionBuf.length > Math.min(limits.maxInstructionBytes, limits.maxTotalBytes)) {
     throw skillPackageError('SKILL_PACKAGE_INVALID', '技能说明文件过大');
   }
   const categories = parseSkillCategories(
@@ -532,7 +417,8 @@ export function buildSkillPackageFromForm(input: {
   assignManifestCategories(manifest, categories);
   const files = new Map<string, Buffer>();
   files.set('SKILL.md', instructionBuf);
-  writeManifestFile(files, manifest);
+  const index = indexSkillFiles(files, new Set());
+  Object.assign(manifest, { packageFormat: 2, files: index, packageDigest: skillPackageDigest(index), limits });
   return { manifest, instruction, files, resourceCount: 0, keyDerived: false };
 }
 
@@ -544,11 +430,13 @@ export async function writeSkillPackageToDisk(
   sourceZip?: Buffer,
 ): Promise<{ storagePath: string; sourceZipPath: string | null }> {
   const relDir = officialSkillPackageRelDir(skillId, revision);
-  const absDir = join(uploadRoot(), relDir);
+  const packageDir = join(uploadRoot(), relDir);
+  const contentRelDir = parsed.manifest.packageFormat === 2 ? posix.join(relDir.replace(/\\/g, '/'), 'content') : relDir;
+  const absDir = join(uploadRoot(), contentRelDir);
   await rm(absDir, { recursive: true, force: true });
   await mkdir(absDir, { recursive: true });
   for (const [rel, data] of parsed.files) {
-    const safeRel = normalizeZipPath(rel);
+    const safeRel = parsed.manifest.packageFormat === 2 ? (isSkillPackagePath(rel) ? rel : null) : normalizeZipPath(rel);
     if (!safeRel) throw skillPackageError('SKILL_PACKAGE_INVALID', '技能包路径不安全');
     const abs = join(absDir, ...safeRel.split('/'));
     // Ensure still under absDir
@@ -561,9 +449,9 @@ export async function writeSkillPackageToDisk(
   let sourceZipPath: string | null = null;
   if (sourceZip?.length) {
     sourceZipPath = posix.join(relDir.replace(/\\/g, '/'), 'package.zip');
-    await writeFile(join(absDir, 'package.zip'), sourceZip);
+    await writeFile(join(packageDir, 'package.zip'), sourceZip);
   }
-  return { storagePath: relDir.replace(/\\/g, '/'), sourceZipPath };
+  return { storagePath: contentRelDir.replace(/\\/g, '/'), sourceZipPath };
 }
 
 export function packagePreview(parsed: ParsedSkillPackage) {
@@ -574,6 +462,7 @@ export function packagePreview(parsed: ParsedSkillPackage) {
     category: parsed.manifest.category ?? null,
     categories: storedCategories(parsed.manifest),
     resourceCount: parsed.resourceCount,
+    ...(parsed.manifest.files ? skillPackageStats(parsed.manifest.files) : {}),
     instructionBytes: Buffer.byteLength(parsed.instruction, 'utf8'),
     keyDerived: parsed.keyDerived,
     license: parsed.manifest.license ?? null,

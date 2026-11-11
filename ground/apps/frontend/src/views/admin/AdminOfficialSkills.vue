@@ -205,7 +205,14 @@
             <el-descriptions-item label="标识">{{ zipPreview.key }}</el-descriptions-item>
             <el-descriptions-item label="预览名称">{{ zipPreview.name }}</el-descriptions-item>
             <el-descriptions-item label="预览介绍">{{ zipPreview.summary || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="资源数">{{ zipPreview.resourceCount }}</el-descriptions-item>
+            <template v-if="zipPreview.fileCount !== undefined">
+              <el-descriptions-item label="文件总数">{{ zipPreview.fileCount }}</el-descriptions-item>
+              <el-descriptions-item label="脚本">{{ zipPreview.scriptCount ?? 0 }}</el-descriptions-item>
+              <el-descriptions-item label="参考资料">{{ zipPreview.referenceCount ?? 0 }}</el-descriptions-item>
+              <el-descriptions-item label="素材与模板">{{ zipPreview.assetCount ?? 0 }}</el-descriptions-item>
+              <el-descriptions-item label="展开大小">{{ ((zipPreview.totalBytes ?? 0) / 1024).toFixed(1) }} KB</el-descriptions-item>
+            </template>
+            <el-descriptions-item v-else label="资源数">{{ zipPreview.resourceCount }}</el-descriptions-item>
           </el-descriptions>
         </template>
 

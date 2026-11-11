@@ -2,6 +2,9 @@
   "name": "@mammoth/backend",
   "version": "0.0.1",
   "private": true,
+  "engines": {
+    "node": ">=22.2.0"
+  },
   "scripts": {
     "start:dev": "prisma generate && node scripts/free-port.cjs && nest start --watch",
     "build": "prisma generate && nest build",
@@ -13,7 +16,14 @@
     "test:library:db": "node --import tsx --test test/library/library.postgres.spec.ts",
     "postinstall": "prisma generate",
     "test:library:custody": "node --import tsx --test test/library/library.custody.spec.ts",
-    "test:library:http": "node --test test/library/library.http.test.cjs test/library/library.sharing.http.test.cjs test/library/library.admin.http.test.cjs"
+    "test:library:http": "node --test --test-concurrency=1 test/library/library.http.test.cjs test/library/library.sharing.http.test.cjs test/library/library.admin.http.test.cjs",
+    "test:library:backup": "node --test --test-concurrency=1 test/library/library.backup.test.cjs",
+    "knowledge:worker": "node dist/knowledge-core/worker-main.js",
+    "test:knowledge-core": "node --import tsx --test test/knowledge-core/core.unit.test.ts test/knowledge-core/ingestion.unit.test.ts",
+    "test:knowledge-core:db": "node --import tsx --test test/knowledge-core/ingestion.postgres.test.ts",
+    "test:knowledge-retrieval": "node --import tsx --test test/knowledge-core/retrieval.unit.test.ts test/knowledge-core/library-source.unit.test.ts",
+    "test:knowledge-retrieval:db": "node --import tsx --test test/knowledge-core/retrieval.postgres.test.ts",
+    "test:knowledge-retrieval:http": "node --test test/knowledge-core/admin.http.test.cjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -31,13 +41,17 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
+    "csv-parse": "6.1.0",
     "fast-xml-parser": "^5.12.0",
     "jose": "^6.2.13",
+    "js-tiktoken": "1.0.21",
     "jszip": "3.10.1",
     "pdf-parse": "2.4.5",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "sharp": "^0.35.5"
+    "sharp": "^0.35.5",
+    "yaml": "2.9.0",
+    "yauzl": "3.4.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",
@@ -46,6 +60,7 @@
     "@types/cookie-parser": "^1.4.8",
     "@types/express": "^5.0.1",
     "@types/node": "^22.14.0",
+    "@types/yauzl": "2.10.3",
     "prisma": "^6.6.0",
     "tsx": "^4.19.3",
     "typescript": "~5.7.3"

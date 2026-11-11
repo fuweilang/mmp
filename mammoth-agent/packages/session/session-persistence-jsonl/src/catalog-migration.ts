@@ -2,7 +2,7 @@
 
 import { stat } from 'node:fs/promises'
 import { basename } from 'node:path'
-import { historicalSessionFormatCatalog, sessionFormatCatalog } from '@mammoth-ai/mmp-session-format-catalog'
+import { historicalSessionFormatCatalog, historicalV4SessionFormatCatalog, sessionFormatCatalog } from '@mammoth-ai/mmp-session-format-catalog'
 import { historicalChildCatalogSource } from '@mammoth-ai/mmp-session-format-v3-to-v4'
 import { SessionFormatUnsupportedMigrationError } from '@mammoth-ai/mmp-session-format'
 import type { SessionFormatJsonObject } from '@mammoth-ai/mmp-session-format'
@@ -50,7 +50,7 @@ export async function prepareCatalogFacts(
     let restored: Awaited<ReturnType<typeof readDecodedJsonlSource>>
     try {
       restored = await readDecodedJsonlSource(source.path, version, compression, {
-        createRestore: header => (version <= 3 ? historicalSessionFormatCatalog : sessionFormatCatalog).createRestore(header, {
+        createRestore: header => (version <= 3 ? historicalSessionFormatCatalog : version === 4 ? historicalV4SessionFormatCatalog : sessionFormatCatalog).createRestore(header, {
           recovery: 'recoverable', validation: 'current',
         }),
       }, signal)

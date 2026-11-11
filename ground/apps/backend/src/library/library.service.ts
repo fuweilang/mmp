@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { buildAskPrompt, sanitizeAnswer } from './library.ask';
-import { LibraryError, libraryNotFound } from './library.errors';
+import { FILE_PURGE_BLOCKED_REASON, LibraryError, libraryNotFound } from './library.errors';
 import {
   assertAllowedUpload,
   assertMediaType,
@@ -573,11 +573,16 @@ export class LibraryService {
     if (node.state !== 'RECYCLED') {
       throw new LibraryError(400, '请先回收到回收站再彻底删除', 'BAD_STATE');
     }
+<<<<<<< HEAD
     const descendants = this.recycledSubtree(await this.store.listNodes(actor.tenantId), node.id);
     if (descendants.some(row => row.state === 'ACTIVE')) throw new LibraryError(400, '目录不为空', 'FOLDER_NONEMPTY');
     for (const child of descendants) {
       if (child.state === 'RECYCLED') await this.purgeStored(child);
     }
+=======
+    if (node.kind === 'FILE') throw new LibraryError(409, FILE_PURGE_BLOCKED_REASON, 'REFERENCE_UNVERIFIED');
+    await this.assertNoLiveChildren(actor.tenantId, node.id);
+>>>>>>> origin/4.0
     await this.purgeStored(node);
     await this.writeAudit(actor, 'library_purge', { nodeId: node.id });
     return { ok: true, code: 'SOURCE_GONE' as const };
@@ -599,13 +604,21 @@ export class LibraryService {
     const bytes = await this.store.getBlob(version.storageKey);
     if (!bytes) throw new LibraryError(410, '来源已彻底删除，不能改指向其他文件或版本', 'SOURCE_GONE');
     const parsed = await parseLibraryBytes(version.originalName, bytes);
-    await this.store.updateVersion(version.id, {
+    await this.store.commitParseResult({
+      tenantId: actor.tenantId,
+      nodeId: node.id,
+      versionId: version.id,
       parseStatus: parsed.status,
       parseReason: parsed.reason,
       extractTruncated: parsed.truncated,
+      chunks: this.chunkRows(version, parsed.chunks),
+      audit: {
+        id: this.store.createId(), tenantId: actor.tenantId, userId: actor.userId,
+        action: 'library_retry_parse',
+        meta: { nodeId: node.id, versionId: version.id, status: parsed.status },
+        createdAt: this.now(),
+      },
     });
-    await this.store.replaceChunks(version.id, version.tenantId, this.chunkRows(version, parsed.chunks));
-    await this.writeAudit(actor, 'library_retry_parse', { nodeId: node.id, versionId: version.id, status: parsed.status });
     return this.toItem(actor, node, await this.custodiesFor(actor), null);
   }
 
@@ -747,6 +760,17 @@ export class LibraryService {
       highlightNote: precise ? null : '没有可靠页码，只能定位到当时使用的段落摘录。',
       replacementVersionId: null,
     };
+  }
+
+  /** Server-selected exact version only. No ordinal/character prefilter; owning ACL is rechecked on every read. */
+  async readRetrievalVersion(actor: Actor, nodeId: string, versionId: string) {
+    const opened = await this.openBytes(actor, nodeId, versionId, false);
+    if (opened.blocked || !opened.version || opened.version.parseStatus !== 'READY' || opened.version.extractTruncated)
+      throw new LibraryError(409, '来源未完整就绪', 'SOURCE_NOT_READY');
+    const chunks = await this.store.listChunks(opened.version.id);
+    await this.auditCustodyRead(actor, opened.node);
+    return {nodeId:opened.node.id,versionId:opened.version.id,tenantId:opened.node.tenantId,
+      name:opened.node.name,contentHash:opened.version.sha256,chunks};
   }
 
   async markUsed(actor: Actor, nodeId: string, versionId: string) {
@@ -1372,6 +1396,7 @@ export class LibraryService {
       linkUrl: node.kind === 'LINK' && node.state === 'ACTIVE' ? node.linkUrl : null,
       mine: node.ownerUserId === actor.userId,
       canManage: canManage(actor, node, custodies, this.now()),
+      purgeBlockedReason: node.kind === 'FILE' ? FILE_PURGE_BLOCKED_REASON : null,
       currentVersion: version ? this.brief(version) : null,
       createdAt: new Date(node.createdAt).toISOString(),
       updatedAt: new Date(node.updatedAt).toISOString(),

@@ -1,3 +1,4 @@
+import { ExpertRuntimeService } from '../official-agent/expert-runtime.service';
 import type { ModelPricingSnapshot } from '../billing/model-pricing';
 import type { TokenUsageSettlementMark } from '../billing/token-usage.service';
 import {
@@ -22,8 +23,12 @@ import { ApplicationLog } from '../logging/application-log.service';
 import { LlmHealthService } from './llm-health.service';
 import { LlmConcurrencyService } from './llm-concurrency.service';
 import { modelCapabilities } from './model-capabilities';
+<<<<<<< HEAD
 import { estimateInputTokens, promptFitsContext } from './prompt-tokens';
 import { decryptApiKey } from './llm-key-crypto';
+=======
+import { resolveChatProviderConfiguration } from './provider-configuration';
+>>>>>>> origin/4.0
 
 interface UpstreamUsage {
   cacheWrite5mTokens?: number;
@@ -59,6 +64,11 @@ export type ModelRequestAttribution = {
   agentId?: string;
   versionId?: string;
   sessionId?: string;
+  previewId?: string;
+  helperPurpose?: 'compaction' | 'session-title';
+  helperOrigin?: {agentId:string;versionId?:string;previewId?:string};
+  /** Server-only delegation origin, never accepted as a client payload. */
+  previewOrigin?: {agentId:string;previewId:string};
 };
 
 /**
@@ -87,6 +97,7 @@ export class LlmChatGatewayService {
     private health: LlmHealthService,
     private concurrency: LlmConcurrencyService,
     private operationLog: ApplicationLog,
+    private expertRuntime?: ExpertRuntimeService,
   ) {}
 
   /**
@@ -200,23 +211,7 @@ export class LlmChatGatewayService {
     },
     model: { id: string; modelId: string; displayName: string; thinkingEnabled: boolean },
   ): ResolvedUpstreamModel {
-    if (!provider.apiKeyEnc) {
-      throw new ServiceUnavailableException(`厂商「${provider.name}」未配置 API Key`);
-    }
-    const baseUrl = (provider.baseUrl || '').trim();
-    if (!baseUrl) {
-      throw new ServiceUnavailableException(`厂商「${provider.name}」未配置 base_url`);
-    }
-    let apiKey: string;
-    try {
-      apiKey = decryptApiKey(provider.apiKeyEnc);
-    } catch (e) {
-      this.logger.error(`decrypt api key failed for provider=${provider.name}`);
-      throw new ServiceUnavailableException('厂商 Key 解密失败，请联系平台管理员重配');
-    }
-    if (!apiKey.trim()) {
-      throw new ServiceUnavailableException(`厂商「${provider.name}」API Key 为空`);
-    }
+    const {baseUrl,apiKey}=resolveChatProviderConfiguration(provider);
     return {
       providerId: provider.id,
       providerName: provider.name,
@@ -285,7 +280,13 @@ export class LlmChatGatewayService {
       }
       releaseConcurrency = this.concurrency.acquire(user.id, tenantId);
 
-      const requested=String(body.model??'auto').trim()||'auto';
+      if(attribution?.previewId && (!attribution.agentId || attribution.versionId))throw new BadRequestException('INVALID_PREVIEW_ATTRIBUTION');
+      if(attribution?.agentId && !attribution.versionId && !attribution.previewId)throw new BadRequestException('INVALID_EXPERT_ATTRIBUTION');
+      const binding=attribution?.agentId?{agentId:attribution.agentId,versionId:attribution.versionId,previewId:attribution.previewId}:undefined;
+      if(attribution?.helperOrigin)await this.expertRuntime!.load(user,tenantId,attribution.helperOrigin);
+      if(attribution?.previewOrigin)await this.expertRuntime!.load(user,tenantId,attribution.previewOrigin);
+      const policy=binding?await this.expertRuntime!.enforceModel(user,tenantId,binding):undefined;
+      const requested=policy?.model??(String(body.model??'auto').trim()||'auto');
       const automatic=requested==='auto'||requested==='*';
       await this.billing.precheck(user,tenantId);
       const rows=await this.candidates(user,tenantId,body);
@@ -313,6 +314,10 @@ export class LlmChatGatewayService {
           try{await this.billing.releaseFrozen(user,tenantId,{freezeKey:keys.freezeKey,unfreezeKey:keys.unfreezeKey,reason});}
           catch(error){this.operationLog.event('error','billing.unfreeze_failed',{userId:user.id,tenantId,model:resolved.modelRef,reason,error});}
         };
+        if(binding || attribution?.helperOrigin){
+          try{if(attribution?.helperOrigin)await this.expertRuntime!.load(user,tenantId,attribution.helperOrigin);if(attribution?.previewOrigin)await this.expertRuntime!.load(user,tenantId,attribution.previewOrigin);const current=binding?await this.expertRuntime!.enforceModel(user,tenantId,binding):undefined;if(current?.model && current.model!==resolved.modelRef)throw new ForbiddenException('FIXED_GENERATION_MODEL_CHANGED');}
+          catch(error){await releaseFrozen('runtime-authorization-revoked');throw error;}
+        }
         const upstreamBody:Record<string,unknown>={...body,model:resolved.modelId,stream,thinking:{type:resolved.thinkingEnabled||requestHasTools(body)?'enabled':'disabled'}};
         if(stream)upstreamBody.stream_options={...(typeof body.stream_options==='object'&&body.stream_options?body.stream_options:{}),include_usage:true};
         const started=Date.now();
@@ -385,7 +390,13 @@ export class LlmChatGatewayService {
         throw new BadRequestException('messages 必须是数组');
       }
       releaseConcurrency = this.concurrency.acquire(user.id, tenantId);
-      const requested = String(body.model ?? 'auto').trim() || 'auto';
+      if(attribution?.previewId && (!attribution.agentId || attribution.versionId))throw new BadRequestException('INVALID_PREVIEW_ATTRIBUTION');
+      if(attribution?.agentId && !attribution.versionId && !attribution.previewId)throw new BadRequestException('INVALID_EXPERT_ATTRIBUTION');
+      const binding=attribution?.agentId?{agentId:attribution.agentId,versionId:attribution.versionId,previewId:attribution.previewId}:undefined;
+      if(attribution?.helperOrigin)await this.expertRuntime!.load(user,tenantId,attribution.helperOrigin);
+      if(attribution?.previewOrigin)await this.expertRuntime!.load(user,tenantId,attribution.previewOrigin);
+      const policy=binding?await this.expertRuntime!.enforceModel(user,tenantId,binding):undefined;
+      const requested = policy?.model ?? (String(body.model ?? 'auto').trim() || 'auto');
       const automatic = requested === 'auto' || requested === '*';
       await this.billing.precheck(user, tenantId);
       const rows = await this.candidates(user, tenantId, body);
@@ -398,6 +409,7 @@ export class LlmChatGatewayService {
           message: '暂无可用模型，请稍后重试或联系管理员',
         });
       }
+      if(!automatic&&!rows.some(m=>m.id===routes[0].modelRowId))throw new BadRequestException('FIXED_MODEL_TASK_UNSUPPORTED');
       for (let attempt = 0; attempt < routes.length; attempt++) {
         const resolved = routes[attempt];
         const states = await this.health.states();
@@ -444,6 +456,7 @@ export class LlmChatGatewayService {
             });
           }
         };
+        if(binding || attribution?.helperOrigin){try{if(attribution?.helperOrigin)await this.expertRuntime!.load(user,tenantId,attribution.helperOrigin);if(attribution?.previewOrigin)await this.expertRuntime!.load(user,tenantId,attribution.previewOrigin);const current=binding?await this.expertRuntime!.enforceModel(user,tenantId,binding):undefined;if(current?.model && current.model!==resolved.modelRef)throw new ForbiddenException('FIXED_GENERATION_MODEL_CHANGED');}catch(error){await releaseFrozen('runtime-authorization-revoked');throw error;}}
         const upstreamBody: Record<string, unknown> = {
           ...body,
           model: resolved.modelId,
@@ -608,12 +621,12 @@ export class LlmChatGatewayService {
 
     const cached = Math.max(0, Math.floor(Number(usage?.prompt_tokens_details?.cached_tokens ?? usage?.prompt_cache_hit_tokens ?? 0)));
     this.operationLog.event('info','model.usage',{userId:user.id,tenantId,model:resolved.modelRef,inputTokens:input,outputTokens:output,cachedTokens:cached,hasUsage:!!usage,officialAgentId:attribution?.agentId,officialAgentVersionId:attribution?.versionId});
-    let usageMeta: Prisma.InputJsonObject = { requestId:this.operationLog.requestId()??null, exempt: user.isPlatformAdmin, billingStatus: usage && input + output > 0 ? 'usage-recorded' : 'usage-missing' };
-    if (attribution?.agentId) {
+    let usageMeta: Prisma.InputJsonObject = { actorUserId:user.id, previewId:attribution?.previewId??attribution?.previewOrigin?.previewId??attribution?.helperOrigin?.previewId??null, usagePurpose:(attribution?.previewId||attribution?.previewOrigin||attribution?.helperOrigin?.previewId)?'PLATFORM_OPERATIONAL_PREVIEW':'CHAT', helperPurpose:attribution?.helperPurpose??null, requestId:this.operationLog.requestId()??null, exempt: user.isPlatformAdmin, billingStatus: usage && input + output > 0 ? 'usage-recorded' : 'usage-missing' };
+    if (attribution?.agentId || attribution?.helperOrigin) {
       usageMeta = {
         ...usageMeta,
-        officialAgentId: attribution.agentId,
-        officialAgentVersionId: attribution.versionId,
+        officialAgentId: attribution.agentId ?? attribution.helperOrigin!.agentId,
+        officialAgentVersionId: attribution.versionId ?? attribution.helperOrigin?.versionId ?? null,
       };
     }
     if (usage && input + output > 0) {
@@ -629,7 +642,7 @@ export class LlmChatGatewayService {
         totalTokens: total,
         modelCalls: 1,
         threadId: attribution?.sessionId ?? '',
-        agentId: attribution?.agentId ?? '',
+        agentId: attribution?.agentId ?? attribution?.helperOrigin?.agentId ?? '',
         clientKind: 'gateway',
         source: 'ground_chat_gateway',
       }, usageMeta);

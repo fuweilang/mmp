@@ -852,7 +852,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--scenario",
-        choices=("all", "sdk-default", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-fs-search", "sdk-spawn-node", "sdk-mcp", "sdk-snapshot", "sdk-recovery", "sdk-restart", "sdk-profile-plugin", "sdk-plugin-manager", "sdk-office", "sdk-authoring", "sdk-live", "runner", "direct"),
+        choices=("all", "sdk-default", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-fs-search", "sdk-spawn-node", "sdk-mcp", "sdk-snapshot", "sdk-recovery", "sdk-restart", "sdk-official-expert", "sdk-profile-plugin", "sdk-plugin-manager", "sdk-office", "sdk-authoring", "sdk-live", "runner", "direct"),
         default="all",
     )
     parser.add_argument("--exe", type=Path)
@@ -871,9 +871,9 @@ def main() -> None:
         parser.error("--scenario sdk-profile-plugin requires --installed-wheel")
     if args.installed_wheel:
         args.exe = assert_installed_wheel_environment()
-    if args.scenario in {"all", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-fs-search", "sdk-spawn-node", "sdk-snapshot", "sdk-recovery", "sdk-restart", "sdk-office", "sdk-authoring", "sdk-plugin-manager", "runner", "direct"} and args.exe is None:
+    if args.scenario in {"all", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-fs-search", "sdk-spawn-node", "sdk-snapshot", "sdk-recovery", "sdk-restart", "sdk-official-expert", "sdk-office", "sdk-authoring", "sdk-plugin-manager", "runner", "direct"} and args.exe is None:
         parser.error("--exe is required for custom, minimal, dynamic-tools, fs-search, spawn-node, snapshot, recovery, restart, office, runner, and direct scenarios")
-    if args.update_snapshots and args.scenario not in {"all", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-snapshot", "sdk-recovery", "sdk-restart", "sdk-authoring"}:
+    if args.update_snapshots and args.scenario not in {"all", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-snapshot", "sdk-recovery", "sdk-restart", "sdk-official-expert", "sdk-authoring"}:
         parser.error("--update-snapshots requires --scenario sdk-minimal, sdk-minimal-in-history, sdk-dynamic-tools, sdk-snapshot, sdk-recovery, sdk-restart, sdk-authoring, or all")
     if args.exe is not None and not args.exe.is_file():
         parser.error(f"runtime executable does not exist: {args.exe}")
@@ -895,6 +895,13 @@ def main() -> None:
     if args.scenario == "sdk-live":
         smoke_sdk_live()
         print("smoke-python-runtime: sdk-live passed")
+        return
+
+    if args.scenario in {"all", "sdk-official-expert"}:
+        assert args.exe is not None
+        smoke_sdk_official_expert(args.exe.resolve(), args.update_snapshots)
+    if args.scenario == "sdk-official-expert":
+        print("smoke-python-runtime: sdk-official-expert passed")
         return
 
     with MockModel() as model:
@@ -1880,6 +1887,73 @@ def smoke_sdk_snapshot_mode(
             ADVANCED_SNAPSHOT_FILENAMES if mode == "native" else ("result.json", "session.v4.jsonl"),
             native_writer_output=True,
         )
+
+
+def smoke_sdk_official_expert(executable: Path, update_snapshots: bool) -> None:
+    """Project required knowledge events through the public Python SDK and shipped sdk profile."""
+    from deepseek_harness import DeepSeekHarness
+
+    checkout = Path(__file__).resolve().parents[1]
+    scenario = checkout / "snapshots/sdk/official-expert-knowledge"
+    session_id = "fixture-root-session"
+    fixture_path = selected_snapshot_session_files(scenario)[0]
+    with tempfile.TemporaryDirectory(prefix="mmp-python-expert-") as temporary:
+        root = Path(temporary).resolve()
+        home, sessions = root / "home", root / "home/sessions"
+        patch = write_profile_patch(root, "official-expert.patch.yml", sessions, [
+            {"id": "time-context", "disabled": True},
+            {"id": "deepseek-account", "disabled": True},
+            {"id": "skill-filesystem", "config": {"includeDefaultRoots": False}},
+            {"id": "llm-ground", "config": {"groundOrigin": "https://rag.snapshot.invalid", "catalogPollIntervalMs": 0}},
+            {"id": "session-log-deepseek", "config": {"enabled": False}},
+            {"id": "sdk-jsonrpc-server", "inject": ["sdkAppStartup", "loader", "officialKnowledgeSnapshot", "officialAgentGallery"]},
+            {"insert": [
+                {"id": "official-knowledge-snapshot", "name": (scenario / "ground-fixture.mjs").as_uri()},
+                {"id": "agent-preset-registry", "name": (checkout / "packages/preset/agent-preset-registry/lib/index.js").as_uri(), "config": {"default": "standard"}},
+                {"id": "official-agent-gallery", "name": (checkout / "packages/preset/official-agent-gallery/lib/index.js").as_uri(), "config": {"groundOrigin": "https://rag.snapshot.invalid"}},
+            ]},
+        ])
+        with DeepSeekHarness(
+            provider="mammoth-ground", model="cloud/fixed", cwd=str(root), dsh_bin=str(executable),
+            dsh_home=str(home), patches=(str(patch),), request_timeout_seconds=30,
+            env={"MMP_TELEMETRY_DISABLED": "1", "MMP_SNAPSHOT": "replay",
+                 "MMP_SNAPSHOT_FILE": str(fixture_path),
+                 "GROUND_PUBLIC_ORIGIN": "https://rag.snapshot.invalid", "MMP_PLATFORM_ORIGIN": "https://rag.snapshot.invalid",
+                 "MMP_AGENTS_HOME": str(root / ".agents")},
+        ) as harness:
+            session = harness.resume_session(session_id)
+            # Derive the task from the canonical recorded user message, never a second input oracle.
+            recorded = [json.loads(line) for line in fixture_path.read_text().splitlines() if line]
+            user = next(message for row in recorded if row["type"] == "agent/inbox/spliced" for message in row["data"].get("inserted", []) if message.get("source", {}).get("kind") == "user")
+            result = session.run(user["content"])
+        assert result.final_response == "SDK_EXPERT_OK [T1L1S1]", result.final_response
+        knowledge = [event for event in result.events if event.get("type") == "official-agent/knowledge"]
+        assert [event["data"]["status"] for event in knowledge] == ["PENDING", "READY"], knowledge
+        evidence = knowledge[-1]["data"]["evidence"][0]
+        assert {key: evidence[key] for key in ("knowledgeReleaseId", "documentId", "revisionId", "indexRevisionId", "chunkId", "label")} == {
+            "knowledgeReleaseId": "release1", "documentId": "doc1", "revisionId": "rev1", "indexRevisionId": "index1", "chunkId": "chunk1", "label": "T1L1S1",
+        }, evidence
+        subscribed = [n.payload["event"] for n in result.notifications if n.method == "session.event" and n.payload.get("event", {}).get("type") == "official-agent/knowledge"]
+        assert subscribed == knowledge, subscribed
+        logs = read_session_logs(sessions)
+        assert set(logs) == {session_id}, logs.keys()
+        persisted = [event for event in logs[session_id] if event.get("type") == "official-agent/knowledge"]
+        assert persisted == knowledge, persisted
+        replacements = snapshot_directory_replacements(root, "{{cwd}}") + [(session_id, "{{session:1}}")]
+        # Identity-bearing fields only; source text/content hashes are not volatile request ids.
+        for event in knowledge:
+            data = event["data"]
+            for key, kind in (("id", "id"), ("messageId", "message")):
+                actual = data[key]
+                if not any(old == actual for old, _ in replacements):
+                    replacements.append((actual, "{{" + kind + ":1}}"))
+        value = {"session_id": result.session_id, "final_response": result.final_response, "events": result.events,
+                 "notifications": [{"method": n.method, "payload": n.payload} for n in result.notifications]}
+        files = {
+            "result.json": json.dumps(normalize_snapshot_value(value, replacements), ensure_ascii=False, indent=2) + "\n",
+            snapshot_session_filename(0, logs[session_id][0]["version"]): render_jsonl(project_session_snapshot([normalize_snapshot_value(row, replacements) for row in logs[session_id]])),
+        }
+        compare_snapshot_files(files, update_snapshots, ADVANCED_SNAPSHOT_ROOT / "official-expert-knowledge", ("result.json", "session.v4.jsonl"), native_writer_output=True)
 
 
 def smoke_sdk_restart_snapshot(base_url: str, executable: Path, update_snapshots: bool) -> None:

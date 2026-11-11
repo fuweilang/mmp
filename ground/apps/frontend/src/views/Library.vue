@@ -71,7 +71,7 @@
         已选 {{ selected.length }} 项
         <el-button v-if="view !== 'trash'" size="small" @click="runBatch('recycle')">回收</el-button>
         <el-button v-if="view === 'trash'" size="small" @click="runBatch('restore')">恢复</el-button>
-        <el-button v-if="view === 'trash'" size="small" type="danger" @click="runBatch('purge')">彻底删除</el-button>
+        <el-button v-if="view === 'trash'" size="small" type="danger" :disabled="!!batchPurgeBlockedReason" :title="batchPurgeBlockedReason || undefined" @click="runBatch('purge')">彻底删除</el-button>
       </div>
 
       <el-table v-loading="loading" :data="items" border class="library-table" @selection-change="onSelect">
@@ -98,6 +98,7 @@
             <span v-else-if="row.kind === 'LINK'">{{ statusLabel('NOT_APPLICABLE') }}</span>
             <span v-else>—</span>
             <span v-if="row.currentVersion?.parseReason" class="library-muted">{{ row.currentVersion.parseReason }}</span>
+            <span v-if="view === 'trash' && purgeBlockedReason(row)" class="library-muted">{{ purgeBlockedReason(row) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="大小" width="90">
@@ -121,7 +122,7 @@
                   <el-dropdown-item v-if="row.currentVersion?.parseStatus === 'FAILED'" @click="retry(row)">重试解析</el-dropdown-item>
                   <el-dropdown-item v-if="view !== 'trash'" @click="recycleOne(row)">回收</el-dropdown-item>
                   <el-dropdown-item v-if="view === 'trash'" @click="restoreOne(row)">恢复</el-dropdown-item>
-                  <el-dropdown-item v-if="view === 'trash'" @click="purgeOne(row)">彻底删除</el-dropdown-item>
+                  <el-dropdown-item v-if="view === 'trash'" :disabled="!!purgeBlockedReason(row)" :title="purgeBlockedReason(row) || undefined" @click="purgeOne(row)">彻底删除</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -338,6 +339,11 @@ const loading = ref(false);
 const listError = ref('');
 const actionError = ref('');
 const selected = ref<LibraryItem[]>([]);
+const batchPurgeBlockedReason = computed(() => selected.value.map(purgeBlockedReason).find(Boolean) || null);
+
+function purgeBlockedReason(row: LibraryItem): string | null {
+  return row.purgeBlockedReason || (row.kind === 'FILE' ? '文件暂不支持彻底删除，可回收或恢复' : null);
+}
 const transferRatio = ref<number | null>(null);
 const uploadOpen = ref(false);
 const uploadParent = ref<string | null>(null);
@@ -692,6 +698,8 @@ async function restoreOne(row: LibraryItem) {
 }
 
 async function purgeOne(row: LibraryItem) {
+  const blockedReason = purgeBlockedReason(row);
+  if (blockedReason) { actionError.value = blockedReason; return; }
   if (!await confirmAction('彻底删除后，旧引用会显示来源不可用，不会改指向其它版本。', '彻底删除')) return;
   await act(() => purgeLibrary(row.id));
 }
@@ -701,7 +709,11 @@ function confirmRecycle() {
 }
 
 async function runBatch(action: 'recycle' | 'restore' | 'purge') {
+<<<<<<< HEAD
   if (action === 'recycle' && !await confirmRecycle()) return;
+=======
+  if (action === 'purge' && batchPurgeBlockedReason.value) { actionError.value = batchPurgeBlockedReason.value; return; }
+>>>>>>> origin/4.0
   if (action === 'purge' && !await confirmAction('彻底删除后不能再下载这些版本。', '彻底删除')) return;
   try {
     const result = await batchLibrary(selected.value.map((row) => row.id), action);

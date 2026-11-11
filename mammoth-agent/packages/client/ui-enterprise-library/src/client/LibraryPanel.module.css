@@ -219,3 +219,4 @@
 .uploadList li { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:12px 0; border-bottom:1px solid var(--dsw-alias-border-l3,#e3e5e8); font-size:13px; }
 .uploadList strong { flex:1 1 180px; min-width:0; font-weight:500; overflow-wrap:anywhere; }
 .uploadList p { flex-basis:100%; margin:0; overflow-wrap:anywhere; color:var(--dsw-alias-label-danger,#b42318); }
+.citationExcerpt { flex:0 1 auto; min-height:0; max-height:35%; overflow:auto; }

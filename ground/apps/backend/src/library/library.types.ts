@@ -136,6 +136,7 @@ export type LibraryItem = {
   linkUrl: string | null;
   mine: boolean;
   canManage: boolean;
+  purgeBlockedReason: string | null;
   currentVersion: VersionBrief | null;
   createdAt: string;
   updatedAt: string;

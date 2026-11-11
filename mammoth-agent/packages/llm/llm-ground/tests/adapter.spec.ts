@@ -82,7 +82,10 @@ it('attributes only ordinary Session requests to their bound official version', 
     { ...base, sessionId, purpose: 'compaction' },
     () => ({ agentId: 'agent-1', versionId: 'version-2' }),
   )
-  expect(compaction['x-mmp-session-id']).toBeUndefined()
+  expect(compaction['x-mmp-session-id']).toBe(sessionId)
+  expect(compaction['x-mmp-helper-purpose']).toBe('compaction')
+  expect(compaction['x-mmp-origin-agent-id']).toBe('agent-1')
+  expect(compaction['x-mmp-origin-version-id']).toBe('version-2')
   expect(compaction['x-mmp-official-agent-id']).toBeUndefined()
   expect(compaction['x-mmp-official-agent-version-id']).toBeUndefined()
 })

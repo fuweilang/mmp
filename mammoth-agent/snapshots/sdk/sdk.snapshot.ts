@@ -140,6 +140,7 @@ interface SdkAssertions {
 }
 
 const SDK_ASSERTIONS: Readonly<Record<string, SdkAssertions>> = {
+  'official-expert-knowledge': {expectedFinalResponse: 'SDK_EXPERT_OK [T1L1S1]', environment: {GROUND_PUBLIC_ORIGIN: 'https://rag.snapshot.invalid', MMP_PLATFORM_ORIGIN: 'https://rag.snapshot.invalid'}},
   'approval': {
     approvalOutcomes: ['allowed-once', 'rejected'],
     environment: { MMP_PERMISSION_MODE: 'workspace-write' },
@@ -458,7 +459,7 @@ function normalizeNotifications(notifications: readonly HarnessNotification[], c
     .filter(n => n.method === 'session.event')
     .map(n => n.params.event as Record<string, unknown>)
   const typedIdentities = events.some(event => event.type === 'feedback/message-put'
-    || event.type === 'job/registered' || event.type === 'job/settled')
+    || event.type === 'job/registered' || event.type === 'job/settled' || event.type === 'official-agent/knowledge')
   const eventLog = events.map(event => JSON.stringify(event)).join('\n') + '\n'
   const typedLog = typedIdentities
     ? redactSessionSnapshotIds([
@@ -872,6 +873,7 @@ async function runScenario(scenario: CorpusScenario): Promise<{
       })
     }
     await harness.start()
+    if (scenario.name === 'official-expert-knowledge') await harness.resumeSession(sessionId)
     let subscription = harness.client.subscribeSessionTree(sessionId)
     const titleSubscription = assertions.waitForProviderTitle === true
       ? harness.client.subscribeSessionTree(sessionId)
@@ -1546,6 +1548,14 @@ describe('TypeScript SDK snapshots over the jsonrpc runtime', () => {
         expect(denied).toMatchObject({ data: {
           message: { content: [{ type: 'text', text: expect.stringContaining('subagent limit reached (active child limit: 1)') }], isError: true },
         } })
+      }
+      if (scenario.name === 'official-expert-knowledge') {
+        const events = results.flatMap(result => result.events)
+        const knowledge = events.filter(event => event.type === 'official-agent/knowledge')
+        expect(knowledge).toHaveLength(2)
+        expect(knowledge[0]).toMatchObject({data: {status: 'PENDING'}})
+        expect(knowledge[1]).toMatchObject({data: {status: 'READY', evidence: [{label: 'T1L1S1', documentId: 'doc1', revisionId: 'rev1', chunkId: 'chunk1', text: 'SDK_EXPERT_FACT: the retention period is 30 days.'}]}})
+        expect(notifications.some(notification => notificationEvent(notification)?.type === 'official-agent/knowledge')).toBe(true)
       }
       if (scenario.name === 'tool-error-details') {
         const events = results.flatMap(result => result.events)

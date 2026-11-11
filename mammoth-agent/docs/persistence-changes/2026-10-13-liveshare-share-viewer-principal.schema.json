@@ -34,7 +34,7 @@
     "2152caf1a71e588e": {"kind":"object","properties":[{"name":"kind","type":"2e4debca12f2c449","optional":false},{"name":"messageId","type":"4cd48f3e5108bd6e","optional":false},{"name":"senderId","type":"4cd48f3e5108bd6e","optional":false},{"name":"senderName","type":"4cd48f3e5108bd6e","optional":false},{"name":"teamId","type":"4cd48f3e5108bd6e","optional":false}],"indices":[]},
     "2235d957bf4b7c6c": {"kind":"object","properties":[{"name":"kind","type":"7b1ce60193fa8b69","optional":false}],"indices":[]},
     "224aa11d4d5f88c4": {"kind":"object","properties":[{"name":"form","type":"fee1caf8ab6a65c1","optional":false},{"name":"kind","type":"23af3759678a30de","optional":false}],"indices":[]},
-    "23af3759678a30de": {"kind":"literal","value":"mmp-session-title-llm"},
+    "23af3759678a30de": {"kind":"literal","value":"dsh-session-title-llm"},
     "24b10f7cdae64928": {"kind":"literal","value":"runtime-context"},
     "24ce31aa528272e5": {"kind":"object","properties":[{"name":"kind","type":"99e7e7d7fed55ae6","optional":false}],"indices":[]},
     "260523b412c19ad8": {"kind":"object","properties":[{"name":"form","type":"aec150797b655c5f","optional":false},{"name":"kind","type":"2f3f201c8846e19c","optional":false}],"indices":[]},

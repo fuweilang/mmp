@@ -1,3 +1,4 @@
+import { ExpertRuntimeService } from '../src/official-agent/expert-runtime.service';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { ConflictException, NotFoundException } from '@nestjs/common';
@@ -143,7 +144,8 @@ function createDeleteHarness(initialStatus: OfficialAgentStatus = OfficialAgentS
         return data;
       },
     },
-    user: {
+    userRole: {findFirst: async()=>({roleId:"super"})},
+    user: {findUnique: async()=>({status:"active"}),
       findMany: async () => [{ id: 'admin-1', name: '平台管理员' }],
     },
     officialSkill: {
@@ -159,6 +161,7 @@ function createDeleteHarness(initialStatus: OfficialAgentStatus = OfficialAgentS
     { adminScope: async () => null } as never,
     { loadAssetFiles: () => [], syncFromAssets: async () => [] } as never,
     { setAgentSkillLinks: async () => undefined, snapshotLinkedSkills: async () => [] } as never,
+    new ExpertRuntimeService(prisma as never, {} as never),
   );
 
   return { service, actor, getAgent: () => agent, versions, grants, preferences, audit, skills };

@@ -42,7 +42,8 @@
     "@mammoth-ai/node-addon-system": "workspace:~",
     "@mammoth-ai/schemastery": "workspace:~",
     "koffi": "3.1.1",
-    "p-limit": "7.3.3"
+    "p-limit": "7.3.3",
+    "@mammoth-ai/mmp-session-format-v4-to-v5": "workspace:*"
   },
   "devDependencies": {
     "@mammoth-ai/mmp-session": "workspace:*",

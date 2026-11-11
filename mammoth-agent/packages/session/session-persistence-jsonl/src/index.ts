@@ -501,7 +501,7 @@ class JsonlSessionPersistence extends SessionPersistence {
       options?.signal?.throwIfAborted()
       return {
         ...metadata,
-        revision: selected.sourceVersion < SESSION_FORMAT_VERSION
+        revision: selected.sourceVersion <= 3
           ? SessionPersistenceRevision(`${fileRevision(identity)}:${await this.historicalCorpusRevision(options?.signal)}`)
           : fileRevision(identity),
         sizeBytes: Number(identity.size),
@@ -529,7 +529,7 @@ class JsonlSessionPersistence extends SessionPersistence {
     // predate the scan), so create-to-list visibility never has a hole.
     const pending = [...this.tracker.pendingEntries()]
     const artifacts = await this.listArtifacts(signal)
-    const corpusRevision = artifacts.some(artifact => artifact.sourceVersion < SESSION_FORMAT_VERSION)
+    const corpusRevision = artifacts.some(artifact => artifact.sourceVersion <= 3)
       ? await this.historicalCorpusRevision(signal) : undefined
     const statted = settledValues(await settleLimited(this.listLimit, artifacts, async (artifact) => {
       signal?.throwIfAborted()
@@ -550,7 +550,7 @@ class JsonlSessionPersistence extends SessionPersistence {
       snapshots.push({
         header: artifact.header,
         formatStatus: artifact.formatStatus,
-        revision: artifact.sourceVersion < SESSION_FORMAT_VERSION
+        revision: artifact.sourceVersion <= 3
           ? SessionPersistenceRevision(`${fileRevision(identity)}:${corpusRevision}`)
           : fileRevision(identity),
         sizeBytes: Number(identity.size),
@@ -718,8 +718,9 @@ class JsonlSessionPersistence extends SessionPersistence {
     let prepared: Awaited<ReturnType<typeof prepareJsonlMigration>>
     let validateRelatedSources: () => Promise<void>
     try {
-      const children = async () => (await this.listArtifacts(signal))
-        .filter(source => source.header.origin === 'subagent' && source.header.parentSession === id)
+      const children = async () => selected.sourceVersion <= 3
+        ? (await this.listArtifacts(signal)).filter(source => source.header.origin === 'subagent' && source.header.parentSession === id)
+        : []
       const sources = await children()
       const related = await prepareCatalogFacts(id, sources, this.compression, signal)
       for (const failure of related.failures) {

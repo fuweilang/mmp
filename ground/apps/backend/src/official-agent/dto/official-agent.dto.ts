@@ -1,6 +1,7 @@
 import {
   ArrayMaxSize,
   IsArray,
+  IsIn,
   IsOptional,
   IsString,
   MaxLength,
@@ -8,6 +9,7 @@ import {
 } from 'class-validator';
 
 export class ResolveOfficialAgentDto {
+  @IsOptional() @IsIn([1,2]) executionProtocol?: number;
   /** 会话创建后的固定版本；缺省仅用于创建前解析当前授权版本。 */
   @IsOptional()
   @IsString()

@@ -1,0 +1,37 @@
+{
+  "ground": "synthetic HTTP fixture",
+  "model": "scripted mock",
+  "execution": "real Loader-composed standard Agent + filesystem + local Bash",
+  "report": {
+    "sum": 10,
+    "asset": "ASSET_OK"
+  },
+  "python": "10",
+  "binarySHA": "020b257b1a7d9ca9e57398993c783c80b5998d3985a2e0884616db4a8c441000",
+  "results": [
+    {
+      "callId": "complete-load",
+      "isError": false
+    },
+    {
+      "callId": "complete-guide",
+      "isError": false
+    },
+    {
+      "callId": "complete-node",
+      "isError": false
+    },
+    {
+      "callId": "complete-python",
+      "isError": false
+    },
+    {
+      "callId": "complete-shell",
+      "isError": false
+    },
+    {
+      "callId": "complete-missing",
+      "isError": false
+    }
+  ]
+}

@@ -75,7 +75,7 @@ describe('GroundOfficialAgentClient', () => {
       },
       {
         url: 'https://ground.test/api/official-agents/agent%2Fone/resolve', method: 'POST',
-        body: JSON.stringify({ versionId: card.versionId }), signal: resolveSignal,
+        body: JSON.stringify({ versionId: card.versionId, executionProtocol: 2 }), signal: resolveSignal,
         headers: expect.any(Headers) as Headers,
       },
       {
@@ -150,4 +150,33 @@ describe('GroundOfficialAgentClient', () => {
     expect(publicCard).not.toHaveProperty('kbFolderIds')
     expect(publicCard).not.toHaveProperty('token')
   })
+})
+
+it('negotiates protocol 2 for normal resolve without breaking exact legacy decoding', async () => {
+  let sent: Record<string,unknown> = {}
+  const client = new GroundOfficialAgentClient('https://ground.test', async () => 'synthetic', async (_url,init) => {
+    sent=JSON.parse(String(init?.body))
+    return json({agentId:'a',key:'a',kind:'GENERAL',versionId:'v',version:1,systemPrompt:'',toolScope:[]})
+  })
+  await client.resolve('a','v')
+  expect(sent).toEqual({versionId:'v',executionProtocol:2})
+})
+it('bounds JSON error streams while keeping only the deleted-skill public message', async () => {
+  let pulls = 0
+  const cancelled = vi.fn()
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) { pulls++; if (pulls <= 8) controller.enqueue(new Uint8Array(4096)); else controller.close(); },
+    cancel: cancelled,
+  })
+  const client = new GroundOfficialAgentClient('https://ground.test', async () => 'synthetic', async () => new Response(stream,{status:403,headers:{'Content-Type':'application/json'}}))
+  await expect(client.list()).rejects.toThrow('Ground official Expert request failed with HTTP 403')
+  expect(cancelled).toHaveBeenCalledOnce()
+  expect(pulls).toBeLessThanOrEqual(4)
+  for (const [code,message,expected] of [
+    ['PRIVATE_INTERNAL','private enterprise failure','Ground official Expert request failed with HTTP 403'],
+    ['OFFICIAL_SKILL_DELETED','技能已删除，请重新选择','技能已删除，请重新选择'],
+  ]) {
+    const bounded = new GroundOfficialAgentClient('https://ground.test',async ()=>'synthetic',async()=>new Response(JSON.stringify({code,message}),{status:403,headers:{'Content-Type':'application/json'}}))
+    await expect(bounded.list()).rejects.toThrow(expected)
+  }
 })

@@ -108,3 +108,5 @@ No direct effect; restored history determines cache identity in its consumer.
 None.
 
 </details>
+
+The fixed `historicalV4SessionFormatCatalog` reads V4 child discovery prerequisites without applying the outgoing V4→V5 edge. The current catalog includes the [V4→V5 identity edge](../session-format-v4-to-v5/README.md).

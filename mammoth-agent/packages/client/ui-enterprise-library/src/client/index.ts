@@ -3,6 +3,7 @@ import type {} from '@mammoth-ai/mmp-client-ui-workspace/client'
 import type {} from '@mammoth-ai/mmp-client-ui-session/client'
 import type {} from '@mammoth-ai/mmp-api-session-controller/client'
 import type {} from '@mammoth-ai/mmp-client-ui-conversation/client'
+import type {} from '@mammoth-ai/mmp-client-ui-chat/client'
 import type { Context as ClientContext } from '@mammoth-ai/cordis'
 import type {} from '@mammoth-ai/mmp-client-locale/client'
 import type {} from '@mammoth-ai/mmp-client-ui-commands/client'
@@ -17,6 +18,7 @@ import type { CommandUiContract } from '@mammoth-ai/mmp-client-ui-commands/clien
 import type { InputTriggerSource } from '@mammoth-ai/mmp-client-ui-input-trigger/client'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import { fetchLibraryItems, libraryRequest } from './api.ts'
+import { parseLibraryCitationLink } from './citation-link.ts'
 import { LibraryIcon } from './LibraryIcon.tsx'
 import { createLibraryNavigationMeasurement } from './useLibrarySidebarResize.ts'
 import { LibraryPanel, type LibrarySourceRequest } from './LibraryPanel.tsx'
@@ -94,6 +96,11 @@ export function apply(ctx: ClientContext): void {
       },
     }),
   }, LibraryPickerOverlay)), 'enterprise-library: picker')
+  ctx.on('chat/resolve-application-link', (_sessionId, href) => {
+    const target = parseLibraryCitationLink(href, document.baseURI)
+    if (!target) return undefined
+    return () => { publishSource(target); ctx.layout.selectPanel(PANEL_ID) }
+  })
   const attach = (sessionId: SessionId, item: LibraryChoice): { sent: false; attached: boolean } => {
     const binding = ctx.sessions.binding(sessionId)
     if (!binding) throw new Error(t('sessionUnavailable'))

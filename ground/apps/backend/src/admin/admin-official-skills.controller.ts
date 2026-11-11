@@ -29,7 +29,8 @@ import {
   UpdateOfficialSkillDto,
 } from './dto/official-skill.dto';
 
-const ZIP_LIMIT = 12 * 1024 * 1024;
+import { SKILL_ZIP_MAX_BYTES } from '../official-skill/skill-package-format';
+const ZIP_LIMIT = SKILL_ZIP_MAX_BYTES;
 
 @Controller('admin/official-skills')
 @UseGuards(JwtGuard)

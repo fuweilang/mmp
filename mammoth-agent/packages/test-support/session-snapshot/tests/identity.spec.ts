@@ -121,3 +121,16 @@ describe('session snapshot identity redaction', () => {
     expect(redacted).not.toContain('{{id:')
   })
 })
+
+it('redacts only the declared knowledge operation identity and preserves source content hashes', () => {
+  const operation = 'a'.repeat(64), contentHash = 'b'.repeat(64)
+  const log = [
+    {type: 'session', id: 'knowledge-session'},
+    {type: 'official-agent/knowledge', data: {id: operation, status: 'PENDING', evidence: []}},
+    {type: 'official-agent/knowledge', data: {id: operation, status: 'READY', evidence: [{contentHash, text: 'literal ' + contentHash}]}},
+  ].map(row => JSON.stringify(row)).join('\n') + '\n'
+  const [redacted] = redactSessionSnapshotIds([log])
+  expect(redacted?.match(/"id":"\{\{id:1\}\}"/g)).toHaveLength(2)
+  expect(redacted).toContain(contentHash)
+  expect(redactSessionSnapshotIds([redacted!])).toEqual([redacted])
+})

@@ -15,6 +15,7 @@ type RawItem = {
   name?: string
   kind?: LibraryKind
   canManage?: boolean
+  purgeBlockedReason?: string | null
   scope?: string
   parentId?: string | null
   parentPath?: { id?: string; name?: string }[]
@@ -52,6 +53,7 @@ export function readLibraryItems(payload: unknown): LibraryChoice[] {
       ...(typeof item.currentVersion?.sizeBytes === 'number' && Number.isFinite(item.currentVersion.sizeBytes) && item.currentVersion.sizeBytes >= 0 ? { sizeBytes: item.currentVersion.sizeBytes } : {}),
       name: item.name,
       canManage: item.canManage === true,
+      purgeBlockedReason: typeof item.purgeBlockedReason === 'string' ? item.purgeBlockedReason : null,
       scope: item.scope ?? 'PRIVATE',
       parentId: item.parentId ?? null,
       ...(Array.isArray(item.parentPath) ? { parentPath: item.parentPath.flatMap((part) => part.id && part.name ? [{ id: part.id, name: part.name }] : []) } : {}),
@@ -68,10 +70,10 @@ export function readLibraryItems(payload: unknown): LibraryChoice[] {
 
 export type LibraryFetch = (url: string, init?: RequestInit) => Promise<Response>
 
-/** Library refusal with the HTTP status that produced it. */
+/** Library refusal with the HTTP status and optional Ground error code. */
 export class LibraryRequestError extends Error {
-  /** @param message - readable refusal, including any Ground `message` field. @param status - HTTP status. */
-  constructor(message: string, readonly status: number) { super(message) }
+  /** @param message - readable refusal, including any Ground `message` field. @param status - HTTP status. @param code - stable Ground refusal code, when present. */
+  constructor(message: string, readonly status: number, readonly code?: string) { super(message) }
 }
 
 function messageOf(body: unknown): string | undefined {
@@ -83,14 +85,20 @@ function messageOf(body: unknown): string | undefined {
   return parts.length > 0 ? parts.join('; ') : undefined
 }
 
-/** Keep the Ground refusal text; 401/403 also state the re-authentication requirement. */
-async function failure(response: Response, label: string): Promise<LibraryRequestError> {
+/** Retain the Ground code and refusal text; labelled reads also include transport diagnostics. */
+async function failure(response: Response, label?: string): Promise<LibraryRequestError> {
   let detail: string | undefined
-  try { detail = messageOf(await response.json()) } catch { /* refusal bodies may be empty or binary */ }
+  let code: string | undefined
+  try {
+    const body: unknown = await response.json()
+    detail = messageOf(body)
+    if (body !== null && typeof body === 'object' && 'code' in body && typeof body.code === 'string') code = body.code
+  } catch { /* refusal bodies may be empty or binary */ }
   const fallback = response.status === 401 ? 'sign in again'
     : response.status === 403 ? 'connection is not authorized; sign in again'
       : `HTTP ${response.status}`
-  return new LibraryRequestError(`${label} ${response.status}: ${detail === undefined ? fallback : `${fallback} (${detail})`}`, response.status)
+  const message = label === undefined ? detail ?? fallback : `${label} ${response.status}: ${detail === undefined ? fallback : `${fallback} (${detail})`}`
+  return new LibraryRequestError(message, response.status, code)
 }
 
 /** List one view. Credentials stay on the request; tenant id is not sent. */
@@ -103,6 +111,10 @@ export async function fetchLibraryItems(origin: string, view: LibraryView, q: st
 }
 
 export type OpenedSource = {
+  readonly nodeId: string
+  readonly versionNo: number | null
+  readonly highlightNote: string | null
+  readonly preciseHighlight: boolean
   readonly name: string
   readonly versionId: string
   readonly locator: string | null
@@ -121,17 +133,22 @@ export async function fetchLibrarySource(
   fetchImpl: LibraryFetch,
   signal?: AbortSignal,
   purpose: 'preview' | 'prepare' = 'preview',
+  locator?: string,
 ): Promise<OpenedSource> {
   const init: RequestInit = {
     method: 'POST',
     credentials: 'include',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ nodeId, versionId, ...(purpose === 'prepare' ? { purpose } : {}) }),
+    body: JSON.stringify({ nodeId, versionId, ...(locator === undefined ? {} : { locator }), ...(purpose === 'prepare' ? { purpose } : {}) }),
   }
   if (signal) init.signal = signal
   const response = await fetchImpl(libraryOpenUrl(origin), init)
   if (!response.ok) throw await failure(response, 'library open')
   const body = await response.json() as {
+    nodeId?: unknown
+    versionNo?: unknown
+    highlightNote?: unknown
+    preciseHighlight?: unknown
     name?: unknown
     versionId?: unknown
     locator?: unknown
@@ -139,11 +156,15 @@ export async function fetchLibrarySource(
     truncated?: unknown
     truncationNote?: unknown
   }
-  if (typeof body.name !== 'string' || typeof body.versionId !== 'string' || body.versionId !== versionId) {
+  if (typeof body.name !== 'string' || typeof body.versionId !== 'string' || body.versionId !== versionId || (body.nodeId !== undefined && body.nodeId !== nodeId)) {
     throw new Error('library open returned a different version')
   }
   const truncated = body.truncated === true
   return {
+    nodeId,
+    versionNo: typeof body.versionNo === 'number' && Number.isInteger(body.versionNo) && body.versionNo > 0 ? body.versionNo : null,
+    highlightNote: typeof body.highlightNote === 'string' ? body.highlightNote : null,
+    preciseHighlight: body.preciseHighlight === true,
     name: body.name,
     versionId: body.versionId,
     locator: typeof body.locator === 'string' ? body.locator : null,
@@ -155,16 +176,15 @@ export async function fetchLibrarySource(
   }
 }
 
-/** Mutate only through the protected Host. All authorization stays on Ground. */
+/** Request only through the protected Host; refusals retain their HTTP status and Ground code. */
 export async function libraryRequest(origin: string, path: string, method: string, data: unknown, fetchImpl: LibraryFetch): Promise<unknown> {
   const form = data instanceof FormData
   const response = await fetchImpl(`${origin.replace(/\/$/, '')}/ground-library/${path}`, {
     method, credentials: 'include',
     ...(data === undefined ? {} : form ? { body: data } : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }),
   })
-  const payload: unknown = await response.json()
-  if (!response.ok) throw new Error(payload && typeof payload === 'object' && 'message' in payload ? String(payload.message) : `HTTP ${response.status}`)
-  return payload
+  if (!response.ok) throw await failure(response)
+  return response.json()
 }
 
 export type LibraryPage = { items: LibraryChoice[]; total: number; breadcrumb: { id: string; name: string }[]; parentScope?: 'PRIVATE' | 'ENTERPRISE' };

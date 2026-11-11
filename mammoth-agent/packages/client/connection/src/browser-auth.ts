@@ -265,6 +265,8 @@ export class BrowserAuth {
     const url = new URL(req.url ?? '/', 'http://mmp.invalid')
     const tokens = url.searchParams.getAll(TOKEN_QUERY)
     if (tokens.length > 0) {
+      url.searchParams.delete(TOKEN_QUERY)
+      const location = `./${url.search}`
       const authority = requestAudience(req.headers, secure)
       if (req.method === 'GET' && url.pathname === '/' && tokens.length === 1
         && authority !== undefined && tokenMatches(tokens.join(''), this.launchToken)) {
@@ -278,7 +280,7 @@ export class BrowserAuth {
         }, this.secret)
         res.writeHead(303, {
           'cache-control': 'no-store',
-          'location': './',
+          'location': location,
           'referrer-policy': 'no-referrer',
           'set-cookie': sessionCookie(
             cookieName(authority), value, expiresAt, Math.floor(this.maxAgeMilliseconds / 1000), secure,
@@ -290,7 +292,7 @@ export class BrowserAuth {
       if (req.method === 'GET' && url.pathname === '/' && this.isAuthenticated(req, secure)) {
         res.writeHead(303, {
           'cache-control': 'no-store',
-          'location': './',
+          'location': location,
           'referrer-policy': 'no-referrer',
         })
         res.end()

@@ -1,5 +1,6 @@
 /** Archive and verify complete Session format references through the current writer. */
 
+import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -16,7 +17,7 @@ const CURRENT_DOCUMENT = 'docs/persistence-catalog.md'
 const CURRENT_SCHEMA = 'docs/persistence-schema.json'
 
 /** Historical checkout that supplies a format's complete declared persistence inventory. */
-export type PersistenceFormatSource = { readonly tag: string } | { readonly pullRequest: number }
+export type PersistenceFormatSource = { readonly tag: string } | { readonly pullRequest: number } | { readonly workingTreeSnapshot: string }
 
 /** One complete format reference; the current catalog follows the historical entries. */
 export interface PersistenceFormatEntry {
@@ -66,6 +67,11 @@ function parseSource(source: unknown, label: string): PersistenceFormatSource {
     const tag = fields(source, ['tag'], `${label} source`).tag
     if (typeof tag !== 'string' || !/^mmp-[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(tag)) throw new Error(`${label}: invalid source tag`)
     return { tag }
+  }
+  if (source !== null && typeof source === 'object' && 'workingTreeSnapshot' in source) {
+    const digest = fields(source, ['workingTreeSnapshot'], `${label} source`).workingTreeSnapshot
+    if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/u.test(digest)) throw new Error(`${label}: workingTreeSnapshot must be a lowercase SHA-256`)
+    return { workingTreeSnapshot: digest }
   }
   const pullRequest = fields(source, ['pullRequest'], `${label} source`).pullRequest
   if (!Number.isSafeInteger(pullRequest) || (pullRequest as number) <= 0) throw new Error(`${label}: source pullRequest must be a positive integer`)
@@ -165,6 +171,10 @@ export function loadPersistenceFormats(root: string): PersistenceFormats {
       const block = machineBlock(english, document)
       if (block !== machineBlock(chinese, document.replace(/\.md$/u, '.zh.md'))) throw new Error(`v${version}: bilingual machine records differ`)
       record = parseRecord(block, version)
+    }
+    if (record !== undefined && 'workingTreeSnapshot' in record.source
+      && createHash('sha256').update(readFileSync(join(root, schemaPath))).digest('hex') !== record.source.workingTreeSnapshot) {
+      throw new Error(`v${version}: workingTreeSnapshot does not match archived schema bytes`)
     }
     const inventory = (current ? parsePersistenceSnapshot : parseHistoricalPersistenceSnapshot)(read(schemaPath))
     validateInventory(inventory, version, current)

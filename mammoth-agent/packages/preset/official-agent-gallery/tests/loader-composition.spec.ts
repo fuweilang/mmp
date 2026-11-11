@@ -67,7 +67,10 @@ describe('official Agent real Loader composition', () => {
       apply(ctx: Context) {
         ctx.provide('workspaceRegistry', { get: () => undefined } as never)
         ctx.provide('deepseekAccount', { resolveToken: () => Promise.resolve('pilot-token') } as never)
-        ctx.provide('groundRequestAttribution', { bind: () => {}, unbind: () => {} } as never)
+        ctx.provide('skills', {} as never)
+        ctx.provide('attachments', {} as never)
+        ctx.provide('agentPresets', {} as never)
+        ctx.provide('groundRequestAttribution', { bind: () => {}, unbind: () => {}, guard: () => () => {} } as never)
       },
     }
     const modules = new Map<string, unknown>([

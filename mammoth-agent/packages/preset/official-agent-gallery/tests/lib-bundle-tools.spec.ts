@@ -61,7 +61,7 @@ describe('official-agent-gallery bundled lib tools', () => {
     } satisfies Pick<Workspace, 'id' | 'path' | 'attachSession'>
     ctx.provide('workspaceRegistry', { get: (id: string) => id === workspace.id ? workspace : undefined } as never)
     ctx.provide('deepseekAccount', { resolveToken: () => Promise.resolve('bundle-token') } as never)
-    ctx.provide('groundRequestAttribution', { bind: vi.fn(), unbind: vi.fn() } as never)
+    ctx.provide('groundRequestAttribution', { bind: vi.fn(), unbind: vi.fn(), guard: () => () => {} } as never)
 
     const card = {
       id: 'agent/bundle', key: 'bundle', kind: 'GENERAL', versionId: 'version/bundle', version: 1,

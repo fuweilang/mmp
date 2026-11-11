@@ -1,0 +1,915 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Synthetic fixture truth only; not customer quality acceptance",
+  "documents": [
+    {
+      "key": "service",
+      "file": "service.txt",
+      "synthetic": true
+    },
+    {
+      "key": "refund",
+      "file": "refund.txt",
+      "synthetic": true
+    },
+    {
+      "key": "storage",
+      "file": "storage.txt",
+      "synthetic": true
+    },
+    {
+      "key": "travel",
+      "file": "travel.txt",
+      "synthetic": true
+    },
+    {
+      "key": "support",
+      "file": "support.txt",
+      "synthetic": true
+    }
+  ],
+  "sources": [
+    {
+      "key": "F01",
+      "documentKey": "service",
+      "locator": {
+        "paragraph": 1
+      },
+      "exactText": "松果试验馆的接待时间为每周三下午三点。"
+    },
+    {
+      "key": "F02",
+      "documentKey": "service",
+      "locator": {
+        "paragraph": 2
+      },
+      "exactText": "松果试验馆的预约邮箱为 visit@example.test。"
+    },
+    {
+      "key": "F03",
+      "documentKey": "service",
+      "locator": {
+        "paragraph": 3
+      },
+      "exactText": "松果试验馆每场最多接待十二人。"
+    },
+    {
+      "key": "F04",
+      "documentKey": "refund",
+      "locator": {
+        "paragraph": 1
+      },
+      "exactText": "蓝鹭计划的退款申请应在付款后三天内提交。"
+    },
+    {
+      "key": "F05",
+      "documentKey": "refund",
+      "locator": {
+        "paragraph": 2
+      },
+      "exactText": "蓝鹭计划退款申请必须附上订单号。"
+    },
+    {
+      "key": "F06",
+      "documentKey": "refund",
+      "locator": {
+        "paragraph": 3
+      },
+      "exactText": "蓝鹭计划批准退款后，款项在五个工作日内原路退回。"
+    },
+    {
+      "key": "F07",
+      "documentKey": "storage",
+      "locator": {
+        "paragraph": 1
+      },
+      "exactText": "青石样本必须存放在二至八摄氏度的冷藏柜。"
+    },
+    {
+      "key": "F08",
+      "documentKey": "storage",
+      "locator": {
+        "paragraph": 2
+      },
+      "exactText": "青石样本开封后应在四十八小时内使用。"
+    },
+    {
+      "key": "F09",
+      "documentKey": "storage",
+      "locator": {
+        "paragraph": 3
+      },
+      "exactText": "青石样本的交接记录由值班管理员签字。"
+    },
+    {
+      "key": "F10",
+      "documentKey": "travel",
+      "locator": {
+        "paragraph": 1
+      },
+      "exactText": "银杉项目的差旅申请须提前两个工作日提交。"
+    },
+    {
+      "key": "F11",
+      "documentKey": "travel",
+      "locator": {
+        "paragraph": 2
+      },
+      "exactText": "银杉项目单晚住宿报销上限为六百元。"
+    },
+    {
+      "key": "F12",
+      "documentKey": "travel",
+      "locator": {
+        "paragraph": 3
+      },
+      "exactText": "银杉项目报销材料必须包含发票和行程单。"
+    },
+    {
+      "key": "F13",
+      "documentKey": "support",
+      "locator": {
+        "paragraph": 1
+      },
+      "exactText": "灯塔演练的故障升级联系人是演练协调员。"
+    },
+    {
+      "key": "F14",
+      "documentKey": "support",
+      "locator": {
+        "paragraph": 2
+      },
+      "exactText": "灯塔演练的周报在每周五十七点前提交。"
+    },
+    {
+      "key": "F15",
+      "documentKey": "support",
+      "locator": {
+        "paragraph": 3
+      },
+      "exactText": "灯塔演练日志的保留期限为三十天。"
+    }
+  ],
+  "questions": [
+    {
+      "id": "direct-F01",
+      "category": "direct",
+      "question": "松果试验馆什么时候接待？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F01"
+      ],
+      "expectedAnswerFacts": [
+        "每周三下午三点"
+      ]
+    },
+    {
+      "id": "direct-F02",
+      "category": "direct",
+      "question": "松果试验馆的预约邮箱是什么？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F02"
+      ],
+      "expectedAnswerFacts": [
+        "visit@example.test"
+      ]
+    },
+    {
+      "id": "direct-F03",
+      "category": "direct",
+      "question": "松果试验馆每场接待人数上限是多少？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F03"
+      ],
+      "expectedAnswerFacts": [
+        "十二人"
+      ]
+    },
+    {
+      "id": "direct-F04",
+      "category": "direct",
+      "question": "蓝鹭计划退款申请期限是多久？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F04"
+      ],
+      "expectedAnswerFacts": [
+        "付款后三天内"
+      ]
+    },
+    {
+      "id": "direct-F05",
+      "category": "direct",
+      "question": "蓝鹭计划退款申请必须附什么？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F05"
+      ],
+      "expectedAnswerFacts": [
+        "订单号"
+      ]
+    },
+    {
+      "id": "direct-F06",
+      "category": "direct",
+      "question": "蓝鹭计划退款批准后多久到账？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F06"
+      ],
+      "expectedAnswerFacts": [
+        "五个工作日内原路退回"
+      ]
+    },
+    {
+      "id": "direct-F07",
+      "category": "direct",
+      "question": "青石样本的存储温度范围是多少？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F07"
+      ],
+      "expectedAnswerFacts": [
+        "二至八摄氏度"
+      ]
+    },
+    {
+      "id": "direct-F08",
+      "category": "direct",
+      "question": "青石样本开封后多久内使用？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F08"
+      ],
+      "expectedAnswerFacts": [
+        "四十八小时内"
+      ]
+    },
+    {
+      "id": "direct-F09",
+      "category": "direct",
+      "question": "青石样本交接记录由谁签字？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F09"
+      ],
+      "expectedAnswerFacts": [
+        "值班管理员"
+      ]
+    },
+    {
+      "id": "direct-F10",
+      "category": "direct",
+      "question": "银杉项目差旅申请需提前多久？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F10"
+      ],
+      "expectedAnswerFacts": [
+        "两个工作日"
+      ]
+    },
+    {
+      "id": "direct-F11",
+      "category": "direct",
+      "question": "银杉项目单晚住宿报销上限多少？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F11"
+      ],
+      "expectedAnswerFacts": [
+        "六百元"
+      ]
+    },
+    {
+      "id": "direct-F12",
+      "category": "direct",
+      "question": "银杉项目报销需要哪些材料？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F12"
+      ],
+      "expectedAnswerFacts": [
+        "发票和行程单"
+      ]
+    },
+    {
+      "id": "direct-F13",
+      "category": "direct",
+      "question": "灯塔演练故障升级找谁？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F13"
+      ],
+      "expectedAnswerFacts": [
+        "演练协调员"
+      ]
+    },
+    {
+      "id": "direct-F14",
+      "category": "direct",
+      "question": "灯塔演练周报什么时候交？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F14"
+      ],
+      "expectedAnswerFacts": [
+        "每周五十七点前"
+      ]
+    },
+    {
+      "id": "direct-F15",
+      "category": "direct",
+      "question": "灯塔演练日志保留多久？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F15"
+      ],
+      "expectedAnswerFacts": [
+        "三十天"
+      ]
+    },
+    {
+      "id": "paraphrase-F01",
+      "category": "paraphrase",
+      "question": "想去松果试验馆，应选哪天几点？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F01"
+      ],
+      "expectedAnswerFacts": [
+        "每周三下午三点"
+      ]
+    },
+    {
+      "id": "paraphrase-F02",
+      "category": "paraphrase",
+      "question": "预约松果试验馆要发信到哪个地址？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F02"
+      ],
+      "expectedAnswerFacts": [
+        "visit@example.test"
+      ]
+    },
+    {
+      "id": "paraphrase-F03",
+      "category": "paraphrase",
+      "question": "一场最多能带多少人参观松果试验馆？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F03"
+      ],
+      "expectedAnswerFacts": [
+        "十二人"
+      ]
+    },
+    {
+      "id": "paraphrase-F04",
+      "category": "paraphrase",
+      "question": "蓝鹭计划付款后最晚何时申请退费？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F04"
+      ],
+      "expectedAnswerFacts": [
+        "付款后三天内"
+      ]
+    },
+    {
+      "id": "paraphrase-F05",
+      "category": "paraphrase",
+      "question": "办理蓝鹭计划退费需要提供哪项订单信息？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F05"
+      ],
+      "expectedAnswerFacts": [
+        "订单号"
+      ]
+    },
+    {
+      "id": "paraphrase-F06",
+      "category": "paraphrase",
+      "question": "蓝鹭计划退费审核通过后还要等几个工作日？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F06"
+      ],
+      "expectedAnswerFacts": [
+        "五个工作日内原路退回"
+      ]
+    },
+    {
+      "id": "paraphrase-F07",
+      "category": "paraphrase",
+      "question": "保存青石样本时冷藏柜该设在什么温度区间？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F07"
+      ],
+      "expectedAnswerFacts": [
+        "二至八摄氏度"
+      ]
+    },
+    {
+      "id": "paraphrase-F08",
+      "category": "paraphrase",
+      "question": "青石样本拆封后的可用时限是多少小时？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F08"
+      ],
+      "expectedAnswerFacts": [
+        "四十八小时内"
+      ]
+    },
+    {
+      "id": "paraphrase-F09",
+      "category": "paraphrase",
+      "question": "青石样本移交表需要哪个岗位签名？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F09"
+      ],
+      "expectedAnswerFacts": [
+        "值班管理员"
+      ]
+    },
+    {
+      "id": "paraphrase-F10",
+      "category": "paraphrase",
+      "question": "银杉项目出差至少应提前几个工作日申请？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F10"
+      ],
+      "expectedAnswerFacts": [
+        "两个工作日"
+      ]
+    },
+    {
+      "id": "paraphrase-F11",
+      "category": "paraphrase",
+      "question": "银杉项目一晚酒店最多能报销多少元？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F11"
+      ],
+      "expectedAnswerFacts": [
+        "六百元"
+      ]
+    },
+    {
+      "id": "paraphrase-F12",
+      "category": "paraphrase",
+      "question": "银杉项目报旅费要交哪两类凭证？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F12"
+      ],
+      "expectedAnswerFacts": [
+        "发票和行程单"
+      ]
+    },
+    {
+      "id": "paraphrase-F13",
+      "category": "paraphrase",
+      "question": "灯塔演练问题需要上报哪个岗位？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F13"
+      ],
+      "expectedAnswerFacts": [
+        "演练协调员"
+      ]
+    },
+    {
+      "id": "paraphrase-F14",
+      "category": "paraphrase",
+      "question": "灯塔演练一周报告最晚在周几几点交？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F14"
+      ],
+      "expectedAnswerFacts": [
+        "每周五十七点前"
+      ]
+    },
+    {
+      "id": "paraphrase-F15",
+      "category": "paraphrase",
+      "question": "灯塔演练记录需要保存多少天？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F15"
+      ],
+      "expectedAnswerFacts": [
+        "三十天"
+      ]
+    },
+    {
+      "id": "followup-F01",
+      "category": "followup",
+      "question": "刚才说的这项要求具体是什么？",
+      "context": [
+        {
+          "role": "user",
+          "content": "松果试验馆什么时候接待？"
+        }
+      ],
+      "expectedSourceKeys": [
+        "F01"
+      ],
+      "expectedAnswerFacts": [
+        "每周三下午三点"
+      ]
+    },
+    {
+      "id": "followup-F02",
+      "category": "followup",
+      "question": "刚才说的这项要求具体是什么？",
+      "context": [
+        {
+          "role": "user",
+          "content": "松果试验馆的预约邮箱是什么？"
+        }
+      ],
+      "expectedSourceKeys": [
+        "F02"
+      ],
+      "expectedAnswerFacts": [
+        "visit@example.test"
+      ]
+    },
+    {
+      "id": "followup-F03",
+      "category": "followup",
+      "question": "刚才说的这项要求具体是什么？",
+      "context": [
+        {
+          "role": "user",
+          "content": "松果试验馆每场接待人数上限是多少？"
+        }
+      ],
+      "expectedSourceKeys": [
+        "F03"
+      ],
+      "expectedAnswerFacts": [
+        "十二人"
+      ]
+    },
+    {
+      "id": "followup-F04",
+      "category": "followup",
+      "question": "刚才说的这项要求具体是什么？",
+      "context": [
+        {
+          "role": "user",
+          "content": "蓝鹭计划退款申请期限是多久？"
+        }
+      ],
+      "expectedSourceKeys": [
+        "F04"
+      ],
+      "expectedAnswerFacts": [
+        "付款后三天内"
+      ]
+    },
+    {
+      "id": "followup-F05",
+      "category": "followup",
+      "question": "刚才说的这项要求具体是什么？",
+      "context": [
+        {
+          "role": "user",
+          "content": "蓝鹭计划退款申请必须附什么？"
+        }
+      ],
+      "expectedSourceKeys": [
+        "F05"
+      ],
+      "expectedAnswerFacts": [
+        "订单号"
+      ]
+    },
+    {
+      "id": "followup-F06",
+      "category": "followup",
+      "question": "刚才说的这项要求具体是什么？",
+      "context": [
+        {
+          "role": "user",
+          "content": "蓝鹭计划退款批准后多久到账？"
+        }
+      ],
+      "expectedSourceKeys": [
+        "F06"
+      ],
+      "expectedAnswerFacts": [
+        "五个工作日内原路退回"
+      ]
+    },
+    {
+      "id": "followup-F07",
+      "category": "followup",
+      "question": "刚才说的这项要求具体是什么？",
+      "context": [
+        {
+          "role": "user",
+          "content": "青石样本的存储温度范围是多少？"
+        }
+      ],
+      "expectedSourceKeys": [
+        "F07"
+      ],
+      "expectedAnswerFacts": [
+        "二至八摄氏度"
+      ]
+    },
+    {
+      "id": "followup-F08",
+      "category": "followup",
+      "question": "刚才说的这项要求具体是什么？",
+      "context": [
+        {
+          "role": "user",
+          "content": "青石样本开封后多久内使用？"
+        }
+      ],
+      "expectedSourceKeys": [
+        "F08"
+      ],
+      "expectedAnswerFacts": [
+        "四十八小时内"
+      ]
+    },
+    {
+      "id": "followup-F09",
+      "category": "followup",
+      "question": "刚才说的这项要求具体是什么？",
+      "context": [
+        {
+          "role": "user",
+          "content": "青石样本交接记录由谁签字？"
+        }
+      ],
+      "expectedSourceKeys": [
+        "F09"
+      ],
+      "expectedAnswerFacts": [
+        "值班管理员"
+      ]
+    },
+    {
+      "id": "followup-F10",
+      "category": "followup",
+      "question": "刚才说的这项要求具体是什么？",
+      "context": [
+        {
+          "role": "user",
+          "content": "银杉项目差旅申请需提前多久？"
+        }
+      ],
+      "expectedSourceKeys": [
+        "F10"
+      ],
+      "expectedAnswerFacts": [
+        "两个工作日"
+      ]
+    },
+    {
+      "id": "crosschunk-01",
+      "category": "crosschunk",
+      "question": "松果试验馆什么时候接待？另外，蓝鹭计划退款批准后多久到账？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F01",
+        "F06"
+      ],
+      "expectedAnswerFacts": [
+        "每周三下午三点",
+        "五个工作日内原路退回"
+      ]
+    },
+    {
+      "id": "crosschunk-02",
+      "category": "crosschunk",
+      "question": "松果试验馆的预约邮箱是什么？另外，青石样本的存储温度范围是多少？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F02",
+        "F07"
+      ],
+      "expectedAnswerFacts": [
+        "visit@example.test",
+        "二至八摄氏度"
+      ]
+    },
+    {
+      "id": "crosschunk-03",
+      "category": "crosschunk",
+      "question": "松果试验馆每场接待人数上限是多少？另外，青石样本开封后多久内使用？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F03",
+        "F08"
+      ],
+      "expectedAnswerFacts": [
+        "十二人",
+        "四十八小时内"
+      ]
+    },
+    {
+      "id": "crosschunk-04",
+      "category": "crosschunk",
+      "question": "蓝鹭计划退款申请期限是多久？另外，青石样本交接记录由谁签字？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F04",
+        "F09"
+      ],
+      "expectedAnswerFacts": [
+        "付款后三天内",
+        "值班管理员"
+      ]
+    },
+    {
+      "id": "crosschunk-05",
+      "category": "crosschunk",
+      "question": "蓝鹭计划退款申请必须附什么？另外，银杉项目差旅申请需提前多久？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F05",
+        "F10"
+      ],
+      "expectedAnswerFacts": [
+        "订单号",
+        "两个工作日"
+      ]
+    },
+    {
+      "id": "crosschunk-06",
+      "category": "crosschunk",
+      "question": "蓝鹭计划退款批准后多久到账？另外，银杉项目单晚住宿报销上限多少？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F06",
+        "F11"
+      ],
+      "expectedAnswerFacts": [
+        "五个工作日内原路退回",
+        "六百元"
+      ]
+    },
+    {
+      "id": "crosschunk-07",
+      "category": "crosschunk",
+      "question": "青石样本的存储温度范围是多少？另外，银杉项目报销需要哪些材料？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F07",
+        "F12"
+      ],
+      "expectedAnswerFacts": [
+        "二至八摄氏度",
+        "发票和行程单"
+      ]
+    },
+    {
+      "id": "crosschunk-08",
+      "category": "crosschunk",
+      "question": "青石样本开封后多久内使用？另外，灯塔演练故障升级找谁？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F08",
+        "F13"
+      ],
+      "expectedAnswerFacts": [
+        "四十八小时内",
+        "演练协调员"
+      ]
+    },
+    {
+      "id": "crosschunk-09",
+      "category": "crosschunk",
+      "question": "青石样本交接记录由谁签字？另外，灯塔演练周报什么时候交？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F09",
+        "F14"
+      ],
+      "expectedAnswerFacts": [
+        "值班管理员",
+        "每周五十七点前"
+      ]
+    },
+    {
+      "id": "crosschunk-10",
+      "category": "crosschunk",
+      "question": "银杉项目差旅申请需提前多久？另外，灯塔演练日志保留多久？",
+      "context": [],
+      "expectedSourceKeys": [
+        "F10",
+        "F15"
+      ],
+      "expectedAnswerFacts": [
+        "两个工作日",
+        "三十天"
+      ]
+    },
+    {
+      "id": "noanswer-01",
+      "category": "noanswer",
+      "question": "松果试验馆的门票价格是多少？",
+      "context": [],
+      "expectedSourceKeys": [],
+      "expectedAnswerFacts": [],
+      "expectedBehavior": "明确说明资料未提供答案，不编造数值、人名、地址或凭据。"
+    },
+    {
+      "id": "noanswer-02",
+      "category": "noanswer",
+      "question": "松果试验馆的街道地址是什么？",
+      "context": [],
+      "expectedSourceKeys": [],
+      "expectedAnswerFacts": [],
+      "expectedBehavior": "明确说明资料未提供答案，不编造数值、人名、地址或凭据。"
+    },
+    {
+      "id": "noanswer-03",
+      "category": "noanswer",
+      "question": "蓝鹭计划的开户银行是什么？",
+      "context": [],
+      "expectedSourceKeys": [],
+      "expectedAnswerFacts": [],
+      "expectedBehavior": "明确说明资料未提供答案，不编造数值、人名、地址或凭据。"
+    },
+    {
+      "id": "noanswer-04",
+      "category": "noanswer",
+      "question": "蓝鹭计划会员年费是多少？",
+      "context": [],
+      "expectedSourceKeys": [],
+      "expectedAnswerFacts": [],
+      "expectedBehavior": "明确说明资料未提供答案，不编造数值、人名、地址或凭据。"
+    },
+    {
+      "id": "noanswer-05",
+      "category": "noanswer",
+      "question": "青石样本的化学配方是什么？",
+      "context": [],
+      "expectedSourceKeys": [],
+      "expectedAnswerFacts": [],
+      "expectedBehavior": "明确说明资料未提供答案，不编造数值、人名、地址或凭据。"
+    },
+    {
+      "id": "noanswer-06",
+      "category": "noanswer",
+      "question": "青石样本每瓶容量是多少？",
+      "context": [],
+      "expectedSourceKeys": [],
+      "expectedAnswerFacts": [],
+      "expectedBehavior": "明确说明资料未提供答案，不编造数值、人名、地址或凭据。"
+    },
+    {
+      "id": "noanswer-07",
+      "category": "noanswer",
+      "question": "银杉项目机票必须选哪家航空公司？",
+      "context": [],
+      "expectedSourceKeys": [],
+      "expectedAnswerFacts": [],
+      "expectedBehavior": "明确说明资料未提供答案，不编造数值、人名、地址或凭据。"
+    },
+    {
+      "id": "noanswer-08",
+      "category": "noanswer",
+      "question": "银杉项目负责人的姓名是什么？",
+      "context": [],
+      "expectedSourceKeys": [],
+      "expectedAnswerFacts": [],
+      "expectedBehavior": "明确说明资料未提供答案，不编造数值、人名、地址或凭据。"
+    },
+    {
+      "id": "noanswer-09",
+      "category": "noanswer",
+      "question": "灯塔演练的管理员电话号码是多少？",
+      "context": [],
+      "expectedSourceKeys": [],
+      "expectedAnswerFacts": [],
+      "expectedBehavior": "明确说明资料未提供答案，不编造数值、人名、地址或凭据。"
+    },
+    {
+      "id": "noanswer-10",
+      "category": "noanswer",
+      "question": "灯塔演练的服务器密码是什么？",
+      "context": [],
+      "expectedSourceKeys": [],
+      "expectedAnswerFacts": [],
+      "expectedBehavior": "明确说明资料未提供答案，不编造数值、人名、地址或凭据。"
+    }
+  ]
+}

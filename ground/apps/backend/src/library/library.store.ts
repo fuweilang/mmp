@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { LibraryError } from './library.errors';
 import type {
   AuditRecord,
@@ -28,6 +29,18 @@ export type ReplacementCommit = {
   updatedAt: number;
 };
 
+/** Retry results and their success audit share one commit point. */
+export type ParseCommit = {
+  tenantId: string;
+  nodeId: string;
+  versionId: string;
+  parseStatus: VersionRecord['parseStatus'];
+  parseReason: string | null;
+  extractTruncated: boolean;
+  chunks: ChunkRecord[];
+  audit: AuditRecord;
+};
+
 export interface LibraryStore {
   /** Serialize directory-tree writes for one tenant and roll back every database change on failure. */
   withTenantWrite<T>(tenantId: string, work: (store: LibraryStore) => Promise<T>): Promise<T>;
@@ -43,6 +56,7 @@ export interface LibraryStore {
   commitNewFile(input: NewFileCommit): Promise<void>;
   /** 新版本、摘录和当前版本指针一次提交。 */
   commitReplacement(input: ReplacementCommit): Promise<void>;
+  commitParseResult(input: ParseCommit): Promise<'committed' | 'unchanged'>;
   updateVersion(id: string, patch: Partial<VersionRecord>): Promise<void>;
   listChunks(versionId: string): Promise<ChunkRecord[]>;
   replaceChunks(versionId: string, tenantId: string, chunks: ChunkRecord[]): Promise<void>;
@@ -74,21 +88,25 @@ export class MemoryLibraryStore implements LibraryStore {
   readonly tenants = new Map<string, string>();
   private seq = 0;
   private writeTail: Promise<void> = Promise.resolve();
+  private readonly writeScope = new AsyncLocalStorage<{ active: boolean }>();
 
   async withTenantWrite<T>(_tenantId: string, work: (store: LibraryStore) => Promise<T>): Promise<T> {
+    if (this.writeScope.getStore()?.active) return work(this);
     const previous = this.writeTail;
     let release!: () => void;
     this.writeTail = new Promise<void>(resolve => { release = resolve; });
     await previous;
     const snapshot = this.snapshot();
     const auditLength = this.audits.length;
+    const scope = { active: true };
     try {
-      return await work(this);
+      return await this.writeScope.run(scope, () => work(this));
     } catch (error) {
       this.restore(snapshot);
       this.audits.length = auditLength;
       throw error;
     } finally {
+      scope.active = false;
       release();
     }
   }
@@ -168,6 +186,35 @@ export class MemoryLibraryStore implements LibraryStore {
       this.restore(snapshot);
       throw error;
     }
+  }
+
+  async commitParseResult(input: ParseCommit): Promise<'committed' | 'unchanged'> {
+    return this.withTenantWrite(input.tenantId, async () => {
+      const node = this.nodes.get(input.nodeId);
+      const version = this.versions.get(input.versionId);
+      if (!node || node.tenantId !== input.tenantId || node.state !== 'ACTIVE'
+        || node.currentVersionId !== input.versionId || !version
+        || version.nodeId !== node.id || version.tenantId !== input.tenantId) {
+        throw new LibraryError(409, '资料已更新，请刷新后重试', 'VERSION_CONFLICT');
+      }
+      if (version.parseStatus === 'READY' || version.parseStatus === 'DOWNLOAD_ONLY') return 'unchanged' as const;
+      const chunks = await this.listChunks(version.id);
+      try {
+        await this.updateVersion(version.id, {
+          parseStatus: input.parseStatus, parseReason: input.parseReason, extractTruncated: input.extractTruncated,
+        });
+        await this.replaceChunks(version.id, input.tenantId, input.chunks);
+        await this.audit(input.audit);
+        return 'committed' as const;
+      } catch (error) {
+        this.versions.set(version.id, version);
+        for (const [id, chunk] of this.chunks) if (chunk.versionId === version.id) this.chunks.delete(id);
+        for (const chunk of chunks) this.chunks.set(chunk.id, chunk);
+        const auditIndex = this.audits.findIndex(row => row.id === input.audit.id);
+        if (auditIndex !== -1) this.audits.splice(auditIndex, 1);
+        throw error;
+      }
+    });
   }
 
   private checkCommitQuota(version: VersionRecord, quota?: number) {

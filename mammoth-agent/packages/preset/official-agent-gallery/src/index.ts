@@ -1,3 +1,7 @@
+import type {} from '@mammoth-ai/mmp-working-directory'
+import { COMPLETE_SKILL_LIMITS, type SkillPackageLimits } from './skill-package-format.ts'
+import { ExpertKnowledgeRuntime, knowledgeProjection, type KnowledgeState } from './knowledge-runtime.ts'
+import { exactSource, type OpenedSource, type RuntimeBinding } from './knowledge-protocol.ts'
 import { skillStepAccess } from './skill-availability.ts'
 import { parseSelection, catalogHash, compositionHashOf, selectionSkills, skillMarksOf, attemptForMessage, attemptForRequest, type CatalogAttempt } from './task-composition.ts'
 import type { AgentHandle } from '@mammoth-ai/mmp-agent'
@@ -21,7 +25,7 @@ import type {} from '@mammoth-ai/mmp-system-prompt'
 import type { ToolDefinition } from '@mammoth-ai/mmp-tools'
 import type {} from '@mammoth-ai/mmp-workspace/types'
 import type {} from '@mammoth-ai/mmp-workspace'
-import type {} from '@mammoth-ai/mmp-skill'
+import { renderSkillContent } from '@mammoth-ai/mmp-skill'
 import { GroundOfficialAgentClient } from './ground.ts'
 import {
   officialAgentBindingProjection,
@@ -82,11 +86,23 @@ declare module '@mammoth-ai/mmp-session/types' {
 export interface Config {
   /** Ground public HTTP(S) origin without a path. */
   groundOrigin: string
+  /** Local maximum expanded bytes for a complete skill revision. */
+  skillMaxTotalBytes?: number
+  /** Local maximum files for a complete skill revision. */
+  skillMaxFiles?: number
+  /** Local maximum SKILL.md bytes. */
+  skillMaxInstructionBytes?: number
+  /** Maximum distinct historical exact sources reauthorized before resend; exceeding it requires a new chat. */
+  maxHistoricalSources?: number
 }
 
 /** Validated Ground connection configuration. */
 export const Config: z<Config> = z.object({
   groundOrigin: z.string().default('http://127.0.0.1:5201'),
+  skillMaxTotalBytes: z.number().min(1).max(COMPLETE_SKILL_LIMITS.maxTotalBytes).step(1).default(COMPLETE_SKILL_LIMITS.maxTotalBytes),
+  skillMaxFiles: z.number().min(1).max(COMPLETE_SKILL_LIMITS.maxFiles).step(1).default(COMPLETE_SKILL_LIMITS.maxFiles),
+  skillMaxInstructionBytes: z.number().min(1).max(COMPLETE_SKILL_LIMITS.maxInstructionBytes).step(1).default(COMPLETE_SKILL_LIMITS.maxInstructionBytes),
+  maxHistoricalSources:z.number().step(1).min(1).max(1024).default(128),
 })
 
 const KNOWLEDGE_TOOL = 'enterprise_knowledge'
@@ -120,15 +136,21 @@ export default class OfficialAgentGallery extends TypertRemoteService {
 
   private readonly ownedTasks = new Map<SessionId, AgentHandle>()
   private readonly ground: GroundOfficialAgentClient
+  private readonly sourceLimit:number
   private readonly origin: string
   private readonly hostInstance=randomUUID()
   private readonly expertTools = new Map<string, () => void>()
-  private readonly runtimes=new Map<string,{epoch:number;used:boolean;invalidateSkills:()=>void;active?:CatalogAttempt|undefined;marker:string;agent:Agent;documents:ManagedDocuments;composition:ManagedComposition|null;bodies:Map<string,{body:string;hash:string;paths:readonly string[];id:string;revision:number}>;attempt:string;turn:number;step:number}>()
+  private readonly runtimes=new Map<string,{epoch:number;used:boolean;invalidateSkills:()=>Promise<void>;skillsCleanup:Promise<void>;active?:CatalogAttempt|undefined;marker:string;agent:Agent;documents:ManagedDocuments;composition:ManagedComposition|null;bodies:Map<string,{body:string;hash:string;paths:readonly string[];id:string;revision:number}>;attempt:string;turn:number;step:number}>()
+  private readonly packageLimits: SkillPackageLimits
+  private knowledgeProjection!: ProjectionHandle<KnowledgeState>
+  private readonly knowledge = new Map<string, ExpertKnowledgeRuntime>()
   private projection!: ProjectionHandle<OfficialAgentBindingState>
   private skillProjection!: ProjectionHandle<OfficialSkillBindingState>
 
   constructor(ctx: Context, config: Config) {
     super(ctx, 'officialAgentGallery')
+    this.packageLimits = { maxTotalBytes: config.skillMaxTotalBytes ?? COMPLETE_SKILL_LIMITS.maxTotalBytes, maxFiles: config.skillMaxFiles ?? COMPLETE_SKILL_LIMITS.maxFiles, maxInstructionBytes: config.skillMaxInstructionBytes ?? COMPLETE_SKILL_LIMITS.maxInstructionBytes }
+    this.sourceLimit=config.maxHistoricalSources??128
     const configuredOrigin = process.env.GROUND_PUBLIC_ORIGIN
       || process.env.MMP_PLATFORM_ORIGIN
       || config.groundOrigin
@@ -142,7 +164,22 @@ export default class OfficialAgentGallery extends TypertRemoteService {
   }
 
   protected async [Service.init](): Promise<void> {
+    this.ctx.on('deepseek-account/signed-out', async () => {
+      await Promise.all([...this.runtimes.values()].map(async runtime => {
+        runtime.epoch++
+        runtime.bodies.clear()
+        const previous = runtime.skillsCleanup
+        runtime.skillsCleanup = Promise.all([previous, runtime.invalidateSkills()]).then(() => {})
+        await runtime.skillsCleanup
+      }))
+    })
     this.ctx.on('task/dispose-owned', async (sessionId) => { const handle=this.ownedTasks.get(sessionId); if(handle){await handle.dispose();this.ownedTasks.delete(sessionId)} })
+    this.knowledgeProjection = await this.ctx.sessionProjections.register(knowledgeProjection)
+    const owner=this
+    this.ctx.on('llm/stream',async function* (options,next){
+      if(options.sessionId){const runtime=owner.knowledge.get(options.sessionId);if(runtime){const agent=owner.ctx.agents.get(options.sessionId);if(agent)await owner.authorize(agent,options.signal);await runtime.authorizeHistory(options.signal)}}
+      yield* next()
+    })
     this.projection = await this.ctx.sessionProjections.register(officialAgentBindingProjection)
     this.skillProjection = await this.ctx.sessionProjections.register(officialSkillBindingProjection)
     await this.ctx.sessionProjections.register(officialGallerySourceProjection)
@@ -160,32 +197,47 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       if(this.runtimes.get(agent.id)?.active!==undefined)return
 
       if (binding !== null) {
-        await this.ground.resolve(binding.agentId, binding.versionId)
+        await this.resolveBinding(binding)
         // Linked skills: summary catalog only; bodies load via native `skill` tool.
         this.ctx.groundRequestAttribution.bind(agent.id, {
-          agentId: binding.agentId, versionId: binding.versionId,
+          ...this.attributionFor(binding),
         })
         return
       }
       const skillBinding = this.skillBindingFor(agent.session)
       if (skillBinding === null) return
     })
-    this.ctx.on('agent/pre-step', async ({agent,signal,turn,step},next):Promise<PreStepDecision>=>{
+    this.ctx.on('agent/pre-step', async ({agent,signal,turn,step,messages,modelSelection},next):Promise<PreStepDecision>=>{
       const runtime=this.runtimes.get(agent.id);if(!runtime)return next()
       if(runtime.turn!==turn){runtime.attempt=randomUUID();runtime.turn=turn;runtime.step=step;this.receipt(agent,'preparing')}else runtime.step=step
       try{
         await this.authorize(agent,signal)
+<<<<<<< HEAD
         for(const selected of this.activeSkills(agent.session)){
           if(runtime.bodies.has(selected.sessionSource.key))continue
+=======
+        const fixed=this.bindingFor(agent.session)?.executionConfig?.generationModel
+        if(fixed?.mode==='FIXED'&&(modelSelection.provider!=='mammoth-ground'||modelSelection.model!==fixed.modelRef))throw Error('EXPERT_FIXED_MODEL_REQUIRED: reselect the expert')
+        await this.knowledge.get(agent.id)?.prepare(turn,messages,signal)
+        const selected=this.skillBindingFor(agent.session)
+        if(selected&&!runtime.bodies.has(selected.sessionSource.key)){
+>>>>>>> origin/4.0
           this.receipt(agent,'fetching')
-          const skill=await this.ctx.skills.get(selected.sessionSource.key,{scope:agent,signal})
+          const directory=agent.ctx.get('workingDirectory')
+          const cwd=directory?await directory.ensure(agent,signal):undefined
+          const skill=await this.ctx.skills.get(selected.sessionSource.key,{scope:agent,cwd,signal})
           if(!skill||!runtime.bodies.has(selected.sessionSource.key))throw new Error('GALLERY_SKILL_LOAD_FAILED')
         }
         signal.throwIfAborted();this.recordUsed(agent);return next()
       }catch(error){this.receipt(agent,signal.aborted?'cancelled':'failed',{reason:error instanceof Error?error.message.split(':')[0]??'GALLERY_FAILED':'GALLERY_PREPARE_FAILED'});throw error}
     })
     this.ctx.on('agent/disposed', ({ agent }) => {
+<<<<<<< HEAD
       this.ctx.groundRequestAttribution.unbind(agent.id)
+=======
+      if (this.bindingFor(agent.session) !== null) this.ctx.groundRequestAttribution.unbind(agent.id)
+      this.knowledge.delete(agent.id)
+>>>>>>> origin/4.0
       this.runtimes.delete(agent.id)
       this.expertTools.delete(agent.id)
       this.ownedTasks.delete(agent.id)
@@ -250,10 +302,27 @@ export default class OfficialAgentGallery extends TypertRemoteService {
   @Remote
   async create(request: OfficialAgentSessionRequest): Promise<SessionId> {
     await this.assertStandardServices()
-    const card = await this.ground.getCard(request.agentId)
-    if (card === undefined) throw new Error('The official Expert is unavailable.')
-    if (!card.executionGranted) throw new Error('OFFICIAL_AGENT_NOT_GRANTED')
-    const execution = await this.ground.resolve(card.id, card.versionId)
+    const card=await this.ground.getCard(request.agentId)
+    if(!card.executionGranted)throw Error('OFFICIAL_AGENT_NOT_GRANTED')
+    const execution=await this.ground.resolve(request.agentId,card.versionId)
+    if(execution.agentId!==request.agentId||execution.versionId!==card.versionId)throw Error('EXPERT_BINDING_CHANGED: reopen the expert')
+    return this.createExpert(request,execution,card.name)
+  }
+
+  /**
+   * Create an immutable creator-only preview through the normal standard Harness.
+   * @param request - Expert, preview and granted Workspace selected by the creator.
+   * @returns The created preview Session identity.
+   */
+  @Remote
+  async createPreview(request: OfficialAgentSessionRequest & {previewId:string}):Promise<SessionId>{
+    await this.assertStandardServices()
+    const execution=await this.ground.resolvePreview(request.agentId,request.previewId)
+    if(execution.agentId!==request.agentId||!('preview' in execution)||execution.preview?.id!==request.previewId||execution.versionId!==null)throw Error('EXPERT_PREVIEW_BINDING_CHANGED: recreate the preview')
+    return this.createExpert(request,execution,execution.key)
+  }
+
+  private async createExpert(request:OfficialAgentSessionRequest,execution:import('./ground.ts').GroundOfficialExecution,name:string):Promise<SessionId>{
     const workspace = this.ctx.workspaceRegistry.get(request.workspaceId)
     if (workspace === undefined) throw new Error('Choose an existing Workspace for the official Expert.')
     const openingQuestion = request.openingQuestion?.trim()
@@ -261,7 +330,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       agentId: execution.agentId,
       versionId: execution.versionId,
       kind: execution.kind,
-      name: card.name,
+      name,
+      ...this.executionFields(execution),
       systemPrompt: execution.systemPrompt,
       toolScope: execution.toolScope,
       // Pass-through only; bodies load on demand via session SkillProvider.
@@ -271,7 +341,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     const handle = await this.ctx.agents.create({
       sessionId,
       meta: { cwd: workspace.path,agentPreset:'standard' },
-      agentOptions: { provider: 'mammoth-ground', model: 'auto' },
+      agentOptions: { provider: 'mammoth-ground', model: 'executionConfig' in execution && execution.executionConfig.generationModel.mode==='FIXED'?execution.executionConfig.generationModel.modelRef:'auto' },
       setup: async (agentCtx, agent) => {
         await this.ctx.agentPresets.mount(agentCtx,'standard')
         agent.session.append('agent-preset/selected',{agentPreset:'standard'})
@@ -440,8 +510,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     }
   }
 
-  private installSessionSkills(agentCtx:Context,skills:readonly OfficialSkillSummary[]|(()=>readonly OfficialSkillSummary[]),agent:Agent):()=>void{
-    return installOfficialGallerySkills(agentCtx,this.ground,skills,(payload,body)=>{
+  private installSessionSkills(agentCtx:Context,skills:readonly OfficialSkillSummary[]|(()=>readonly OfficialSkillSummary[]),agent:Agent):()=>Promise<void>{
+    return installOfficialGallerySkills(agentCtx,this.ground,skills,(payload,body,directory)=>{
       const runtime=this.runtimes.get(agent.id);if(!runtime)throw new Error('GALLERY_RUNTIME_MISSING')
       const pins=runtime.active!==undefined?this.attemptPins(runtime.active):runtime.composition?.selected?[runtime.composition.selected]:[]
       const expected=pins.find(pin=>pin.key===payload.key)
@@ -450,9 +520,9 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       if(!runtime.active&&historical?.type==='official-gallery/receipt'&&historical.data.skillHash!==sha(payload.instruction))throw new Error('GALLERY_SKILL_HASH_MISMATCH')
       const old=runtime.bodies.get(payload.key)
       if(old&&old.hash!==sha(payload.instruction))throw new Error('GALLERY_SKILL_HASH_MISMATCH')
-      runtime.bodies.set(payload.key,{body,hash:sha(payload.instruction),paths:payload.references.map(r=>r.path),id:payload.id,revision:payload.packageRevision})
+      runtime.bodies.set(payload.key,{body:renderSkillContent({name:payload.key,provider:'official-gallery',content:body,resourceBase:{kind:'directory',path:directory}}),hash:sha(payload.instruction),paths:('packageFormat' in payload?payload.files:payload.references).map(r=>r.path),id:payload.id,revision:payload.packageRevision})
       this.receipt(agent,'prepared',{skillHash:sha(payload.instruction),skillKey:payload.key,revision:payload.packageRevision})
-    },()=>this.runtimes.get(agent.id)?.epoch)
+    },()=>this.runtimes.get(agent.id)?.epoch,this.packageLimits)
   }
   private requiredContext(runtime:{marker:string;active?:CatalogAttempt|undefined;bodies:Map<string,{body:string}>}):string|undefined {
     const bodies=[...runtime.bodies.values()].map(body=>body.body).join('\n\n')
@@ -478,10 +548,15 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     let expert:OfficialAgentBinding|null=null,skills:OfficialSkillBinding[]=[],skillHashes:string[]=[]
     if(previous){expert=previous.expert;skills=Array.isArray(previous.skills)?[...previous.skills]:previous.skill?[previous.skill]:[];skillHashes=Array.isArray(previous.skillHashes)?[...previous.skillHashes]:previous.skillHash?[previous.skillHash]:[]}
     else {
+<<<<<<< HEAD
       if(selection.expertRef){const card=await this.ground.getCard(selection.expertRef.id);if(!card.executionGranted)throw new Error('TASK_EXPERT_ACCESS_CHANGED');const execution=await this.ground.resolve(selection.expertRef.id,selection.expertRef.versionId);if(execution.agentId!==selection.expertRef.id||execution.versionId!==selection.expertRef.versionId)throw new Error('TASK_EXPERT_REVISION_CHANGED');expert={agentId:execution.agentId,versionId:execution.versionId,kind:execution.kind,name:card.name,systemPrompt:execution.systemPrompt,toolScope:execution.toolScope,...execution.linkedSkills?{linkedSkills:execution.linkedSkills}:{}}}
       for(const ref of selectionSkills(selection)){const skill=await this.ground.beginSkillSession(ref.id,ref.revision);if(skill.sessionSource.id!==ref.id||skill.sessionSource.packageRevision!==ref.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');if(skills.some(existing=>existing.sessionSource.key===skill.sessionSource.key))throw new Error('TASK_SELECTION_DUPLICATE_SKILL');const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision);if(content.id!==ref.id||content.key!==skill.sessionSource.key||content.packageRevision!==ref.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');skills.push(skill);skillHashes.push(sha(content.instruction))}
+=======
+      if(selection.expertRef){const card=await this.ground.getCard(selection.expertRef.id);if(!card.executionGranted)throw new Error('TASK_EXPERT_ACCESS_CHANGED');const execution=await this.ground.resolve(selection.expertRef.id,selection.expertRef.versionId);if(execution.agentId!==selection.expertRef.id||execution.versionId!==selection.expertRef.versionId)throw new Error('TASK_EXPERT_REVISION_CHANGED');expert={agentId:execution.agentId,versionId:execution.versionId,kind:execution.kind,name:card.name,systemPrompt:execution.systemPrompt,toolScope:execution.toolScope,...this.executionFields(execution),...execution.linkedSkills?{linkedSkills:execution.linkedSkills}:{}}}
+      if(selection.skillRef){skill=await this.ground.beginSkillSession(selection.skillRef.id,selection.skillRef.revision);if(skill.sessionSource.id!==selection.skillRef.id||skill.sessionSource.packageRevision!==selection.skillRef.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision);if(content.id!==selection.skillRef.id||content.key!==skill.sessionSource.key||content.packageRevision!==selection.skillRef.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');skillHash=sha(content.instruction)}
+>>>>>>> origin/4.0
     }
-    if(expert)await this.ground.resolve(expert.agentId,expert.versionId)
+    if(expert)await this.resolveBinding(expert)
     const latest=attemptForRequest(agent.session,request.requestId)
     if(latest&&(latest.selectionHash!==selectionHash||latest.inputHash!==inputHash))throw new Error('TASK_IDEMPOTENCY_COMPOSITION_CONFLICT')
     if(this.ctx.agents.get(agent.id)!==agent)throw new Error('TASK_DISPOSED_DURING_PREPARATION')
@@ -499,12 +574,22 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     const preset=await this.ctx.agentPresets.resolve('standard');if(preset.broken)throw new Error(`GALLERY_STANDARD_UNAVAILABLE: ${preset.broken}`)
   }
   private async authorize(agent:Agent,signal?:AbortSignal):Promise<void>{
+<<<<<<< HEAD
     signal?.throwIfAborted();const active=this.runtimes.get(agent.id)?.active;const chosen=this.activeSkills(agent.session);if(active&&!active.expert&&chosen.length===0)return;if(active){const scope=await this.ground.currentScope();if(scope.userId!==active.authScope.userId||scope.scope!==active.authScope.scope)throw new Error('TASK_AUTH_SCOPE_CHANGED')}const binding=this.bindingFor(agent.session)
     if(binding)await this.ground.resolve(binding.agentId,binding.versionId,signal)
     if(chosen.length>0){
       const frozen=skillStepAccess(Boolean(active))==='snapshot'
       if(frozen&&active){
         for(const skill of chosen){const pin=this.attemptPins(active).find(item=>item.key===skill.sessionSource.key);if(pin?.hash){const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision,signal);if(sha(content.instruction)!==pin.hash)throw new Error('TASK_SKILL_SNAPSHOT_CHANGED')}}
+=======
+    signal?.throwIfAborted();await this.runtimes.get(agent.id)?.skillsCleanup;const active=this.runtimes.get(agent.id)?.active;if(active&&!active.expert&&!active.skill)return;if(active){const scope=await this.ground.currentScope();if(scope.userId!==active.authScope.userId||scope.scope!==active.authScope.scope)throw new Error('TASK_AUTH_SCOPE_CHANGED')}const binding=this.bindingFor(agent.session),selected=this.skillBindingFor(agent.session)
+    if(binding)await this.resolveBinding(binding,signal)
+    if(selected){
+      const active=this.runtimes.get(agent.id)?.active
+      const frozen=skillStepAccess(Boolean(active?.skill))==='snapshot'
+      if(frozen){
+        if(active?.skillHash){const content=await this.ground.fetchSkillContent(selected.sessionSource.id,selected.sessionSource.packageRevision,signal);if(sha(content.instruction)!==active.skillHash)throw new Error('TASK_SKILL_SNAPSHOT_CHANGED')}
+>>>>>>> origin/4.0
       }else{
         for(const skill of chosen)await this.ground.beginSkillSession(skill.sessionSource.id,skill.sessionSource.packageRevision,signal)
       }
@@ -528,21 +613,34 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     const lastStart=agent.session.snapshotEvents().findLast(e=>e.type==='official-gallery/attempt-start')
     const restored=lastStart?.type==='official-gallery/attempt-start'?attemptForMessage(agent.session,lastStart.data.messageId):undefined
     if(lastStart&&!restored)throw new Error('TASK_COMPOSITION_HISTORY_INVALID')
-    const runtime={epoch:0,used:false,invalidateSkills:()=>{},active:restored,marker:'',agent,composition,documents,bodies:new Map<string,{body:string;hash:string;paths:readonly string[];id:string;revision:number}>(),attempt:restored?.requestId??String(randomUUID()),turn:lastStart?.type==='official-gallery/attempt-start'?lastStart.data.turn:0,step:0}
+    const runtime={epoch:0,used:false,invalidateSkills:async()=>{},skillsCleanup:Promise.resolve(),active:restored,marker:'',agent,composition,documents,bodies:new Map<string,{body:string;hash:string;paths:readonly string[];id:string;revision:number}>(),attempt:restored?.requestId??String(randomUUID()),turn:lastStart?.type==='official-gallery/attempt-start'?lastStart.data.turn:0,step:0}
     this.runtimes.set(agent.id,runtime)
+    const knowledge=new ExpertKnowledgeRuntime(agent,this.ground,this.knowledgeProjection.readerFor(agent.session),()=>this.bindingFor(agent.session),this.sourceLimit)
+    this.knowledge.set(agent.id,knowledge)
+    agent.ctx.effect(()=>{
+      const dispose=this.ctx.groundRequestAttribution.guard(agent.id,(request,body)=>knowledge.assertWire(request,body))
+      this.ctx.effect(()=>dispose) // Either plugin replacement or Agent disposal retires the same idempotent guard.
+      return dispose
+    })
+    this.selectFixedModel(agent,this.bindingFor(agent.session))
     agent.ctx.systemPrompt.section({name:'OFFICIAL_GALLERY_REQUIRED_SKILLS',order:899,interpolate:false,text:()=>this.requiredContext(runtime)??''})
     agent.ctx.systemPrompt.section({name:'OFFICIAL_EXPERT_ROLE',order:898,interpolate:false,text:()=>runtime.active ? '' : this.bindingFor(agent.session)?.systemPrompt??''})
     this.replaceExpertTools(agent,this.bindingFor(agent.session))
+<<<<<<< HEAD
     runtime.invalidateSkills=this.installSessionSkills(agent.ctx,()=>{const expert=this.bindingFor(agent.session),skills=this.activeSkills(agent.session);return [...new Map([...expert?.linkedSkills??[],...skills.map(skill=>this.skillSummaryFromBinding(skill))].map(summary=>[summary.key,summary])).values()]},agent)
+=======
+    runtime.invalidateSkills=this.installSessionSkills(agent.ctx,()=>{const expert=this.bindingFor(agent.session),skill=this.skillBindingFor(agent.session);return [...new Map([...expert?.linkedSkills??[],...skill?[this.skillSummaryFromBinding(skill)]:[]].map(summary=>[summary.key,summary])).values()]},agent)
+    const resetSkills=()=>{runtime.skillsCleanup=runtime.invalidateSkills();void runtime.skillsCleanup.catch(()=>{})}
+>>>>>>> origin/4.0
     agent.ctx.on('agent/inbox/claimed',({message,turn})=>{
       const frozen=attemptForMessage(agent.session,message.id)
-      if(!frozen){runtime.epoch++;runtime.active=undefined;runtime.used=false;runtime.bodies.clear();runtime.invalidateSkills();runtime.turn=turn;runtime.step=1;runtime.attempt=randomUUID();this.ctx.groundRequestAttribution.unbind(agent.id);this.replaceExpertTools(agent,null);const original=this.bindingFor(agent.session);if(original){this.ctx.groundRequestAttribution.bind(agent.id,{agentId:original.agentId,versionId:original.versionId});this.replaceExpertTools(agent,original)}return}
+      if(!frozen){runtime.epoch++;runtime.active=undefined;runtime.used=false;runtime.bodies.clear();resetSkills();runtime.turn=turn;runtime.step=1;runtime.attempt=randomUUID();this.ctx.groundRequestAttribution.unbind(agent.id);this.replaceExpertTools(agent,null);const original=this.bindingFor(agent.session);if(original){this.ctx.groundRequestAttribution.bind(agent.id,this.attributionFor(original));this.selectFixedModel(agent,original);this.replaceExpertTools(agent,original)}return}
       if(runtime.active&&runtime.turn===turn&&runtime.active.compositionHash!==frozen.compositionHash)throw new Error('TASK_COMPOSITION_STEER_CONFLICT')
       this.expertTools.get(agent.id)?.();this.expertTools.delete(agent.id)
-      runtime.epoch++;runtime.active=frozen;runtime.used=false;runtime.bodies.clear();runtime.invalidateSkills();runtime.turn=turn;runtime.step=1;runtime.attempt=frozen.requestId
+      runtime.epoch++;runtime.active=frozen;runtime.used=false;runtime.bodies.clear();resetSkills();runtime.turn=turn;runtime.step=1;runtime.attempt=frozen.requestId
       this.ctx.groundRequestAttribution.unbind(agent.id)
       this.replaceExpertTools(agent,frozen.expert)
-      if(frozen.expert)this.ctx.groundRequestAttribution.bind(agent.id,{agentId:frozen.expert.agentId,versionId:frozen.expert.versionId})
+      if(frozen.expert)this.ctx.groundRequestAttribution.bind(agent.id,this.attributionFor(frozen.expert));this.selectFixedModel(agent,frozen.expert)
       agent.session.append('official-gallery/attempt-start',{requestId:frozen.requestId,messageId:message.id,turn,compositionHash:frozen.compositionHash})
     })
     // Native assemble precedes agent/pre-step. Load here, then update THIS assembly,
@@ -559,7 +657,9 @@ export default class OfficialAgentGallery extends TypertRemoteService {
         for(const event of agent.session.snapshotEvents())if(!runtime.active&&event.type==='official-gallery/receipt'&&event.data.phase==='prepared'&&event.data.skillKey&&associated.some(s=>s.key===event.data.skillKey&&s.packageRevision===event.data.revision))keys.add(event.data.skillKey)
         for(const key of keys)if(!runtime.bodies.has(key)){
           await this.authorize(agent,context.signal);this.receipt(agent,'fetching')
-          const prepared=await this.ctx.skills.get(key,{scope:agent,signal:context.signal})
+          const directory=agent.ctx.get('workingDirectory')
+          const cwd=directory?await directory.ensure(agent,context.signal):undefined
+          const prepared=await this.ctx.skills.get(key,{scope:agent,cwd,signal:context.signal})
           if(!prepared||!runtime.bodies.has(key))throw new Error('GALLERY_SKILL_LOAD_FAILED')
         }
         const result=await next()
@@ -576,7 +676,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     this.expertTools.delete(agent.id)
     if (!binding) return
     const extra = [
-      ...(binding.kind === 'KNOWLEDGE' && binding.toolScope.includes(KNOWLEDGE_TOOL) ? [this.knowledgeTool(binding)] : []),
+      ...(binding.executionConfig?.route==='KNOWLEDGE_CORE' ? binding.executionConfig.retrievalPolicy==='OFF'?[]:[this.coreKnowledgeTool(agent)] : binding.kind === 'KNOWLEDGE' && binding.toolScope.includes(KNOWLEDGE_TOOL) ? [this.knowledgeTool(binding)] : []),
       ...(binding.toolScope.includes(WEB_SEARCH_TOOL) ? [this.webSearchTool(binding)] : []),
       ...(binding.toolScope.includes(WEB_FETCH_TOOL) ? [this.webFetchTool(binding)] : []),
       ...(binding.toolScope.includes(TABULAR_ANALYZE_TOOL) ? [this.tabularAnalyzeTool(binding)] : []),
@@ -588,6 +688,32 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       if (!agent.ctx.tools.get(definition.name, agent)) disposers.push(agent.ctx.tools.register(definition))
     }
     this.expertTools.set(agent.id, () => { for (const dispose of disposers) dispose() })
+  }
+
+  private executionFields(execution:import('./ground.ts').GroundOfficialExecution){
+    return 'executionConfig' in execution?{executionConfig:execution.executionConfig,...execution.preview?{preview:execution.preview}:{}}:{}
+  }
+  private async resolveBinding(binding:OfficialAgentBinding,signal?:AbortSignal){const current=binding.preview?await this.ground.resolveRuntime(binding,signal):await this.ground.resolve(binding.agentId,this.publishedVersion(binding),signal);if(current.agentId!==binding.agentId||current.versionId!==binding.versionId||(binding.preview&&(!('preview' in current)||current.preview?.id!==binding.preview.id)))throw Error('EXPERT_BINDING_CHANGED: reopen the expert');return current}
+  private publishedVersion(binding:RuntimeBinding):string{if(!binding.versionId)throw Error('EXPERT_PREVIEW_TOOL_UNAVAILABLE');return binding.versionId}
+  private attributionFor(binding:OfficialAgentBinding){return binding.preview?{agentId:binding.agentId,previewId:binding.preview.id}:{agentId:binding.agentId,versionId:this.publishedVersion(binding)}}
+  private selectFixedModel(agent:Agent,binding:OfficialAgentBinding|null){const fixed=binding?.executionConfig?.generationModel;if(fixed?.mode==='FIXED')agent.model.select({provider:'mammoth-ground',model:fixed.modelRef})}
+  private coreKnowledgeTool(agent:Agent):ToolDefinition{return {name:KNOWLEDGE_TOOL,description:'Search the expert documents once for supplemental evidence. Returned labels refer to untrusted document data in the current context. Never invent a source.',parameters:{type:'object',properties:{query:{type:'string'}},required:['query'],additionalProperties:false},output:{schema:{type:'object'},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)}]},execute:async(args,exec)=>{const {query}=querySchema.parse(args);const runtime=this.knowledge.get(agent.id);if(!runtime)throw Error('EXPERT_RUNTIME_MISSING');return runtime.supplemental(query,exec.signal)}}}
+
+  /**
+   * Open an exact source selected from one persisted turn/lookup, under current account authorization.
+   * @param agent - Session containing the persisted lookup.
+   * @param recordId - Recorded lookup identity.
+   * @param label - Exact citation label from that lookup.
+   * @returns The authorized immutable source passage and its original offsets.
+   */
+  @Remote
+  async openKnowledgeSource(agent:Agent,recordId:string,label:string):Promise<OpenedSource>{
+    const record=this.knowledgeProjection.stateOf(agent.session).records.find(r=>r.id===recordId)
+    const source=record?.evidence.find(e=>e.label===label)
+    if(!record||!source)throw Error('EXPERT_SOURCE_NOT_FOUND')
+    const scope=await this.ground.currentScope()
+    if(scope.userId!==record.authScope.userId||scope.scope!==record.authScope.scope)throw Error('EXPERT_SOURCE_ACCESS_CHANGED')
+    return this.ground.openSource(record.binding,exactSource(source))
   }
 
   private knowledgeTool(binding: OfficialAgentBinding): ToolDefinition {
@@ -606,13 +732,13 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       },
       execute: async (args, exec) => {
         const { query } = querySchema.parse(args)
-        await this.ground.resolve(binding.agentId, binding.versionId, exec.signal)
-        const result = await this.ground.retrieve(binding.agentId, binding.versionId, query, exec.signal)
+        await this.resolveBinding(binding, exec.signal)
+        const result = await this.ground.retrieve(binding.agentId, this.publishedVersion(binding), query, exec.signal)
         return {
           hits: result.hits.map(hit => ({
             ...hit,
             sourceUrl: new URL(
-              `/api/official-agents/${encodeURIComponent(binding.agentId)}/sources/${encodeURIComponent(hit.documentId)}?versionId=${encodeURIComponent(binding.versionId)}`,
+              `/api/official-agents/${encodeURIComponent(binding.agentId)}/sources/${encodeURIComponent(hit.documentId)}?versionId=${encodeURIComponent(this.publishedVersion(binding))}`,
               this.origin,
             ).href,
           })),
@@ -637,8 +763,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       },
       execute: async (args, exec) => {
         const { query } = webSearchQuerySchema.parse(args)
-        await this.ground.resolve(binding.agentId, binding.versionId, exec.signal)
-        const result = await this.ground.search(binding.agentId, binding.versionId, query, exec.signal)
+        await this.resolveBinding(binding, exec.signal)
+        const result = await this.ground.search(binding.agentId, binding.versionId, query, exec.signal, binding.preview)
         return {
           provider: result.provider,
           hits: result.hits.map(hit => ({
@@ -670,8 +796,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       },
       execute: async (args, exec) => {
         const { url } = webFetchSchema.parse(args)
-        await this.ground.resolve(binding.agentId, binding.versionId, exec.signal)
-        return this.ground.fetchUrl(binding.agentId, binding.versionId, url, exec.signal)
+        await this.resolveBinding(binding, exec.signal)
+        return this.ground.fetchUrl(binding.agentId, binding.versionId, url, exec.signal, binding.preview)
       },
     }
   }
@@ -702,7 +828,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       },
       execute: async (args, exec) => {
         const parsed = tabularSchema.parse(args)
-        await this.ground.resolve(binding.agentId, binding.versionId, exec.signal)
+        await this.resolveBinding(binding, exec.signal)
         const body: {
           content: string
           format?: 'csv' | 'json' | 'auto'
@@ -714,7 +840,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
         if (parsed.groupBy !== undefined) body.groupBy = parsed.groupBy
         if (parsed.metrics !== undefined) body.metrics = parsed.metrics
         if (parsed.goal !== undefined) body.goal = parsed.goal
-        return this.ground.analyzeTabular(binding.agentId, binding.versionId, body, exec.signal)
+        return this.ground.analyzeTabular(binding.agentId, binding.versionId, body, exec.signal, binding.preview)
       },
     }
   }
@@ -743,7 +869,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       },
       execute: async (args, exec) => {
         const parsed = delegateSchema.parse(args)
-        await this.ground.resolve(binding.agentId, binding.versionId, exec.signal)
+        await this.resolveBinding(binding, exec.signal)
         const body: {
           targetKey: string
           task: string
@@ -752,7 +878,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
         } = { targetKey: parsed.targetKey, task: parsed.task }
         if (parsed.tabularContent !== undefined) body.tabularContent = parsed.tabularContent
         if (parsed.tabularFormat !== undefined) body.tabularFormat = parsed.tabularFormat
-        return this.ground.delegate(binding.agentId, binding.versionId, body, exec.signal)
+        return this.ground.delegate(binding.agentId, binding.versionId, body, exec.signal, binding.preview)
       },
     }
   }

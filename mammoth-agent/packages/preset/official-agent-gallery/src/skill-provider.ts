@@ -1,7 +1,9 @@
 /**
  * Session-scoped SkillProvider for Ground-managed official skills.
- * Lists frozen summaries only; loads SKILL.md (+ references) on demand via Ground.
+ * Lists frozen summaries and prepares versioned package files on demand via Ground.
  */
+import { CompleteSkillPackages } from './skill-package.ts'
+import type { SkillPackageLimits } from './skill-package-format.ts'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -29,8 +31,19 @@ interface OfficialSkillLocator {
   readonly displayName: string
 }
 
+// Detach a cancelled lookup even when an HTTP implementation ignores AbortSignal.
+// Both promise branches remain observed; a late response cannot resume package preparation.
+function withAbort<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(signal.reason)
+    signal.addEventListener('abort', abort, { once: true })
+    if (signal.aborted) abort()
+    operation.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort))
+  })
+}
+
 function stripFrontmatter(raw: string): string {
-  const match = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/u.exec(raw)
+  const match = /^(?:\uFEFF)?---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/u.exec(raw)
   return match === null ? raw.trim() : raw.slice(match[0].length).trim()
 }
 
@@ -46,27 +59,52 @@ function catalogDescription(displayName: string, summary: string): string {
  * @param agentCtx - agent-scoped context (files into that scope layer).
  * @param ground - authenticated Ground client.
  * @param skills - frozen summaries for this Session only.
+ * @param loaded - records an instruction after complete file preparation.
+ * @param generation - current task selection generation.
+ * @param packageLimits - local complete-package admission caps.
+ * @returns invalidation that joins cleanup of the previous execution copies.
  */
 export function installOfficialGallerySkills(
   agentCtx: Context,
   ground: GroundOfficialAgentClient,
   skills: readonly OfficialSkillSummary[] | (() => readonly OfficialSkillSummary[]),
-  loaded?: (payload:GroundOfficialSkillContent,body:string)=>void,
+  loaded?: (payload:GroundOfficialSkillContent,body:string,directory:string)=>void,
   generation?:()=>number|undefined,
-): () => void {
+  packageLimits?: SkillPackageLimits,
+): () => Promise<void> {
   const skillsService = agentCtx.get('skills')
-  if (skillsService === undefined) return () => {}
+  if (skillsService === undefined) return async () => {}
   let invalidate = () => {}
+  let clearPackages = async () => {}
   let lifecycle:AbortSignal|undefined
   const usable = () => (typeof skills === 'function' ? skills() : skills).filter(skill => isSkillName(skill.key))
 
   agentCtx.effect(function* () {
-    const materializations = new Map<string, string>()
+    const newState = () => ({
+      control: new AbortController(),
+      packages: new CompleteSkillPackages(packageLimits),
+      materializations: new Map<string, string>(),
+      pending: new Set<Promise<SkillDefinition | undefined>>(),
+    })
+    let state = newState()
+    const retiring = new Set<Promise<void>>()
+    const retire = async (previous: typeof state) => {
+      previous.control.abort(new Error('GALLERY_STALE_SKILL_LOAD'))
+      await Promise.allSettled([...previous.pending])
+      await previous.packages.dispose()
+      await Promise.all([...previous.materializations.values()].map(directory => rm(directory, { recursive: true, force: true })))
+      previous.materializations.clear()
+    }
+    clearPackages = async () => {
+      const previous = state
+      state = newState()
+      const cleanup = retire(previous)
+      retiring.add(cleanup)
+      try { await Promise.all([...retiring]) } finally { retiring.delete(cleanup) }
+    }
     yield async () => {
-      await Promise.all([...materializations.values()].map(async (directory) => {
-        await rm(directory, { recursive: true, force: true })
-      }))
-      materializations.clear()
+      await retire(state)
+      await Promise.all([...retiring])
     }
 
     const candidates = (): SkillCandidate[] => usable().map((skill) => {
@@ -96,24 +134,28 @@ export function installOfficialGallerySkills(
       name: OFFICIAL_GALLERY_SKILL_PROVIDER,
       list: () => Promise.resolve(candidates()),
       async get(candidate, options: SkillLookupOptions): Promise<SkillDefinition | undefined> {
-        const epoch=generation?.(),signal=lifecycle?AbortSignal.any([lifecycle,...options.signal?[options.signal]:[]]):options.signal
+        const current = state
+        const operation = (async (): Promise<SkillDefinition | undefined> => {
+        const epoch=generation?.(),signal=AbortSignal.any([current.control.signal,...lifecycle?[lifecycle]:[],...options.signal?[options.signal]:[]])
         const locator = candidate.locator as OfficialSkillLocator
         if (!usable().some(skill => skill.key === locator.key && skill.id === locator.id && skill.packageRevision === locator.revision)) return undefined
         signal?.throwIfAborted()
         let payload: GroundOfficialSkillContent
         try {
-          payload = await ground.fetchSkillContent(locator.id, locator.revision, signal)
+          payload = await withAbort(ground.fetchSkillContent(locator.id, locator.revision, signal), signal)
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
           throw new Error(`Official skill "${locator.displayName}" could not be loaded: ${message}`)
         }
-        if (payload.key !== locator.key || payload.packageRevision !== locator.revision) {
+        if (payload.id !== locator.id || payload.key !== locator.key || payload.packageRevision !== locator.revision) {
           throw new Error(`Official skill "${locator.displayName}" revision no longer matches the frozen Session.`)
         }
-        if(Buffer.byteLength(payload.instruction,'utf8')>131072||payload.references.length>64)throw new Error('Official skill exceeds managed package limits')
+        if(!('packageFormat' in payload)&&(Buffer.byteLength(payload.instruction,'utf8')>131072||payload.references.length>64))throw new Error('Official skill exceeds managed package limits')
         signal?.throwIfAborted()
-        const directory = await materializeSkillPackage(
-          materializations,
+        const directory = 'packageFormat' in payload
+          ? await current.packages.prepare(payload, ground, options.cwd, signal)
+          : await materializeSkillPackage(
+          current.materializations,
           ground,
           locator,
           payload,
@@ -121,26 +163,29 @@ export function installOfficialGallerySkills(
         )
         signal?.throwIfAborted()
         if(generation&&generation()!==epoch)throw new Error('GALLERY_STALE_SKILL_LOAD')
-        loaded?.(payload,stripFrontmatter(payload.instruction))
+        loaded?.(payload,stripFrontmatter(payload.instruction),directory)
         const { rank: _rank, locator: _locator, ...summary } = candidate
         return {
           ...summary,
           resourceBase: { kind: 'directory', path: directory },
           content: stripFrontmatter(payload.instruction),
         }
+        })()
+        current.pending.add(operation)
+        try { return await operation } finally { current.pending.delete(operation) }
       },
     }
 
     yield skillsService.registerProvider(control => { lifecycle=control.signal;invalidate=()=>control.invalidate(); return provider })
   }, 'official-gallery: session skill provider')
-  return () => invalidate()
+  return async () => { invalidate(); await clearPackages() }
 }
 
 async function materializeSkillPackage(
   cache: Map<string, string>,
   ground: GroundOfficialAgentClient,
   locator: OfficialSkillLocator,
-  payload: GroundOfficialSkillContent,
+  payload: Exclude<GroundOfficialSkillContent, { packageFormat: 2 }>,
   signal: AbortSignal | undefined,
 ): Promise<string> {
   const cacheKey = `${locator.id}@${String(locator.revision)}`

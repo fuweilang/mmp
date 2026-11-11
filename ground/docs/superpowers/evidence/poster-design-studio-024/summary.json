@@ -1,0 +1,42 @@
+{
+  "package": "poster-design-studio",
+  "version": "0.2.4",
+  "archive": {
+    "bytes": 91935,
+    "sha256": "ff9931d0cbfab691301a3ee0a3f0168fbc7c486c8ce297bcad83b58c2f7911a8",
+    "unchanged": true
+  },
+  "files": {
+    "total": 22,
+    "scripts": 4,
+    "references": 14,
+    "assets": 0,
+    "expandedBytes": 280076,
+    "verifiedBeforeAndAfterExecution": 22
+  },
+  "packageDigest": "8a8621d24b308bd53ddd728de645e5d87fccb4f1e5f7d2cbd9fa5440c90f0a02",
+  "groundImportAndResourceRead": "passed, real parser/storage/service and database fixture",
+  "sourceFocusedTests": {
+    "passed": 61,
+    "failed": 0
+  },
+  "builtNativeTests": {
+    "passed": 7,
+    "failed": 0
+  },
+  "python": {
+    "default": "3.9.6, incompatible runtime type alias at scripts/mcp_client.py:139",
+    "testedWorking": "existing Python3.12.14, no install or global configuration change"
+  },
+  "BeatraCredentialPresent": false,
+  "missingCredentialHandling": "verified with an isolated state directory and forbidden external-transport callback",
+  "BeatraRequests": 0,
+  "paidGeneration": false,
+  "autoUpdate": false,
+  "originalScriptsModified": false,
+  "model": "scripted mock",
+  "GroundHTTP": "fixture carrying actual import payload and bytes",
+  "hostTypes": "passed",
+  "clientTypes": "five unchanged baseline errors",
+  "productionDeployed": false
+}

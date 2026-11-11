@@ -33,9 +33,8 @@ describe('skill zip import', () => {
     assert.equal(parsed.manifest.description, 'Turn notes into actions');
     assert.equal(parsed.manifest.license, 'Apache-2.0');
     assert.match(parsed.instruction, /original English steps/);
-    const stored = JSON.parse(parsed.files.get('skill.json')!.toString('utf8'));
-    assert.equal(stored.license, 'Apache-2.0');
-    assert.equal(stored.entry, 'SKILL.md');
+    assert.equal(parsed.manifest.entry, 'SKILL.md');
+    assert.equal(parsed.files.has('skill.json'), false);
   });
 
   it('unwraps one outer directory and ignores Mac junk', async () => {
@@ -70,7 +69,7 @@ describe('skill zip import', () => {
     assert.match(parsed.instruction, /Body stays English/);
   });
 
-  it('names corrupt, missing, empty, multiple-entry and arbitrary archives', async () => {
+  it('names corrupt, missing, empty and multiple-entry archives', async () => {
     await assert.rejects(parseSkillZip(Buffer.from('not-a-zip')), /已损坏/);
     await assert.rejects(parseSkillZip(await zip({ 'readme.txt': 'hello' })), /缺少 SKILL.md/);
     await assert.rejects(parseSkillZip(await zip({ 'SKILL.md': '   \n' })), /内容为空/);
@@ -78,10 +77,8 @@ describe('skill zip import', () => {
       'a/SKILL.md': '# A\n\nOne.\n',
       'b/SKILL.md': '# B\n\nTwo.\n',
     })), /多个 SKILL.md/);
-    await assert.rejects(parseSkillZip(await zip({
-      'SKILL.md': '# Ok\n\nBody.\n',
-      'run.exe': 'nope',
-    })), /无法识别的文件/);
+    const dataOnly = await parseSkillZip(await zip({ 'SKILL.md': '# Ok\n\nBody.\n', 'run.exe': 'ordinary asset' }));
+    assert.equal(dataOnly.files.get('run.exe')?.toString(), 'ordinary asset');
   });
 
   it('rejects unsafe paths instead of accepting the archive', async () => {

@@ -1,3 +1,8 @@
+import { submitExpertPreviewInput } from './expert-preview-admission.ts'
+import { resolvePreviewWorkspace } from './expert-preview-workspace.ts'
+import { CompactExpertPreview, CompactExpertMessages } from './CompactExpertPreview.tsx'
+import { ExpertPreviewEntry, isEmbeddedExpertPreview, parseExpertPreview } from './ExpertPreviewEntry.tsx'
+import { installExpertPreviewBridge } from './expert-preview-bridge.ts'
 import { installTaskCatalog } from './task-catalog.tsx'
 /** Shared Mac/Web official expert + skill gallery (expert plaza). */
 import type { Context as ClientContext } from '@mammoth-ai/cordis'
@@ -27,6 +32,10 @@ declare module '@mammoth-ai/mmp-client-ui-slots' {
   }
 }
 
+declare module '@mammoth-ai/mmp-api-session-controller/client' {
+  interface SessionReferenceSourceMap { officialExpertPreview: unknown }
+}
+
 const NS = 'officialAgentGallery'
 const PANEL_ID = 'official-agents' as MainPanelId
 
@@ -51,6 +60,91 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en, ja, es, fr, de, ru, pt }), 'official-agent-gallery: dictionaries')
   const t = ctx.locale.bind(NS)
   ctx.inject(['sessions','conversation'], scope=>{installTaskCatalog(scope)})
+  const preview=typeof window==='undefined'?null:parseExpertPreview(window.location.search)
+  const embeddedPreview = typeof window !== 'undefined' && isEmbeddedExpertPreview(window.location.search)
+  if (preview) {
+    let sessionId: SessionId | undefined
+    let createdSessionId: SessionId | undefined
+    let sessionReference: ReturnType<typeof ctx.sessions.retain> | undefined
+    let launching: Promise<string | undefined> | undefined
+    let active = true
+    let bridge: ReturnType<typeof installExpertPreviewBridge> | undefined
+    let stopState: (() => void) | undefined
+    const admission = new AbortController()
+    ctx.effect(() => {
+      bridge = installExpertPreviewBridge({
+        frame: window, target: preview, message: key => t(embeddedPreview && key === 'previewSubmitFailed' ? 'previewAdmissionFailed' : key),
+        input: () => {
+          const binding = sessionId === undefined ? undefined : ctx.sessions.binding(sessionId)
+          if (binding === undefined) return
+          const input = ctx.conversation.input.for(binding.ctx)
+          return {
+            initialize: text => ctx.conversation.input.requestDraftInitialization(binding, { prompt: text, whenDraftExists: 'keep' }),
+            submit: () => embeddedPreview ? submitExpertPreviewInput(input, admission.signal) : input.submit('queue', 'click'),
+            cancel: () => binding.ctx.conversation.cancel(),
+          }
+        },
+      })
+      return () => { active = false; admission.abort(); stopState?.(); sessionReference?.release(); bridge?.dispose() }
+    }, 'official-agent-gallery: preview handoff')
+    ctx.inject(['layout', 'workspaces'], scope => {
+      const key = 'official-expert-preview' as MainPanelId
+      const launch = async () => {
+        if (sessionId !== undefined || !active) return
+        if (launching !== undefined) return launching
+        launching = (async () => {
+          const workspaceId = await resolvePreviewWorkspace(ctx.uiWorkspace.workspaceForNewSession(), scope.workspaces, admission.signal)
+          if (!active) return
+          if (workspaceId === undefined) return 'workspaceRequired'
+          if (createdSessionId === undefined) {
+            const result = await ctx.remote.officialAgentGallery.createPreview({ ...preview, workspaceId })
+            if (!result.ok) return 'previewUnavailable'
+            createdSessionId = result.value
+          }
+          // Catalog the Host-created identity before retaining its Client binding.
+          await ctx.sessions.refresh()
+          if (!active) return
+          sessionId = createdSessionId
+          const url = new URL(window.location.href)
+          url.searchParams.delete('expertPreview')
+          url.searchParams.delete('expertId')
+          url.searchParams.delete('expertEmbed')
+          window.history.replaceState(null, '', url)
+          if (embeddedPreview) sessionReference = ctx.sessions.retain(sessionId, { source: 'officialExpertPreview' })
+          else { ctx.uiWorkspace.openSession(sessionId); scope.layout.selectPanel(null) }
+          bridge?.start()
+          const binding = ctx.sessions.binding(sessionId)
+          if (embeddedPreview && binding) {
+            const report = () => bridge?.state(binding.session.getSnapshot().running)
+            stopState = binding.session.subscribe(report)
+            report()
+          }
+          return undefined
+        })().finally(() => { launching = undefined })
+        return launching
+      }
+      scope.slots.inject('main', () => {
+        const dispose = ctx.slots.register({ name: 'main', key, locale: NS, inject: () => ({ target: preview, launch }) }, ExpertPreviewEntry)
+        if (sessionId === undefined && !embeddedPreview) scope.layout.selectPanel(key)
+        return dispose
+      })
+      if (embeddedPreview) {
+        scope.slots.inject('rootframe', () => scope.slots.register({
+          name: 'rootframe', locale: NS,
+          children: { 'official.expert.preview.session': { kind: 'single', scope: 'session' } },
+          inject: () => ({ target: preview, launch, getSession: () => sessionReference }),
+        }, CompactExpertPreview))
+        scope.slots.inject('official.expert.preview.session', () => scope.slots.register({
+          name: 'official.expert.preview.session', locale: NS,
+          inject: () => ({ chatText: ctx.locale.bind('chat'), openSource: async (id: SessionId, recordId: string, label: string) => {
+            const result = await ctx.remote.officialAgentGallery.openKnowledgeSource(id, recordId, label)
+            if (!result.ok) throw new Error(result.error.message)
+            return result.value
+          } }),
+        }, CompactExpertMessages))
+      }
+    })
+  }
   const face: GalleryFace = {
     preferences: async(kind,view)=>{const result=await ctx.remote.officialAgentGallery.preferences(kind,view);if(!result.ok)throw new Error(result.error.message);return result.value},
     favourite: async(kind,id,value)=>{const result=await ctx.remote.officialAgentGallery.favourite(kind,id,value);if(!result.ok)throw new Error(result.error.message)},
@@ -119,6 +213,7 @@ export function apply(ctx: ClientContext): void {
     id: 'official-gallery-input-source',
     order: -9,
     locale: NS,
+<<<<<<< HEAD
     inject: () => ({
       download: async (sessionId: string, id: string) => {
         const result = await ctx.remote.officialAgentGallery.downloadArtifact(sessionId as Parameters<typeof ctx.remote.officialAgentGallery.downloadArtifact>[0], id)
@@ -126,6 +221,9 @@ export function apply(ctx: ClientContext): void {
         return result.value
       },
     }),
+=======
+    inject: () => ({ skillAvailability: readSkillAvailability(ctx),openKnowledgeSource:async(sessionId:string,recordId:string,label:string)=>{const result=await ctx.remote.officialAgentGallery.openKnowledgeSource(sessionId as SessionId,recordId,label);if(!result.ok)throw Error(result.error.message);return result.value} }),
+>>>>>>> origin/4.0
   }, GallerySourceLabel))
   ctx.slots.inject('conversation.chat.user.skills', () => ctx.slots.register({
     name: 'conversation.chat.user.skills',

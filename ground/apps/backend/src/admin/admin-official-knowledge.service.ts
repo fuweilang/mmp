@@ -1,3 +1,5 @@
+import { PrismaService } from '../prisma/prisma.service';
+import { assertSuperAdmin } from '../auth/super-admin';
 import { Injectable } from '@nestjs/common';
 import { KbStatus, User } from '@prisma/client';
 import { OfficialKbService } from '../official-agent/official-kb.service';
@@ -16,6 +18,7 @@ export class AdminOfficialKnowledgeService {
   constructor(
     private support: AdminSupportService,
     private officialKb: OfficialKbService,
+    private prisma?: PrismaService,
   ) {}
 
   async list(actor: User, query: ListOfficialKnowledgeDto) {
@@ -58,7 +61,7 @@ export class AdminOfficialKnowledgeService {
     file: UploadedFile | undefined,
     body: { agentId: string; name?: string; assetKey?: string },
   ) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma!,actor.id);
     return this.officialKb.uploadAdminDocument({
       agentId: body.agentId,
       file,
@@ -68,12 +71,12 @@ export class AdminOfficialKnowledgeService {
   }
 
   async replace(actor: User, id: string, file: UploadedFile | undefined, name?: string) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma!,actor.id);
     return this.officialKb.replaceAdminDocument(id, file, name);
   }
 
   async reindex(actor: User, id: string) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma!,actor.id);
     return this.officialKb.reindexAdminDocument(id);
   }
 

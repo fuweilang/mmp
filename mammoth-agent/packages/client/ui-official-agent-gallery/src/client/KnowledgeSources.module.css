@@ -1,0 +1,7 @@
+.sources { max-width: 38rem; color: var(--dsw-text-primary); }
+.opened { max-height: 60vh; overflow: auto; background: var(--dsw-bg-primary); padding: 1rem; }
+.opened pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.location { display: block; color: var(--dsw-text-secondary); font-size: 0.85em; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+.embedded { max-width: 100%; min-width: 0; color: var(--dsw-text-primary); overflow-wrap: anywhere; }
+.embedded .source { display: block; width: 100%; height: auto; text-align: start; white-space: normal; overflow-wrap: anywhere; padding: 8px 0; }
+.embedded .opened { max-height: none; padding: 12px 0; overflow-wrap: anywhere; }

@@ -84,7 +84,7 @@ async function fixture(options: { kind?: 'GENERAL' | 'KNOWLEDGE'; toolScope?: re
   ctx.provide('deepseekAccount', { resolveToken: () => Promise.resolve('pilot-token') } as never)
   const bind = vi.fn()
   const unbind = vi.fn()
-  ctx.provide('groundRequestAttribution', { bind, unbind } as never)
+  ctx.provide('groundRequestAttribution', { bind, unbind, guard: () => () => {} } as never)
   const resolved = {
     ...execution,
     kind: options.kind ?? execution.kind,

@@ -37,3 +37,32 @@ test('availability filters task capability, enterprise restrictions and valid pr
  f.rows[0].meta.supportsTools=false;f.billing.quoteModel=async(p,m)=>{if(m==='b')throw Error('No valid tariff');return {};};
  const rows=await real.candidates(user,'tenant',{messages:[],max_tokens:16,tools:[{type:'function'}]});assert.deepEqual(rows.map(r=>r.id),['a2']);
 });
+test('attributed fixed policy overrides auto at gateway dispatch and preserves preview supplier usage',async()=>{
+ const f=fixture(),original=axios.post,usage=[];let validations=0;
+ f.service.expertRuntime={enforceModel:async()=>{validations++;return{model:'channel-b/b',preview:{id:'pv',actorUserId:'member'}};}};
+ f.service.resolveModel=async(_u,_t,ref)=>{const row=f.rows.find(r=>`${r.provider.name}/${r.modelId}`===ref);assert.ok(row);return f.service.toResolved(row.provider,row);};
+ f.billing.reportTokenUsage=async(_u,_t,_row,meta)=>usage.push(meta);
+ axios.post=async(_url,body)=>{f.calls.push(body.model);return{status:200,data,headers:{}};};
+ try{await f.service.proxyChatCompletions({...user,isPlatformAdmin:true},null,{model:'auto',messages:[]},f.res,{agentId:'a',previewId:'pv'});assert.deepEqual(f.calls,['b']);assert.ok(validations>=2);assert.equal(usage.length,1);assert.equal(usage[0].previewId,'pv');assert.equal(usage[0].usagePurpose,'PLATFORM_OPERATIONAL_PREVIEW');assert.equal(usage[0].actorUserId,'member');assert.equal(usage[0].exempt,true);assert.ok(Number(usage[0].purchaseCostYuan)>0);}finally{axios.post=original;}
+});
+test('completeOnce enforces fixed policy for internally delegated attributed calls',async()=>{
+ const f=fixture(),original=axios.post;let validations=0;
+ f.service.expertRuntime={enforceModel:async()=>{validations++;return{model:'channel-b/b'};}};
+ f.service.resolveModel=async(_u,_t,ref)=>{const row=f.rows.find(r=>`${r.provider.name}/${r.modelId}`===ref);return f.service.toResolved(row.provider,row);};
+ axios.post=async(_url,body)=>{f.calls.push(body.model);return{status:200,data,headers:{}};};
+ try{const result=await f.service.completeOnce(user,'tenant',{model:'auto',messages:[]},{agentId:'child',versionId:'v'});assert.equal(result.modelRef,'channel-b/b');assert.deepEqual(f.calls,['b']);assert.ok(validations>=2);}finally{axios.post=original;}
+});
+test('delegated preview origin remains creator-authorized and supplier usage retains snapshot attribution',async()=>{
+ const f=fixture(),original=axios.post,usage=[];let origins=0;
+ f.service.expertRuntime={load:async(_u,_t,b)=>{assert.deepEqual(b,{agentId:'boss',previewId:'preview'});origins++;},enforceModel:async()=>({model:undefined})};
+ f.billing.reportTokenUsage=async(_u,_t,_row,meta)=>usage.push(meta);
+ axios.post=async()=>({status:200,data,headers:{}});
+ try{await f.service.completeOnce({...user,isPlatformAdmin:true},null,{model:'auto',messages:[]},{agentId:'child',versionId:'v',previewOrigin:{agentId:'boss',previewId:'preview'}});assert.ok(origins>=2);assert.equal(usage[0].previewId,'preview');assert.equal(usage[0].officialAgentId,'child');assert.equal(usage[0].usagePurpose,'PLATFORM_OPERATIONAL_PREVIEW');assert.ok(Number(usage[0].purchaseCostYuan)>0);}finally{axios.post=original;}
+});
+test('actual gateway provider resolution shares local URL and credential validation',()=>{
+ const {encryptApiKey}=require('../dist/llm/llm-key-crypto');process.env.LLM_API_KEY_SECRET='gateway-local-readiness';
+ const f=fixture(),resolve=LlmChatGatewayService.prototype.toResolved.bind(f.service);
+ const valid={id:'p',name:'p',kind:'OPENAI',baseUrl:'http://127.0.0.1:9',apiKeyEnc:encryptApiKey('fake')},model={id:'m',modelId:'chat',displayName:'chat',thinkingEnabled:false};
+ for(const bad of [{baseUrl:null},{baseUrl:'not a url'},{apiKeyEnc:'corrupt'},{apiKeyEnc:encryptApiKey('  ')}])assert.throws(()=>resolve({...valid,...bad},model));
+ assert.equal(resolve(valid,model).apiKey,'fake');
+});

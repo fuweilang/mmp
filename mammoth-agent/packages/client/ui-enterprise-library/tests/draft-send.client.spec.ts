@@ -56,6 +56,7 @@ async function composer(versionId: string, authorize: (refs: readonly LibraryPro
   let panel: PanelUse | undefined
   let picker: Picker | undefined
   const facade = {
+    on: (name: 'chat/resolve-application-link', callback: (sessionId: SessionId, href: string) => (() => void) | undefined) => ctx.on(name, callback),
     locale: { register: () => () => {}, bind: () => (key: string) => key },
     slots: {
       inject: (_name: string, install: () => unknown) => { install(); return () => {} },
@@ -205,7 +206,7 @@ it('lets the Host open selected v1 after v2 replaces it and preserves the draft 
   revoked.shell.setDraft('撤权后还在吗')
   await revoked.panel.onUse(choice)
   await service.recycle(actor, uploaded.id)
-  await service.purge(actor, uploaded.id)
+  await expect(service.purge(actor, uploaded.id)).rejects.toMatchObject({ status: 409, code: 'REFERENCE_UNVERIFIED' })
   revoked.shell.submit('queue', 'click')
   await vi.waitFor(() => { expect(authorize).toHaveBeenCalledTimes(2) })
   expect(sent).toEqual([])
@@ -213,4 +214,24 @@ it('lets the Host open selected v1 after v2 replaces it and preserves the draft 
   expect(revoked.shell.draftSnapshot.references.map(reference => reference.ref)).toEqual([`${uploaded.id}@${versionId}`])
   expect(fetchImpl.mock.calls.every(call => !call[0].includes('/open'))).toBe(true)
   await revoked.dispose()
+})
+
+it('retains every selected reference and all draft text when one of multiple sources is refused', async () => {
+  browserTransport()
+  const authorize = vi.fn(async (refs: readonly LibraryPromptPart[]) => {
+    expect(refs.map(ref => ref.versionId)).toEqual(['ver-1', 'ver-2'])
+    throw new Error('source revoked')
+  })
+  const box = await composer('ver-1', authorize)
+  try {
+    box.shell.setDraft('Compare both sources')
+    await box.panel.onUse(box.item())
+    await box.panel.onUse({ ...box.item(), nodeId:'node-2', versionId:'ver-2', name:'Revoked.md' })
+    await vi.waitFor(()=>expect(box.shell.draftSnapshot.references).toHaveLength(2))
+    box.shell.submit('queue', 'click')
+    await vi.waitFor(() => expect(authorize).toHaveBeenCalledOnce())
+    expect(sent).toEqual([])
+    expect(box.shell.draftSnapshot.text.startsWith('Compare both sources')).toBe(true)
+    expect(box.shell.draftSnapshot.references.map(ref=>ref.ref)).toEqual(['node-1@ver-1','node-2@ver-2'])
+  } finally { await box.dispose() }
 })

@@ -1,5 +1,14 @@
 /** Typed gallery copy. */
 export const zh = {
+  knowledgePage: '第 {value} 页', knowledgeParagraph: '第 {value} 段', knowledgeRows: '第 {start}–{end} 行',
+  previewAdmissionFailed: '问题未能提交，内容已保留，请重试。',
+  previewQuestionTooLong: '问题超过16000字，请缩短后重试。',
+  previewQuestionEmpty: '请输入预览问题。',
+  previewInputNotReady: '预览输入正在准备或提交，请稍后重试。',
+  previewDraftExists: '预览会话已有未发送草稿，请在会话中检查并发送。',
+  previewSubmitFailed: '未能交接预览问题，请在会话中检查草稿并重试。',
+  previewRequestLimit: '本次预览请求次数过多，请重新打开预览。',
+  previewTitle:'专家预览',previewDescription:'此会话使用创建时的专家配置。预览仅限创建者，30分钟后失效。',previewStarting:'正在打开预览…',previewUnavailable:'预览已失效或当前账号无权访问，请回到管理页重新创建。',knowledgeSources:'知识来源',knowledgeSourceUnavailable:'来源已不可用或权限已变化，请在原账号与空间中重试。',
   'selectorScopeHint': '选择后可编辑问题再发送；专家或技能不会扩大当前Host的授权范围。',
   'sourceCreation': '创建来源：',
   "selectorExpert": "选择专家",
@@ -164,6 +173,15 @@ export type OfficialAgentGalleryLocaleKey = keyof typeof zh
 
 /** English gallery copy. */
 export const en = {
+  knowledgePage: 'Page {value}', knowledgeParagraph: 'Paragraph {value}', knowledgeRows: 'Rows {start}–{end}',
+  previewAdmissionFailed: 'The question was not submitted. Your text was kept; try again.',
+  previewQuestionTooLong: 'The question exceeds 16,000 characters. Shorten it and try again.',
+  previewQuestionEmpty: 'Enter a preview question.',
+  previewInputNotReady: 'The preview input is preparing or submitting. Try again shortly.',
+  previewDraftExists: 'The preview already has an unsent draft. Review and send it in the conversation.',
+  previewSubmitFailed: 'The preview question could not be handed off. Review the conversation draft and try again.',
+  previewRequestLimit: 'This preview has received too many requests. Open a new preview.',
+  previewTitle:'Expert preview',previewDescription:'This session uses the frozen expert configuration. Only its creator can use it, for 30 minutes.',previewStarting:'Opening preview…',previewUnavailable:'The preview expired or access changed. Create a new preview from administration.',knowledgeSources:'Knowledge sources',knowledgeSourceUnavailable:'The source is unavailable or access changed. Retry with the original account and space.',
   'selectorScopeHint': 'Select, edit and send. Experts and skills do not expand Host authorization.',
   'sourceCreation': 'Created from:',
   "selectorExpert": "Choose expert",

@@ -1,3 +1,4 @@
+import { assertV4MigrationRowAdmission, assertV5RowAdmission } from '@mammoth-ai/mmp-session-format-v4-to-v5'
 /**
  * Durable whole-generation publication for JSONL Session artifacts.
  *
@@ -308,7 +309,7 @@ class MigratingJsonlRows {
   private rowIndex = 0
   private issue: Error | undefined
 
-  constructor(private readonly restore: SessionFormatRestore) {}
+  constructor(private readonly restore: SessionFormatRestore, private readonly sourceVersion: number) {}
 
   /** Consume plaintext bytes following the independently decoded header. */
   write(chunk: Buffer): void {
@@ -359,6 +360,8 @@ class MigratingJsonlRows {
       this.issue ??= asError(error)
       return
     }
+    if (this.sourceVersion === 4) assertV4MigrationRowAdmission(row)
+    if (this.sourceVersion === 5) assertV5RowAdmission(row)
     if (this.issue !== undefined) {
       if (typeof row === 'object' && row !== null
         && (row as { type?: unknown }).type === 'turn/end') throw this.issue
@@ -387,7 +390,7 @@ async function startMigrationStream(
   const validation = validateHistoricalHeader?.(header)
   if (validation !== undefined) await validation
   const stream = format.createRestore(header)
-  return { parser: new MigratingJsonlRows(stream) }
+  return { parser: new MigratingJsonlRows(stream, sourceVersion) }
 }
 
 async function consumeMigrationBytes(

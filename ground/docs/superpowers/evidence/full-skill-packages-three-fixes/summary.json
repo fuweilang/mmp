@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-10",
+  "findings": {
+    "SKILL-ADV-01": "fixed",
+    "SKILL-ADV-02": "fixed",
+    "SKILL-ADV-03": "fixed"
+  },
+  "focused": {
+    "ground": 68,
+    "host": 60,
+    "totalPassed": 128,
+    "failed": 0
+  },
+  "builtNative": {
+    "passed": 6,
+    "failed": 0
+  },
+  "gallery": {
+    "total": 94,
+    "passed": 71,
+    "failed": 23,
+    "newFailures": [],
+    "baselineFailingTests": [
+      "packages/preset/official-agent-gallery/tests/lib-bundle-tools.spec.ts > official-agent-gallery bundled lib tools > lib/index.js contains advanced tool tokens",
+      "packages/preset/official-agent-gallery/tests/lib-bundle-tools.spec.ts > official-agent-gallery bundled lib tools > runtime import of lib/index.js registers and executes advanced tools",
+      "packages/preset/official-agent-gallery/tests/loader-composition.spec.ts > official Agent real Loader composition > loads the Host service and restores its private durable projection",
+      "packages/preset/official-agent-gallery/tests/managed-business.spec.ts > gallery managed business focused evidence > actual Ground adapter validates exact post-budget wire before mocked HTTP and replaces invalid cloud sticky ID",
+      "packages/preset/official-agent-gallery/tests/managed-business.spec.ts > gallery managed business focused evidence > expert appends role, loads linked skill on demand, creates real file; ordinary standard remains usable",
+      "packages/preset/official-agent-gallery/tests/managed-business.spec.ts > gallery managed business focused evidence > hash corruption blocks first business request, not a silent ordinary-chat downgrade",
+      "packages/preset/official-agent-gallery/tests/managed-business.spec.ts > gallery managed business focused evidence > rejects same-name scoped replacement instead of treating a registered name as authorization",
+      "packages/preset/official-agent-gallery/tests/managed-business.spec.ts > gallery managed business focused evidence > serializes concurrent immutable document calls; duplicate call is one artifact and changed params fail",
+      "packages/preset/official-agent-gallery/tests/managed-business.spec.ts > gallery managed business focused evidence > skill -> native standard mount -> frozen final context -> admitted upload -> actual verified artifact",
+      "packages/preset/official-agent-gallery/tests/managed-business.spec.ts > t166 legacy omitted selection returns to original standard, not the last client mutable role; owned unsafe tools are not advertised or executed under a selected role",
+      "packages/preset/official-agent-gallery/tests/managed-business.spec.ts > t166 selected expert plus explicit method reads a real admitted input and writes/downloads a real managed document",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Host execution > denies every inherited and directly dispatched tool for a GENERAL Agent",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Host execution > denies web_search when the frozen version did not declare it",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Host execution > disposes creation when Workspace attachment fails",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Host execution > exposes delegate_official_agent for boss orchestration",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Host execution > exposes only authorized knowledge retrieval and rechecks before each execution",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Host execution > exposes tabular_analyze only when toolScope allows it",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Host execution > exposes web_fetch only when toolScope allows it",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Host execution > exposes web_search only when toolScope allows it and executes through Ground",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Host execution > freezes replayed execution privately and installs its prompt, Workspace, attribution, and caller",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Host execution > rejects revoked official steps but delegates ordinary Sessions",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Host execution > withholds the knowledge tool when the frozen scope omits it",
+      "packages/preset/official-agent-gallery/tests/official-agent-gallery.host.spec.ts > official Agent Remote access > resolves request.workspaceId and refuses non-owner creation without that Workspace grant"
+    ]
+  },
+  "builds": {
+    "ground": "passed",
+    "hostArtifacts": "8 passed",
+    "hostTypes": "passed",
+    "clientTypes": "five unchanged baseline errors"
+  },
+  "minimumGroundNode": "22.2.0",
+  "actualTestNode": "26.13.0",
+  "review": "No Critical/Important/Minor findings in scoped independent review",
+  "deployed": false
+}

@@ -1,3 +1,4 @@
+import { executionConfigSchema, previewSchema } from './knowledge-protocol.ts'
 import { z } from 'zod'
 import type { ProjectionDefinition } from '@mammoth-ai/mmp-session-projection'
 import { MAMMOTH_AI_ANSWER } from './types.ts'
@@ -23,12 +24,13 @@ const skillSummarySchema = z.object({
 
 const bindingSchema = z.object({
   agentId: z.string().min(1),
-  versionId: z.string().min(1),
+  versionId: z.string().min(1).nullable(),
   kind: z.enum(['GENERAL', 'KNOWLEDGE']),
   name: z.string().min(1),
   systemPrompt: z.string(),
   toolScope: z.array(z.string()),
   linkedSkills: z.array(skillSummarySchema).optional(),
+  executionConfig:executionConfigSchema.optional(),preview:previewSchema.optional(),
 }).strict()
 
 const stateSchema = z.object({ binding: bindingSchema.nullable() }).strict()
@@ -39,7 +41,7 @@ const gallerySourceSchema = z.discriminatedUnion('type', [
     id: z.string().min(1),
     key: z.string().min(1),
     name: z.string().min(1),
-    versionId: z.string().min(1),
+    versionId: z.string().min(1).nullable(),
   }).strict(),
   z.object({
     type: z.literal('skill'),
@@ -92,7 +94,7 @@ export const officialAgentBindingProjection = {
   key: 'officialAgentExecution',
   stateSchema: stateSchema as z.ZodType<OfficialAgentBindingState>,
   // Bumped: optional linkedSkills frozen onto new expert Sessions.
-  stateVersion: 2,
+  stateVersion: 3,
   init: () => ({ binding: null }),
   apply: (state, event) => event.type === 'official-agent/bound'
     ? { binding: event.data as OfficialAgentBindingState['binding'] }
@@ -106,7 +108,7 @@ export const officialAgentBindingProjection = {
 export const officialGallerySourceProjection = {
   key: 'officialGallerySource',
   stateSchema: gallerySourceStateSchema as z.ZodType<OfficialGallerySourceState>,
-  stateVersion: 1,
+  stateVersion: 2,
   init: () => ({ source: null }),
   apply: (state, event) => {
     if (event.type === 'official-gallery/source') {

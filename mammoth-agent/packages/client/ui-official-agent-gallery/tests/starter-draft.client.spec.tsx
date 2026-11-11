@@ -56,7 +56,11 @@ async function runtime() {
   const created: { openingQuestion?: string }[] = []
   r.ctx.provide('uiWorkspace', {
     workspaceForNewSession: () => 'ws-1',
+<<<<<<< HEAD
     openSession: (id: string) => { r.sessions.retain(SessionId(id), { source: 'mainView' }) },
+=======
+    openSession: (id: SessionId) => { r.sessions.retain(id, { source: 'mainView' }) },
+>>>>>>> origin/4.0
   } as never)
   r.remote.provideNamespaces({
     officialAgentGallery: {

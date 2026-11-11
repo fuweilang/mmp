@@ -1,0 +1,37 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/session/session-format-v4-to-v5/README.md
+/:
+  en: 27e5f345e1c1cd66
+  zh: 1f64d7c292af47b6
+/session-v4-to-v5:
+  en: 2b0906926e52c182
+  zh: 334cef610fadc0d8
+/session-v4-to-v5/summary:
+  en: bf109dc081408893
+  zh: e30d2951a05c36ea
+/session-v4-to-v5/conversion-and-admission:
+  en: 8c4211315b0e1430
+  zh: d89e339a678f82ed
+/session-v4-to-v5/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/session-v4-to-v5/model-experience/restored-requests:
+  en: 1f382ba95f25defb
+  zh: c3f3ecd058e4440d
+/session-v4-to-v5/model-experience/restored-requests/what-the-model-sees:
+  en: 1f7cec03e3cf19fb
+  zh: 5cfa298438897ac8
+/session-v4-to-v5/model-experience/restored-requests/token-effect:
+  en: 5a6cab0f4e1aa6d9
+  zh: 02f8d1d6a25d57ab
+/session-v4-to-v5/model-experience/restored-requests/kv-cache-effect:
+  en: 2bcc70f0899045f2
+  zh: c5f507fd5db211ea
+/session-v4-to-v5/known-limitations-and-deferred-work:
+  en: b70253d3f844139f
+  zh: 8eb8a8484b2ae301
+/session-v4-to-v5/known-limitations-and-deferred-work/dev-note:
+  en: 0a1253c6f7b5e8b9
+  zh: 9f56528562c7c914

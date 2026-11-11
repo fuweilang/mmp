@@ -55,7 +55,8 @@
     "@mammoth-ai/mmp-skill": "workspace:*",
     "@mammoth-ai/mmp-attachment": "workspace:*",
     "@mammoth-ai/mmp-agent-preset-registry": "workspace:*",
-    "@mammoth-ai/mmp-agent-instructions": "workspace:*"
+    "@mammoth-ai/mmp-agent-instructions": "workspace:*",
+    "@mammoth-ai/mmp-working-directory": "workspace:*"
   },
   "dependencies": {
     "@mammoth-ai/schemastery": "workspace:~",
@@ -86,7 +87,9 @@
     "@mammoth-ai/mmp-skill": "workspace:*",
     "@mammoth-ai/mmp-attachment": "workspace:*",
     "@mammoth-ai/mmp-agent-preset-registry": "workspace:*",
-    "@mammoth-ai/mmp-agent-instructions": "workspace:*"
+    "@mammoth-ai/mmp-agent-instructions": "workspace:*",
+    "@mammoth-ai/mmp-working-directory": "workspace:*",
+    "@mammoth-ai/mmp-compaction-basic": "workspace:*"
   },
   "files": [
     "lib/index.js",

@@ -76,8 +76,11 @@ export interface Config {
 
   /** Platform origin serving auth-api and browser pages. */
   historySync?: boolean
+  /** Milliseconds between incremental cloud history synchronization attempts. */
   historySyncIntervalMs?: number
+  /** Maximum transcript messages sent per cloud history synchronization request. */
   historyBatchSize?: number
+  /** Ground platform origin used for account and cloud service requests. */
   platformOrigin?: string
   /**
    * Authentication protocol.

@@ -58,6 +58,9 @@
     },
     {
       "path": "../../context/agent-instructions"
+    },
+    {
+      "path": "../../session/working-directory"
     }
   ]
 }

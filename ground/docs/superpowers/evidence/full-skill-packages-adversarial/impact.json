@@ -1,0 +1,13 @@
+{
+  "filesystem": "darwin",
+  "longName": {
+    "acceptedFiles": 2,
+    "componentCharacters": 256,
+    "storageError": "ENAMETOOLONG"
+  },
+  "crc": {
+    "original": "CRC_ORIGINAL_SENTINEL",
+    "accepted": "XRC_ORIGINAL_SENTINEL",
+    "packageDigest": "8e040d1fd8df1771a4b8f09c2835a4aecb13e0a07a600c254907e29e9f1956e1"
+  }
+}

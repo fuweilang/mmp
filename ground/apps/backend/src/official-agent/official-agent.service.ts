@@ -1,3 +1,4 @@
+import { ExpertRuntimeService } from './expert-runtime.service';
 import { expertDiscoveryDetail } from './discovery-detail';
 import { catalogQuery, catalogFacets, catalogDiscoveryWhere, discoveryOf, displaySummary, DESCRIPTIONS, nextCatalogCursor, type CatalogQuery } from './catalog-discovery';
 import {
@@ -72,6 +73,7 @@ export class OfficialAgentService {
     private webFetchProvider: OfficialWebFetchService,
     private tabularAnalyze: OfficialTabularAnalyzeService,
     private orchestrate: OfficialOrchestrateService,
+    private runtime?: ExpertRuntimeService,
   ) {}
 
   /**
@@ -116,8 +118,11 @@ export class OfficialAgentService {
     tenantId: string | null,
     agentId: string,
     versionId?: string,
+    executionProtocol?: number,
   ): Promise<OfficialAgentExecution> {
     const { agent, version } = await this.resolvePublishedVersion(user, agentId, versionId);
+    if (executionProtocol === 2) return {...await this.runtime!.resolve(user,tenantId,{agentId,versionId:version.id}),linkedSkills:await this.versionLinkedSkills(agent.id,version)} as unknown as OfficialAgentExecution;
+    if ((version.executionConfig as any)?.route === 'KNOWLEDGE_CORE' || (version.executionConfig as any)?.generationModel?.mode === 'FIXED') throw new BadRequestException('EXECUTION_PROTOCOL_UPGRADE_REQUIRED: upgrade client to executionProtocol 2');
     const linkedSkills = await this.versionLinkedSkills(agent.id, version);
     return {
       agentId: agent.id,
@@ -218,6 +223,7 @@ export class OfficialAgentService {
     query: string,
   ) {
     const { agent, version } = await this.resolvePublishedVersion(user, agentId, versionId);
+    if ((version.executionConfig as any)?.route === 'KNOWLEDGE_CORE') throw new BadRequestException('EXECUTION_PROTOCOL_UPGRADE_REQUIRED');
     if (await this.officialKb.hasDocuments(agent.id)) {
       const result = await this.officialKb.search(agent.id, query);
       await this.prisma.auditLog.create({
@@ -407,7 +413,8 @@ export class OfficialAgentService {
     versionId: string | undefined,
     documentId: string,
   ) {
-    const { agent } = await this.resolvePublishedVersion(user, agentId, versionId);
+    const { agent, version } = await this.resolvePublishedVersion(user, agentId, versionId);
+    if ((version.executionConfig as any)?.route === 'KNOWLEDGE_CORE') throw new BadRequestException('EXECUTION_PROTOCOL_UPGRADE_REQUIRED');
     if (await this.officialKb.hasDocuments(agent.id)) {
       return this.officialKb.file(agent.id, documentId);
     }

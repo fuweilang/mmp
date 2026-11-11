@@ -107,6 +107,7 @@ export function redactSessionSnapshotIds(logs: readonly string[]): string[] {
       if (record.type === 'feedback/message-put' && isRecord(record.data) && isRecord(record.data.item)) {
         claim(record.data.item.version, 'id')
       }
+      if (record.type === 'official-agent/knowledge' && isRecord(record.data)) claim(record.data.id, 'id', true)
       collect(record, record.type)
     }
   }

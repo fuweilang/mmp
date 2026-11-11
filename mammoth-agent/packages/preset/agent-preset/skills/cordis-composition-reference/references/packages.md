@@ -62,7 +62,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@mammoth-ai/mmp-client-connection` | yes | Authenticated RPC transport and generation lifecycle |
 | `@mammoth-ai/mmp-client-file-upload` | no | Agent-scoped browser file upload, streaming intake, and staged receipt service |
 | `@mammoth-ai/mmp-client-hmr` | yes | Web client graph synchronization and rebuilt-bundle reload transport |
-| `@mammoth-ai/mmp-client-locale` | no | Locale plugin: Host-backed preference, extensible language catalog, browser fallback, and typed built-in dictionaries |
+| `@mammoth-ai/mmp-client-locale` | no | Locale plugin: Host-backed preference, Chinese-first product default, extensible language catalog, and typed built-in dictionaries |
 | `@mammoth-ai/mmp-client-modules` | no | Client module system, dual-face: node half composes the __MMP_BOOT__ entry graph (incremental mmp.client scan, bundle route, index tap, webPlugins service); browser half is the lazy-CJS module table the vendored cordis Loader consumes as its internal seam |
 | `@mammoth-ai/mmp-client-product-analytics` | yes | Desktop product event collection and authenticated Host reporting |
 | `@mammoth-ai/mmp-client-resources` | no | Unified client resource model: protocol-registered providers turn URL addresses into live values, consumed through the useResource global standard hook |
@@ -72,12 +72,14 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@mammoth-ai/mmp-client-ui-attachment` | no | Dynamic attachment presentation plugin for conversation input, message-image, and trajectory image slots |
 | `@mammoth-ai/mmp-client-ui-brand-official` | no | Official DeepSeek Harness brand occupants for the Web client's sidebar slots |
 | `@mammoth-ai/mmp-client-ui-chat` | no | Chat Conversation target, node definitions, renderers, and details surface |
+| `@mammoth-ai/mmp-client-ui-client-download` | no | Web-only sidebar footer action offering the 猛犸AI desktop client downloads |
 | `@mammoth-ai/mmp-client-ui-commands` | no | Client command surface: global directory cache, '/' source, three command UI kinds, popupSelect registry |
 | `@mammoth-ai/mmp-client-ui-context-menu` | no | Typed, plugin-extensible context menus with captured targets and shared Web presentation |
 | `@mammoth-ai/mmp-client-ui-conversation` | no | Target-neutral Conversation assembly, shell, composer, queue, and view navigation |
 | `@mammoth-ai/mmp-client-ui-deliverables` | no | Changed-files card with per-file comparison tabs, delivery cards, and clickable final-response file references for Web |
 | `@mammoth-ai/mmp-client-ui-directory-picker-browse` | no | In-app directory browsing surface: the workspace directory-flow owner rendering the host's listing and creation primitives |
 | `@mammoth-ai/mmp-client-ui-directory-picker-native` | no | Native directory-picker surface: the renderless workspace directory-flow occupant driving the local Desktop or Host OS chooser |
+| `@mammoth-ai/mmp-client-ui-enterprise-library` | no | Enterprise library sidebar and composer picker over the ground /api/library dataset |
 | `@mammoth-ai/mmp-client-ui-entry-customization` | no | Customize plugin entries in the left sidebar, conversation views, and right sidebar, and quickly create new plugins. |
 | `@mammoth-ai/mmp-client-ui-file-actions` | no | Original-file saving and image clipboard actions for Web and Desktop |
 | `@mammoth-ai/mmp-client-ui-file-drag` | no | Application-owned file drag transfers and localized failure feedback |
@@ -87,6 +89,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@mammoth-ai/mmp-client-ui-layout` | no | Shell plugin: three-column AppFrame with drag handles, ctx.layout viewing-state service (navigation + panels) |
 | `@mammoth-ai/mmp-client-ui-message-feedback` | no | The Web feedback surface: per-message Like/Dislike in the assistant-message action strip and the feedback dialog behind both ratings and /feedback, backed by the messageFeedback and sessionFeedback Host Remotes |
 | `@mammoth-ai/mmp-client-ui-model-selection` | no | Model selection over the shared model catalog, Session projection, and session.selectModel |
+| `@mammoth-ai/mmp-client-ui-official-agent-gallery` | no | Shared Mac/Web browser UI for the Ground official Agent gallery |
 | `@mammoth-ai/mmp-client-ui-open-in-app` | no | Web "Open In..." controls: the Session-header split button opening the workspace directory in an installed application, and the document preview's default-application controls for one file |
 | `@mammoth-ai/mmp-client-ui-permission-presets` | no | Permission surfaces: a new-session default in General settings and a current-session /permission popup over the permissions projection |
 | `@mammoth-ai/mmp-client-ui-plan` | no | Plan mode controls, persistent transcript plan cards, and sidebar Markdown previews |
@@ -318,6 +321,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@mammoth-ai/mmp-llm` | no | Provider-neutral LLM service interface for the DeepSeek Harness |
 | `@mammoth-ai/mmp-llm-deepseek-account` | yes | DeepSeek account provider authentication and discovery |
 | `@mammoth-ai/mmp-llm-deepseek-api-key` | yes | DeepSeek api-key provider authentication and discovery |
+| `@mammoth-ai/mmp-llm-ground` | yes | 猛犸 Ground OpenAI-compatible chat gateway adapter (SSO grant → /api/v1) |
 | `@mammoth-ai/mmp-llm-pi-ai` | yes | pi-ai-backed DeepSeek adapter for the DeepSeek Harness LLM seam (design-verification twin of mmp-llm-deepseek) |
 | `@mammoth-ai/mmp-llm-retry` | yes | Provider-routed LLM request retry policy for the DeepSeek Harness |
 | `@mammoth-ai/mmp-plugin-package-inventory-deepseek` | yes | Active Loader-backed plugin package inventory for official DeepSeek LLM API requests |
@@ -350,6 +354,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 |---|---|---|
 | `@mammoth-ai/mmp-agent-preset` | yes | Declare an Agent capability composition in Cordis YAML |
 | `@mammoth-ai/mmp-agent-preset-registry` | yes | Declarative Agent preset registry and profile-backed editing |
+| `@mammoth-ai/mmp-official-agent-gallery` | yes | Ground official Agent Remote service, frozen Sessions, controlled knowledge tools, and usage attribution |
 | `@mammoth-ai/mmp-persona` | yes | Composition-authored deployment persona section for the DeepSeek Harness |
 
 ## ptc-runtime
@@ -466,8 +471,8 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@mammoth-ai/mmp-subagent-acp` | yes | Out-of-process ACP subagent backend: drives a child agent in a spawned subprocess over the Agent Client Protocol |
 | `@mammoth-ai/mmp-subagent-claude-code` | yes | One-shot Claude Code subagent provider over the official Agent SDK |
 | `@mammoth-ai/mmp-subagent-codex` | yes | One-shot Codex subagent provider over the official app-server protocol |
-| `@mammoth-ai/mmp-subagent-mmp-sdk` | yes | Out-of-process SDK subagent backend: drives a child DeepSeek Harness runtime subprocess over stdio JSON-RPC through the TypeScript SDK client |
 | `@mammoth-ai/mmp-subagent-fork-in-process` | yes | In-process fork subagent backend: runs a child agent seeded with a prefix of the parent's log |
+| `@mammoth-ai/mmp-subagent-mmp-sdk` | yes | Out-of-process SDK subagent backend: drives a child DeepSeek Harness runtime subprocess over stdio JSON-RPC through the TypeScript SDK client |
 | `@mammoth-ai/mmp-subagent-spawn-in-process` | yes | In-process spawn subagent backend: runs a fresh child agent on ctx.agents |
 | `@mammoth-ai/mmp-tool-subagent` | yes | Model-facing subagent delegation tool over the ctx.subagents seam |
 | `@mammoth-ai/mmp-tool-subagent-control` | no | Shared messaging, interruption, and child discovery tools for subagents |

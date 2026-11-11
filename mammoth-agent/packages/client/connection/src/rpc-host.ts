@@ -229,7 +229,7 @@ export class HostConnectionService extends Service implements HostConnectionHand
     if (this.browserAuth.isAuthenticated(request, secure)) return true
     // The launch capability stays inside the Host. Only the external verifier can reach this exchange.
     return this.browserAuth.authorizeIndex({ method: 'GET', headers: request.headers,
-      url: this.browserAuth.authenticatedUrl('http://mmp.invalid/') }, response, secure)
+      url: this.browserAuth.authenticatedUrl(`http://mmp.invalid/${new URL(request.url ?? '/', 'http://mmp.invalid/').search}`) }, response, secure)
   }
 
   /** @param policy - Host identity verifier. @returns disposer removing only this policy. */

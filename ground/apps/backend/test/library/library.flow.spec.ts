@@ -228,7 +228,8 @@ describe('enterprise library', () => {
     assert.equal(restored.scope, 'PRIVATE');
     assert.equal((await store.getVersion(first))?.id, first);
     await service.recycle(owner, item.id);
-    await service.purge(owner, item.id);
+    // Historical purged metadata remains readable as an unavailable source, without deleting a live fixture.
+    await store.updateNode(item.id, { state: 'PURGED', purgedAt: Date.now() });
     const gone = code(await service.openCitation(owner, item.id, first, 'paragraph:1').catch((error: unknown) => error));
     assert.equal(gone.status, 410);
     assert.match(gone.message, /不能改指向/);
@@ -301,7 +302,7 @@ describe('enterprise library', () => {
     assert.equal(hidden.status, 404);
     assert.equal(hidden.message.includes('唯一段落'), false);
     await service.recycle(owner, single.id);
-    await service.purge(owner, single.id);
+    await store.updateNode(single.id, { state: 'PURGED', purgedAt: Date.now() });
     const gone = code(await service.openCitation(owner, single.id, singleId).catch((error: unknown) => error));
     assert.equal(gone.status, 410);
   });
@@ -527,7 +528,7 @@ describe('enterprise library', () => {
     await service.list(owner, 'trash');
     const swept = code(await service.openCitation(owner, item.id, item.currentVersion!.id).catch((error: unknown) => error));
     assert.equal(swept.status, 409);
-    await service.purge(owner, item.id);
+    await assert.rejects(() => service.purge(owner, item.id), (error: unknown) => error instanceof LibraryError && error.code === 'REFERENCE_UNVERIFIED');
     const stats = await service.adminStats({ userId: 'platform', isPlatformAdmin: true });
     assert.equal(JSON.stringify(stats).includes('私人正文'), false);
     assert.equal(JSON.stringify(stats).includes('私人.md'), false);
@@ -863,5 +864,168 @@ describe('t191 Console flat mine management', () => {
     const found = await service.catalog(owner, '', 1, 10);
     assert.equal(found.items.some((row) => row.id === failed.id), false);
     assert.equal(found.items.some((row) => row.id === ready.id), true);
+  });
+});
+
+describe('atomic parse retry', () => {
+  it('keeps a completed parse when a queued tree transaction fails', { timeout: 2000 }, async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const item = await upload(service, owner, 'queued.md', Buffer.from('committed source'));
+    const versionId = item.currentVersion!.id;
+    await store.updateVersion(versionId, { parseStatus: 'FAILED', parseReason: 'retryable' });
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredParse = new Promise<void>(resolve => { entered = resolve; });
+    const allowParse = new Promise<void>(resolve => { release = resolve; });
+    const listChunks = store.listChunks.bind(store);
+    let pause = true;
+    store.listChunks = async id => {
+      if (pause) { pause = false; entered(); await allowParse; }
+      return listChunks(id);
+    };
+    const parsed = service.retryParse(owner, item.id);
+    await enteredParse;
+    const tree = store.withTenantWrite('ta', async () => {
+      await parsed;
+      throw new Error('tree write failed');
+    });
+    const failedTree = assert.rejects(tree, /tree write failed/);
+    release();
+    assert.equal((await parsed).currentVersion?.parseStatus, 'READY');
+    await failedTree;
+    assert.equal((await store.getVersion(versionId))?.parseStatus, 'READY');
+    assert.deepEqual((await store.listChunks(versionId)).map(row => ({ content: row.content, locator: row.locator })),
+      [{ content: 'committed source', locator: 'paragraph:1' }]);
+    assert.equal(store.audits.filter(row => row.action === 'library_retry_parse').length, 1);
+  });
+
+  it('joins a parse retry inside an existing tree transaction without waiting on itself', { timeout: 2000 }, async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const item = await upload(service, owner, 'nested.md', Buffer.from('nested source'));
+    const versionId = item.currentVersion!.id;
+    await store.updateVersion(versionId, { parseStatus: 'FAILED', parseReason: 'retryable' });
+    const parsed = await store.withTenantWrite('ta', () => service.retryParse(owner, item.id));
+    assert.equal(parsed.currentVersion?.parseStatus, 'READY');
+    assert.equal((await store.listChunks(versionId))[0]?.content, 'nested source');
+    assert.equal(store.audits.filter(row => row.action === 'library_retry_parse').length, 1);
+  });
+
+  it('rolls back status and chunks after a chunk write fails, then permits a retry', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const item = await upload(service, owner, 'retry.md', Buffer.from('persistent source'));
+    const versionId = item.currentVersion!.id;
+    await store.updateVersion(versionId, { parseStatus: 'FAILED', parseReason: 'retryable' });
+    const beforeVersion = structuredClone(await store.getVersion(versionId));
+    const beforeChunks = structuredClone(await store.listChunks(versionId));
+    const beforeAudits = [...store.audits];
+    const replace = store.replaceChunks.bind(store);
+    store.replaceChunks = async (...args) => { await replace(...args); throw new Error('chunk write failed'); };
+    await assert.rejects(() => service.retryParse(owner, item.id), /chunk write failed/);
+    assert.deepEqual(await store.getVersion(versionId), beforeVersion);
+    assert.deepEqual(await store.listChunks(versionId), beforeChunks);
+    assert.deepEqual(store.audits, beforeAudits);
+    store.replaceChunks = replace;
+    assert.equal((await service.retryParse(owner, item.id)).currentVersion?.parseStatus, 'READY');
+    assert.equal((await store.listChunks(versionId)).length, 1);
+  });
+
+  it('rolls back parsed data if the success audit fails', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const item = await upload(service, owner, 'audit.md', Buffer.from('audited source'));
+    const versionId = item.currentVersion!.id;
+    await store.updateVersion(versionId, { parseStatus: 'FAILED', parseReason: 'retryable' });
+    const beforeVersion = structuredClone(await store.getVersion(versionId));
+    const beforeChunks = structuredClone(await store.listChunks(versionId));
+    const beforeAudits = [...store.audits];
+    const audit = store.audit.bind(store);
+    store.audit = async row => { await audit(row); throw new Error('audit write failed'); };
+    await assert.rejects(() => service.retryParse(owner, item.id), /audit write failed/);
+    assert.deepEqual(await store.getVersion(versionId), beforeVersion);
+    assert.deepEqual(await store.listChunks(versionId), beforeChunks);
+    assert.deepEqual(store.audits, beforeAudits);
+  });
+
+  it('commits simultaneous retries once and preserves the successful chunk ids and locators', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const item = await upload(service, owner, 'concurrent.md', Buffer.from('first\n\nsecond'));
+    const versionId = item.currentVersion!.id;
+    await store.updateVersion(versionId, { parseStatus: 'FAILED' });
+    await Promise.all([service.retryParse(owner, item.id), service.retryParse(owner, item.id)]);
+    const chunks = structuredClone(await store.listChunks(versionId));
+    assert.equal(chunks.length, 2);
+    assert.equal(store.audits.filter(row => row.action === 'library_retry_parse').length, 1);
+    await service.retryParse(owner, item.id);
+    assert.deepEqual(await store.listChunks(versionId), chunks);
+  });
+
+  for (const action of ['replace', 'recycle'] as const) it('rejects a retry when the node changes by ' + action + ' during parsing', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const item = await upload(service, owner, 'stale.md', Buffer.from('old source'));
+    const versionId = item.currentVersion!.id;
+    await store.updateVersion(versionId, { parseStatus: 'FAILED' });
+    const getBlob = store.getBlob.bind(store);
+    store.getBlob = async key => {
+      if (action === 'replace') await service.replaceVersion(owner, item.id, 'stale.md', 'text/markdown', Buffer.from('new source'));
+      else await service.recycle(owner, item.id);
+      return getBlob(key);
+    };
+    await assert.rejects(() => service.retryParse(owner, item.id), (error: unknown) => error instanceof LibraryError && error.status === 409 && error.code === 'VERSION_CONFLICT');
+    assert.equal((await store.getVersion(versionId))?.parseStatus, 'FAILED');
+    assert.equal(store.audits.filter(row => row.action === 'library_retry_parse').length, 0);
+  });
+});
+
+describe('file purge protection', () => {
+  it('refuses file purge without changing originals, versions, chunks, state or audit', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const item = await upload(service, owner, 'protected.md', Buffer.from('v1 body'));
+    await service.replaceVersion(owner, item.id, 'protected.md', 'text/markdown', Buffer.from('v2 body'));
+    await service.recycle(owner, item.id);
+    const before = structuredClone({ node: await store.getNode(item.id), versions: [...store.versions.values()], chunks: [...store.chunks.values()], audits: store.audits });
+    const blobs = [...store.blobs].map(([key, bytes]) => [key, bytes.toString('hex')]);
+    await assert.rejects(() => service.purge(owner, item.id), (error: unknown) => error instanceof LibraryError && error.status === 409 && error.code === 'REFERENCE_UNVERIFIED');
+    assert.deepEqual({ node: await store.getNode(item.id), versions: [...store.versions.values()], chunks: [...store.chunks.values()], audits: store.audits }, before);
+    assert.deepEqual([...store.blobs].map(([key, bytes]) => [key, bytes.toString('hex')]), blobs);
+    const row = (await service.list(owner, 'trash')).items.find(row => row.id === item.id)!;
+    assert.equal(typeof row.purgeBlockedReason, 'string');
+    assert.ok(row.purgeBlockedReason);
+    await service.restore(owner, item.id);
+    assert.equal((await service.openCitation(owner, item.id, item.currentVersion!.id)).quote, 'v1 body');
+  });
+
+  it('reports protected files as failed in a mixed purge batch while clearing empty metadata', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const file = await upload(service, owner, 'batch.md', Buffer.from('kept body'));
+    const folder = await service.createFolder(owner, 'empty folder');
+    const link = await service.createLink(owner, 'empty link', 'https://example.test/kept');
+    for (const row of [file, folder, link]) await service.recycle(owner, row.id);
+    const result = await service.batch(owner, [file.id, folder.id, link.id], 'purge');
+    assert.deepEqual(result.ok, [folder.id, link.id]);
+    assert.deepEqual(result.failed.map(row => row.id), [file.id]);
+    assert.equal((await store.getNode(file.id))?.state, 'RECYCLED');
+    assert.equal((await store.getNode(folder.id))?.state, 'PURGED');
+    assert.equal((await store.getNode(link.id))?.state, 'PURGED');
+  });
+
+  it('keeps a recycled folder nonempty while its protected file remains', async () => {
+    const { service, actor } = world();
+    const owner = actor('owner', 'ta');
+    const folder = await service.createFolder(owner, 'parent');
+    const file = await upload(service, owner, 'child.md', Buffer.from('retained child'));
+    await service.move(owner, file.id, folder.id);
+    await service.recycle(owner, file.id);
+    await service.recycle(owner, folder.id);
+    await assert.rejects(() => service.purge(owner, folder.id), (error: unknown) => error instanceof LibraryError && error.code === 'FOLDER_NONEMPTY');
+    const rows = (await service.list(owner, 'trash')).items;
+    assert.equal(rows.find(row => row.id === folder.id)?.purgeBlockedReason, null);
+    assert.ok(rows.find(row => row.id === file.id)?.purgeBlockedReason);
   });
 });

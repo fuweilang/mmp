@@ -6,6 +6,7 @@
   },
   "include": ["src"],
   "references": [
+    { "path": "../../api/workspace-controller/tsconfig.client.json" },
     { "path": "../../../vendor/cordis" },
     { "path": "../../api/remotes/tsconfig.client.json" },
     { "path": "../../core/session" },
@@ -19,6 +20,8 @@
     { "path": "../ui-sidebar" },
     { "path": "../ui-slots" },
     { "path": "../ui-workspace" },
-    { "path": "../ui-commands" }
+    { "path": "../ui-commands" },
+    { "path": "../ui-conversation/tsconfig.client.json" },
+    { "path": "../ui-chat/tsconfig.client.json" }
   ]
 }

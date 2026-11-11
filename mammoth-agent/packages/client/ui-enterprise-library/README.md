@@ -13,9 +13,19 @@ The directory divider highlights on hover or keyboard focus. Dragging adjusts it
 
 The native panel supports explicit multi-file save, folders, URL-only links, rename/move/download, version history/replacement, visibility, recycling, restore, purge and parse retry. Temporary local chat attachments are not uploaded by this package. Saving into the library stays an explicit library action. New items at the personal root are private; items created at the Shared root or inside a shared folder are enterprise-visible immediately. Nested creation and uploads inherit the server folder visibility. Sharing or unsharing a folder confirms the server-reported count and revision and changes all nested items atomically. Moving private items into a shared folder requires confirmation. Visibility does not grant peers permission to edit another owner's items.
 
+The panel checks enterprise availability before requesting its list or directory tree. Missing enterprise context shows enterprise-entry guidance; expired sign-in and access denial show localized recovery instructions. These states disable upload and creation, hide the directory tree and empty-library invitation, and can be checked again with Refresh. A failed availability check never implies that the library is empty.
+
 ## Model Experience
 
 An `@` library chip serializes to a selected node/version request. The Host supplies one untrusted excerpt block containing the server-returned file name, version id, locator and quote, including any truncation warning. The model sees that block only after the user sends the draft. The package adds no tool and does not call a local model provider.
+
+Each excerpt includes a Markdown source link with the fixed node, version and stored locator. Chat exposes a generic application-link resolver; this package recognizes only complete same-application `/ground-library/nodes/:nodeId/source?versionId=...&locator=...` addresses. Clicking a settled link opens the library panel and reads the source again through the authenticated Host. The inline preview uses Ground's title, version number, stored excerpt and highlight explanation alongside the complete original version. It never uses the model's link label as source metadata. A format-conversion failure preserves the authorized historical excerpt, locator and download while reporting the preview error. Recycled, revoked or missing sources clear the old preview and display the server refusal. Persisted messages retain the address for later reopening; no additional Session schema is needed.
+
+Multiple selected sources remain on the draft until every fixed version is admitted. If any source is refused, the entire draft and its references remain available and no message is sent.
+
+## Acceptance Tests
+
+`apps/web/tests/enterprise-library.e2e.ts` composes the built Web Host, normal Ground password login, an isolated PostgreSQL database, the real composer and JSONL Session persistence. Only the model response uses deterministic replay. It checks two-source submission, replacement after selection, fixed-version source reopening after browser reload, and refusal after recycling. Build Ground and the Web artifacts first, then run it with `vitest.web.config.ts` and `LIBRARY_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55439/mmp_library_acceptance`. The fixture refuses other database addresses. Real cloud model acceptance is a separate manual check and is not claimed by this replay test.
 
 ## Known Limitations and Deferred Work
 

@@ -48,7 +48,11 @@ export const KNOWN_SESSION_EVENT_TYPES: ReadonlySet<string> = new Set([
   'llm/retry-started',
   'model/selection',
   'official-agent/bound',
+<<<<<<< HEAD
   'official-gallery/answer-identity',
+=======
+  'official-agent/knowledge',
+>>>>>>> origin/4.0
   'official-gallery/artifact',
   'official-gallery/attempt',
   'official-gallery/attempt-start',

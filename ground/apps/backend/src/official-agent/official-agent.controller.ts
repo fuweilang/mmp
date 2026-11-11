@@ -76,7 +76,7 @@ export class OfficialAgentController {
     @Param('id') id: string,
     @Body() dto: ResolveOfficialAgentDto,
   ) {
-    return this.officialAgents.resolve(user, tenantId, id, dto.versionId);
+    return this.officialAgents.resolve(user, tenantId, id, dto.versionId, dto.executionProtocol);
   }
 
   @Post(':id/retrieve')

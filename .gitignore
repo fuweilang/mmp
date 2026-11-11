@@ -53,3 +53,9 @@ ground/apps/backend/.logs/
 
 # 本地数据库导出/备份，禁止入库
 _backups/
+<<<<<<< HEAD
+=======
+
+# Root development launcher ownership and startup locks
+/.mmp-dev/
+>>>>>>> origin/4.0

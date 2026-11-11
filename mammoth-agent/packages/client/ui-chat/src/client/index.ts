@@ -1,4 +1,17 @@
 import type {} from '@mammoth-ai/mmp-client-ui-context-menu/client'
+import type { SessionId } from '@mammoth-ai/mmp-session/types'
+
+declare module '@mammoth-ai/cordis' {
+  interface Events {
+    /**
+     * Resolve a feature-owned Markdown destination without reading or navigating.
+     * @mode bail
+     * @param sessionId - Session whose message owns the destination.
+     * @param href - Untrusted Markdown destination.
+     */
+    'chat/resolve-application-link'(sessionId: SessionId, href: string): (() => void) | undefined
+  }
+}
 /** Browser Chat target plugin. */
 export { apply, inject } from './apply.ts'
 export type {} from './conversation-nodes/assistant.ts'

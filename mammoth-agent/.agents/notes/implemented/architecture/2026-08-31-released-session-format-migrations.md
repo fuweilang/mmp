@@ -249,3 +249,8 @@ Lower generations remain for operator inspection. Retention does not promise dow
 - **Share stateful codec instances globally** — would mix pending attempts, mappings, and counters across concurrent Session restores.
 - **Persist every intermediate format version** — creates durable states with no runtime consumer; only the exact source and final current generation are needed.
 - **Let mounted plugins register migrations** — makes historical readability deployment dependent. The static catalog must restore released formats before feature plugins mount.
+
+
+## V5 required-event refusal
+
+The V4→V5 edge preserves event bodies and inherited cuts while advancing the immutable generation header. A V4 scanner can suppress an unknown required row after an earlier corrupt row, so new required expert evidence needs header-level refusal in already-distributed readers. Write-open publishes and verifies the final V5 successor before append; native V5 admission checks required event names before recoverable-tail suppression. Historical V4 child prerequisites use a fixed V4 catalog, independent of the current writer. The [edge reference](../../../../packages/session/session-format-v4-to-v5/README.md) owns conversion and source admission, including local V4 RAG records.

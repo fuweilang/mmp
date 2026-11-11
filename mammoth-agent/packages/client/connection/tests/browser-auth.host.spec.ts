@@ -368,3 +368,14 @@ describe('BrowserAuth', () => {
       .rejects.toThrow(/safe timestamp range/u)
   })
 })
+
+it('preserves application queries while removing the process token after root cookie exchange', async () => {
+  const auth = await createAuth(new RecordCredentials());
+  const target = new URL(auth.authenticatedUrl('http://127.0.0.1:3080/?expertPreview=preview-one&expertId=expert-one&expertEmbed=1'));
+  const res = response();
+  expect(auth.authorizeIndex(request(target.pathname+target.search),res.value)).toBe(false);
+  expect(res.state.status).toBe(303);
+  expect(res.state.headers?.location).toBe('./?expertPreview=preview-one&expertId=expert-one&expertEmbed=1');
+  expect(res.state.headers?.location).not.toContain('token=');
+  expect(res.state.headers?.['referrer-policy']).toBe('no-referrer');
+});

@@ -41,17 +41,19 @@ export class LlmChatController {
     @Headers('x-mmp-official-agent-version-id') versionId: string | undefined,
     @Headers('x-mmp-session-id') sessionId: string | undefined,
     @Res() res: Response,
+    @Headers('x-mmp-expert-preview-id') previewId?:string,
+    @Headers('x-mmp-helper-purpose') helperPurpose?:string,
+    @Headers('x-mmp-origin-agent-id') originAgentId?:string,
+    @Headers('x-mmp-origin-version-id') originVersionId?:string,
+    @Headers('x-mmp-origin-preview-id') originPreviewId?:string,
   ) {
-    if (!agentId !== !versionId) {
-      throw new BadRequestException('官方专家归因信息不完整');
-    }
-    const execution = agentId && versionId
-      ? await this.officialAgents.resolve(user, tenantId, agentId, versionId)
-      : undefined;
-    await this.gateway.proxyChatCompletions(user, tenantId, body, res, execution ? {
-      agentId: execution.agentId,
-      versionId: execution.versionId,
-      ...(sessionId ? { sessionId: sessionId.slice(0, 128) } : {}),
-    } : sessionId ? { sessionId: sessionId.slice(0, 128) } : undefined);
+    if(previewId && (!agentId || versionId))throw new BadRequestException('INVALID_PREVIEW_ATTRIBUTION');
+    if(!previewId && !agentId !== !versionId)throw new BadRequestException('官方专家归因信息不完整');
+    for(const value of [agentId,versionId,previewId,sessionId,originAgentId,originVersionId,originPreviewId])if(value!==undefined&&(!value||value.length>128||/[\x00-\x1f]/.test(value)))throw new BadRequestException('INVALID_RUNTIME_ATTRIBUTION');
+    if (helperPurpose !== undefined && (!sessionId || !['compaction','session-title'].includes(helperPurpose))) throw new BadRequestException('INVALID_HELPER_PURPOSE');
+    if ((originAgentId || originVersionId || originPreviewId) && (!helperPurpose || !originAgentId || !!originVersionId === !!originPreviewId)) throw new BadRequestException('INVALID_HELPER_ORIGIN');
+    // Purpose is attribution only: ordinary binding headers always retain FIXED enforcement.
+    // Gateway owns fresh validation and fixed policy enforcement immediately before dispatch.
+    await this.gateway.proxyChatCompletions(user,tenantId,body,res,{agentId,versionId,previewId,sessionId,...helperPurpose?{helperPurpose:helperPurpose as 'compaction'|'session-title'}:{},...originAgentId?{helperOrigin:{agentId:originAgentId,versionId:originVersionId,previewId:originPreviewId}}:{}});
   }
 }

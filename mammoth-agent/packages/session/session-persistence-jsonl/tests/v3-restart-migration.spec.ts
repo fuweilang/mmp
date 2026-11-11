@@ -1,3 +1,4 @@
+import { SESSION_FORMAT_VERSION } from '@mammoth-ai/mmp-session'
 import { Context } from '@mammoth-ai/cordis'
 import { SessionId, type SessionEvent } from '@mammoth-ai/mmp-session'
 import * as JsonlSessionPersistence from '@mammoth-ai/mmp-session-persistence-jsonl'
@@ -52,7 +53,7 @@ describe.each(['none', 'zstd'] as const)('V3 interrupted-turn publication (%s)',
     return { id, path, root, rows, mount }
   }
 
-  it('prepares read-only, publishes a verified V4 successor, and reopens without repeating the repair', async () => {
+  it('prepares read-only, publishes a verified current successor, and reopens without repeating the repair', async () => {
     const f = await fixture()
     const original = await identity(f.path)
     const directory = dirname(f.path)
@@ -62,7 +63,7 @@ describe.each(['none', 'zstd'] as const)('V3 interrupted-turn publication (%s)',
     let prepared: readonly SessionEvent[]
     try {
       prepared = (await reader.read()).events
-      expect(reader.header.version).toBe(4)
+      expect(reader.header.version).toBe(SESSION_FORMAT_VERSION)
       expect(prepared).toHaveLength(f.rows.length + 1)
       expect(prepared[4]).toEqual({ type: 'turn/end', seq: 4, time: 14, data: { turn: 1, reason: { kind: 'interrupted' } } })
       expect(prepared[7]).toMatchObject({ type: 'session/title', data: { messageSeqs: [6] } })
@@ -76,7 +77,7 @@ describe.each(['none', 'zstd'] as const)('V3 interrupted-turn publication (%s)',
     expect(await identity(f.path)).toEqual(original)
     expect((await readdir(directory)).filter(name => name !== 'session.lock').sort()).toEqual([
       compression === 'none' ? 'session.v3.jsonl' : 'session.v3.jsonl.zstd',
-      compression === 'none' ? 'session.v4.jsonl' : 'session.v4.jsonl.zstd',
+      compression === 'none' ? `session.v${SESSION_FORMAT_VERSION}.jsonl` : `session.v${SESSION_FORMAT_VERSION}.jsonl.zstd`,
     ])
     const independent = await f.mount()
     const reopened = await independent.sessionPersistence.open(f.id, 'read')

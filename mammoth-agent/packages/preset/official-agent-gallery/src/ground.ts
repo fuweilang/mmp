@@ -1,3 +1,5 @@
+import { completeSkillFields } from './skill-package-format.ts'
+import { executionConfigSchema, previewSchema, knowledgeResultSchema, openedSourceSchema, runtimeReference, type RuntimeBinding, type ExactSource, type ExpertPreview, type KnowledgeResult, type OpenedSource } from './knowledge-protocol.ts'
 import type { CatalogQuery } from './types.ts'
 import { z } from 'zod'
 
@@ -58,15 +60,46 @@ const skillSessionBindingSchema = z.object({
   }).strict(),
 }).strict()
 
-const skillContentSchema = z.object({
-  id: z.string().min(1),
-  key: z.string().min(1),
-  name: z.string().min(1),
-  summary: z.string(),
-  packageRevision: z.number().int().nonnegative(),
-  instruction: z.string(),
-  references: z.array(z.object({ path: z.string().min(1) }).strict()),
-}).strict()
+const skillContentIdentity = {
+  id: z.string().min(1), key: z.string().min(1), name: z.string().min(1), summary: z.string(),
+  packageRevision: z.number().int().nonnegative(), instruction: z.string(),
+}
+const skillContentSchema = z.union([
+  z.object({ ...skillContentIdentity, references: z.array(z.object({ path: z.string().min(1) }).strict()) }).strict(),
+  z.object({ ...skillContentIdentity, ...completeSkillFields }).strict(),
+])
+
+async function boundedBody(response: Response, maxBytes: number, signal?: AbortSignal): Promise<Uint8Array> {
+  signal?.throwIfAborted()
+  if (Number(response.headers.get('content-length')) > maxBytes) {
+    await response.body?.cancel()
+    throw new Error('Ground skill response byte limit exceeded')
+  }
+  if (!response.body) return new Uint8Array()
+  const reader = response.body.getReader(), chunks: Uint8Array[] = []
+  let bytes = 0
+  const abort = () => { void reader.cancel(signal?.reason).catch(() => {}) }
+  signal?.addEventListener('abort', abort, { once: true })
+  try {
+    for (;;) {
+      signal?.throwIfAborted()
+      const chunk = await reader.read()
+      signal?.throwIfAborted()
+      if (chunk.done) break
+      bytes += chunk.value.byteLength
+      if (bytes > maxBytes) throw new Error('Ground skill response byte limit exceeded')
+      chunks.push(chunk.value)
+    }
+    const result = new Uint8Array(bytes)
+    let offset = 0
+    for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.byteLength }
+    return result
+  } finally {
+    signal?.removeEventListener('abort', abort)
+    reader.releaseLock()
+    await response.body.cancel().catch(() => {})
+  }
+}
 
 const cardSchema = z.object({
   id: z.string().min(1),
@@ -89,7 +122,7 @@ const expertPageSchema=z.object({items:z.array(cardSchema.extend({discovery:disc
 const skillPageSchema=z.object({items:z.array(skillCardSchema.extend({avatarUrl:z.string().nullable().optional()})),total:z.number(),hasMore:z.boolean(),nextCursor:z.string().nullable()}).strict()
 const facetSchema=z.object({total:z.number(),capabilities:z.array(z.object({id:z.string(),count:z.number()}).strict()),industries:z.array(z.object({id:z.string(),count:z.number()}).strict())}).strict()
 
-const executionSchema = z.object({
+const legacyExecutionSchema = z.object({
   agentId: z.string().min(1),
   key: z.string().min(1),
   kind: z.enum(['GENERAL', 'KNOWLEDGE']),
@@ -99,6 +132,8 @@ const executionSchema = z.object({
   toolScope: z.array(z.string()),
   linkedSkills: z.array(skillSummarySchema).optional(),
 }).strict()
+
+const executionSchema = z.union([legacyExecutionSchema.extend({executionProtocol:z.literal(2),versionId:z.string().nullable(),version:z.number().int().nonnegative(),executionConfig:executionConfigSchema,preview:previewSchema.optional()}).strict(),legacyExecutionSchema])
 
 const retrievalSchema = z.object({
   tenantId: z.string().min(1),
@@ -212,7 +247,7 @@ export class GroundOfficialAgentClient {
     private readonly fetcher: typeof fetch = fetch,
   ) {}
 
-  currentScope(){return this.request('/api/official-agents/catalog-preferences/scope',z.object({userId:z.string().min(1),scope:z.string().min(1)}),{})}
+  currentScope(signal?:AbortSignal){return this.request('/api/official-agents/catalog-preferences/scope',z.object({userId:z.string().min(1),scope:z.string().min(1)}),{...signal?{signal}:{}})}
   preferences(kind:'expert'|'skill',view:'favourites'|'recent') {
     return this.request(`/api/official-agents/catalog-preferences?kind=${kind}&view=${view}`,z.array(z.object({kind:z.enum(['expert','skill']),resourceId:z.string(),favourite:z.boolean(),lastUsedAt:z.string().nullable()})),{})
   }
@@ -269,9 +304,62 @@ export class GroundOfficialAgentClient {
    */
   async resolve(agentId: string, versionId: string, signal?: AbortSignal): Promise<GroundOfficialExecution> {
     return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/resolve`, executionSchema, {
-      method: 'POST', body: JSON.stringify({ versionId }),
+      method: 'POST', body: JSON.stringify({ versionId, executionProtocol:2 }),
       ...signal === undefined ? {} : { signal },
     })
+  }
+
+  /**
+   * Resolve a creator-only preview ID without manufacturing snapshot metadata.
+   * @param agentId - Official expert identity.
+   * @param previewId - Immutable creator-owned preview identity.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @returns The validated immutable execution snapshot.
+   */
+  resolvePreview(agentId:string,previewId:string,signal?:AbortSignal):Promise<GroundOfficialExecution>{
+    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/runtime/resolve`,executionSchema,{method:'POST',body:JSON.stringify({executionProtocol:2,previewId}),...signal?{signal}:{}})
+  }
+  /**
+   * Resolve one immutable published or creator-only preview snapshot.
+   * @param binding - Frozen published version or creator-owned preview.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @returns The validated immutable execution snapshot.
+   */
+  resolveRuntime(binding:RuntimeBinding,signal?:AbortSignal):Promise<GroundOfficialExecution>{
+    return this.request(`/api/official-agents/${encodeURIComponent(binding.agentId)}/runtime/resolve`,executionSchema,{method:'POST',body:JSON.stringify(runtimeReference(binding)),...signal?{signal}:{}})
+  }
+  /**
+   * Retrieve with Host-owned session/turn identity; model arguments contain only query.
+   * @param binding - Frozen published version or creator-owned preview.
+   * @param sessionId - Host-owned Session identity.
+   * @param turnId - Host-owned turn identity.
+   * @param query - Visible user question or focused supplemental question.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @param context - Bounded visible conversation preceding the current question.
+   * @returns The validated retrieval result and rendered context.
+   */
+  retrieveRuntime(binding:RuntimeBinding,sessionId:string,turnId:string,query:string,signal?:AbortSignal,context:readonly {role:'user'|'assistant';content:string}[]=[]):Promise<KnowledgeResult>{
+    return this.request(`/api/official-agents/${encodeURIComponent(binding.agentId)}/runtime/retrieve`,knowledgeResultSchema,{method:'POST',body:JSON.stringify({...runtimeReference(binding),sessionId,turnId,query,context}),...signal?{signal}:{}})
+  }
+  /**
+   * Terminal server snapshot for the whole historical lineage, after exact text reads.
+   * @param scope - Original user and account-space identity.
+   * @param entries - Nonempty frozen runtime bindings and their exact source references.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @returns Successful authorization of the complete historical lineage.
+   */
+  authorizeHistory(scope:{userId:string;scope:string},entries:readonly {binding:RuntimeBinding;sources:ExactSource[]}[],signal?:AbortSignal):Promise<{authorized:true}>{
+    return this.request(`/api/official-agents/${encodeURIComponent(entries[0]!.binding.agentId)}/runtime/history/authorize`,z.object({authorized:z.literal(true)}).strict(),{method:'POST',body:JSON.stringify({...scope,entries:entries.map(({binding,sources})=>({agentId:binding.agentId,...runtimeReference(binding),sources}))}),...signal?{signal}:{}})
+  }
+  /**
+   * Reauthorize and open exactly the persisted source tuple, never the latest revision.
+   * @param binding - Frozen published version or creator-owned preview.
+   * @param source - Exact immutable source identifiers persisted with the answer.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @returns The authorized original source passage and offsets.
+   */
+  openSource(binding:RuntimeBinding,source:ExactSource,signal?:AbortSignal):Promise<OpenedSource>{
+    return this.request(`/api/official-agents/${encodeURIComponent(binding.agentId)}/runtime/sources/open`,openedSourceSchema,{method:'POST',body:JSON.stringify({...runtimeReference(binding),...source}),...signal?{signal}:{}})
   }
 
   /**
@@ -296,10 +384,11 @@ export class GroundOfficialAgentClient {
    * @param query - user search question; provider keys stay on Ground.
    * @param signal - optional caller cancellation forwarded to Ground.
    * @returns validated search hits.
+   * @param preview - Optional creator-owned preview replacing the published version reference.
    */
-  async search(agentId: string, versionId: string, query: string, signal?: AbortSignal): Promise<GroundOfficialWebSearch> {
-    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/search`, searchSchema, {
-      method: 'POST', body: JSON.stringify({ versionId, query }),
+  async search(agentId: string, versionId: string|null, query: string, signal?: AbortSignal, preview?:ExpertPreview): Promise<GroundOfficialWebSearch> {
+    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/${preview?'runtime/':''}search`, searchSchema, {
+      method: 'POST', body: JSON.stringify({ ...(preview?{executionProtocol:2,previewId:preview.id}:{versionId}), query }),
       ...signal === undefined ? {} : { signal },
     })
   }
@@ -307,40 +396,45 @@ export class GroundOfficialAgentClient {
 
   /**
    * Run entitlement-checked tabular analysis for one frozen official Expert version.
+   * @param preview - Optional creator-owned preview replacing the published version reference.
    */
   async analyzeTabular(
     agentId: string,
-    versionId: string,
+    versionId: string|null,
     body: { content: string; format?: 'csv' | 'json' | 'auto'; groupBy?: string; metrics?: string[]; goal?: string },
     signal?: AbortSignal,
+    preview?:ExpertPreview,
   ): Promise<GroundOfficialTabular> {
-    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/analyze-tabular`, tabularSchema, {
-      method: 'POST', body: JSON.stringify({ versionId, ...body }),
+    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/${preview?'runtime/':''}analyze-tabular`, tabularSchema, {
+      method: 'POST', body: JSON.stringify({ ...(preview?{executionProtocol:2,previewId:preview.id}:{versionId}), ...body }),
       ...signal === undefined ? {} : { signal },
     })
   }
 
   /**
    * Fetch one public URL under entitlement checks; provider keys stay on Ground.
+   * @param preview - Optional creator-owned preview replacing the published version reference.
    */
-  async fetchUrl(agentId: string, versionId: string, url: string, signal?: AbortSignal): Promise<GroundOfficialFetch> {
-    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/fetch-url`, fetchSchema, {
-      method: 'POST', body: JSON.stringify({ versionId, url }),
+  async fetchUrl(agentId: string, versionId: string|null, url: string, signal?: AbortSignal, preview?:ExpertPreview): Promise<GroundOfficialFetch> {
+    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/${preview?'runtime/':''}fetch-url`, fetchSchema, {
+      method: 'POST', body: JSON.stringify({ ...(preview?{executionProtocol:2,previewId:preview.id}:{versionId}), url }),
       ...signal === undefined ? {} : { signal },
     })
   }
 
   /**
    * Single-layer official Expert delegation for the boss orchestrator.
+   * @param preview - Optional creator-owned preview replacing the published version reference.
    */
   async delegate(
     agentId: string,
-    versionId: string,
+    versionId: string|null,
     body: { targetKey: string; task: string; tabularContent?: string; tabularFormat?: 'csv' | 'json' | 'auto' },
     signal?: AbortSignal,
+    preview?:ExpertPreview,
   ): Promise<GroundOfficialDelegate> {
-    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/delegate`, delegateSchema, {
-      method: 'POST', body: JSON.stringify({ versionId, ...body }),
+    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/${preview?'runtime/':''}delegate`, delegateSchema, {
+      method: 'POST', body: JSON.stringify({ ...(preview?{executionProtocol:2,previewId:preview.id}:{versionId}), ...body }),
       ...signal === undefined ? {} : { signal },
     })
   }
@@ -376,29 +470,42 @@ export class GroundOfficialAgentClient {
   }
 
   /**
-   * Load one frozen skill instruction body (+ reference guide) on demand.
+   * Negotiate a frozen complete package or read a legacy instruction/reference payload.
    * Pass an explicit revision so disabled skills remain readable for existing Sessions.
+   * @param skillId - Frozen official skill identity.
+   * @param revision - Frozen package revision selected by the Session.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @returns A validated complete package manifest or legacy instruction/reference payload.
    */
   async fetchSkillContent(
     skillId: string,
     revision: number,
     signal?: AbortSignal,
   ): Promise<GroundOfficialSkillContent> {
-    const path = `/api/official-skills/${encodeURIComponent(skillId)}/content?revision=${encodeURIComponent(String(revision))}`
+    const path = `/api/official-skills/${encodeURIComponent(skillId)}/content?revision=${encodeURIComponent(String(revision))}&packageFormat=2`
     return this.request(path, skillContentSchema, {
       ...signal === undefined ? {} : { signal },
-    })
+    // 500 paths × 512 UTF-16 units × 3 UTF-8 bytes, 100KiB instruction
+    // × 6 JSON escape bytes, plus bounded identity/display fields fit within 2MiB.
+    }, 2 * 1024 * 1024)
   }
 
   /**
    * Load one declared skill package resource at a frozen revision.
-   * Path must already be Ground-validated (`references/...`); Host does not trust model paths blindly.
+   * Ground checks the exact revision's file index; Host enforces the supplied byte bound while reading.
+   * @param skillId - Frozen official skill identity.
+   * @param revision - Frozen package revision selected by the Session.
+   * @param resourcePath - Exact relative path declared by that revision.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @param maxBytes - Maximum response bytes accepted while reading the resource.
+   * @returns Verified-length-bounded resource bytes for subsequent integrity validation.
    */
   async fetchSkillResource(
     skillId: string,
     revision: number,
     resourcePath: string,
     signal?: AbortSignal,
+    maxBytes = 1048576,
   ): Promise<Uint8Array> {
     const url = new URL(`/api/official-skills/${encodeURIComponent(skillId)}/resources`, this.origin)
     url.searchParams.set('path', resourcePath)
@@ -415,13 +522,14 @@ export class GroundOfficialAgentClient {
       if (response.status === 401) throw new Error('猛犸登录已失效，请重新登录。')
       throw new Error(`Ground official skill resource failed with HTTP ${response.status}`)
     }
-    return new Uint8Array(await response.arrayBuffer())
+    return boundedBody(response, maxBytes, signal)
   }
 
   private async request<Schema extends z.ZodType>(
     path: string,
     schema: Schema,
     init: RequestInit,
+    maxBytes?: number,
   ): Promise<z.infer<Schema>> {
     const response = await this.fetcher(new URL(path, this.origin), {
       ...init,
@@ -432,20 +540,15 @@ export class GroundOfficialAgentClient {
       },
     })
     if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      if (response.status === 401) throw new Error('猛犸登录已失效，请重新登录。')
-      let code = ''
-      let message = ''
-      try {
-        const body = JSON.parse(text) as { code?: unknown; message?: unknown }
-        code = typeof body.code === 'string' ? body.code : ''
-        message = typeof body.message === 'string' ? body.message : ''
-      } catch {
-        code = ''
-      }
-      if (code === 'OFFICIAL_SKILL_DELETED') throw new Error(message || '技能已删除，请重新选择')
+      if (response.status === 401) {await response.body?.cancel();throw new Error('猛犸登录已失效，请重新登录。')}
+      let message=''
+      if(response.headers.get('content-type')?.includes('application/json')){
+        const body:unknown=await boundedBody(response,8192,init.signal??undefined).then(bytes=>JSON.parse(new TextDecoder().decode(bytes))).catch(()=>null)
+        if(body&&typeof body==='object'&&'code' in body&&body.code==='OFFICIAL_SKILL_DELETED'&&'message' in body&&typeof body.message==='string')message=body.message
+      }else await response.body?.cancel()
       throw new Error(message || `Ground official Expert request failed with HTTP ${response.status}`)
     }
-    return schema.parse(await response.json()) as z.infer<Schema>
+    const value: unknown = maxBytes === undefined ? await response.json() : JSON.parse(new TextDecoder().decode(await boundedBody(response, maxBytes, init.signal ?? undefined)))
+    return schema.parse(value) as z.infer<Schema>
   }
 }

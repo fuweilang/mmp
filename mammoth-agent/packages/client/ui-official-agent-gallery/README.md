@@ -13,6 +13,12 @@ Shared Mac/Web gallery for Ground official experts and skills. The browser lists
 
 The browser receives no tokens, system prompts, tool scopes, or folder scopes. Session freezing, authorization checks, knowledge retrieval, and usage attribution belong to `@mammoth-ai/mmp-official-agent-gallery`.
 
+Preview startup selects from the Host Workspace registry independently of Session-list readiness, waits for its baseline, and uses the existing first-use default initializer only when the ready registry is empty. It refreshes the Session catalog before retaining the Host-created session and reuses that session if catalog synchronization needs a retry. Disposal cancels the pending wait.
+
+The `expertPreview` URL entry consumes the immutable admin preview through the normal Host `createPreview` Remote method and opens a standard conversation in the selected workspace. Source controls read the session projection and preserve each original turn/lookup label. Locations display headings, pages, paragraphs, or rows instead of serialized JSON. Source bodies require a fresh authenticated exact-source call; unknown labels never gain links.
+
+The preview entry retries missing workspace initialization for up to ten seconds and creates at most one successful session per entry lifetime. An embedded preview announces `mmp.expert-preview.ready` after its retained session input becomes available. It accepts `mmp.expert-preview.submit` only from the same-origin parent window with the captured `agentId`, `previewId`, a nonblank `requestId` of at most 128 characters, and nonblank `text` of at most 16,000 UTF-16 code units. It preserves existing drafts and submits through the standard composer. The `accepted` reply acknowledges composer handoff; normal input guards and Host acceptance still determine execution. Duplicate request ids replay their original reply without resubmission. Input readiness polling stops after ten seconds; plugin disposal removes the listener and timers. Questions never enter the launch URL.
+
 ## Model Experience
 
 Indirectly, through the Host gallery service that configures the selected official Agent and starts its Session.
