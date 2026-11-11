@@ -14,7 +14,7 @@ import type { SessionId, SessionSeq } from '@mammoth-ai/mmp-session/types'
 import type { RemoteResult } from '@mammoth-ai/mmp-typert-protocol'
 import type { ObservableSnapshot } from '@mammoth-ai/mmp-client-store'
 import type { PromptContentPart, QueueAction, SessionRequestId } from '../../types.ts'
-import type { PendingSubmissionAttachment, SessionSnapshot } from './snapshot.ts'
+import type { PendingSubmissionAttachment, PendingSubmissionSkill, SessionSnapshot } from './snapshot.ts'
 import type { LibrarySourceReference } from '@mammoth-ai/mmp-attachment/types'
 
 /**
@@ -40,6 +40,8 @@ export interface BeginSubmissionInput {
   readonly attachments: readonly PendingSubmissionAttachment[]
   /** Display-only library identities; Host admission replaces names with authorized source metadata. */
   readonly libraryReferences?: readonly LibrarySourceReference[]
+  /** Skills shown on the echo, in chip order. Omitted when the draft has none. */
+  readonly sentSkills?: readonly PendingSubmissionSkill[]
   /**
    * Called once when the Host accepted the prompt, in the same update that
    * publishes the echo, whether the receipt or an Inbox row showed it first.

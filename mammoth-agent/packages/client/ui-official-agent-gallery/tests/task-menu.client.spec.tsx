@@ -11,6 +11,7 @@ import { apply as menus, inject as menusInject } from '@mammoth-ai/mmp-client-ui
 import { apply as triggers, inject as triggersInject } from '@mammoth-ai/mmp-client-ui-input-trigger/client'
 import { apply as commands, inject as commandsInject } from '@mammoth-ai/mmp-client-ui-commands/client'
 import { apply as conversation, inject as conversationInject } from '@mammoth-ai/mmp-client-ui-conversation/client'
+import css from '../src/client/task-catalog.module.css'
 import type { PropsRenderSlots } from '@mammoth-ai/mmp-client-ui-slots'
 import { SessionId } from '@mammoth-ai/mmp-session/types'
 import * as gallerySource from '../src/client/index.ts'
@@ -43,7 +44,7 @@ const sid=SessionId('t175-isolated-fixture')
 function Root({renderSlot}:PropsRenderSlots<'main'|'shell.overlay'>){return <>{renderSlot('main',{}, {entryKey:'conversation'})}{renderSlot('shell.overlay',{})}</>}
 const expert={id:'expert-fixture',key:'writer',name:'写作专家',summary:'优化表达',versionId:'version-fixture',version:1,kind:'GENERAL',category:'content',openingQuestions:[],capabilities:[],avatarUrl:null,executionGranted:true}
 const skill={id:'skill-fixture',key:'document',name:'文档技能',summary:'整理文档',avatarUrl:null,packageRevision:2,detail:{starters:[]}}
-async function bench(){
+async function bench(galleryRemote:Record<string,unknown>={}){
  const r=await SlotTestRuntime.create();onTestFinished(()=>r.dispose())
  const locale=new LocaleRuntime(r.ctx);r.ctx.provide('locale',locale);r.slots.installLocale(locale)
  r.ctx.provide('configForms',{developerTools:{enabled:createSnapshotStore(true)},get:()=>stubConfigForm().scope} as never)
@@ -55,7 +56,8 @@ async function bench(){
  r.remote.provideNamespaces({commands:{list:async()=>({ok:true,value:[]})},officialAgentGallery:{
   preferences:async(kind:string)=>({ok:true,value:[{resourceId:kind==='expert'?expert.id:skill.id}]}),
   expertCard:async()=>({ok:true,value:expert}),catalogDetail:async()=>({ok:true,value:skill}),
-  favourite:async()=>({ok:true,value:null}),pageExperts:async()=>({ok:true,value:{items:[expert],hasMore:false,nextCursor:null}}),pageSkills:async()=>({ok:true,value:{items:[skill],hasMore:false,nextCursor:null}})
+  favourite:async()=>({ok:true,value:null}),pageExperts:async()=>({ok:true,value:{items:[expert],hasMore:false,nextCursor:null}}),pageSkills:async()=>({ok:true,value:{items:[skill],hasMore:false,nextCursor:null}}),
+  ...galleryRemote,
  }})
  await r.mount({inject:[...menusInject],apply:menus})
  await r.root.declare({'main':{kind:'keyed',scope:'root'},'shell.overlay':{kind:'list',scope:'root'}} as const,Root)
@@ -69,8 +71,8 @@ async function bench(){
 async function open(f:Awaited<ReturnType<typeof bench>>){
  fireEvent.click(f.view.getByRole('button',{name:'添加文件或调用指令'}))
  await waitFor(()=>expect(f.view.getByRole('option',{name:/引用企业资料/})).toBeTruthy())
- expect(f.view.getByRole('option',{name:/选择专家/})).toBeTruthy()
- expect(f.view.getByRole('option',{name:/选择技能/})).toBeTruthy()
+ expect(f.view.getByRole('option',{name:/选择专家/}).querySelector('svg')).toBeTruthy()
+ expect(f.view.getByRole('option',{name:/选择技能/}).querySelector('svg')).toBeTruthy()
 }
 it('t175 actual + opens all three contributions using id-only session context, not SessionFace',async()=>{
  const f=await bench();await open(f)
@@ -80,7 +82,17 @@ it('t175 + expert/skill choose removable tags; cancelling preserves user text an
  const f=await bench();await act(async()=>{f.input.setDraft('原始问题')});await open(f)
  fireEvent.mouseDown(f.view.getByRole('option',{name:/选择专家/}))
  const expertDialog=await f.view.findByRole('dialog',{name:'选择专家'})
+ const dialog=css.dialog,sheetClass=css.sheet,listClass=css.list
+ if(dialog===undefined||sheetClass===undefined||listClass===undefined)throw new Error('catalog dialog classes are missing')
+ expect(expertDialog.classList.contains(dialog)).toBe(true)
+ const sheet=[...expertDialog.querySelectorAll('div')].find(node=>node.classList.contains(sheetClass))
+ const list=[...expertDialog.querySelectorAll('div')].find(node=>node.classList.contains(listClass))
+ expect(sheet).toBeTruthy()
+ expect(list).toBeTruthy()
+ expect(list!.contains(within(expertDialog).getByRole('textbox',{name:'搜索名称或用途'}))).toBe(false)
+ expect(within(expertDialog).queryByRole('tablist')).toBeNull()
  await waitFor(()=>expect(within(expertDialog).getByText('写作专家')).toBeTruthy())
+ expect(list!.textContent).toContain('写作专家')
  fireEvent.click(within(expertDialog).getByRole('button',{name:'选择'}))
  await waitFor(()=>expect(f.input.state.getSnapshot().catalogSelection?.expertRef?.id).toBe(expert.id))
  expect(f.input.state.getSnapshot().draft).toBe('原始问题')
@@ -88,21 +100,64 @@ it('t175 + expert/skill choose removable tags; cancelling preserves user text an
  const skillDialog=await f.view.findByRole('dialog',{name:'选择技能'})
  await waitFor(()=>expect(within(skillDialog).getByText('文档技能')).toBeTruthy())
  fireEvent.click(within(skillDialog).getByRole('button',{name:'选择'}))
- await waitFor(()=>expect(f.input.state.getSnapshot().catalogSelection?.skillRef?.revision).toBe(2))
+ await waitFor(()=>expect(f.input.state.getSnapshot().catalogSelection?.skillRefs[0]?.revision).toBe(2))
  fireEvent.click(f.view.getByRole('button',{name:'发送消息'}))
  await waitFor(()=>expect(f.prompt).toHaveBeenCalledTimes(1))
  const accepted=f.prompt.mock.calls[0] as readonly unknown[]
  expect(accepted[0]).toEqual([{type:'text',text:'原始问题'}])
- expect(accepted[4]).toMatchObject({protocol:1,expertRef:{id:expert.id,versionId:expert.versionId},skillRef:{id:skill.id,revision:2}})
+ expect(accepted[4]).toMatchObject({protocol:1,expertRef:{id:expert.id,versionId:expert.versionId},skillRef:{id:skill.id,revision:2},skillRefs:[{id:skill.id,revision:2}]})
  await waitFor(()=>expect(f.input.state.getSnapshot().phase).toBe('plain'))
+ expect(f.input.state.getSnapshot().draft).toBe('')
+ expect(f.input.state.getSnapshot().catalogSelection?.skillRefs).toEqual([])
+ expect(f.input.state.getSnapshot().catalogSelection?.expertRef).toBeNull()
  await act(async()=>{f.input.setDraft('原始问题')})
- fireEvent.click(f.view.getByRole('button',{name:/^移除专家/}));fireEvent.click(f.view.getByRole('button',{name:/^移除技能/}))
- await waitFor(()=>expect(f.input.state.getSnapshot().catalogSelection).toMatchObject({expertRef:null,skillRef:null}))
- expect(f.input.state.getSnapshot().draft).toBe('原始问题')
  fireEvent.click(f.view.getByRole('button',{name:'发送消息'}))
  await waitFor(()=>expect(f.prompt).toHaveBeenCalledTimes(2))
  const cleared=f.prompt.mock.calls[1] as readonly unknown[]
- expect(cleared[4]).toMatchObject({expertRef:null,skillRef:null})
+ expect(cleared[4]).toMatchObject({expertRef:null,skillRefs:[]})
+})
+it('picker keeps the current rows and sends one catalog search after typing pauses',async()=>{
+ const pageExperts=vi.fn(async(query:{q?:string})=>query.q==='文案大师'
+  ?{ok:true as const,value:{items:[{...expert,id:'expert-filtered',name:'文案大师'}],hasMore:false,nextCursor:null}}
+  :{ok:true as const,value:{items:[expert],hasMore:false,nextCursor:null}})
+ const f=await bench({pageExperts});await open(f)
+ fireEvent.mouseDown(f.view.getByRole('option',{name:/选择专家/}))
+ const dialog=await f.view.findByRole('dialog',{name:'选择专家'})
+ await waitFor(()=>expect(within(dialog).getByText('写作专家')).toBeTruthy())
+ const opened=pageExperts.mock.calls.length
+ const box=within(dialog).getByRole('textbox',{name:'搜索名称或用途'})
+ fireEvent.change(box,{target:{value:'文'}})
+ fireEvent.change(box,{target:{value:'文案'}})
+ fireEvent.change(box,{target:{value:'文案大师'}})
+ expect(within(dialog).getByText('写作专家')).toBeTruthy()
+ expect(pageExperts.mock.calls.length).toBe(opened)
+ await waitFor(()=>expect(pageExperts.mock.calls.some(call=>call[0]?.q==='文案大师')).toBe(true),{timeout:1500})
+ expect(pageExperts.mock.calls.filter(call=>call[0]?.q).length).toBe(1)
+ await waitFor(()=>expect(within(dialog).getByText('文案大师')).toBeTruthy())
+ expect(within(dialog).queryByText('写作专家')).toBeNull()
+})
+it('adds a second skill beside the draft instead of replacing the first',async()=>{
+ const second={...skill,id:'skill-2',key:'market',name:'行情技能',packageRevision:4}
+ const f=await bench({pageSkills:async()=>({ok:true,value:{items:[skill,second],hasMore:false,nextCursor:null}})})
+ await act(async()=>{f.input.setDraft('小米有什么汽车推荐？')});await open(f)
+ fireEvent.mouseDown(f.view.getByRole('option',{name:/选择技能/}))
+ const first=await f.view.findByRole('dialog',{name:'选择技能'})
+ await waitFor(()=>expect(within(first).getByText('文档技能')).toBeTruthy())
+ const firstRow=within(first).getByText('文档技能').closest('article')
+ fireEvent.click(within(firstRow as HTMLElement).getByRole('button',{name:'选择'}))
+ await waitFor(()=>expect(f.input.state.getSnapshot().catalogSelection?.skillRefs.map(item=>item.id)).toEqual([skill.id]))
+ await open(f);fireEvent.mouseDown(f.view.getByRole('option',{name:/选择技能/}))
+ const again=await f.view.findByRole('dialog',{name:'选择技能'})
+ const row=within(again).getByText('行情技能').closest('article')
+ fireEvent.click(within(row as HTMLElement).getByRole('button',{name:'选择'}))
+ await waitFor(()=>expect(f.input.state.getSnapshot().catalogSelection?.skillRefs.map(item=>item.id)).toEqual([skill.id,second.id]))
+ expect(f.input.state.getSnapshot().draft).toBe('小米有什么汽车推荐？')
+ await open(f);fireEvent.mouseDown(f.view.getByRole('option',{name:/选择技能/}))
+ const duplicate=await f.view.findByRole('dialog',{name:'选择技能'})
+ const duplicateRow=within(duplicate).getByText('文档技能').closest('article')
+ fireEvent.click(within(duplicateRow as HTMLElement).getByRole('button',{name:'选择'}))
+ await waitFor(()=>expect(f.view.queryByRole('dialog',{name:'选择技能'})).toBeNull())
+ expect(f.input.state.getSnapshot().catalogSelection?.skillRefs.map(item=>item.id)).toEqual([skill.id,second.id])
 })
 it('t175 + enterprise reference checks state and tag cancellation does not edit text or retrieve',async()=>{
  const f=await bench();const fetch=vi.fn();vi.stubGlobal('fetch',fetch)

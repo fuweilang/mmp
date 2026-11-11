@@ -1,5 +1,5 @@
 import { skillStepAccess } from './skill-availability.ts'
-import { parseSelection, catalogHash, attemptForMessage, attemptForRequest, type CatalogAttempt } from './task-composition.ts'
+import { parseSelection, catalogHash, compositionHashOf, selectionSkills, skillMarksOf, attemptForMessage, attemptForRequest, type CatalogAttempt } from './task-composition.ts'
 import type { AgentHandle } from '@mammoth-ai/mmp-agent'
 import {ManagedDocuments,managedRuntimeProjection,compositionOf,sha,type ManagedComposition,type GalleryReceipt} from './managed-runtime.ts'
 import type {} from '@mammoth-ai/mmp-agent-preset-registry'
@@ -25,6 +25,7 @@ import type {} from '@mammoth-ai/mmp-skill'
 import { GroundOfficialAgentClient } from './ground.ts'
 import {
   officialAgentBindingProjection,
+  officialGallerySentSkillsProjection,
   officialGallerySourceProjection,
   officialSkillBindingProjection,
 } from './projection.ts'
@@ -138,6 +139,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     this.projection = await this.ctx.sessionProjections.register(officialAgentBindingProjection)
     this.skillProjection = await this.ctx.sessionProjections.register(officialSkillBindingProjection)
     await this.ctx.sessionProjections.register(officialGallerySourceProjection)
+    await this.ctx.sessionProjections.register(officialGallerySentSkillsProjection)
     await this.ctx.sessionProjections.register(managedRuntimeProjection)
     this.ctx.on('task/check-queue-steer',async(agent,message)=>{if(attemptForMessage(agent.session,message.id))throw new Error('TASK_SELECTION_REQUIRES_NEXT_TURN_QUEUE')})
     this.ctx.on('task/prepare-prompt', async (agent, request, message) => this.prepareTaskPrompt(agent, request, message))
@@ -164,8 +166,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       if(runtime.turn!==turn){runtime.attempt=randomUUID();runtime.turn=turn;runtime.step=step;this.receipt(agent,'preparing')}else runtime.step=step
       try{
         await this.authorize(agent,signal)
-        const selected=this.skillBindingFor(agent.session)
-        if(selected&&!runtime.bodies.has(selected.sessionSource.key)){
+        for(const selected of this.activeSkills(agent.session)){
+          if(runtime.bodies.has(selected.sessionSource.key))continue
           this.receipt(agent,'fetching')
           const skill=await this.ctx.skills.get(selected.sessionSource.key,{scope:agent,signal})
           if(!skill||!runtime.bodies.has(selected.sessionSource.key))throw new Error('GALLERY_SKILL_LOAD_FAILED')
@@ -174,7 +176,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       }catch(error){this.receipt(agent,signal.aborted?'cancelled':'failed',{reason:error instanceof Error?error.message.split(':')[0]??'GALLERY_FAILED':'GALLERY_PREPARE_FAILED'});throw error}
     })
     this.ctx.on('agent/disposed', ({ agent }) => {
-      if (this.bindingFor(agent.session) !== null) this.ctx.groundRequestAttribution.unbind(agent.id)
+      this.ctx.groundRequestAttribution.unbind(agent.id)
       this.runtimes.delete(agent.id)
       this.expertTools.delete(agent.id)
       this.ownedTasks.delete(agent.id)
@@ -355,12 +357,27 @@ export default class OfficialAgentGallery extends TypertRemoteService {
 
   private bindingFor(session: Parameters<ProjectionHandle<OfficialAgentBindingState>['stateOf']>[0]): OfficialAgentBinding | null {
     const active=this.runtimes.get(session.id)?.active
-    return active === undefined ? this.projection.stateOf(session).binding : active.expert
+    // A recorded attempt owns the turn. The expert frozen at creation does not fill a later turn.
+    if (active !== undefined) return active.expert
+    if (session.snapshotEvents().some(event => event.type === 'official-gallery/attempt')) return null
+    return this.projection.stateOf(session).binding
   }
 
   private skillBindingFor(session: Parameters<ProjectionHandle<OfficialSkillBindingState>['stateOf']>[0]): OfficialSkillBinding | null {
+    return this.activeSkills(session)[0] ?? null
+  }
+
+  /** Skills this turn may run, in chip order. A session created from one skill stays a one-item list. */
+  private activeSkills(session: Parameters<ProjectionHandle<OfficialSkillBindingState>['stateOf']>[0]): OfficialSkillBinding[] {
     const active=this.runtimes.get(session.id)?.active
-    return active === undefined ? this.skillProjection.stateOf(session).binding : active.skill
+    if(active===undefined){const bound=this.skillProjection.stateOf(session).binding;return bound?[bound]:[]}
+    if(Array.isArray(active.skills))return [...active.skills]
+    return active.skill?[active.skill]:[]
+  }
+
+  private attemptPins(active:CatalogAttempt):{key:string;revision:number;hash?:string|undefined}[]{
+    if(Array.isArray(active.skills))return active.skills.map((skill,index)=>({key:skill.sessionSource.key,revision:skill.sessionSource.packageRevision,hash:active.skillHashes?.[index]}))
+    return active.skill?[{key:active.skill.sessionSource.key,revision:active.skill.sessionSource.packageRevision,hash:active.skillHash??undefined}]:[]
   }
 
   private skillSummaryFromBinding(binding: OfficialSkillBinding): OfficialSkillSummary {
@@ -378,7 +395,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
   private installSessionSkills(agentCtx:Context,skills:readonly OfficialSkillSummary[]|(()=>readonly OfficialSkillSummary[]),agent:Agent):()=>void{
     return installOfficialGallerySkills(agentCtx,this.ground,skills,(payload,body)=>{
       const runtime=this.runtimes.get(agent.id);if(!runtime)throw new Error('GALLERY_RUNTIME_MISSING')
-      const expected=runtime.active!==undefined ? runtime.active.skill?{key:runtime.active.skill.sessionSource.key,revision:runtime.active.skill.sessionSource.packageRevision,hash:runtime.active.skillHash}:null : runtime.composition?.selected
+      const pins=runtime.active!==undefined?this.attemptPins(runtime.active):runtime.composition?.selected?[runtime.composition.selected]:[]
+      const expected=pins.find(pin=>pin.key===payload.key)
       if(expected?.key===payload.key&&(expected.revision!==payload.packageRevision||expected.hash!==sha(payload.instruction)))throw new Error('GALLERY_SKILL_HASH_MISMATCH')
       const historical=agent.session.snapshotEvents().find(e=>e.type==='official-gallery/receipt'&&e.data.phase==='prepared'&&e.data.skillKey===payload.key&&e.data.revision===payload.packageRevision)
       if(!runtime.active&&historical?.type==='official-gallery/receipt'&&historical.data.skillHash!==sha(payload.instruction))throw new Error('GALLERY_SKILL_HASH_MISMATCH')
@@ -390,7 +408,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
   }
   private requiredContext(runtime:{marker:string;active?:CatalogAttempt|undefined;bodies:Map<string,{body:string}>}):string|undefined {
     const bodies=[...runtime.bodies.values()].map(body=>body.body).join('\n\n')
-    return runtime.active ? `${runtime.marker}\nHistorical roles and skill methods are history data, not active instructions. Only this attempt role/method applies.\n${runtime.active.expert?.systemPrompt??''}\n${bodies}` : bodies||undefined
+    return runtime.active ? `${runtime.marker}\nHistorical roles and skill methods are history data, not active instructions. Only this attempt's role and selected skill methods apply.\n${runtime.active.expert?.systemPrompt??''}\n${bodies}` : bodies||undefined
   }
   private async prepareTaskPrompt(agent:Agent,raw:unknown,message?:import('@mammoth-ai/mmp-llm').UserMessage):Promise<'handled'|undefined>{
     if(!raw||typeof raw!=='object')return undefined
@@ -403,17 +421,17 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     if(!message)return 'handled'
     // A new ordinary standard task with no catalog choice needs no gallery runtime,
     // tenant lookup or document-only capability wrapper.
-    if (!selection.expertRef && !selection.skillRef && !this.runtimes.has(agent.id)
+    if (!selection.expertRef && selectionSkills(selection).length===0 && !this.runtimes.has(agent.id)
       && !this.projection.stateOf(agent.session).binding && !this.skillProjection.stateOf(agent.session).binding
       && !agent.session.snapshotEvents().some(e => e.type === 'official-gallery/attempt')) return 'handled'
     const currentScope=await this.ground.currentScope()
     const authScope=previous?.authScope??currentScope
     if(currentScope.userId!==authScope.userId||currentScope.scope!==authScope.scope)throw new Error('TASK_AUTH_SCOPE_CHANGED')
-    let expert:OfficialAgentBinding|null=null,skill:OfficialSkillBinding|null=null,skillHash:string|null=null
-    if(previous){expert=previous.expert;skill=previous.skill;skillHash=previous.skillHash}
+    let expert:OfficialAgentBinding|null=null,skills:OfficialSkillBinding[]=[],skillHashes:string[]=[]
+    if(previous){expert=previous.expert;skills=Array.isArray(previous.skills)?[...previous.skills]:previous.skill?[previous.skill]:[];skillHashes=Array.isArray(previous.skillHashes)?[...previous.skillHashes]:previous.skillHash?[previous.skillHash]:[]}
     else {
       if(selection.expertRef){const card=await this.ground.getCard(selection.expertRef.id);if(!card.executionGranted)throw new Error('TASK_EXPERT_ACCESS_CHANGED');const execution=await this.ground.resolve(selection.expertRef.id,selection.expertRef.versionId);if(execution.agentId!==selection.expertRef.id||execution.versionId!==selection.expertRef.versionId)throw new Error('TASK_EXPERT_REVISION_CHANGED');expert={agentId:execution.agentId,versionId:execution.versionId,kind:execution.kind,name:card.name,systemPrompt:execution.systemPrompt,toolScope:execution.toolScope,...execution.linkedSkills?{linkedSkills:execution.linkedSkills}:{}}}
-      if(selection.skillRef){skill=await this.ground.beginSkillSession(selection.skillRef.id,selection.skillRef.revision);if(skill.sessionSource.id!==selection.skillRef.id||skill.sessionSource.packageRevision!==selection.skillRef.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision);if(content.id!==selection.skillRef.id||content.key!==skill.sessionSource.key||content.packageRevision!==selection.skillRef.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');skillHash=sha(content.instruction)}
+      for(const ref of selectionSkills(selection)){const skill=await this.ground.beginSkillSession(ref.id,ref.revision);if(skill.sessionSource.id!==ref.id||skill.sessionSource.packageRevision!==ref.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');if(skills.some(existing=>existing.sessionSource.key===skill.sessionSource.key))throw new Error('TASK_SELECTION_DUPLICATE_SKILL');const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision);if(content.id!==ref.id||content.key!==skill.sessionSource.key||content.packageRevision!==ref.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');skills.push(skill);skillHashes.push(sha(content.instruction))}
     }
     if(expert)await this.ground.resolve(expert.agentId,expert.versionId)
     const latest=attemptForRequest(agent.session,request.requestId)
@@ -421,7 +439,9 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     if(this.ctx.agents.get(agent.id)!==agent)throw new Error('TASK_DISPOSED_DURING_PREPARATION')
     if(this.ctx.workspaceRegistry.archivedSessionIds?.includes(agent.id))throw new Error('TASK_ARCHIVED_DURING_PREPARATION')
     if(!this.runtimes.has(agent.id))this.installCatalogRuntime(agent)
-    const snapshot:CatalogAttempt={protocol:1,requestId:request.requestId,messageId:message.id,selection,selectionHash,inputHash,authScope,expert,skill,skillHash,compositionHash:catalogHash({expert,skill,skillHash,selectionHash,authScope})}
+    const skill=skills[0]??null,skillHash=skillHashes[0]??null,listed=previous?Array.isArray(previous.skills):true
+    const skillMarks=skillMarksOf(request.catalogSelection,skills.length)
+    const snapshot:CatalogAttempt={protocol:1,requestId:request.requestId,messageId:message.id,selection,selectionHash,inputHash,authScope,expert,skill,skillHash,...listed?{skills,skillHashes}:{},...skillMarks===undefined?{}:{skillMarks},compositionHash:compositionHashOf({expert,skill,skillHash,...listed?{skills,skillHashes}:{},selectionHash,authScope})}
     agent.session.append('official-gallery/attempt',snapshot)
     return 'handled'
   }
@@ -431,21 +451,20 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     const preset=await this.ctx.agentPresets.resolve('standard');if(preset.broken)throw new Error(`GALLERY_STANDARD_UNAVAILABLE: ${preset.broken}`)
   }
   private async authorize(agent:Agent,signal?:AbortSignal):Promise<void>{
-    signal?.throwIfAborted();const active=this.runtimes.get(agent.id)?.active;if(active&&!active.expert&&!active.skill)return;if(active){const scope=await this.ground.currentScope();if(scope.userId!==active.authScope.userId||scope.scope!==active.authScope.scope)throw new Error('TASK_AUTH_SCOPE_CHANGED')}const binding=this.bindingFor(agent.session),selected=this.skillBindingFor(agent.session)
+    signal?.throwIfAborted();const active=this.runtimes.get(agent.id)?.active;const chosen=this.activeSkills(agent.session);if(active&&!active.expert&&chosen.length===0)return;if(active){const scope=await this.ground.currentScope();if(scope.userId!==active.authScope.userId||scope.scope!==active.authScope.scope)throw new Error('TASK_AUTH_SCOPE_CHANGED')}const binding=this.bindingFor(agent.session)
     if(binding)await this.ground.resolve(binding.agentId,binding.versionId,signal)
-    if(selected){
-      const active=this.runtimes.get(agent.id)?.active
-      const frozen=skillStepAccess(Boolean(active?.skill))==='snapshot'
-      if(frozen){
-        if(active?.skillHash){const content=await this.ground.fetchSkillContent(selected.sessionSource.id,selected.sessionSource.packageRevision,signal);if(sha(content.instruction)!==active.skillHash)throw new Error('TASK_SKILL_SNAPSHOT_CHANGED')}
+    if(chosen.length>0){
+      const frozen=skillStepAccess(Boolean(active))==='snapshot'
+      if(frozen&&active){
+        for(const skill of chosen){const pin=this.attemptPins(active).find(item=>item.key===skill.sessionSource.key);if(pin?.hash){const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision,signal);if(sha(content.instruction)!==pin.hash)throw new Error('TASK_SKILL_SNAPSHOT_CHANGED')}}
       }else{
-        await this.ground.beginSkillSession(selected.sessionSource.id,selected.sessionSource.packageRevision,signal)
+        for(const skill of chosen)await this.ground.beginSkillSession(skill.sessionSource.id,skill.sessionSource.packageRevision,signal)
       }
     }
     if(active){const scope=await this.ground.currentScope();if(scope.userId!==active.authScope.userId||scope.scope!==active.authScope.scope)throw new Error('TASK_AUTH_SCOPE_CHANGED')}
     signal?.throwIfAborted()
   }
-  private recordUsed(agent:Agent):void{const runtime=this.runtimes.get(agent.id),active=runtime?.active;if(!runtime||!active||runtime.used)return;runtime.used=true;if(active.expert)void this.ground.preference('expert',active.expert.agentId,'used',undefined,active.authScope).catch(()=>{});if(active.skill)void this.ground.preference('skill',active.skill.sessionSource.id,'used',undefined,active.authScope).catch(()=>{})}
+  private recordUsed(agent:Agent):void{const runtime=this.runtimes.get(agent.id),active=runtime?.active;if(!runtime||!active||runtime.used)return;runtime.used=true;if(active.expert)void this.ground.preference('expert',active.expert.agentId,'used',undefined,active.authScope).catch(()=>{});for(const skill of this.activeSkills(agent.session))void this.ground.preference('skill',skill.sessionSource.id,'used',undefined,active.authScope).catch(()=>{})}
   private receipt(agent:Agent,phase:string,extra:Partial<GalleryReceipt>={}):void{
     const r=this.runtimes.get(agent.id);if(!r)return
     agent.session.append('official-gallery/receipt',{eventId:randomUUID(),attemptId:r.attempt,phase,...r.active?{compositionHash:r.active.compositionHash}:{},turn:r.turn,step:r.step,generation:agent.session.surface.contentGeneration,...extra})
@@ -466,7 +485,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     agent.ctx.systemPrompt.section({name:'OFFICIAL_GALLERY_REQUIRED_SKILLS',order:899,interpolate:false,text:()=>this.requiredContext(runtime)??''})
     agent.ctx.systemPrompt.section({name:'OFFICIAL_EXPERT_ROLE',order:898,interpolate:false,text:()=>runtime.active ? '' : this.bindingFor(agent.session)?.systemPrompt??''})
     this.replaceExpertTools(agent,this.bindingFor(agent.session))
-    runtime.invalidateSkills=this.installSessionSkills(agent.ctx,()=>{const expert=this.bindingFor(agent.session),skill=this.skillBindingFor(agent.session);return [...new Map([...expert?.linkedSkills??[],...skill?[this.skillSummaryFromBinding(skill)]:[]].map(summary=>[summary.key,summary])).values()]},agent)
+    runtime.invalidateSkills=this.installSessionSkills(agent.ctx,()=>{const expert=this.bindingFor(agent.session),skills=this.activeSkills(agent.session);return [...new Map([...expert?.linkedSkills??[],...skills.map(skill=>this.skillSummaryFromBinding(skill))].map(summary=>[summary.key,summary])).values()]},agent)
     agent.ctx.on('agent/inbox/claimed',({message,turn})=>{
       const frozen=attemptForMessage(agent.session,message.id)
       if(!frozen){runtime.epoch++;runtime.active=undefined;runtime.used=false;runtime.bodies.clear();runtime.invalidateSkills();runtime.turn=turn;runtime.step=1;runtime.attempt=randomUUID();this.ctx.groundRequestAttribution.unbind(agent.id);this.replaceExpertTools(agent,null);const original=this.bindingFor(agent.session);if(original){this.ctx.groundRequestAttribution.bind(agent.id,{agentId:original.agentId,versionId:original.versionId});this.replaceExpertTools(agent,original)}return}
@@ -485,8 +504,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       if(start?.type==='turn/start'&&start.data.turn!==runtime.turn){runtime.turn=start.data.turn;runtime.step=1;runtime.attempt=runtime.active?.requestId??randomUUID();this.receipt(agent,'preparing')}
       try{
         runtime.marker=runtime.active?`ACTIVE_CATALOG_COMPOSITION:${runtime.active.compositionHash}:${randomUUID()}`:''
-        const selected=this.skillBindingFor(agent.session)
-        const keys=new Set(selected?[selected.sessionSource.key]:[])
+        const keys=new Set(this.activeSkills(agent.session).map(skill=>skill.sessionSource.key))
         const associated=this.bindingFor(agent.session)?.linkedSkills??[]
         // Previously loaded associated methods are revalidated on resume/compression,
         // but never load unrelated associated methods before their first use.

@@ -1,5 +1,5 @@
 /** Visual body of one skill chip. The node owns identity and removal. */
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { IconCloseOutlineRegular } from '@mammoth-ai/mmp-client-ui-primitives'
 import css from './SkillChip.module.css'
 
@@ -18,11 +18,15 @@ export interface SkillChipViewProps {
  */
 export function SkillChipView({ name, icon, label, onRemove }: SkillChipViewProps): ReactNode {
   const portrait = icon?.trim() ?? ''
+  const [failed, setFailed] = useState(false)
+  const showIcon = portrait !== '' && !failed
   return (
-    <span className={css.chip}>
-      <span className={css.icon} aria-hidden="true">
-        {portrait !== '' ? <img src={portrait} alt="" /> : <span className={css.fallback} />}
-      </span>
+    <span className={css.chip} {...(showIcon ? { 'data-has-icon': 'true' } : {})}>
+      {showIcon && (
+        <span className={css.icon} aria-hidden="true">
+          <img src={portrait} alt="" onError={() => { setFailed(true) }} />
+        </span>
+      )}
       <span className={css.name}>{name}</span>
       <button
         type="button"

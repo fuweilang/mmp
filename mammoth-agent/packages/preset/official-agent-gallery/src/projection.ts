@@ -2,8 +2,10 @@ import { z } from 'zod'
 import type { ProjectionDefinition } from '@mammoth-ai/mmp-session-projection'
 import type {
   OfficialAgentBindingState,
+  OfficialGallerySentSkillsState,
   OfficialGallerySourceState,
   OfficialSkillBindingState,
+  SentSkillView,
 } from './types.ts'
 
 const skillSummarySchema = z.object({
@@ -114,6 +116,71 @@ export const officialGallerySourceProjection = {
     view: (state: OfficialGallerySourceState) => state.source,
   },
 } satisfies ProjectionDefinition<'officialGallerySource', OfficialGallerySourceState>
+
+const sentSkillSchema = z.object({
+  name: z.string().min(1),
+  key: z.string().min(1),
+  icon: z.string().nullable(),
+  offset: z.number().int().nonnegative().optional(),
+}).strict()
+
+const sentSkillsStateSchema = z.object({
+  byRequest: z.record(z.string(), z.array(sentSkillSchema)),
+}).strict()
+
+function sentSkillsOf(data: unknown): { requestId: string; skills: SentSkillView[] } | undefined {
+  if (!data || typeof data !== 'object') return undefined
+  const record = data as { requestId?: unknown; skills?: unknown; skill?: unknown; skillMarks?: unknown }
+  if (typeof record.requestId !== 'string' || record.requestId === '') return undefined
+  const listed = Array.isArray(record.skills) ? record.skills : record.skill === undefined || record.skill === null ? [] : [record.skill]
+  const marks = Array.isArray(record.skillMarks) && record.skillMarks.length === listed.length ? record.skillMarks : undefined
+  const skills: SentSkillView[] = []
+  for (const [index, item] of listed.entries()) {
+    if (!item || typeof item !== 'object') return undefined
+    const binding = item as { skill?: { name?: unknown }; sessionSource?: { key?: unknown; avatarUrl?: unknown } }
+    const name = binding.skill?.name
+    const key = binding.sessionSource?.key
+    if (typeof name !== 'string' || name === '' || typeof key !== 'string' || key === '') return undefined
+    const avatar = binding.sessionSource?.avatarUrl
+    const mark = marks?.[index]
+    skills.push({
+      name, key, icon: typeof avatar === 'string' && avatar !== '' ? avatar : null,
+      ...(Number.isSafeInteger(mark) && Number(mark) >= 0 ? { offset: Number(mark) } : {}),
+    })
+  }
+  return skills.length === 0 ? undefined : { requestId: record.requestId, skills }
+}
+
+function sameSentSkills(left: readonly SentSkillView[], right: readonly SentSkillView[]): boolean {
+  return left.length === right.length && left.every((skill, index) => {
+    const other = right[index]
+    return other !== undefined && skill.name === other.name && skill.key === other.key && skill.icon === other.icon && skill.offset === other.offset
+  })
+}
+
+/**
+ * Client-visible skills for each sent message. Names come from the attempt.
+ * Older attempts store one `skill`; later attempts store `skills` in chip order.
+ * Display fields stay out of the composition hash.
+ */
+export const officialGallerySentSkillsProjection = {
+  key: 'officialGallerySentSkills',
+  stateSchema: sentSkillsStateSchema as z.ZodType<OfficialGallerySentSkillsState>,
+  stateVersion: 1,
+  init: (): OfficialGallerySentSkillsState => ({ byRequest: {} }),
+  apply: (state: OfficialGallerySentSkillsState, event: { type: string; data?: unknown }): OfficialGallerySentSkillsState => {
+    if (event.type !== 'official-gallery/attempt') return state
+    const next = sentSkillsOf(event.data)
+    if (next === undefined) return state
+    const current = state.byRequest[next.requestId]
+    if (current !== undefined && sameSentSkills(current, next.skills)) return state
+    return { byRequest: { ...state.byRequest, [next.requestId]: next.skills } }
+  },
+  wire: {
+    viewSchema: z.record(z.string(), z.array(sentSkillSchema)) as z.ZodType<OfficialGallerySentSkillsState['byRequest']>,
+    view: (state: OfficialGallerySentSkillsState) => state.byRequest,
+  },
+} satisfies ProjectionDefinition<'officialGallerySentSkills', OfficialGallerySentSkillsState>
 
 /** Host-only skill freeze for Task 5 on-demand loading; never wire the body. */
 export const officialSkillBindingProjection = {

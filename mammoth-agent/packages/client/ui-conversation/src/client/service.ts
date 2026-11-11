@@ -15,7 +15,7 @@ import { randomUUID } from '@mammoth-ai/mmp-util-crypto'
 // error, so scope resolution goes through the sessions service (scopeOf
 // method) instead of the standalone helper.
 import type {
-  ISessions, PendingSubmissionRetirement, SessionFace,
+  BeginSubmissionInput, ISessions, PendingSubmissionRetirement, SessionFace,
 } from '@mammoth-ai/mmp-api-session-controller/client'
 import type {} from '@mammoth-ai/mmp-client-file-upload/client'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
@@ -33,6 +33,8 @@ import type {
   DraftAttachmentId, DraftAttachmentSerializationResult, SessionInputResolver, SubmitAttachment, SubmitOutcome, SerializedDraftPrompt,
 } from './contract/input.ts'
 import type { InputSubmitMode } from './contract/composer-submission.ts'
+
+type EchoSkill = NonNullable<BeginSubmissionInput['sentSkills']>[number]
 
 /**
  * The outward conversation face (`ctx.conversation`): the scope-addressed
@@ -290,10 +292,23 @@ export class ConversationController extends Service implements IConversation {
       source: 'library' as const, nodeId: part.nodeId, versionId: part.versionId, name: part.name,
     }] : [])
     const displayText = typeof text === 'string' ? text : promptParts.filter(part => part.type === 'text').map(part => part.text).join('').trim()
+    const sentSkills = (catalogSelection?.skillRefs ?? []).map((skill): EchoSkill => {
+      const icon = typeof skill.icon === 'string' && skill.icon !== '' ? skill.icon : undefined
+      const offset = Number.isSafeInteger(skill.offset) && Number(skill.offset) >= 0 ? Number(skill.offset) : undefined
+      return {
+        name: skill.name,
+        key: skill.key,
+        ...(icon === undefined ? {} : { icon }),
+        ...(offset === undefined ? {} : { offset }),
+      }
+    })
+    const skillMarks = sentSkills.flatMap(skill => skill.offset === undefined ? [] : [skill.offset])
+    const placedMarks = sentSkills.length > 0 && skillMarks.length === sentSkills.length
     const submission = session.beginSubmission({
       mode,
       text: displayText,
       ...(libraryReferences.length === 0 ? {} : { libraryReferences }),
+      ...(sentSkills.length === 0 ? {} : { sentSkills }),
       attachments: pendingAttachments,
       onAccept: () => {
         ownership.accepted = true
@@ -322,7 +337,9 @@ export class ConversationController extends Service implements IConversation {
         protocol: 1, selectionVersion: catalogSelection.selectionVersion,
         expertRef: catalogSelection.expertRef
           ? { id: catalogSelection.expertRef.id, versionId: catalogSelection.expertRef.versionId } : null,
-        skillRef: catalogSelection.skillRef ? { id: catalogSelection.skillRef.id, revision: catalogSelection.skillRef.revision } : null,
+        skillRef: catalogSelection.skillRefs[0] ? { id: catalogSelection.skillRefs[0].id, revision: catalogSelection.skillRefs[0].revision } : null,
+        skillRefs: catalogSelection.skillRefs.map(skill => ({ id: skill.id, revision: skill.revision })),
+        ...(placedMarks ? { skillMarks } : {}),
       })
     const result = await Promise.race([prompt, acceptance.promise])
     if (result !== undefined && !result.ok) return { kind: 'error' }

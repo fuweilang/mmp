@@ -189,7 +189,10 @@ export function apply(ctx: Context): void {
         },
       }
     },
-    children: { 'conversation.chat.user.images': { kind: 'single', scope: 'session' } },
+    children: {
+      'conversation.chat.user.images': { kind: 'single', scope: 'session' },
+      'conversation.chat.user.skills': { kind: 'single', scope: 'session' },
+    },
   }, UserContent)
 
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({

@@ -8,6 +8,7 @@ import type {} from '@mammoth-ai/mmp-client-ui-renderer/client'
 import type {} from '@mammoth-ai/mmp-client-ui-sidebar/client'
 import type {} from '@mammoth-ai/mmp-client-ui-workspace/client'
 import type {} from '@mammoth-ai/mmp-client-ui-conversation/client'
+import type {} from '@mammoth-ai/mmp-client-ui-chat/client'
 import type {} from '@mammoth-ai/mmp-api-remotes/client'
 import type {} from '@mammoth-ai/mmp-official-agent-gallery/types'
 import { createElement } from 'react'
@@ -15,17 +16,7 @@ import { IconUsersOutlineRegular } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import { GalleryPage, type GalleryFace } from './GalleryPage.tsx'
 import { GallerySourceLabel } from './GallerySourceLabel.tsx'
-
-type SkillAvailability = { skillAvailability?: (id: string) => Promise<{ ok: true; value: { deleted: boolean } } | { ok: false }> }
-
-function readSkillAvailability(ctx: ClientContext) {
-  return async (id: string) => {
-    const call = (ctx.remote.officialAgentGallery as SkillAvailability).skillAvailability
-    if (!call) return { deleted: false }
-    const result = await call(id)
-    return { deleted: result.ok ? result.value.deleted : false }
-  }
-}
+import { SentSkillChips } from './SentSkillChips.tsx'
 import { zh, en, ja, es, fr, de, ru, pt, type OfficialAgentGalleryLocaleKey } from './locales.ts'
 
 declare module '@mammoth-ai/mmp-client-ui-slots' {
@@ -122,15 +113,22 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
     name: 'sidebar.panellist', id: PANEL_ID, order: 20, locale: NS, label: () => t('title'),
   }, GalleryIcon))
-  ctx.slots.inject('conversation.session.header.actions', () => ctx.slots.register({
-    name: 'conversation.session.header.actions',
-    id: 'official-gallery-source',
-    // Sit with other static session context chips (agent-preset uses -10).
+  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
+    name: 'conversation.input.left',
+    id: 'official-gallery-input-source',
     order: -9,
     locale: NS,
-    inject: () => ({ skillAvailability: readSkillAvailability(ctx) }),
+    inject: () => ({
+      download: async (sessionId: string, id: string) => {
+        const result = await ctx.remote.officialAgentGallery.downloadArtifact(sessionId as Parameters<typeof ctx.remote.officialAgentGallery.downloadArtifact>[0], id)
+        if (!result.ok) throw new Error(result.error.message)
+        return result.value
+      },
+    }),
   }, GallerySourceLabel))
-  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({name:'conversation.input.left',id:'official-gallery-input-source',order:-9,locale:NS,inject:()=>({download:async(sessionId:string,id:string)=>{const result=await ctx.remote.officialAgentGallery.downloadArtifact(sessionId as Parameters<typeof ctx.remote.officialAgentGallery.downloadArtifact>[0],id);if(!result.ok)throw new Error(result.error.message);return result.value},skillAvailability:readSkillAvailability(ctx)})},GallerySourceLabel))
+  ctx.slots.inject('conversation.chat.user.skills', () => ctx.slots.register({
+    name: 'conversation.chat.user.skills',
+  }, SentSkillChips))
 }
 
 /** Decorative sidebar glyph; the row owns its localized navigation label. */

@@ -290,7 +290,7 @@ export async function ensureDatabase({
     return true; // An already-ready DB needs neither Docker nor a second runtime.
   }
   if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(host) || port !== 5433) {
-    throw bootFailure(`配置的数据库 ${host}:${port} 不可连接；本机 compose 仅提供 :5433，不会启动不相关数据库。`);
+    throw bootFailure(`配置的数据库 ${host}:${port} 不可连接。开发库走 SSH 隧道：ssh -N -L 5434:127.0.0.1:5432 root@124.223.179.250。本机 compose 只提供 :5433，不会拿它代替这条隧道。`);
   }
   await ensureDocker({ runCommand, dockerTimeoutMs, pollMs, platform, desktopInstalled, env });
   console.log('[boot] starting postgres (existing compose service, no recreate)...');

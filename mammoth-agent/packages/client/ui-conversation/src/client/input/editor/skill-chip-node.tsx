@@ -1,6 +1,6 @@
 /**
  * Inline skill chip. Several may sit in the draft with text between them.
- * This round inserts one, at the start, and the send still carries one skill.
+ * The send carries every chip, in document order, up to five.
  * The chip is not draft text: clipboard projection is empty.
  */
 import type { JSX } from 'react'
@@ -14,7 +14,7 @@ import { $isCommandChipNode } from './command-chip-node.tsx'
 import { SkillChipView } from './SkillChip.tsx'
 
 /** Display identity of one skill chip. The icon is a portrait URL, or null. */
-export type SkillChipData = NonNullable<CatalogDraftSelection['skillRef']>
+export type SkillChipData = CatalogDraftSelection['skillRefs'][number]
 
 /** Localized control copy. It is not part of the serialized chip. */
 export interface SkillChipLabels {
@@ -184,24 +184,47 @@ export function $skillChips(): SkillChipNode[] {
 }
 
 /**
- * Make the draft show `data`, or no skill chips when `data` is null.
- * A missing chip is inserted at the start of the first block, after a
- * leading command chip. An existing chip keeps its place. Further chips
- * stay where they are so a later insert can accumulate them.
- * @param data - the one skill this round sends, or null to clear every chip.
+ * Make the draft show exactly `skills`.
+ * Chips already on screen keep their places. Missing skills are inserted at
+ * the caret, or at the start when the draft has no skill chip yet.
+ * When every missing skill carries an `offset` and the draft has no chip yet,
+ * `insertAnchored` puts them back beside the saved characters.
+ * @param skills - skills this round sends, in preferred order.
+ * @param insertAnchored - restore chips that remember a text offset.
+ */
+export function $syncSkillSet(
+  skills: readonly SkillChipData[],
+  insertAnchored?: (skills: readonly SkillChipData[]) => void,
+): void {
+  const wanted = new Map(skills.map(skill => [skill.id, skill]))
+  for (const chip of $skillChips()) {
+    const next = wanted.get(chip.getData().id)
+    if (next === undefined) chip.remove()
+    else chip.setData(next)
+  }
+  const present = new Set($skillChips().map(chip => chip.getData().id))
+  const missing = skills.filter(skill => !present.has(skill.id))
+  if (missing.length === 0) return
+  if (present.size === 0) {
+    if (insertAnchored !== undefined && missing.every(skill => Number.isSafeInteger(skill.offset) && Number(skill.offset) >= 0)) {
+      insertAnchored(missing)
+      return
+    }
+    for (let index = missing.length - 1; index >= 0; index -= 1) {
+      const skill = missing[index]
+      if (skill !== undefined) $insertSkillChip(skill)
+    }
+    return
+  }
+  for (const skill of missing) $insertSkillChipAtCaret(skill)
+}
+
+/**
+ * Make the draft show one skill, or no skill chips when `data` is null.
+ * @param data - the skill to show, or null to clear every chip.
  */
 export function $syncSkillChip(data: SkillChipData | null): void {
-  const chips = $skillChips()
-  if (data === null) {
-    for (const chip of chips) chip.remove()
-    return
-  }
-  const first = chips[0]
-  if (first === undefined) {
-    $insertSkillChip(data)
-    return
-  }
-  first.setData(data)
+  $syncSkillSet(data === null ? [] : [data])
 }
 
 /** Insert one chip at the start, without taking a command chip's leading seat. */
@@ -223,6 +246,24 @@ function $insertSkillChip(data: SkillChipData): void {
   }
   if (first === null) block.append(chip)
   else first.insertBefore(chip)
+}
+
+/** Insert one chip at the caret, or at the end of the draft when there is no caret. */
+function $insertSkillChipAtCaret(data: SkillChipData): void {
+  const chip = $createSkillChipNode(data)
+  const selection = $getSelection()
+  if ($isRangeSelection(selection)) {
+    selection.insertNodes([chip])
+    return
+  }
+  const root = $getRoot()
+  let block = root.getLastChild()
+  if (block === null || !$isElementNode(block)) {
+    block = $createParagraphNode()
+    root.append(block)
+  }
+  if (!$isElementNode(block)) return
+  block.append(chip)
 }
 
 /**

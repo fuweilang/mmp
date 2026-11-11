@@ -320,6 +320,7 @@ export class SessionInputShell implements SessionInput {
     this.catalogSelection=structuredClone(value)
     this.draftSnapshotCache=undefined
     this.placeSkillChip()
+    this.adoptSkillChip()
     this.publish()
     return true
   }
@@ -328,21 +329,27 @@ export class SessionInputShell implements SessionInput {
   private placeSkillChip(): void {
     if (this.disposed || frozen(this.core.state.phase)) return
     this.placingSkill = true
-    try { this.draftEditor.syncSkillChip(this.catalogSelection?.skillRef ?? null) }
+    try { this.draftEditor.syncSkillChips(this.catalogSelection?.skillRefs ?? []) }
     finally { this.placingSkill = false }
   }
 
-  /** Follow a chip the user added or removed, without writing the draft again. */
+  /** Follow a chip the user added, removed, or moved, without writing the draft again. */
   private adoptSkillChip(): void {
     if (this.disposed || frozen(this.core.state.phase)) return
-    const chip = this.draftEditor.skillChip()
-    const current = this.catalogSelection?.skillRef ?? null
-    if (chip === null && current === null) return
-    if (chip !== null && current !== null && chip.id === current.id && chip.revision === current.revision && chip.key === current.key && chip.name === current.name && (chip.icon ?? null) === (current.icon ?? null)) return
-    const before = this.catalogSelection ?? { protocol: 1 as const, selectionVersion: 0, expertRef: null, skillRef: null }
-    this.catalogSelection = { ...before, selectionVersion: before.selectionVersion + 1, skillRef: chip }
+    const chips = this.draftEditor.skillChipAnchors()
+    const current = this.catalogSelection?.skillRefs ?? []
+    if (chips.length === 0 && current.length === 0) return
+    const sameIdentity = chips.length === current.length && chips.every((chip, index) => {
+      const skill = current[index]
+      return skill !== undefined && chip.id === skill.id && chip.revision === skill.revision && chip.key === skill.key && chip.name === skill.name && (chip.icon ?? null) === (skill.icon ?? null)
+    })
+    if (sameIdentity && chips.every((chip, index) => chip.offset === current[index]?.offset)) return
+    const before = this.catalogSelection ?? { protocol: 1 as const, selectionVersion: 0, expertRef: null, skillRefs: [] }
+    this.catalogSelection = sameIdentity
+      ? { ...before, skillRefs: chips }
+      : { ...before, selectionVersion: before.selectionVersion + 1, skillRefs: chips }
     this.draftSnapshotCache = undefined
-    this.publish()
+    if (!sameIdentity) this.publish()
   }
 
   setEnterpriseKnowledge(enabled: boolean): void {
@@ -465,6 +472,9 @@ export class SessionInputShell implements SessionInput {
    */
   submit(mode: InputSubmitMode = 'queue', source?: 'click' | 'enter'): void {
     if (this.disposed) return
+    // The attempt must list the chips on screen, including one the catalog
+    // selection has not yet adopted.
+    this.adoptSkillChip()
     const timestamp = Date.now()
     let state: MessageSubmissionState | undefined
     if (this.snapshot.phase === 'plain' && (this.snapshot.draft.trim() !== '' || this.attachmentIds.length > 0)) {
@@ -775,8 +785,9 @@ export class SessionInputShell implements SessionInput {
 
   /**
    * Execute the commit-draft effect: clear the committed content (retaining
-   * a pure typed-during-flight suffix when the snapshot allows) and cut the
-   * undo history so sent content cannot resurrect.
+   * a pure typed-during-flight suffix when the snapshot allows), drop the
+   * sent expert and skill chips, and cut the undo history so sent content cannot resurrect.
+   * A refused send never reaches this effect.
    */
   private commitDraft(retainSuffixOf: string | null): void {
     this.placingSkill = true
@@ -787,7 +798,17 @@ export class SessionInputShell implements SessionInput {
         }
         return null
       })
-      this.draftEditor.syncSkillChip(this.catalogSelection?.skillRef ?? null)
+      const current = this.catalogSelection
+      // Keep this version. The next explicit selection uses the following one and still applies after acceptance.
+      if (current !== undefined && (current.expertRef !== null || current.skillRefs.length > 0)) {
+        this.catalogSelection = {
+          ...current,
+          expertRef: null,
+          skillRefs: [],
+        }
+        this.draftSnapshotCache = undefined
+      }
+      this.draftEditor.syncSkillChips([])
       this.draftEditor.clearHistory()
     } finally {
       this.placingSkill = false

@@ -24,7 +24,8 @@ const quoteSchema = z.object({
   text: z.string().refine(text => text.trim() !== ''),
 })
 
-const catalogSelectionSchema=z.object({protocol:z.literal(1),selectionVersion:z.number().int().nonnegative(),expertRef:z.object({id:z.string(),versionId:z.string(),name:z.string(),icon:z.string().nullable().optional()}).nullable(),skillRef:z.object({id:z.string(),revision:z.number().int().positive(),name:z.string(),key:z.string(),icon:z.string().nullable().optional()}).nullable()})
+const skillDraftSchema=z.object({id:z.string(),revision:z.number().int().positive(),name:z.string(),key:z.string(),icon:z.string().nullable().optional(),offset:z.number().int().nonnegative().optional()})
+const catalogSelectionSchema=z.object({protocol:z.literal(1),selectionVersion:z.number().int().nonnegative(),expertRef:z.object({id:z.string(),versionId:z.string(),name:z.string(),icon:z.string().nullable().optional()}).nullable(),skillRef:skillDraftSchema.nullable().optional(),skillRefs:z.array(skillDraftSchema).max(5).optional()}).transform(value=>({protocol:1 as const,selectionVersion:value.selectionVersion,expertRef:value.expertRef,skillRefs:value.skillRefs??(value.skillRef?[value.skillRef]:[])}))
 const snapshotSchema = z.object({
   catalogSelection: catalogSelectionSchema.optional(),
   text: z.string(),

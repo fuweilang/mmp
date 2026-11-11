@@ -242,6 +242,7 @@ export class Session implements SessionFace {
       text: input.text,
       attachments: input.attachments,
       ...(input.libraryReferences === undefined ? {} : { libraryReferences: input.libraryReferences }),
+      ...(input.sentSkills === undefined ? {} : { sentSkills: input.sentSkills }),
     }]
     this.submissionSettlements.set(requestId, {
       placement, accepted: false, onAccept: input.onAccept, onRetire: input.onRetire, retiring: false,

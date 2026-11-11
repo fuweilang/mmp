@@ -18,6 +18,7 @@ import type { SubagentAddress } from '@mammoth-ai/mmp-subagent/client'
 import type {
   IWorkspaces, WorkspaceId, WorkspaceSnapshot, WorkspaceView,
 } from '@mammoth-ai/mmp-api-workspace-controller/client'
+import { DEFAULT_WORKSPACE_DIRECTORY } from '@mammoth-ai/mmp-api-workspace-controller/default-workspace'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import type {} from '@mammoth-ai/mmp-client-ui-layout/client'
 import type { DraftInitializationOptions } from '@mammoth-ai/mmp-client-ui-conversation/client'
@@ -82,14 +83,14 @@ export interface UiWorkspace {
   connectWorkspace(workspaceId: WorkspaceId, options?: Pick<StartSessionOptions, 'agentPreset'>): Promise<SessionId>
   /**
    * Resolve the Workspace a new conversation action would use without creating a Session.
-   * @returns the current Workspace, otherwise the most recent ready Workspace; undefined when none exists.
+   * @returns the automatic default Workspace when one is registered, otherwise the current Workspace, otherwise the most recent ready Workspace; undefined when none exists.
    */
   workspaceForNewSession(): WorkspaceId | undefined
   /**
    * Open the Workspace blank `connectWorkspace` resolves, so New Session returns to that blank's
    * unsent draft. A creation the Host refuses is shown through the Workspace notice and leaves the
    * selection as it was.
-   * @param workspaceId - explicit target; absent inherits the current or most recent Workspace.
+   * @param workspaceId - explicit target; absent uses the automatic default Workspace, then the current or most recent Workspace.
    * @param options - initial content, the blank's preset, and `whenDraftExists`, which decides
    * whether existing text or attachments are kept, replaced, or followed by the prompt.
    */
@@ -341,6 +342,8 @@ class UiWorkspaceService extends Service implements UiWorkspace {
 
   workspaceForNewSession(): WorkspaceId | undefined {
     const workspace = this.workspaces.list.getSnapshot()
+    const automatic = automaticDefaultWorkspace(workspace.items)
+    if (automatic !== undefined) return automatic
     const sessions = this.sessions.list.getSnapshot()
     const current = this.mainReference?.sessionId
     const currentWorkspaceId = current === undefined
@@ -370,11 +373,16 @@ class UiWorkspaceService extends Service implements UiWorkspace {
       void this.pickWorkspaceThenStart(agentPreset)
       return
     }
-    const opening = this.openWorkspace(target, initializeDraft ? (id) => {
+    const opening = this.openWorkspace(target, (id) => {
+      const clearSelection = this.newTaskSelectionClear()
+      if (!initializeDraft && clearSelection === undefined) return
       const binding = this.sessions.binding(id)
-      if (binding === undefined) this.draftPreparationFailed()
-      this.prepareDraft(binding, draftOptions)
-    } : undefined, agentPreset === undefined ? {} : { agentPreset })
+      if (initializeDraft) {
+        if (binding === undefined) this.draftPreparationFailed()
+        this.prepareDraft(binding, draftOptions)
+      }
+      if (binding !== undefined && clearSelection !== undefined) clearSelection(binding)
+    }, agentPreset === undefined ? {} : { agentPreset })
     void opening.catch(
       (reason: unknown) => { console.warn('new session failed:', reason) },
     )
@@ -395,6 +403,14 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     } catch (error: unknown) {
       this.notify({ kind: 'createFailed', message: creationFailureMessage(error) })
     }
+  }
+
+  /** New Task opens without the previous expert or skills. Typed text stays. */
+  private newTaskSelectionClear(): ((binding: SessionBinding) => void) | undefined {
+    const input = this.ctx.get('conversation')?.input
+    const clear = input?.clearCatalogSelection
+    if (typeof clear !== 'function') return undefined
+    return (binding) => { clear.call(input, binding) }
   }
 
   private prepareDraft(binding: SessionBinding, options: DraftInitializationOptions): void {
@@ -601,6 +617,18 @@ function creationFailureMessage(error: unknown): string {
   const refused = sessionCreateErrorOf(error)
   if (refused !== undefined) return `${refused.rpcError.code}: ${refused.rpcError.message}`
   return error instanceof Error ? error.message : String(error)
+}
+
+/** The first-use folder, recognized by its path even after the stored title changes. */
+function automaticDefaultWorkspace(workspaces: readonly WorkspaceView[]): WorkspaceId | undefined {
+  const byPath = workspaces.find(workspace => workspacePathIsDefault(workspace.path))
+  if (byPath !== undefined) return byPath.workspaceId
+  return workspaces.find(workspace => workspace.title === DEFAULT_WORKSPACE_DIRECTORY)?.workspaceId
+}
+
+function workspacePathIsDefault(path: string): boolean {
+  const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '')
+  return normalized.endsWith(`/deepseek-harness/${DEFAULT_WORKSPACE_DIRECTORY}`)
 }
 
 /** Stable tie-breaking follows Host Workspace order. */

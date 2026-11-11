@@ -4998,9 +4998,15 @@ importers:
       '@mammoth-ai/mmp-client-test-runtime':
         specifier: workspace:*
         version: link:../../test-support/client-runtime
+      '@mammoth-ai/mmp-client-ui-chat':
+        specifier: workspace:*
+        version: link:../ui-chat
       '@mammoth-ai/mmp-client-ui-commands':
         specifier: workspace:*
         version: link:../ui-commands
+      '@mammoth-ai/mmp-client-ui-conversation':
+        specifier: workspace:*
+        version: link:../ui-conversation
       '@mammoth-ai/mmp-client-ui-layout':
         specifier: workspace:*
         version: link:../ui-layout

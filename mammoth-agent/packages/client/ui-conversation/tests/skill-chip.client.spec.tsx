@@ -44,6 +44,22 @@ it('inserts one skill chip before the example and leaves the example as the draf
   expect(editor.projection.clipboardText).toBe('帮我润色这段产品介绍')
 })
 
+it('adds another skill at the caret and keeps the typed question', () => {
+  const editor = runtime()
+  const other = { id: 'skill-2', revision: 4, key: 'market', name: '行情技能', icon: null }
+  editor.setDraft('小米有什么汽车推荐？')
+  editor.syncSkillChip(skill)
+  editor.editor.update(() => {
+    const text = $getRoot().getAllTextNodes()[0]
+    text?.select(text.getTextContentSize(), text.getTextContentSize())
+  }, { discrete: true })
+  editor.syncSkillChips([skill, other])
+  expect(editor.projection.clipboardText).toBe('小米有什么汽车推荐？')
+  expect(editor.skillChips().map(item => item.id)).toEqual([skill.id, other.id])
+  editor.syncSkillChips([other, skill])
+  expect(editor.skillChips().map(item => item.id)).toEqual([skill.id, other.id])
+})
+
 it('puts the skill chip after a leading command chip', () => {
   const editor = runtime()
   const claim: CommandClaim = { name: 'goal', token: '/goal ', submit: async () => ({ kind: 'success' as const }) }
@@ -79,7 +95,30 @@ it('removes the skill chip with one Backspace and keeps the example text', async
   })).toBe(true)
 })
 
-it('imports a skill chip as its name and renders the portrait or a plain disc', () => {
+it('puts saved skill chips back beside the same characters', () => {
+  const editor = runtime()
+  const other = { id: 'skill-2', revision: 4, key: 'market', name: '行情技能', icon: null }
+  const text = '请用这段说明'
+  editor.setDraft(text)
+  editor.syncSkillChips([{ ...skill, offset: 2 }, { ...other, offset: 2 }])
+  expect(editor.projection.clipboardText).toBe(text)
+  expect(editor.projection.detectText).toBe(`${text.slice(0, 2)}${ATOMIC_CHAR}${ATOMIC_CHAR}${text.slice(2)}`)
+  expect(editor.skillChipAnchors().map(item => item.offset)).toEqual([2, 2])
+  editor.setDraft('')
+  editor.setDraft(text)
+  editor.syncSkillChips([{ ...other, offset: 0 }, { ...skill, offset: text.length }])
+  expect(editor.projection.clipboardText).toBe(text)
+  expect(editor.projection.detectText).toBe(`${ATOMIC_CHAR}${text}${ATOMIC_CHAR}`)
+  expect(editor.skillChips().map(item => item.id)).toEqual([other.id, skill.id])
+  const wrapped = '艺术作品的场景。\n请继续'
+  const breakAt = wrapped.indexOf('\n') + 1
+  editor.setDraft(wrapped)
+  editor.syncSkillChips([{ ...skill, offset: 0 }, { ...other, offset: breakAt }])
+  expect(editor.projection.clipboardText).toBe(wrapped)
+  expect(editor.projection.detectText).toBe(`${ATOMIC_CHAR}${wrapped.slice(0, breakAt)}${ATOMIC_CHAR}${wrapped.slice(breakAt)}`)
+})
+
+it('imports a skill chip as its name and renders a portrait only when one exists', () => {
   const editor = runtime()
   editor.editor.update(() => {
     const node = SkillChipNode.importJSON({
@@ -90,6 +129,7 @@ it('imports a skill chip as its name and renders the portrait or a plain disc', 
   const remove = () => {}
   const plain = render(<SkillChipView name={skill.name} icon={null} label="移除技能" onRemove={remove} />)
   expect(plain.getByRole('button', { name: '移除技能' })).toBeTruthy()
+  expect(plain.container.querySelector('img')).toBeNull()
   plain.unmount()
   const pictured = render(<SkillChipView name={skill.name} icon="https://example.test/a.png" label="移除技能" onRemove={remove} />)
   expect(pictured.container.querySelector('img')?.getAttribute('src')).toBe('https://example.test/a.png')

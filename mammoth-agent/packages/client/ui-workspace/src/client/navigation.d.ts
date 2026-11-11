@@ -51,14 +51,14 @@ export interface UiWorkspace {
     connectWorkspace(workspaceId: WorkspaceId, options?: Pick<StartSessionOptions, 'agentPreset'>): Promise<SessionId>;
     /**
      * Resolve the Workspace a new conversation action would use without creating a Session.
-     * @returns the current Workspace, otherwise the most recent ready Workspace; undefined when none exists.
+     * @returns the automatic default Workspace when one is registered, otherwise the current Workspace, otherwise the most recent ready Workspace; undefined when none exists.
      */
     workspaceForNewSession(): WorkspaceId | undefined;
     /**
      * Open the Workspace blank `connectWorkspace` resolves, so New Session returns to that blank's
      * unsent draft. A creation the Host refuses is shown through the Workspace notice and leaves the
      * selection as it was.
-     * @param workspaceId - explicit target; absent inherits the current or most recent Workspace.
+     * @param workspaceId - explicit target; absent uses the automatic default Workspace, then the current or most recent Workspace.
      * @param options - initial content, the blank's preset, and `whenDraftExists`, which decides
      * whether existing text or attachments are kept, replaced, or followed by the prompt.
      */

@@ -248,6 +248,11 @@ export interface SessionInputResolver {
    * @throws when binding is not the currently retained Session generation.
    */
   requestDraftInitialization(binding: SessionBinding, options: DraftInitializationOptions): DraftInitializationResult
+  /**
+   * Drop the expert and skills saved on a new task.
+   * A plaza session keeps its expert until that session sends; this only runs for New Task.
+   */
+  clearCatalogSelection(binding: SessionBinding): void
 }
 
 /** Initial text for a target Session; attachments remain under their existing owner. */

@@ -272,6 +272,7 @@ class FakeDirectoryPicker {
 
 interface BenchOptions {
   readonly conversation?: boolean
+  readonly clearCatalogSelection?: SessionInputResolver['clearCatalogSelection']
   readonly configureWorkspaces?: (workspaces: FakeWorkspaces) => void
   readonly workspaces?: WorkspaceSnapshot
   readonly sessions?: SessionListState
@@ -286,7 +287,14 @@ function bench(options: BenchOptions = {}) {
   ctx.effect(() => locale.register('workspace', { en, zh }))
   ctx.provide('locale', locale)
   const requestDraftInitialization = vi.fn<SessionInputResolver['requestDraftInitialization']>(() => 'applied')
-  if (options.conversation !== false) ctx.provide('conversation', { input: { requestDraftInitialization } })
+  if (options.conversation !== false) {
+    ctx.provide('conversation', {
+      input: {
+        requestDraftInitialization,
+        ...(options.clearCatalogSelection === undefined ? {} : { clearCatalogSelection: options.clearCatalogSelection }),
+      },
+    })
+  }
   const layout = new LayoutController({
     selectPanel: vi.fn(), retainMainPanels: vi.fn(),
     setSidebar: vi.fn(), toggleSidebar: vi.fn(), setViewportWidth: vi.fn(),
@@ -799,6 +807,34 @@ describe('UiWorkspaceService', () => {
     })
   })
 
+  it('opens a new Session in the automatic default Workspace ahead of the current folder', async () => {
+    const current = summary('current', { cwd: '/w/current-home', updatedAt: 1 })
+    const named = bench({
+      sessions: sessionState([current]),
+      workspaces: workspaceState([
+        workspace('current-home', [current.id]),
+        workspace('default-workspace'),
+      ]),
+    })
+    named.uiWorkspace.openSession(current.id)
+    named.uiWorkspace.startSession()
+    await vi.waitFor(() => {
+      expect(named.sessions.create).toHaveBeenCalledWith({ workspaceId: wid('default-workspace') })
+    })
+    const renamed = bench({
+      sessions: sessionState([current]),
+      workspaces: workspaceState([
+        workspace('current-home', [current.id]),
+        { ...workspace('docs'), path: '/Users/a/Documents/deepseek-harness/default-workspace', title: '我的资料' },
+      ]),
+    })
+    renamed.uiWorkspace.openSession(current.id)
+    renamed.uiWorkspace.startSession()
+    await vi.waitFor(() => {
+      expect(renamed.sessions.create).toHaveBeenCalledWith({ workspaceId: wid('docs') })
+    })
+  })
+
   it('opens the directory picker when a New Session request has no Workspace to open', async () => {
     const b = bench()
     b.directoryPicker.onPick = () => Promise.resolve({ ok: true, value: '/w/new-home' })
@@ -877,6 +913,19 @@ describe('UiWorkspaceService', () => {
 
       expect(b.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('created-a'), { source: 'mainView' })
       expect(b.sessions.binding).not.toHaveBeenCalled()
+      expect(b.requestDraftInitialization).not.toHaveBeenCalled()
+      expect(b.notify).not.toHaveBeenCalled()
+    })
+
+    it('clears the retained new task without initializing draft text', async () => {
+      const clearCatalogSelection = vi.fn<SessionInputResolver['clearCatalogSelection']>()
+      const b = bench({ workspaces: workspaceState([workspace('a')]), clearCatalogSelection })
+
+      b.uiWorkspace.startSession(wid('a'))
+      await vi.waitFor(() => { expect(b.sessions.retain).toHaveBeenCalledOnce() })
+
+      expect(clearCatalogSelection).toHaveBeenCalledExactlyOnceWith(b.sessions.retained[0]!.reference.binding)
+      expect(b.sessions.binding).toHaveBeenCalledExactlyOnceWith(sid('created-a'))
       expect(b.requestDraftInitialization).not.toHaveBeenCalled()
       expect(b.notify).not.toHaveBeenCalled()
     })

@@ -153,11 +153,18 @@ const UNDECORATED_ROW: DecoratedRow = { kind: 'user', data: { source: null } }
 /** Occupant used by rows that do not own the message-source seat. */
 const NO_MESSAGE_SOURCE: PropsRenderSlots<'conversation.chat.user.before'>['renderSlotChain'] = () => null
 
+/** Prompt request id echoed on a durable user source. */
+function requestIdOf(source: unknown): string | undefined {
+  if (typeof source !== 'object' || source === null || !('rpcId' in source)) return undefined
+  return typeof source.rpcId === 'string' && source.rpcId !== '' ? source.rpcId : undefined
+}
+
 /** Right-aligned bubble shared by user and steering rows. */
 function UserStyleBubble({
   node, renderSlotChain, content, loadImage, renderFactorySlot, actions,
   pending = false, echo = false, batchStart = false,
   referenceLabels, skillNames, previewAttachments, facts: inputFacts = EMPTY_TEXT_FACTS, interactive = false,
+  requestId, sentSkills,
 }: {
   content: readonly unknown[]
   renderFactorySlot: PropsRenderFactories['renderFactorySlot']
@@ -181,6 +188,10 @@ function UserStyleBubble({
   previewAttachments?: readonly UserContentAttachment[]
   /** Inputs used by text transforms, separate from row and rendering props. */
   facts?: Readonly<Partial<UserTextFacts>>
+  /** Prompt request id of a durable message. The skill row reads the attempt by it. */
+  requestId?: string
+  /** Skills on a local echo, in chip order. */
+  sentSkills?: UserContentInput['skills']
 } & Pick<ChatNodeOwnerProps, 'loadImage'> & Pick<UserContentInput, 'interactive'>): ReactNode {
   const parts = useMemo(() => userMessageContent(content), [content])
   const prepared = useMemo<UserContentData>(() => ({
@@ -207,6 +218,8 @@ function UserStyleBubble({
         loadImage,
         facts,
         interactive,
+        ...(requestId === undefined ? {} : { requestId }),
+        ...(sentSkills === undefined ? {} : { skills: sentSkills }),
       })}
       {actions?.(userContentText(content))}
     </div>
@@ -289,6 +302,8 @@ export function PendingSubmissionBubble({ submission, loadImage, renderFactorySl
       previewAttachments={previewAttachments}
       renderFactorySlot={renderFactorySlot}
       loadImage={loadImage}
+      requestId={submission.requestId}
+      {...submission.sentSkills === undefined ? {} : { sentSkills: submission.sentSkills }}
       pending={submission.placement === 'steering'}
       echo
       actions={text => (
@@ -318,6 +333,7 @@ export const UserMessageNodeView = memo(function UserMessageNodeView({
   renderSlotChain: PropsRenderSlots<'conversation.chat.user.before'>['renderSlotChain']
 }) {
   const data = node.data
+  const requestId = requestIdOf(data.source)
   return (
     <UserStyleBubble
       node={node}
@@ -329,6 +345,7 @@ export const UserMessageNodeView = memo(function UserMessageNodeView({
       batchStart={node.kind === 'steering' && node.data.batchStart === true}
       {...data.referenceLabels === undefined ? {} : { referenceLabels: data.referenceLabels }}
       {...data.skillNames === undefined ? {} : { skillNames: data.skillNames }}
+      {...requestId === undefined ? {} : { requestId }}
       actions={text => (
         <MessageIconActions
           text={text}

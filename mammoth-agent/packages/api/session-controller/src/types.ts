@@ -326,6 +326,10 @@ export interface TaskCatalogSelection {
   readonly selectionVersion: number
   readonly expertRef: { readonly id: string; readonly versionId: string } | null
   readonly skillRef: { readonly id: string; readonly revision: number } | null
+  /** Chip order for this send. Absent on older requests, which carry only `skillRef`. */
+  readonly skillRefs?: readonly { readonly id: string; readonly revision: number }[]
+  /** Display offsets into the prompt text, one per `skillRefs` entry. Absent from the composition hash. */
+  readonly skillMarks?: readonly number[]
 }
 
 export interface SessionPromptRequest {
@@ -720,6 +724,11 @@ export type SessionWorkspacePathApplication = NativeFileApplication
 /** Host-only lifecycle capability: each creator disposes only handles it actually owns. */
 declare module '@mammoth-ai/cordis' {
   interface Events {
+    /**
+     * A Session is being deleted, and each listener releases only the task handles it created.
+     * @mode parallel
+     * @param sessionId - Session whose owned task handles must be released.
+     */
     'task/dispose-owned'(sessionId: SessionId): Promise<void>
   }
 }

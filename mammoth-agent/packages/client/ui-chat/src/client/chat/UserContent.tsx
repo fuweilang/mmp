@@ -13,10 +13,11 @@ const EMPTY_LABELS: readonly string[] = []
  * @returns the content stack using the existing user-message layout.
  */
 export function UserContent({
-  content, loadImage, facts, interactive = false, ellipsis = false, renderSlot, renderFactorySlot, t, openLibraryReference,
+  content, loadImage, facts, interactive = false, ellipsis = false, requestId, skills, renderSlot, renderFactorySlot, t, openLibraryReference,
 }:
 FactoryComponentPropsOf<'conversation.chat.user.content'>) {
   const { text, attachments, extraBlocks, referenceLabels = EMPTY_LABELS } = content
+  const showSkills = requestId !== undefined || (skills !== undefined && skills.length > 0)
   const [expanded, setExpanded] = useState(false)
   const libraryCount = attachments.filter(attachment => attachment.type === 'library').length
   let libraryIndex = 0
@@ -65,7 +66,13 @@ FactoryComponentPropsOf<'conversation.chat.user.content'>) {
         </div>
       )}
       {showBubble && <UserMessageBubble data-message-bubble="" data-text-interaction-source="">
-        {renderFactorySlot('conversation.user.text', { text, facts, interactive, ellipsis })}
+        {showSkills ? renderSlot('conversation.chat.user.skills', {
+          ...(requestId === undefined ? {} : { requestId }),
+          ...(skills === undefined ? {} : { skills }),
+          text,
+          renderText: (slice: string) => renderFactorySlot('conversation.user.text', { text: slice, facts, interactive, ellipsis }),
+        }, { fallback: renderFactorySlot('conversation.user.text', { text, facts, interactive, ellipsis }) })
+          : renderFactorySlot('conversation.user.text', { text, facts, interactive, ellipsis })}
         {extraBlocks.map((block, index) => (
           <JsonBlock key={index} label={t('message.extraBlock')} payload={block} truncatedLabel={truncated} />
         ))}

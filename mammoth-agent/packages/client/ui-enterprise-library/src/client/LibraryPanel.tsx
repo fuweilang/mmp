@@ -485,6 +485,11 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       {blocked !== null && <div role="alert" className={css.error}>{blocked}</div>}
       {tenants.length > 1 && tenants.map(tenant => <Button key={tenant.id} size="sm" aria-pressed={memberTenantId === tenant.id} disabled={switching || busy} onClick={() => { void enterTenant(tenant.id) }}>{tenant.name}</Button>)}
       <nav className={css.navScroll} aria-label={t('browse')}>
+        <LibraryCreateMenu prominent name={t('new')} disabled={busy || blocked !== null} t={t}
+          onCreate={action => {
+            const here = view === 'mine' || view === 'shared'
+            beginCreate(action, here ? view : 'mine', here ? path : [], here ? captureTarget() : { parentId: null, scope: 'PRIVATE', name: t('mine') })
+          }} />
         {VIEWS.map(id => {
           const Icon = VIEW_ICONS[id]
           const treeView = id === 'mine' || id === 'shared' ? id : undefined

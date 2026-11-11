@@ -147,5 +147,6 @@ export interface Occurrence {
 export interface CatalogDraftSelection {
  readonly protocol:1;readonly selectionVersion:number
  readonly expertRef:{readonly id:string;readonly versionId:string;readonly name:string;readonly icon?:string|null|undefined}|null
- readonly skillRef:{readonly id:string;readonly revision:number;readonly name:string;readonly key:string;readonly icon?:string|null|undefined}|null
+ /** Skills in chip order. At most five. `offset` is the chip's place in the draft text. An older draft stored one skill as `skillRef` and omitted `offset`. */
+ readonly skillRefs:readonly {readonly id:string;readonly revision:number;readonly name:string;readonly key:string;readonly icon?:string|null|undefined;readonly offset?:number|undefined}[]
 }

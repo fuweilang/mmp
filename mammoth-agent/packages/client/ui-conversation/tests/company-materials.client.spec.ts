@@ -88,21 +88,58 @@ it('company materials a second accepted message is unselected unless explicitly 
 })
 
 it('t166 draft selection is independent text, session-isolated and atomically captured before later selection changes',async()=>{
- const f=await fixture(),a={protocol:1 as const,selectionVersion:1,expertRef:{id:'expert-a',versionId:'v1',name:'专家A'},skillRef:null}
+ const f=await fixture(),a={protocol:1 as const,selectionVersion:1,expertRef:{id:'expert-a',versionId:'v1',name:'专家A'},skillRefs:[]}
  f.shell.setDraft('用户原文');expect(f.shell.setCatalogSelection(a)).toBe(true);expect(f.shell.snapshot.draft).toBe('用户原文')
  expect(parseStoredDraft(f.shell.draftSnapshot)?.catalogSelection).toEqual(a)
  let finish!:(outcome:SubmitOutcome)=>void
  f.send.mockImplementation((...args:unknown[])=>{(args[5] as ()=>void)();return new Promise(done=>{finish=done})})
  f.shell.submit();await vi.waitFor(()=>expect(f.send).toHaveBeenCalledTimes(1));await vi.waitFor(()=>expect(f.shell.snapshot.phase).toBe('plain'))
- const b={...a,selectionVersion:2,expertRef:null,skillRef:{id:'skill-b',revision:3,name:'技能B',key:'skill-b'}}
+ const b={...a,selectionVersion:2,expertRef:null,skillRefs:[{id:'skill-b',revision:3,name:'技能B',key:'skill-b'}]}
  expect(f.shell.setCatalogSelection(b)).toBe(true);f.shell.setDraft('下一轮用户输入')
  expect(f.send.mock.calls[0]?.[6]).toEqual(a);finish({kind:'success'});await Promise.resolve();await Promise.resolve()
- expect(f.shell.snapshot.catalogSelection).toEqual(b);expect(f.shell.snapshot.draft).toBe('下一轮用户输入');expect(f.shell.setCatalogSelection(a)).toBe(false)
+ const skill=b.skillRefs[0],placed=skill===undefined?b:{...b,skillRefs:[{...skill,offset:0}]}
+ expect(f.shell.snapshot.catalogSelection).toEqual(placed);expect(f.shell.snapshot.draft).toBe('下一轮用户输入');expect(f.shell.setCatalogSelection(a)).toBe(false)
  const id=SessionId('t166-other-draft');await f.sessions.add({id});const other=f.sessions.retain(id);await other.ready;onTestFinished(()=>other.release());const input=f.hub.shellFor(other.binding)
- expect(input.snapshot.catalogSelection).toBeUndefined();expect(f.shell.snapshot.catalogSelection).toEqual(b)
+ expect(input.snapshot.catalogSelection).toBeUndefined();expect(f.shell.snapshot.catalogSelection).toEqual(placed)
 })
+it('accepted send clears the expert and the skill chips', async () => {
+  const f = await fixture()
+  const selected = {
+    protocol: 1 as const, selectionVersion: 3,
+    expertRef: { id: 'expert-a', versionId: 'v1', name: '专家A' },
+    skillRefs: [{ id: 'skill-b', revision: 3, name: '技能B', key: 'skill-b' }, { id: 'skill-c', revision: 1, name: '技能C', key: 'skill-c' }],
+  }
+  f.shell.setDraft('原问题')
+  expect(f.shell.setCatalogSelection(selected)).toBe(true)
+  f.shell.submit()
+  await vi.waitFor(() => expect(f.shell.snapshot.phase).toBe('plain'))
+  const sent = f.send.mock.calls[0]?.[6] as { expertRef: { id: string } | null; skillRefs: { id: string }[] }
+  expect(sent.expertRef?.id).toBe('expert-a')
+  expect(sent.skillRefs.map(skill => skill.id)).toEqual(['skill-b', 'skill-c'])
+  expect(f.shell.snapshot.draft).toBe('')
+  expect(f.shell.snapshot.catalogSelection?.expertRef).toBeNull()
+  expect(f.shell.snapshot.catalogSelection?.skillRefs).toEqual([])
+  expect(f.shell.snapshot.catalogSelection?.selectionVersion).toBe(3)
+})
+
+it('refused send keeps the skill chips', async () => {
+  const f = await fixture()
+  const selected = {
+    protocol: 1 as const, selectionVersion: 3,
+    expertRef: null,
+    skillRefs: [{ id: 'skill-b', revision: 3, name: '技能B', key: 'skill-b' }],
+  }
+  f.send.mockResolvedValue({ kind: 'error', text: 'refused' })
+  f.shell.setDraft('原问题')
+  expect(f.shell.setCatalogSelection(selected)).toBe(true)
+  f.shell.submit()
+  await vi.waitFor(() => expect(f.shell.snapshot.phase).toBe('plain'))
+  expect(f.shell.snapshot.draft).toBe('原问题')
+  expect(f.shell.snapshot.catalogSelection?.skillRefs.map(skill => skill.id)).toEqual(['skill-b'])
+})
+
 it('t166 failed send retains exact chosen references; explicit null removal cannot be revived by late source initialization',async()=>{
- const f=await fixture(),a={protocol:1 as const,selectionVersion:1,expertRef:{id:'expert-a',versionId:'v1',name:'专家A'},skillRef:null}
+ const f=await fixture(),a={protocol:1 as const,selectionVersion:1,expertRef:{id:'expert-a',versionId:'v1',name:'专家A'},skillRefs:[]}
  f.send.mockResolvedValue({kind:'error',text:'refused'});f.shell.setDraft('原问题');f.shell.setCatalogSelection(a);f.shell.submit();await vi.waitFor(()=>expect(f.shell.snapshot.phase).toBe('plain'));expect(f.shell.snapshot.draft).toBe('原问题');expect(f.shell.snapshot.catalogSelection).toEqual(a)
- const cleared={protocol:1 as const,selectionVersion:2,expertRef:null,skillRef:null};expect(f.shell.setCatalogSelection(cleared)).toBe(true);expect(f.shell.setCatalogSelection(a,true)).toBe(false);expect(f.shell.snapshot.catalogSelection).toEqual(cleared);expect(f.shell.snapshot.draft).toBe('原问题')
+ const cleared={protocol:1 as const,selectionVersion:2,expertRef:null,skillRefs:[]};expect(f.shell.setCatalogSelection(cleared)).toBe(true);expect(f.shell.setCatalogSelection(a,true)).toBe(false);expect(f.shell.snapshot.catalogSelection).toEqual(cleared);expect(f.shell.snapshot.draft).toBe('原问题')
 })

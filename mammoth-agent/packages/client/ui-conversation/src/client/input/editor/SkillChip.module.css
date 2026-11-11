@@ -6,9 +6,10 @@
   max-width: 180px;
   height: 22px;
   margin-inline: 0 4px;
-  padding: 0 8px 0 2px;
+  padding: 0 8px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, var(--dsw-alias-bg-elevated));
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 4%, var(--dsw-alias-bg-layer-1));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent);
   color: var(--dsw-alias-label-primary);
   font-size: 12px;
   line-height: 18px;
@@ -22,15 +23,22 @@
   border-radius: 50%;
   overflow: hidden;
 }
-.icon img,
-.fallback {
+.chip[data-has-icon] { padding-left: 2px; }
+.icon img {
   width: 16px;
   height: 16px;
   border-radius: 50%;
   object-fit: cover;
 }
-.fallback { background: color-mix(in srgb, var(--dsw-alias-label-primary) 16%, var(--dsw-alias-bg-elevated)); }
 .name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+@media (hover: hover) {
+  .chip:hover,
+  .chip:focus-within {
+    background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, var(--dsw-alias-bg-layer-1));
+  }
+  .chip:not([data-has-icon]):hover,
+  .chip:not([data-has-icon]):focus-within { padding-left: 20px; }
+}
 .chip:hover .icon,
 .chip:focus-within .icon { visibility: hidden; }
 .remove {
@@ -52,4 +60,9 @@
 }
 .chip:hover .remove,
 .chip:focus-within .remove { opacity: 1; pointer-events: auto; }
+@media (hover: none) {
+  .chip:not([data-has-icon]) { padding-left: 20px; }
+  .chip .icon { visibility: hidden; }
+  .chip .remove { opacity: 1; pointer-events: auto; }
+}
 .remove:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }

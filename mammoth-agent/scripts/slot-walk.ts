@@ -15,10 +15,21 @@ import ts from 'typescript'
 const SLOTS_MODULE = '@mammoth-ai/mmp-client-ui-slots'
 
 /** Cheap textual prefilter for a slot-contract merge, quote-style agnostic. */
-const MERGE_HEAD = /declare module ['"]@deepseek-ai\/mmp-client-ui-slots['"]/
+const MERGE_HEAD = /declare module ['"]@mammoth-ai\/mmp-client-ui-slots['"]/
 
 /** Cheap textual prefilter for a Slot or Factory registration call site. */
 const REGISTER_HEAD = /\.(?:register|registerFactory)\(/
+
+/**
+ * Source paths for a scan. `*.ts` also matches emitted `.d.ts`, and those copies
+ * repeat `SlotMap`, so the scan keeps the TypeScript source.
+ */
+function sourceRels(scanRoot: string, patterns: readonly string[]): string[] {
+  return [...new Set(globSync(patterns as string[], { cwd: scanRoot })
+    .map(path => path.split(sep).join('/')))]
+    .filter(rel => !rel.endsWith('.d.ts'))
+    .sort()
+}
 
 /** One `SlotMap` member: the slot's contract as its owning package declares it. */
 export interface SlotDeclaration {
@@ -95,9 +106,7 @@ export interface ScannedFile {
 export function scanSlotFiles(scanRoot: string, patterns: readonly string[]): ScannedFile[] {
   const out: ScannedFile[] = []
   const names = new Map<string, string>()
-  const rels = [...new Set(globSync(patterns as string[], { cwd: scanRoot })
-    .map(path => path.split(sep).join('/')))].sort()
-  for (const rel of rels) {
+  for (const rel of sourceRels(scanRoot, patterns)) {
     const abs = resolve(scanRoot, rel)
     const text = readFileSync(abs, 'utf8')
     if (!MERGE_HEAD.test(text) && !REGISTER_HEAD.test(text)) continue
@@ -122,9 +131,7 @@ export function scanSlotFiles(scanRoot: string, patterns: readonly string[]): Sc
 export function indexExportedTypes(scanRoot: string, patterns: readonly string[]): Map<string, TypeDeclaration> {
   const index = new Map<string, TypeDeclaration>()
   const ambiguous = new Set<string>()
-  const rels = [...new Set(globSync(patterns as string[], { cwd: scanRoot })
-    .map(path => path.split(sep).join('/')))].sort()
-  for (const rel of rels) {
+  for (const rel of sourceRels(scanRoot, patterns)) {
     const abs = resolve(scanRoot, rel)
     const sf = ts.createSourceFile(abs, readFileSync(abs, 'utf8'), ts.ScriptTarget.Latest, true, scriptKindOf(rel))
     for (const statement of sf.statements) {

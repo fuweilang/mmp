@@ -92,6 +92,19 @@ export class InputHub implements SessionInputResolver {
     return this.shellFor(binding).requestDraftInitialization(options)
   }
 
+  clearCatalogSelection(binding: SessionBinding): void {
+    if (this.sessions().binding(binding.sessionId) !== binding) return
+    const shell = this.shellFor(binding)
+    const current = shell.snapshot.catalogSelection
+    if (current !== undefined && current.expertRef === null && current.skillRefs.length === 0) return
+    shell.setCatalogSelection({
+      protocol: 1,
+      selectionVersion: current === undefined ? 1 : current.selectionVersion + 1,
+      expertRef: null,
+      skillRefs: [],
+    })
+  }
+
   /**
    * Resolve the resident shell for an already-retained, addressable Session binding.
    * Draft import completes before return. The Session scope owns input listeners,

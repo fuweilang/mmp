@@ -168,10 +168,30 @@ export interface OfficialGallerySourceState {
   readonly source: OfficialGallerySource | null
 }
 
+/** One skill painted on a sent user message. Portrait URLs are optional. `offset` is its place in the message text. */
+export interface SentSkillView {
+  readonly name: string
+  readonly key: string
+  readonly icon: string | null
+  readonly offset?: number
+}
+
+/**
+ * Skills for sent messages, keyed by the prompt request id.
+ * One list per message that carried skills, in chip order. The list grows
+ * with those messages so a reload can paint each bubble. Attempts without
+ * skills are omitted.
+ */
+export interface OfficialGallerySentSkillsState {
+  readonly byRequest: Readonly<Record<string, readonly SentSkillView[]>>
+}
+
 declare module '@mammoth-ai/mmp-session-projection/types' {
   interface SessionProjectionMap {
     /** Client-visible expert/skill origin chip for plaza-created Sessions. */
     officialGallerySource: OfficialGallerySource | null
+    /** Skills on each sent user message, keyed by the prompt request id. */
+    officialGallerySentSkills: Readonly<Record<string, readonly SentSkillView[]>>
   }
 }
 

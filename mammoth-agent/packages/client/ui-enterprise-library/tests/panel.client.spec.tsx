@@ -212,6 +212,29 @@ describe('library panel', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
+  it('saves the prominent New action in the open folder, and in My files from Recent', async () => {
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') return Response.json({ id: 'made' })
+      if (url.includes('parentId=folder-1') || url.includes('view=recent')) return Response.json({ items: [], total: 0 })
+      return Response.json({ items: [{ id: 'folder-1', name: '合同', kind: 'FOLDER', scope: 'PRIVATE', canManage: true }], total: 1 })
+    })
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    fireEvent.click(await listing().findByRole('button', { name: '合同' }))
+    fireEvent.click(screen.getByRole('button', { name: zh.new }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: zh.folder }))
+    fireEvent.change(screen.getByRole('textbox', { name: zh.name }), { target: { value: '补充' } })
+    fireEvent.click(screen.getByRole('button', { name: zh.save }))
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/folders', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '补充', parentId: 'folder-1', scope: 'PRIVATE', confirmShare: false }) })))
+    fireEvent.click(screen.getByRole('button', { name: zh.recent }))
+    fireEvent.click(screen.getByRole('button', { name: zh.new }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: zh.folder }))
+    const dialog = await screen.findByRole('dialog', { name: zh.folder })
+    expect(within(dialog).getByText(zh.privateSaveHint)).toBeTruthy()
+    fireEvent.change(within(dialog).getByRole('textbox', { name: zh.name }), { target: { value: '最近新建' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: zh.save }))
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/folders', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '最近新建', parentId: null, scope: 'PRIVATE', confirmShare: false }) })))
+  })
+
   it('opens New folder through the secondary menu and saves with the existing mmp modal', async () => {
     const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => init?.method === 'POST' ? Response.json({ id: 'folder1' }) : Response.json({ items: [] }))
     render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)

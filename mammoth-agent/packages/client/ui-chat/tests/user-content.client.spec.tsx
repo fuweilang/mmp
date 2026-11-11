@@ -94,7 +94,10 @@ async function bench() {
     ctx.slots.registerFactory({
       name: 'conversation.chat.user.content', scope: 'session', locale: NS,
       inject: () => ({ openLibraryReference }),
-      children: { 'conversation.chat.user.images': { kind: 'single', scope: 'session' } },
+      children: {
+        'conversation.chat.user.images': { kind: 'single', scope: 'session' },
+        'conversation.chat.user.skills': { kind: 'single', scope: 'session' },
+      },
     }, UserContent)
   } })
   const owner = await mountContent()

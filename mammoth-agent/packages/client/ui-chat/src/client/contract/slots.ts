@@ -1,5 +1,5 @@
 /** Chat-owned Slot declarations and composed component props. */
-import type { RefObject } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import type { MessageId } from '@mammoth-ai/mmp-llm/brand'
 import type { SessionId, SessionSeq } from '@mammoth-ai/mmp-session/types'
 import type { PendingSubmission } from '@mammoth-ai/mmp-api-session-controller/client'
@@ -254,6 +254,27 @@ export type UserContentAttachment =
   | { readonly type: 'file'; readonly file: FileAttachmentRef }
   | { readonly type: 'library'; readonly reference: LibrarySourceReference }
 
+/** One skill painted on a sent user message. The gallery owns the portrait. `offset` is its place in the message text. */
+export interface UserSentSkill {
+  readonly name: string
+  readonly key: string
+  readonly icon?: string | null
+  readonly offset?: number
+}
+
+/**
+ * Skills for one sent user message.
+ * `requestId` matches the prompt on a durable message. `skills` is the local
+ * echo, in chip order, before that projection arrives. `renderText` paints one
+ * slice of `text` with the normal user-text rules.
+ */
+export interface UserSentSkillsOwnerProps {
+  readonly requestId?: string
+  readonly skills?: readonly UserSentSkill[]
+  readonly text?: string
+  readonly renderText?: (text: string) => ReactNode
+}
+
 /** Prepared user contents without row identity, admission state, time, or actions. */
 export interface UserContentData {
   readonly text: string
@@ -266,7 +287,7 @@ export interface UserContentData {
 
 /** Public content rendering input; reference renderers own their injected actions. */
 export interface UserContentInput extends Pick<ChatNodeOwnerProps, 'loadImage'>,
-  Pick<UserTextInput, 'interactive' | 'ellipsis'> {
+  Pick<UserTextInput, 'interactive' | 'ellipsis'>, UserSentSkillsOwnerProps {
   readonly content: UserContentData
   /** Transform inputs passed unchanged to UserText, separate from summary and rendering props. */
   readonly facts: Readonly<Partial<UserTextFacts>>
@@ -421,7 +442,11 @@ declare module '@mammoth-ai/mmp-client-ui-slots' {
       props: UserContentInput
       inject: UserContentInjected
       locale: 'chat'
-      children: { 'conversation.chat.user.images': { kind: 'single'; scope: 'session' } }
+      children: {
+        'conversation.chat.user.images': { kind: 'single'; scope: 'session' }
+        /** Skills on this sent message, in chip order. Unregistered messages show text only. */
+        'conversation.chat.user.skills': { kind: 'single'; scope: 'session' }
+      }
     }
     /** Session-independent reasoning Markdown with Chat labels and compact typography. */
     'conversation.chat.reasoning.content': {
@@ -475,6 +500,11 @@ declare module '@mammoth-ai/mmp-client-ui-slots' {
     'conversation.chat.message.images': { kind: 'single'; scope: 'session'; owner: MessageImagesOwnerProps }
     /** User-message images, including pending and local-echo previews, independently replaceable from output images. */
     'conversation.chat.user.images': { kind: 'single'; scope: 'session'; owner: MessageImagesOwnerProps }
+    /**
+     * Skills carried by one sent user message, placed in the sentence when each skill has an offset.
+     * Chat supplies the prompt request id, the message text, and any local echo skills. The gallery paints the sentence.
+     */
+    'conversation.chat.user.skills': { kind: 'single'; scope: 'session'; owner: UserSentSkillsOwnerProps }
     /**
      * Command row keyed by the command name. The component receives the folded
      * command lifecycle and linked compaction when present. Reusing a key

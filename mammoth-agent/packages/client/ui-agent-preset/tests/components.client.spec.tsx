@@ -1,9 +1,7 @@
 // @vitest-environment jsdom
 /**
- * The two conversation-adjacent surfaces: the new-session chip naming the
- * next session's preset, and the session header's read-only label. The split
- * is the host's rule — a session's history is produced under its preset's
- * tools, so the choice is only ever offered before one starts.
+ * The new-session chip names the next session's preset. The session header
+ * seat renders nothing: the choice is offered before a session starts.
  */
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -394,45 +392,23 @@ describe('the chip introduce cue', () => {
 })
 
 describe('the session-header label', () => {
-  it('names the preset the session runs, and never offers a switch', async () => {
-    const { load } = renderLabel({
+  it('renders nothing and reads no roster', async () => {
+    const present = renderLabel({
       blank: false,
       projectionValues: { agentPreset: 'standard' },
     })
-
-    await waitFor(() => { expect(load).toHaveBeenCalledTimes(1) })
-    // A control here would promise a switch the host refuses outright.
+    expect(present.view.container.firstChild).toBeNull()
     expect(screen.queryByRole('button')).toBeNull()
-    expect(screen.getByTitle(en.presetStandardDescription).textContent).toBe(en.presetStandardName)
-  })
+    cleanup()
 
-  it('falls back to the id, and to the generic hint, when metadata is absent', () => {
-    renderLabel({ blank: true, projectionValues: { agentPreset: 'mine' } })
-
-    expect(screen.getByTitle(en.headerHint).textContent).toBe('mine')
-  })
-
-  it('shows the id until the roster resolves it', () => {
-    renderLabel({
-      blank: false,
-      projectionValues: { agentPreset: 'standard' },
-    }, { options: [] })
-
-    // The session's own summary is the authority on which preset it runs; the
-    // roster only supplies the display name, and its arrival is a later frame.
-    expect(screen.getByTitle(en.headerHint).textContent).toBe('standard')
-  })
-
-  it('renders nothing, and reads no roster, when the session records no preset', async () => {
     const absent = renderLabel({ blank: true })
     expect(absent.view.container.firstChild).toBeNull()
     cleanup()
 
-    // A session the list has not caught up to is the same answer: a deployment
-    // that composes no presets must not pay for a roster read per header.
     const unknown = renderLabel(undefined)
     expect(unknown.view.container.firstChild).toBeNull()
     await act(async () => { await Promise.resolve() })
+    expect(present.load).not.toHaveBeenCalled()
     expect(absent.load).not.toHaveBeenCalled()
     expect(unknown.load).not.toHaveBeenCalled()
   })

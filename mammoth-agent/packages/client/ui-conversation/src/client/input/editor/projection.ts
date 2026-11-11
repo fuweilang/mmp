@@ -143,6 +143,27 @@ export function $composerLayout(): ComposerLayout {
  * @param clipboardOffset - offset into the clipboard projection.
  * @returns the detect offset covering the same document position.
  */
+/**
+ * Detect offset on the leading side of a clipboard boundary.
+ * A chip that starts at `clipboardOffset` stays after the point, so a
+ * zero-width skill chip can return to the gap before that chip.
+ * @param layout - the current walk product.
+ * @param clipboardOffset - offset into the clipboard projection.
+ * @returns the detect offset at that boundary.
+ */
+export function detectOffsetBeforeClipboardOffset(layout: ComposerLayout, clipboardOffset: number): number {
+  const clamped = Math.min(Math.max(clipboardOffset, 0), layout.clipboardText.length)
+  for (const segment of layout.segments) {
+    const end = segment.clipboardStart + segment.clipboardLength
+    if (clamped > end) continue
+    if (clamped === segment.clipboardStart) return segment.detectStart
+    if (segment.kind === 'text') return segment.detectStart + (clamped - segment.clipboardStart)
+    if (clamped === end) return segment.detectStart + segment.detectLength
+    return segment.detectStart
+  }
+  return layout.detectLength
+}
+
 export function detectOffsetOfClipboardOffset(layout: ComposerLayout, clipboardOffset: number): number {
   for (const segment of layout.segments) {
     const end = segment.clipboardStart + segment.clipboardLength

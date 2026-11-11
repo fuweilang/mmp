@@ -398,7 +398,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
               next.setDraft(draft)
               from.setDraft('')
               from.setEnterpriseKnowledge(false)
-              if (draft.catalogSelection !== undefined) from.setCatalogSelection({ protocol: 1, selectionVersion: draft.catalogSelection.selectionVersion + 1, expertRef: null, skillRef: null })
+              if (draft.catalogSelection !== undefined) from.setCatalogSelection({ protocol: 1, selectionVersion: draft.catalogSelection.selectionVersion + 1, expertRef: null, skillRefs: [] })
             }
             if (attachmentIds.length > 0) {
               for (const id of attachmentIds) from.removeAttachment(id)

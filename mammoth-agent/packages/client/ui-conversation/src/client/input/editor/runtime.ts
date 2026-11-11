@@ -20,13 +20,13 @@ import { ReferenceChipNode, $createReferenceChipNode } from './chip-node.tsx'
 import { CommandChipNode, $createCommandChipNode, registerCommandChipSeat } from './command-chip-node.tsx'
 import { registerCommandChipSelection } from './command-chip-selection.ts'
 import {
-  $isSkillChipNode, $skillChipBesideCaret, $skillChips, $syncSkillChip, REMOVE_SKILL_CHIP_COMMAND, SkillChipNode,
+  $createSkillChipNode, $isSkillChipNode, $skillChipBesideCaret, $skillChips, $syncSkillSet, REMOVE_SKILL_CHIP_COMMAND, SkillChipNode,
   sameSkill,
 } from './skill-chip-node.tsx'
 import type { SkillChipData, SkillChipLabels } from './skill-chip-node.tsx'
 import { registerTextRefDecoration, rescanTextRefs, TextRefNode } from './text-ref.ts'
 import type { EditorProjection } from './projection.ts'
-import { $composerLayout, $projectComposer, detectOffsetOfClipboardOffset } from './projection.ts'
+import { $composerLayout, $projectComposer, detectOffsetBeforeClipboardOffset, detectOffsetOfClipboardOffset } from './projection.ts'
 import { $replaceDetectSpanWithNodes, $replaceDetectSpanWithText } from './span-map.ts'
 import type { DetectSpan } from './span-map.ts'
 
@@ -205,21 +205,45 @@ export class DraftEditorRuntime {
    * @param text - the full next draft.
    */
   /**
-   * Show `data` as the draft's skill chip, or remove every skill chip.
-   * An existing chip stays where it is. A missing one is inserted at the start.
+   * Show exactly these skills. Existing chips stay where they are.
+   * A skill that is not on screen yet is inserted at the caret.
+   * @param skills - skills this round sends.
+   */
+  syncSkillChips(skills: readonly SkillChipData[]): void {
+    const current = this.editor.getEditorState().read(() => $skillChips().map(chip => chip.getData()))
+    if (current.length === skills.length && current.every(chip => skills.some(skill => sameSkill(chip, skill)))) return
+    this.editor.update(() => { $syncSkillSet(skills, $insertAnchoredSkillChips) }, { discrete: true, tag: HISTORY_MERGE_TAG })
+  }
+
+  /** Skill chips in document order, each with its place in the draft text. */
+  skillChipAnchors(): SkillChipData[] {
+    return this.editor.getEditorState().read(() => {
+      const layout = $composerLayout()
+      const chips: SkillChipData[] = []
+      for (const segment of layout.segments) {
+        if (segment.kind !== 'chip' || segment.node === null || !$isSkillChipNode(segment.node)) continue
+        chips.push({ ...segment.node.getData(), offset: segment.clipboardStart })
+      }
+      return chips
+    })
+  }
+
+  /**
+   * Show `data` as the only skill chip, or remove every skill chip.
    * @param data - the skill to show, or null.
    */
   syncSkillChip(data: SkillChipData | null): void {
-    const current = this.editor.getEditorState().read(() => $skillChips()[0]?.getData() ?? null)
-    const extras = this.editor.getEditorState().read(() => $skillChips().length)
-    // current is SkillChipData | null; extras>0 does not narrow it for TS, so compare via sameSkill.
-    if (data === null ? extras === 0 : extras > 0 && sameSkill(current, data)) return
-    this.editor.update(() => { $syncSkillChip(data) }, { discrete: true, tag: HISTORY_MERGE_TAG })
+    this.syncSkillChips(data === null ? [] : [data])
+  }
+
+  /** Skill chips in document order. */
+  skillChips(): SkillChipData[] {
+    return this.editor.getEditorState().read(() => $skillChips().map(chip => chip.getData()))
   }
 
   /** The first skill chip in the draft, or null. */
   skillChip(): SkillChipData | null {
-    return this.editor.getEditorState().read(() => $skillChips()[0]?.getData() ?? null)
+    return this.skillChips()[0] ?? null
   }
 
   setDraft(text: string): void {
@@ -519,5 +543,23 @@ export class DraftEditorRuntime {
   /** Cut the editor's undo history after a committed clear or restoration. */
   clearHistory(): void {
     this.editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
+  }
+}
+
+/** Put chips that already know their text offsets back there, in document order. */
+function $insertAnchoredSkillChips(skills: readonly SkillChipData[]): void {
+  const groups = new Map<number, SkillChipData[]>()
+  for (const skill of skills) {
+    const offset = skill.offset ?? 0
+    const group = groups.get(offset)
+    if (group === undefined) groups.set(offset, [skill])
+    else group.push(skill)
+  }
+  for (const offset of [...groups.keys()].sort((left, right) => left - right)) {
+    const layout = $composerLayout()
+    const clamped = Math.min(offset, layout.clipboardText.length)
+    const at = detectOffsetBeforeClipboardOffset(layout, clamped)
+    const nodes = (groups.get(offset) ?? []).map(skill => $createSkillChipNode(skill))
+    $replaceDetectSpanWithNodes({ start: at, end: at }, nodes)
   }
 }

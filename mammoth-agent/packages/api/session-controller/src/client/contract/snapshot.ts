@@ -38,6 +38,14 @@ export type PendingSubmissionAttachment =
 /** Client surface selected when a local submission begins. */
 export type PendingSubmissionPlacement = 'transcript' | 'queued' | 'steering'
 
+/** One skill shown on a local submission echo, in chip order. Display only. `offset` is its place in the prompt text. */
+export interface PendingSubmissionSkill {
+  readonly name: string
+  readonly key: string
+  readonly icon?: string | null
+  readonly offset?: number
+}
+
 /**
  * One local prompt-submission echo: registered when a submission begins and
  * published once the Host accepts the prompt, so the conversation shows the
@@ -57,6 +65,8 @@ export interface PendingSubmission {
   readonly attachments: readonly PendingSubmissionAttachment[]
   /** Library identities shown while the Host resolves the selected versions. */
   readonly libraryReferences?: readonly LibrarySourceReference[]
+  /** Skills in chip order. Reload paints them from the attempt projection. */
+  readonly sentSkills?: readonly PendingSubmissionSkill[]
 }
 
 /** History-open lifecycle of a Session event window. */
