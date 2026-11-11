@@ -6,6 +6,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
+import { once } from 'node:events';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { encryptApiKey } from '../../src/llm/llm-key-crypto';
 import { KnowledgeProfilesService } from '../../src/knowledge-core/profiles.service';
@@ -81,6 +82,27 @@ after(async () => {
   await db.$disconnect();
   await rm(dir, { recursive: true, force: true });
 });
+async function whileEmbeddingBlocked(action: () => Promise<void>) {
+  const request = new AbortController();
+  const started = once(server, 'request', { signal: request.signal });
+  delay = new Promise((resolve) => (unlock = resolve));
+  const pending = worker.runOnce();
+  try {
+    await Promise.race([
+      started,
+      pending.then(() => {
+        throw new Error('Worker finished before reaching the paused supplier');
+      }),
+    ]);
+    await action();
+  } finally {
+    request.abort();
+    unlock!();
+    unlock = undefined;
+    delay = undefined;
+    await pending;
+  }
+}
 async function provider(key = true) {
   return db.llmProvider.create({
     data: {
@@ -255,15 +277,11 @@ test('only complete validated indexes release; released bytes/chunks/items canno
 test('cancellation fences slow upstream promotion and restart can reclaim an expired lease', async () => {
   const dto = await profile(),
     job = await upload(dto.id);
-  delay = new Promise((r) => (unlock = r));
   assert.equal((await core.inspectJob(job.id, scope)).stage, 'UPLOADED');
-  const pending = worker.runOnce();
-  await new Promise((r) => setTimeout(r, 120));
-  assert.equal((await core.inspectJob(job.id, scope)).stage, 'EMBEDDING');
-  await core.cancelJob(job.id, scope);
-  unlock!();
-  delay = undefined;
-  await pending;
+  await whileEmbeddingBlocked(async () => {
+    assert.equal((await core.inspectJob(job.id, scope)).stage, 'EMBEDDING');
+    await core.cancelJob(job.id, scope);
+  });
   const state = await core.inspectJob(job.id, scope);
   assert.equal(state.status, 'CANCELLED');
   assert.equal(
@@ -344,13 +362,9 @@ test('lease expiring inside promotion transaction rolls all writes back', async 
 test('lease stolen during slow upstream never writes stale chunks', async () => {
   const dto = await profile(),
     job = await upload(dto.id);
-  delay = new Promise((r) => (unlock = r));
-  const pending = worker.runOnce();
-  await new Promise((r) => setTimeout(r, 100));
-  await db.$executeRaw`UPDATE kc_ingestion_job SET lease_token='new-worker',lease_until=now()+interval '1 minute' WHERE id=${job.id}`;
-  unlock!();
-  delay = undefined;
-  await pending;
+  await whileEmbeddingBlocked(async () => {
+    await db.$executeRaw`UPDATE kc_ingestion_job SET lease_token='new-worker',lease_until=now()+interval '1 minute' WHERE id=${job.id}`;
+  });
   const state = await core.inspectJob(job.id, scope);
   assert.equal(state.status, 'RUNNING');
   assert.equal(
