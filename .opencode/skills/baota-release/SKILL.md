@@ -784,21 +784,43 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 | 4 | 平台超管验收资料库一直 `NO_TENANT` | cookie 里的租户上下文不被 library 采用 | `POST /api/library/context {tenantId}` 拿返回 `token`，再用 `Authorization: Bearer` 调 `items/search/config` | 平台账号验收资料库必须走 context token，不要用 cookie 反复试 |
 | 5 | `state.json` 的 `web-image` note 带上一版镜像 tag | state 复用了旧 note | 收尾重写 steps/note | 每次收尾核对 note 里的 tag 与本次 RELEASE_ID 一致 |
 
-### 4J.3 优化优先级（更新版）
+### 4J.3 优化优先级（2026-11-11 实测后更新）
 
-| 优先级 | 项 | 预计省 | 说明 |
+| 优先级 | 项 | 实测/预计 | 状态 |
 |---|---|---|---|
-| **P0** | **web 镜像依赖分层 + pnpm store cache mount** | **7 min**（617s → ~200s） | 现在占单次发布 56%，是唯一值得改代码的项：`COPY package.json/lockfile` 单独一层，`RUN --mount=type=cache,target=/pnpm-store` |
-| P0 | 门禁前移到排期前 | 3 min + 消除返工 | 本轮又是在窗口内修类型 |
-| P0 | 冲突范围以"少发"为准并立即报告 | 0 min，防误发 | 写进 4J.2 #1 |
-| P1 | smoke 拆 `--quick`（30s）+ 全量 hash 异步 | 2.5 min | 切流后 30s 先确认没白屏 |
-| P1 | 上传与 smoke 错层：先部署+quick smoke，再传大文件 | 2 min | 中台单发时收益有限（只有 325MB api 镜像） |
-| P2 | `release/last-release.json` 基线 + 变更集裁剪 | 视改动 | 本轮已手工按 `git diff 5d74eb6f` 判断只发中台 |
-| P2 | 备份演练脚本化（保留 dump、自动建/删演练库） | 0.5 min + 防手误 | 见 4J.2 #3 |
+| **P0** | **`--reuse-web <tag>`：本次没改 `mammoth-agent/` 就复用上一版 web 镜像** | **省 ~10 min**（整段 web 构建跳过） | ✅ 已实现（`release.sh`） |
+| **P0** | web 镜像依赖分层 + pnpm store cache mount | 617s → **526s**（省 ~1.5 min，不是原估的 7 min） | ✅ 已实现（`Dockerfile`） |
+| P0 | 门禁前移到排期前 | 3 min + 消除返工 | 流程 |
+| P0 | 冲突范围以"少发"为准并立即报告 | 0 min，防误发 | 流程 |
+| P1 | smoke 拆 `--quick`（30s）+ 全量 hash 异步 | 2.5 min | 未做 |
+| P1 | 上传与 smoke 错层 | 中台单发收益有限（325MB） | 未做 |
+| P2 | `release/last-release.json` 基线 | 自动提示"可用 --reuse-web" | ✅ 已实现（每次 deploy+smoke 成功后写） |
+| P2 | 备份演练脚本化 | 0.5 min + 防手误 | 未做 |
 
-> 结论：中台单发的理论下限 ≈ **11–12 min**（web 镜像 3 min + 其余 8 min）。不改 web 镜像分层，就永远卡在 26 分钟左右。
+> 关键修正：web 镜像 617s 里 **install 只占 ~70–90s，其余 ~8.5 min 是 `build:artifacts`（tsc -b 401 个项目 + tsdown）和 `build:web`**。所以：
+> - 依赖分层只能省 1–1.5 min（已做，别再指望它省 7 min）；
+> - 真正的大头是"**没改客户端就别重建 web**"，即 `--reuse-web`（省 ~10 min）；
+> - 中台单发且只改 `ground/` 时的实际路径 ≈ 8 min（前端 5s + api 83s + 部署/验收 6–7 min）。
 
-### 4J.4 本轮基线（3.2.0-20261111-0048）
+### 4J.4 实现记录（2026-11-11，已提交代码）
+
+| 改动 | 文件 | 验证 |
+|---|---|---|
+| `--reuse-web <tag>`：跳过 web 构建，部署时沿用该 tag | `ground/infra/production/release.sh` | `--dry-run --reuse-web` 输出正确；服务器镜像存在性校验 |
+| 预检自动提示：`release/last-release.json` 的 commit 之后 `mammoth-agent/` 无改动 → 打印"可用 --reuse-web" | 同上 | 靠上一次 deploy+smoke 成功后写基线 |
+| 每次成功发布写 `release/last-release.json`（release_id / commit / 镜像 tag） | 同上 | — |
+| web 镜像依赖层：把 workspace 的 `package.json` / `pnpm-lock.yaml` / `pnpm-workspace.yaml` / `patches/**` 预staged 到 `__manifests__/`，先 `COPY` 再 `pnpm install --ignore-scripts`，`COPY . .` 后再补跑一次 install 执行生命周期脚本 | `mammoth-agent/infra/production/Dockerfile` + `release.sh` 的 staging 步骤 | 冷缓存 649s，源码变更后重建 **526s** |
+
+实现中踩到的两个坑：
+
+| 现象 | 根因 | 处理 |
+|---|---|---|
+| `ERR_PNPM_PATCH_NOT_FOUND patches/@botiverse__oar@0.67.0.patch` | 依赖层只 stage 了 manifests，`patchedDependencies` 需要的 patch 文件不在上下文 | staging 的 `find` 增加 `-path "./patches/*"` |
+| `Cannot find module .../scripts/ensure-spawn-helper.mjs` | 部分包的 postinstall 读取源码 | 依赖层用 `--ignore-scripts`；`COPY . .` 后再跑一次 `pnpm install`（store 已热，只执行待跑脚本） |
+| rsh 里 `-path './patches/*'` 直接把外层单引号截断 | 脚本通过单引号 heredoc 传给远端 | 远端脚本内部一律用双引号 |
+| `REUSE_WEB（: unbound variable` | bash 在 UTF-8 locale 下把全角括号当成变量名字符 | 变量后紧跟中文标点时写 `${VAR}` |
+
+### 4J.5 本轮基线（3.2.0-20261111-0048）
 
 | 项 | 值 |
 |---|---|
