@@ -60,6 +60,20 @@ jobs:
       - name: Install dependencies
         run: corepack pnpm install --frozen-lockfile
 
+      # .env.windows 被 .gitignore 忽略，CI 按需生成：身份与已发布 Mac 包一致，
+      # 策略服务指向生产域名；未签名安装包不读取任何证书配置。
+      - name: Write Windows packaging environment
+        shell: pwsh
+        run: |
+          $content = @(
+            'MMP_DESKTOP_APP_ID=com.deepseek.harness'
+            'MMP_DESKTOP_AUTO_UPDATE_ENV=production'
+            'MMP_DESKTOP_MANDATORY_UPDATE_PROD_ORIGIN=https://www.mmai.vip'
+            'MMP_DESKTOP_MANDATORY_UPDATE_CONFIG={}'
+            'MMP_DESKTOP_WINDOWS_COMPRESSION_LEVEL=3'
+          ) -join "`n"
+          [System.IO.File]::WriteAllText('apps/desktop/.env.windows', $content + "`n", [System.Text.UTF8Encoding]::new($false))
+
       - name: Package Windows x64 (unsigned)
         run: corepack pnpm --dir apps/desktop run package:win:x64:unsigned
 
