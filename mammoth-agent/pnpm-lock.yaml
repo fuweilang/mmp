@@ -4491,6 +4491,9 @@ importers:
       '@mammoth-ai/mmp-client-locale':
         specifier: workspace:*
         version: link:../locale
+      '@mammoth-ai/mmp-client-ui-chat':
+        specifier: workspace:*
+        version: link:../ui-chat
       '@mammoth-ai/mmp-client-ui-commands':
         specifier: workspace:*
         version: link:../ui-commands

@@ -353,6 +353,8 @@ export interface ChatViewInjected {
   }
   /** Open one HTTP(S) message link at the selected destination, using an external tab if Sidebar Browser is unavailable. */
   openExternalLink: (url: string) => void
+  /** Pure feature-owned destination resolver; returned actions run on user activation. */
+  resolveApplicationLink?: ((href: string) => (() => void) | undefined) | undefined
   openFile: (path: string, options?: OpenFileOptions) => Promise<void>
   loadOlder: () => void
   /** Jump loader: page history back through seq; resolves when the window covers it. */

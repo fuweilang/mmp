@@ -77,7 +77,9 @@ async function withLibraryHttpFixture(work) {
       const form = new FormData(); form.append('files', new Blob([content]), name);
       return request(who, replacement ? `files/${replacement}/versions` : 'files', 'POST', form);
     };
-    await work({ app, prisma, origin, directory, request, upload, users, tenants });
+    await work({ app, prisma, origin, directory, request, upload, users, tenants,
+      browserCookie: who => { if (!sessions[who]) throw new Error('Unknown fixture identity'); return sessions[who]; },
+    });
   } finally {
     try { if (prisma) {
       await prisma.role.deleteMany({ where: { id: { in: roles.map(row => row.id) } } });

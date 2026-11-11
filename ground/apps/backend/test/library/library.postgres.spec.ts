@@ -286,4 +286,73 @@ describe('library postgres', () => {
     assert.equal((await filesUnder(libraryDir)).length, before + 1);
   });
 
+  it('rolls back retry status and chunks when the transactional audit violates a database constraint', async () => {
+    const store = new PrismaLibraryStore(prisma as never);
+    const service = new LibraryService(store);
+    const item = await service.upload(actor(ownerId, tenantA), { originalName: 'retry-atomic.md', mimeType: 'text/markdown', bytes: Buffer.from('transaction source') });
+    const versionId = item.currentVersion!.id;
+    await store.updateVersion(versionId, { parseStatus: 'FAILED', parseReason: 'retryable' });
+    const before = await prisma.libraryVersion.findUniqueOrThrow({ where: { id: versionId } });
+    const beforeChunks = await prisma.libraryChunk.findMany({ where: { versionId }, orderBy: { ordinal: 'asc' } });
+    const existingAudit = await prisma.auditLog.findFirstOrThrow({ where: { tenantId: tenantA } });
+    const input = {
+      tenantId: tenantA, nodeId: item.id, versionId,
+      parseStatus: 'READY' as const, parseReason: null, extractTruncated: false,
+      chunks: [{ id: store.createId(), tenantId: tenantA, versionId, ordinal: 0, content: 'transaction source', locator: 'paragraph:1', locatorKind: 'paragraph' as const }],
+      audit: { id: existingAudit.id, tenantId: tenantA, userId: ownerId, action: 'library_retry_parse', meta: { nodeId: item.id, versionId, status: 'READY' }, createdAt: Date.now() },
+    };
+    await assert.rejects(() => store.commitParseResult(input));
+    assert.deepEqual(await prisma.libraryVersion.findUniqueOrThrow({ where: { id: versionId } }), before);
+    assert.deepEqual(await prisma.libraryChunk.findMany({ where: { versionId }, orderBy: { ordinal: 'asc' } }), beforeChunks);
+    input.audit.id = store.createId();
+    assert.equal(await store.commitParseResult(input), 'committed');
+    assert.equal((await store.getVersion(versionId))?.parseStatus, 'READY');
+    const committedChunks = await store.listChunks(versionId);
+    assert.equal(committedChunks.length, 1);
+    assert.equal(await store.commitParseResult({ ...input, audit: { ...input.audit, id: store.createId() } }), 'unchanged');
+    assert.deepEqual(await store.listChunks(versionId), committedChunks);
+  });
+
+  it('serializes retries from separate store instances without replacing a successful locator', async () => {
+    const firstStore = new PrismaLibraryStore(prisma as never);
+    const secondStore = new PrismaLibraryStore(prisma as never);
+    const first = new LibraryService(firstStore), second = new LibraryService(secondStore);
+    const owner = actor(ownerId, tenantA);
+    const item = await first.upload(owner, { originalName: 'parallel-retry.md', mimeType: 'text/markdown', bytes: Buffer.from('first\n\nsecond') });
+    const versionId = item.currentVersion!.id;
+    await firstStore.updateVersion(versionId, { parseStatus: 'FAILED' });
+    let arrivals = 0;
+    let release!: () => void;
+    const bothReading = new Promise<void>(resolve => { release = resolve; });
+    for (const store of [firstStore, secondStore]) {
+      const read = store.getBlob.bind(store);
+      store.getBlob = async key => { const bytes = await read(key); if (++arrivals === 2) release(); await bothReading; return bytes; };
+    }
+    await Promise.all([first.retryParse(owner, item.id), second.retryParse(owner, item.id)]);
+    const chunks = await firstStore.listChunks(versionId);
+    assert.equal(chunks.length, 2);
+    assert.deepEqual(chunks.map(row => row.locator), ['paragraph:1', 'paragraph:2']);
+    assert.equal(await prisma.auditLog.count({ where: { action: 'library_retry_parse', meta: { path: ['nodeId'], equals: item.id } } }), 1);
+    await second.retryParse(owner, item.id);
+    assert.deepEqual(await firstStore.listChunks(versionId), chunks);
+  });
+
+  for (const action of ['replace', 'recycle'] as const) it('rejects a stale PostgreSQL retry after ' + action, async () => {
+    const store = new PrismaLibraryStore(prisma as never);
+    const service = new LibraryService(store), owner = actor(ownerId, tenantA);
+    const item = await service.upload(owner, { originalName: 'changed-retry.md', mimeType: 'text/markdown', bytes: Buffer.from('old source') });
+    const versionId = item.currentVersion!.id;
+    await store.updateVersion(versionId, { parseStatus: 'FAILED' });
+    const beforeChunks = await store.listChunks(versionId);
+    const getBlob = store.getBlob.bind(store);
+    store.getBlob = async key => {
+      if (action === 'replace') await service.replaceVersion(owner, item.id, 'changed-retry.md', 'text/markdown', Buffer.from('new source'));
+      else await service.recycle(owner, item.id);
+      return getBlob(key);
+    };
+    await assert.rejects(() => service.retryParse(owner, item.id), (error: unknown) => error instanceof LibraryError && error.status === 409 && error.code === 'VERSION_CONFLICT');
+    assert.equal((await store.getVersion(versionId))?.parseStatus, 'FAILED');
+    assert.deepEqual(await store.listChunks(versionId), beforeChunks);
+  });
+
 });

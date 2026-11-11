@@ -157,6 +157,56 @@ describe('library icon', () => {
 })
 
 describe('library panel', () => {
+  it('waits for enterprise availability before browsing and offers no empty-library upload when blocked', async () => {
+    let resolveConfig!: (response: Response) => void
+    const config = new Promise<Response>(resolve => { resolveConfig = resolve })
+    const fetchImpl = vi.fn(async (url: string) => url.endsWith('/config') ? config : Response.json({ message: '缺少企业上下文', code: 'NO_TENANT' }, { status: 403 }))
+    const guidance = '资料库属于企业能力：请先在控制台进入企业工作台，再打开资料库'
+    render(<Panel clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual(['/ground-library/config'])
+    expect(screen.queryByText(zh.empty)).toBeNull()
+    expect(screen.getAllByRole('button', { name: `${zh.new} · ${zh.mine}` }).every(button => (button as HTMLButtonElement).disabled)).toBe(true)
+    resolveConfig(Response.json({ enabled: false, reason: 'NO_TENANT', message: guidance }))
+    await screen.findByText(/资料库属于企业能力/)
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(screen.queryByText(zh.empty)).toBeNull()
+    expect(screen.queryByText(zh.emptyHint)).toBeNull()
+    expect(screen.getAllByRole('button', { name: `${zh.new} · ${zh.mine}` }).every(button => (button as HTMLButtonElement).disabled)).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: zh.refresh }))
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2))
+    expect(fetchImpl.mock.calls.every(([url]) => url.endsWith('/config'))).toBe(true)
+  })
+
+  it('recovers a blocked enterprise check after refresh before showing the real empty state', async () => {
+    let enabled = false
+    const fetchImpl = vi.fn(async (url: string) => url.endsWith('/config')
+      ? Response.json({ enabled, message: 'Choose an enterprise first' })
+      : Response.json({ items: [], total: 0 }))
+    render(<Panel clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    await screen.findByText('Choose an enterprise first')
+    expect(screen.queryByText(zh.empty)).toBeNull()
+    enabled = true
+    fireEvent.click(screen.getByRole('button', { name: zh.refresh }))
+    await listing().findByText(zh.empty)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getAllByRole('button', { name: `${zh.new} · ${zh.mine}` }).every(button => !(button as HTMLButtonElement).disabled)).toBe(true)
+  })
+
+  it.each([
+    [403, 'NO_TENANT', '资料库属于企业能力'],
+    [401, 'UNAUTHORIZED', '请重新登录'],
+    [403, 'FORBIDDEN', '无权访问资料库'],
+  ])('contains a refused config check (%s/%s) without browsing or presenting an empty library', async (status, code, guidance) => {
+    const fetchImpl = vi.fn(async () => Response.json({ code, message: 'Server diagnostic' }, { status }))
+    render(<Panel clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    await screen.findByText(new RegExp(guidance))
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(screen.queryByText(zh.empty)).toBeNull()
+    expect(screen.getAllByRole('button', { name: `${zh.new} · ${zh.mine}` }).every(button => (button as HTMLButtonElement).disabled)).toBe(true)
+    expect(fetchImpl).toHaveBeenCalledOnce()
+  })
+
+
   it('clears the previous classification on a failed scope change and exposes no stale titles', async () => {
     const fetchImpl = vi.fn(async (url: string) => url.includes('view=shared') ? new Response('no', { status: 403 }) : Response.json({ items: [
       { id: 'n1', name: '制度.md', kind: 'FILE', currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'READY' } },
@@ -580,4 +630,95 @@ it('keeps the preview inside the right pane with original Markdown structure and
   expect(document.querySelector('main strong')?.textContent).toBe('加粗正文')
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(preview().queryByText('提取文本')).toBeNull()
+})
+
+describe('file purge protection', () => {
+  for (const withServerReason of [true, false]) it('keeps restore available and blocks FILE purge ' + (withServerReason ? 'with the server reason' : 'with an older server'), async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'DELETE') throw new Error('A protected file must never be deleted')
+      return Response.json({ items: [{ id: 'protected', name: 'protected.md', kind: 'FILE', canManage: true,
+        ...(withServerReason ? { purgeBlockedReason: 'File purge is temporarily unavailable' } : {}),
+        currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'READY' } }] })
+    })
+    try {
+      render(<Panel clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+      await listing().findByText('protected.md')
+      fireEvent.click(screen.getByRole('button', { name: zh.trash }))
+      await listing().findByText('protected.md')
+      fireEvent.click(listing().getByRole('button', { name: `${zh.more} · protected.md` }))
+      const purge = await screen.findByRole('menuitem', { name: zh.purge })
+      expect((purge as HTMLButtonElement).disabled).toBe(true)
+      expect(screen.getByRole('menuitem', { name: zh.restore }).getAttribute('aria-disabled')).not.toBe('true')
+      fireEvent.click(purge)
+      expect(fetchImpl.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false)
+      expect(listing().getByText('protected.md')).toBeTruthy()
+      expect(confirm).not.toHaveBeenCalled()
+    } finally { confirm.mockRestore() }
+  })
+})
+
+
+describe('inline citation navigation', () => {
+  it('does not let an earlier manual preview replace a later citation preview', async () => {
+    let request: { nodeId: string; versionId: string; locator: string } | null = null
+    const selectSource = <T,>(select: (value: typeof request) => T): T => select(request)
+    const manual = Promise.withResolvers<Response>()
+    const fetchImpl = vi.fn(async (url: string) => url.includes('nodes/a/preview?') ? manual.promise
+      : url.endsWith('/open') ? Response.json({ nodeId: 'b', name: 'Citation B.md', versionId: 'vb', versionNo: 1, locator: 'paragraph:2', quote: 'Citation B source' })
+        : url.includes('nodes/b/preview?') ? Response.json({ name: 'Citation B.md', versionId: 'vb' })
+          : url.includes('/download?') ? new Response('Complete B', { headers: { 'content-type': 'text/plain' } })
+            : Response.json({ items: [{ id: 'a', name: 'Manual A.md', kind: 'FILE', currentVersion: { id: 'va', versionNo: 1, parseStatus: 'READY' } }] }))
+    const props = { useSourceRequest: selectSource, clearSourceRequest: () => {}, t: t as never, origin: '', fetchImpl, onUse: vi.fn() }
+    const view = render(<Panel {...props} />)
+    fireEvent.click(await listing().findByRole('button', { name: 'Manual A.md' }))
+    request = { nodeId: 'b', versionId: 'vb', locator: 'paragraph:2' }
+    view.rerender(<Panel {...props} />)
+    await preview().findByRole('heading', { name: 'Citation B.md' })
+    await act(async () => { manual.resolve(Response.json({ name: 'Manual A.md', versionId: 'va', text: 'Stale A source' })) })
+    expect(preview().queryByRole('heading', { name: 'Manual A.md' })).toBeNull()
+    expect(preview().getByText('Citation B source')).toBeTruthy()
+    expect(preview().queryByText('Stale A source')).toBeNull()
+    expect(fetchImpl.mock.calls.some(([url]) => url.includes('nodes/a/download?'))).toBe(false)
+  })
+
+  it('opens the exact stored paragraph beside the original bytes without replacing the inline pane', async () => {
+    const request = { nodeId: 'n', versionId: 'old-v', locator: 'paragraph:2' }
+    const selectSource = <T,>(select: (value: typeof request | null) => T): T => select(request)
+    const fetchImpl = vi.fn(async (url: string, _init?: RequestInit) => url.endsWith('/open')
+      ? Response.json({ nodeId: 'n', name: 'Server title.md', versionId: 'old-v', versionNo: 1, locator: 'paragraph:2', quote: 'Old second paragraph', highlightNote: 'Stored paragraph' })
+      : url.includes('/preview?') ? Response.json({ nodeId: 'n', name: 'Server title.md', originalName: 'Original.md', versionId: 'old-v' })
+        : url.includes('/download?') ? new Response('# Original full text', { headers: { 'content-type': 'text/markdown' } }) : Response.json({ items: [] }))
+    render(<Panel useSourceRequest={selectSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    await preview().findByRole('heading', { name: 'Server title.md' })
+    expect(preview().getByText('Old second paragraph')).toBeTruthy()
+    expect(preview().getByText(/v1.*paragraph:2/)).toBeTruthy()
+    await preview().findByRole('heading', { name: 'Original full text' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    const init = fetchImpl.mock.calls.find(([url]) => url.endsWith('/open'))?.[1]
+    expect(JSON.parse(String(init?.body))).toEqual(request)
+    expect(fetchImpl).toHaveBeenCalledWith('/ground-library/nodes/n/download?versionId=old-v', expect.objectContaining({ credentials: 'include' }))
+  })
+
+  it('keeps a source refusal when a slower list succeeds and recovers on the next request', async () => {
+    let request = { nodeId: 'n', versionId: 'gone', locator: 'paragraph:1' }
+    const selectSource = <T,>(select: (value: typeof request | null) => T): T => select(request)
+    const list = Promise.withResolvers<Response>()
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => url.endsWith('/open')
+      ? JSON.parse(String(init?.body)).versionId === 'gone'
+        ? Response.json({ message: 'Source is in the recycle bin' }, { status: 409 })
+        : Response.json({ nodeId: 'n', name: 'Restored.md', versionId: 'ready', versionNo: 1, locator: 'paragraph:1', quote: 'Available again' })
+      : url.includes('/preview?') ? Response.json({ name: 'Restored.md', versionId: 'ready' })
+        : url.includes('/download?') ? new Response('Restored body', { headers: { 'content-type': 'text/plain' } })
+          : url.includes('/items?') ? list.promise.then(response => response.clone()) : Response.json({}))
+    const props = { useSourceRequest: selectSource, clearSourceRequest: () => {}, t: t as never, origin: '', fetchImpl, onUse: vi.fn() }
+    const view = render(<Panel {...props} />)
+    await screen.findByText(/Source is in the recycle bin/)
+    await act(async () => { list.resolve(Response.json({ items: [] })) })
+    expect(preview().getByRole('alert').textContent).toContain('Source is in the recycle bin')
+    request = { ...request, versionId: 'ready' }
+    view.rerender(<Panel {...props} />)
+    await preview().findByRole('heading', { name: 'Restored.md' })
+    expect(screen.queryByText(/Source is in the recycle bin/)).toBeNull()
+  })
 })

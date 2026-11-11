@@ -52,6 +52,9 @@
     },
     {
       "path": "../ui-sidebar-documentpreview/tsconfig.client.json"
+    },
+    {
+      "path": "../ui-chat/tsconfig.client.json"
     }
   ]
 }

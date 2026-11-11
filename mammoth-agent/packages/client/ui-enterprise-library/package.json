@@ -61,7 +61,8 @@
     "@mammoth-ai/mmp-client-ui-session": "workspace:*",
     "@mammoth-ai/mmp-api-session-controller": "workspace:*",
     "@mammoth-ai/mmp-session": "workspace:*",
-    "@mammoth-ai/mmp-client-ui-sidebar-documentpreview": "workspace:*"
+    "@mammoth-ai/mmp-client-ui-sidebar-documentpreview": "workspace:*",
+    "@mammoth-ai/mmp-client-ui-chat": "workspace:*"
   },
   "files": [
     "lib/index.js",

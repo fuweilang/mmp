@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { Prisma, type LibraryNode, type LibraryVersion, type LibraryCustody, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { LibraryError, libraryNotFound } from './library.errors';
+import { FILE_PURGE_BLOCKED_REASON, LibraryError, libraryNotFound } from './library.errors';
 import { LibraryService } from './library.service';
 import { PrismaLibraryStore } from './library.prisma-store';
 import { libraryLimitsFromEnv } from './library.limits';
@@ -52,7 +52,7 @@ export class LibraryAdminService {
    const v=byVersion.get(n.currentVersionId??''),read=grants.find(g=>this.covers(user,n,g)),write=tenant.status==='active'?grants.find(g=>g.powers==='CRUD'&&this.covers(user,n,g)):undefined;
    const path:string[]=[];const seen=new Set([n.id]);let parent=byId.get(n.parentId??'');while(parent&&!seen.has(parent.id)&&path.length<32){path.unshift(parent.name);seen.add(parent.id);parent=byId.get(parent.parentId??'');}
    const targetScope=n.scope==='PRIVATE'?'ENTERPRISE':'PRIVATE';const target={...n,scope:targetScope} as LibraryNode;const scopeGrant=grants.find(g=>g.powers==='CRUD'&&this.covers(user,target,g));
-   return {id:n.id,name:n.name,kind:n.kind,scope:n.scope,state:n.state,parentId:n.parentId,parentPath:path,ownerUserId:n.ownerUserId,ownerName:byOwner.get(n.ownerUserId)??null,updatedAt:n.updatedAt.toISOString(),currentVersion:v?brief(v):null,fileType:fileType(n,v),readGrantId:read?.id??null,writeGrantId:write?.id??null,targetScopeGrantId:scopeGrant?.id??null,purgeBlockedReason:n.kind==='FILE'?'无法核实任务活动使用，暂不开放文件彻底删除；可回收并恢复。':null};
+   return {id:n.id,name:n.name,kind:n.kind,scope:n.scope,state:n.state,parentId:n.parentId,parentPath:path,ownerUserId:n.ownerUserId,ownerName:byOwner.get(n.ownerUserId)??null,updatedAt:n.updatedAt.toISOString(),currentVersion:v?brief(v):null,fileType:fileType(n,v),readGrantId:read?.id??null,writeGrantId:write?.id??null,targetScopeGrantId:scopeGrant?.id??null,purgeBlockedReason:n.kind==='FILE'?FILE_PURGE_BLOCKED_REASON:null};
   });return {items:rows,total:filtered.length,page:query.page,pageSize:query.pageSize};
  }
  async detail(user: Platform, tenantId: string, nodeId: string) {
@@ -120,7 +120,7 @@ export class LibraryAdminService {
    else if(input.action==='scope') {if(!input.scope)throw new LibraryError(400,'缺少目标可见范围','BAD_SCOPE');if(input.scope!==node.scope){const targetGrant=await this.lockGrant(tx,user,tenantId,input.targetGrantId??'',true);if(!this.covers(user,{...node,scope:input.scope},targetGrant))throw new LibraryError(403,'需要目标可见范围的管理授权','FORBIDDEN');}await domain.setScope({...actor,targetCustodyId:input.targetGrantId},node.id,input.scope,input.confirmShare,{confirmUnshare:input.confirmUnshare,expectedTreeRevision:input.expectedTreeRevision});}
    else if(input.action==='recycle')await domain.recycle(actor,node.id);
    else if(input.action==='restore'){if(node.parentId){const parent=await tx.libraryNode.findUnique({where:{id:node.parentId}});if((!parent||parent.state==='PURGED')&&input.confirmMissingParent!==true)throw new LibraryError(409,'原目录已不存在，请明确确认恢复到当前企业根目录','CONFIRM_RESTORE');}await domain.restore(actor,node.id);}
-   else if(input.action==='purge'){if(input.confirmPurge!==true)throw new LibraryError(400,'请确认永久删除','CONFIRM_PURGE');if(node.kind==='FILE')throw new LibraryError(409,'无法核实任务活动使用，文件暂不开放彻底删除；可先回收','REFERENCE_UNVERIFIED');await domain.purge(actor,node.id);}
+   else if(input.action==='purge'){if(input.confirmPurge!==true)throw new LibraryError(400,'请确认永久删除','CONFIRM_PURGE');await domain.purge(actor,node.id);}
    else if(input.action==='retry')await domain.retryParse(actor,node.id);
    else if(input.action==='replace'){if(!file)throw new LibraryError(400,'请选择替换文件','NO_FILE');await domain.replaceVersion(actor,node.id,file.originalname,file.mimetype,file.buffer);}
    const current=await tx.libraryNode.findUnique({where:{id:node.id}});return {nodeId:node.id,versionId:current?.currentVersionId??null};
@@ -130,6 +130,6 @@ export class LibraryAdminService {
   this.platform(user);return this.prisma.$transaction(async tx=>{await this.tenant(tx,tenantId);const grant=await this.lockGrant(tx,user,tenantId,grantId);const node=await this.lockNode(tx,tenantId,nodeId);if(!this.covers(user,node,grant))throw libraryNotFound();const domain=new LibraryService(new PrismaLibraryStore(tx));const actor=this.actor(user,tenantId,grant.id);const result=await (download?domain.download(actor,nodeId,versionId,inline):domain.preview(actor,nodeId,versionId));await this.lockGrant(tx,user,tenantId,grantId);return result;},{timeout:60000});
  }
  async impact(user:Platform,tenantId:string,nodeId:string) {
-  this.platform(user);const node=await this.prisma.libraryNode.findFirst({where:{id:nodeId,tenantId}});if(!node)throw libraryNotFound();const [versions,children]=await Promise.all([this.prisma.libraryVersion.aggregate({where:{nodeId,tenantId},_count:true,_sum:{sizeBytes:true}}),this.prisma.libraryNode.count({where:{tenantId,parentId:nodeId,state:{in:['ACTIVE','RECYCLED']}}})]);return {nodeId,versionCount:versions._count,bytes:versions._sum.sizeBytes??0,children,referenceStatus:'UNVERIFIED',activeUseStatus:'UNVERIFIED',canPurge:node.state==='RECYCLED'&&node.kind!=='FILE'&&children===0,blockedReason:node.kind==='FILE'?'无法核实任务活动使用，暂不开放文件彻底删除':children?'目录非空，请先处理子项':node.state!=='RECYCLED'?'请先移入回收站':null};
+  this.platform(user);const node=await this.prisma.libraryNode.findFirst({where:{id:nodeId,tenantId}});if(!node)throw libraryNotFound();const [versions,children]=await Promise.all([this.prisma.libraryVersion.aggregate({where:{nodeId,tenantId},_count:true,_sum:{sizeBytes:true}}),this.prisma.libraryNode.count({where:{tenantId,parentId:nodeId,state:{in:['ACTIVE','RECYCLED']}}})]);return {nodeId,versionCount:versions._count,bytes:versions._sum.sizeBytes??0,children,referenceStatus:'UNVERIFIED',activeUseStatus:'UNVERIFIED',canPurge:node.state==='RECYCLED'&&node.kind!=='FILE'&&children===0,blockedReason:node.kind==='FILE'?FILE_PURGE_BLOCKED_REASON:children?'目录非空，请先处理子项':node.state!=='RECYCLED'?'请先移入回收站':null};
  }
 }

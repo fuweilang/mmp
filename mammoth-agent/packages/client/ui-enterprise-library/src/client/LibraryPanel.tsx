@@ -4,7 +4,7 @@ import type { LibraryKey } from './locales.ts'
 import type { HostObservable, InjectFace, PropsLocale, PropsRuntime, PropsRenderFactories } from '@mammoth-ai/mmp-client-ui-slots'
 import type {} from '@mammoth-ai/mmp-client-ui-layout/client'
 import type {} from '@mammoth-ai/mmp-client-ui-sidebar-documentpreview/client'
-import { fetchLibraryItems, fetchLibraryPage, fetchLibraryScopeImpact, fetchLibraryPreviewBytes, LibraryRequestError, libraryRequest, type LibraryFetch, type LibraryView } from './api.ts'
+import { fetchLibraryItems, fetchLibrarySource, fetchLibraryPage, fetchLibraryScopeImpact, fetchLibraryPreviewBytes, LibraryRequestError, libraryRequest, type LibraryFetch, type LibraryView } from './api.ts'
 import { choiceBlock, type LibraryChoice } from './selection.ts'
 import { RowActions } from './LibraryRowActions.tsx'
 import { LibraryTree } from './LibraryTree.tsx'
@@ -13,7 +13,7 @@ import { LibraryUploadDialog } from './LibraryUploadDialog.tsx'
 import { useLibrarySidebarResize } from './useLibrarySidebarResize.ts'
 import css from './LibraryPanel.module.css'
 
-export type LibrarySourceRequest = { nodeId: string; versionId: string }
+export type LibrarySourceRequest = { nodeId: string; versionId: string; locator?: string }
 
 export type LibraryPanelInjected = {
   readonly hooks: { sourceRequest: HostObservable<LibrarySourceRequest | null>; navigationWidth: HostObservable<number | null> }
@@ -28,7 +28,7 @@ export type LibraryPanelProps = PropsRuntime<'main'> & PropsLocale<'enterpriseLi
 const VIEWS: readonly LibraryView[] = ['recent', 'mine', 'shared', 'trash']
 type SaveTarget = { parentId: string | null; scope: 'PRIVATE' | 'ENTERPRISE'; name: string }
 type Edit = { kind: 'folder' | 'link' | 'rename' | 'move'; item?: LibraryChoice; target?: SaveTarget }
-type Source = { originalName?: string; parseStatus?: string; bytes?: Uint8Array<ArrayBuffer>; mimeType?: string; missingFonts?: readonly string[]; item?: LibraryChoice; nodeId?: string; previewKind?: string; mediaUrl?: string; name?: string; text?: string | null; linkUrl?: string | null; parseReason?: string | null; highlightNote?: string | null; locator?: string | null; versionNo?: number | null; versionId?: string; truncated?: boolean; truncationNote?: string | null; chunks?: readonly { locator: string; text: string }[] }
+type Source = { citationQuote?: string | null; originalName?: string; parseStatus?: string; bytes?: Uint8Array<ArrayBuffer>; mimeType?: string; missingFonts?: readonly string[]; item?: LibraryChoice; nodeId?: string; previewKind?: string; mediaUrl?: string; name?: string; text?: string | null; linkUrl?: string | null; parseReason?: string | null; highlightNote?: string | null; locator?: string | null; versionNo?: number | null; versionId?: string; truncated?: boolean; truncationNote?: string | null; chunks?: readonly { locator: string; text: string }[] }
 
 const ACCEPT = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.md,.markdown,.txt,.csv,.html,.htm,.zip,.png,.jpg,.jpeg,.gif,.webp,.avif,.mp4,.webm,.mov'
 const VIEW_ICONS = { recent: IconClockOutlineRegular, mine: IconFolderCloseRegular, shared: IconShareOutlineRegular, trash: IconTrashOutlineRegular }
@@ -61,6 +61,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const [blocked, setBlocked] = useState<string | null>(null)
+  const [configReady, setConfigReady] = useState(false)
   const [tenants, setTenants] = useState<readonly { id: string; name: string }[]>([])
   const [switching, setSwitching] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -121,7 +122,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [moveFolders, setMoveFolders] = useState<readonly LibraryChoice[]>([])
   const [movePath, setMovePath] = useState<readonly { id: string; name: string; scope?: string | undefined }[]>([])
   const parentId = path.at(-1)?.id ?? null
-  const refresh = () => { setRevision(n => n + 1) }
+  const refresh = () => { setConfigReady(false); setRevision(n => n + 1) }
   /** Platform admins have no default enterprise; let them enter one in place. */
   const loadTenants = async () => {
     try {
@@ -152,29 +153,31 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
 
   useEffect(() => {
     let current = true
+    setConfigReady(false)
     void libraryRequest(origin, 'config', 'GET', undefined, fetchImpl).then(value => {
-      const config = value as { maxFileBytes?: number; allowedExtensions?: string[]; enabled?: boolean; message?: string }
+      const config = value as { maxFileBytes?: number; allowedExtensions?: string[]; enabled?: boolean; reason?: string; message?: string }
       if (!current) return
+      setError('')
       if (config.enabled === false) {
         closePreview()
-        setBlocked(config.message ?? t('loadError'))
+        setBlocked(config.reason === 'NO_TENANT' ? t('enterpriseRequired') : config.message ?? t('loadError'))
         void loadTenants()
         return
       }
       setBlocked(null)
       if (typeof config.maxFileBytes === 'number' && Array.isArray(config.allowedExtensions)) setLimits({ maxFileBytes: config.maxFileBytes, allowedExtensions: config.allowedExtensions })
+      setConfigReady(true)
     }).catch(e => {
-      // Older Ground builds answer 403 NO_TENANT instead of a disabled config.
-      if (current && e instanceof Error && /缺少企业上下文|NO_TENANT/.test(e.message)) {
-        closePreview()
-        setBlocked('资料库属于企业能力：请先在控制台进入企业工作台，再打开资料库')
-        void loadTenants()
-      }
+      if (!current) return
+      closePreview(); setVersions(undefined); setError('')
+      if (e instanceof LibraryRequestError && e.code === 'NO_TENANT') {
+        setBlocked(t('enterpriseRequired')); void loadTenants()
+      } else setBlocked(t(e instanceof LibraryRequestError && e.status === 401 ? 'signInRequired' : e instanceof LibraryRequestError && e.status === 403 ? 'accessDenied' : 'loadError'))
     })
     return () => { current = false }
   }, [origin, fetchImpl, revision])
   useEffect(() => {
-    if (blocked !== null) { setLoading(false); setItems([]); return }
+    if (!configReady || blocked !== null) { setLoading(false); setItems([]); setTotal(0); return }
     const control = new AbortController()
     setLoading(true); setItems([])
     void fetchLibraryPage(origin, view, query, fetchImpl, control.signal, parentId, page, filter).then(next => {
@@ -187,7 +190,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       setError(`${t('loadError')} ${e instanceof Error ? e.message : ''}`)
     } }).finally(() => { if (!control.signal.aborted) setLoading(false) })
     return () => { control.abort() }
-  }, [blocked, origin, view, query, fetchImpl, t, revision, parentId, page, filter])
+  }, [configReady, blocked, origin, view, query, fetchImpl, t, revision, parentId, page, filter])
   useEffect(() => {
     if (edit?.kind !== 'move') return
     const control = new AbortController()
@@ -206,15 +209,20 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     setPreviewError('')
     setPreviewLoading(true)
     const transport: LibraryFetch = (url, init) => fetchImpl(url, { ...init, signal: control.signal })
-    void libraryRequest(origin, `nodes/${encodeURIComponent(requested.nodeId)}/preview?versionId=${encodeURIComponent(requested.versionId)}`, 'GET', undefined, transport).then(async value => {
-      const opened = value as Source
+    void (async () => {
+      const citation = requested.locator === undefined ? undefined
+        : await fetchLibrarySource(origin, requested.nodeId, requested.versionId, fetchImpl, control.signal, 'preview', requested.locator)
       if (control.signal.aborted || generation !== previewGeneration.current) return
-      if (opened.versionId !== requested.versionId || !opened.name) throw new Error(t('operationFailed'))
+      const opened = await libraryRequest(origin, `nodes/${encodeURIComponent(requested.nodeId)}/preview?versionId=${encodeURIComponent(requested.versionId)}`, 'GET', undefined, transport) as Source
+      if (control.signal.aborted || generation !== previewGeneration.current) return
+      if (opened.versionId !== requested.versionId || !opened.name || (opened.nodeId && opened.nodeId !== requested.nodeId)) throw new Error(t('operationFailed'))
       const contents = await fetchLibraryPreviewBytes(origin, requested.nodeId, requested.versionId, opened.originalName ?? opened.name, fetchImpl, control.signal)
       if (!control.signal.aborted && generation === previewGeneration.current) {
-        setSource({ ...opened, ...contents, nodeId: requested.nodeId, name: opened.name, versionId: requested.versionId })
+        setSource({ ...opened, ...contents, ...(citation ? { name: citation.name, versionNo: citation.versionNo,
+          locator: citation.locator, citationQuote: citation.quote, highlightNote: citation.highlightNote,
+          truncated: citation.truncated, truncationNote: citation.truncationNote } : {}), nodeId: requested.nodeId, versionId: requested.versionId })
       }
-    }).catch(error => {
+    })().catch(error => {
       if (!control.signal.aborted && generation === previewGeneration.current) {
         setPreviewError(error instanceof Error ? error.message : t('operationFailed'))
       }
@@ -298,6 +306,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
         const impact = await fetchLibraryScopeImpact(origin, item.nodeId, scope, fetchImpl)
         if (window.confirm(t(scope === 'ENTERPRISE' ? 'confirmShareTree' : 'confirmUnshareTree').replace('{count}', String(impact.total)))) await mutate(`nodes/${id}/scope`, 'POST', { scope, confirmShare: scope === 'ENTERPRISE', confirmUnshare: scope === 'PRIVATE', expectedTreeRevision: impact.treeRevision })
       } else if (action === 'purge') {
+        if (item.purgeBlockedReason || item.kind === 'FILE') throw new Error(item.purgeBlockedReason || t('filePurgeBlocked'))
         if (window.confirm(t('confirmPurge'))) await mutate(`nodes/${id}`, 'DELETE')
       } else if (action === 'retry') await mutate(`nodes/${id}/retry-parse`, 'POST')
       else if (action === 'restore' || action === 'recycle') await mutate(`nodes/${id}/${action}`, 'POST')
@@ -345,6 +354,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
         <RowActions item={item} view={view} busy={busy} t={t} onAction={rowAction} />
       </span>
       {item.parseReason && <small className={css.flatReason}>{item.parseReason}</small>}
+      {view === 'trash' && (item.purgeBlockedReason || item.kind === 'FILE') && <small className={css.flatReason}>{item.purgeBlockedReason || t('filePurgeBlocked')}</small>}
     </div>)}
     {total > 20 && <nav className={css.pagination} aria-label={t('browse')}>
       <Button size="sm" disabled={loading || page <= 1} onClick={() => { setPage(n => n - 1) }}>{t('previousPage')}</Button>
@@ -377,17 +387,17 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
                 aria-controls={treeView ? `enterprise-library-${treeView}-tree` : undefined} onClick={() => { chooseView(id) }}>
                 <span>{t(id)}</span>{treeView && <span className={css.rootChevron} data-expanded={expandedRoots[treeView]}><IconChevronDownOutlineRegular size={12} /></span>}
               </Button>
-              {treeView && <LibraryCreateMenu name={t(treeView)} disabled={busy || blocked !== null} t={t}
+              {treeView && <LibraryCreateMenu name={t(treeView)} disabled={busy || !configReady || blocked !== null} t={t}
                 onCreate={action => { beginCreate(action, treeView, [], { parentId: null, scope: treeView === 'shared' ? 'ENTERPRISE' : 'PRIVATE', name: t(treeView) }) }} />}
             </div>
-            {treeView && mountedRoots[treeView] && blocked === null && <div id={`enterprise-library-${treeView}-tree`} className={css.treeRoot}
+            {treeView && mountedRoots[treeView] && configReady && blocked === null && <div id={`enterprise-library-${treeView}-tree`} className={css.treeRoot}
               hidden={!expandedRoots[treeView] || (view === treeView && (query !== '' || filter !== 'all'))}>
               <LibraryTree key={revision} view={treeView} t={t} origin={origin} fetchImpl={fetchImpl} path={[]}
                 selectedId={view === treeView ? source?.nodeId ?? parentId ?? undefined : undefined}
                 onFolder={(next, item) => { chooseFolder(treeView, next, item) }} onFile={item => { if (view !== treeView) { setView(treeView); setPath([]); setQuery('') } void openSource(item) }}
                 onCreate={(action, next, item) => { beginCreate(action, treeView, next, { parentId: item.nodeId, scope: item.scope === 'ENTERPRISE' ? 'ENTERPRISE' : 'PRIVATE', name: item.name }) }} onAction={(action, item) => { if (view !== treeView) { closePreview(); setView(treeView); setPath([]); setQuery('') } rowAction(action, item) }} onDenied={closePreview} busy={busy} />
             </div>}
-            {view === id && id !== 'recent' && (id === 'trash' || query !== '' || filter !== 'all') && flatList}
+            {configReady && blocked === null && view === id && id !== 'recent' && (id === 'trash' || query !== '' || filter !== 'all') && flatList}
           </div>
         })}
       </nav>
@@ -414,13 +424,19 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       {previewError && <div role="alert" className={css.previewStatus}><p>{previewError}</p>
         {!source && <Button variant="outline" onClick={() => { closePreview(); clearSourceRequest() }}>{t('close')}</Button>}
       </div>}
+      {source?.citationQuote !== undefined && <section className={`${css.previewNote} ${css.citationExcerpt}`}>
+        <p>{t('version')} · {source.versionNo ? `v${source.versionNo}` : source.versionId}{source.locator ? ` · ${source.locator}` : ''}</p>
+        {source.citationQuote && <pre className={css.sourceText}>{source.citationQuote}</pre>}
+        {source.truncated && <p>{source.truncationNote ?? t('truncatedExcerpt')}</p>}
+        {source.highlightNote && <p>{source.highlightNote}</p>}
+      </section>}
       {source?.bytes && <div className={css.previewBody} key={`${source.nodeId}:${source.versionId}`}>
         {renderFactorySlot('document.preview.bytes', { name: source.originalName ?? source.name ?? '', bytes: source.bytes, mimeType: source.mimeType ?? 'application/octet-stream', ...(source.missingFonts ? { missingFonts: source.missingFonts } : {}) })}
       </div>}
       {source?.linkUrl && <div className={css.previewStatus}><IconLinkOutlineRegular size={32} /><p>{source.linkUrl}</p><a href={source.linkUrl} target="_blank" rel="noopener noreferrer">{t('openLink')}</a></div>}
       {source?.parseReason && <p className={css.previewNote}>{source.parseReason}</p>}
-      {view === 'recent' && !source && !previewLoading && !previewError && <section className={css.recentFiles} aria-label={t('recent')}><h2>{t('recent')}</h2>{flatList}</section>}
-      {view !== 'recent' && !source && !previewLoading && !previewError && <div className={css.previewEmpty}>
+      {configReady && blocked === null && view === 'recent' && !source && !previewLoading && !previewError && <section className={css.recentFiles} aria-label={t('recent')}><h2>{t('recent')}</h2>{flatList}</section>}
+      {configReady && blocked === null && view !== 'recent' && !source && !previewLoading && !previewError && <div className={css.previewEmpty}>
         <IconFolderCloseRegular size={40} /><h2>{t('selectPreview')}</h2><p>{t('selectPreviewHint')}</p>
       </div>}
     </main>

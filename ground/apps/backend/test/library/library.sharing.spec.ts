@@ -201,19 +201,16 @@ describe('library sharing inheritance', () => {
     assert.equal((await store.getNode(child.id))?.scope, 'ENTERPRISE');
   });
 
-  it('does not resurrect purged metadata after physical deletion if the audit write fails', async () => {
+  it('retains file metadata and original bytes while permanent deletion is blocked', async () => {
     const { service, owner, store, file } = setup();
     const item = await file();
     await service.recycle(owner, item.id);
-    const audit = store.audit.bind(store);
-    store.audit = async row => {
-      if (row.action === 'library_purge') throw new Error('audit unavailable');
-      return audit(row);
-    };
-    await assert.rejects(service.purge(owner, item.id), /audit unavailable/);
-    assert.equal(store.blobs.size, 0);
-    assert.equal((await store.getNode(item.id))?.state, 'PURGED');
-    await assert.rejects(service.restore(owner, item.id));
+    const blobs = store.blobs.size;
+    await assert.rejects(service.purge(owner, item.id), { status: 409, code: 'REFERENCE_UNVERIFIED' });
+    assert.equal(store.blobs.size, blobs);
+    assert.equal((await store.getNode(item.id))?.state, 'RECYCLED');
+    await service.restore(owner, item.id);
+    assert.equal((await store.getNode(item.id))?.state, 'ACTIVE');
   });
 
   it('removes replacement blobs when the enclosing transaction fails after writing the version', async () => {

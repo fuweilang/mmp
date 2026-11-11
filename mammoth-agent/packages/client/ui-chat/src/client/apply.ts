@@ -291,6 +291,7 @@ export function apply(ctx: Context): void {
             await Promise.resolve()
           },
           resolveFilePath: sessionFilePath(ctx, sessionId),
+          resolveApplicationLink: href => ctx.bail(binding.ctx, 'chat/resolve-application-link', sessionId, href),
           openExternalLink: (url) => {
             if (linkOpening.getSnapshot() === 'sidebar' && ctx.get('sidebarRightTabs')?.get('browser') !== undefined) {
               ctx.sidebarRight.openTab('browser', { params: { url } })

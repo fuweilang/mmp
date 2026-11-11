@@ -615,12 +615,24 @@ function MarkdownAnchor({ href, glyph, children }: {
 
 /** Local destinations use the scoped file delegate after settlement. */
 function renderAnchor(url: string, children: ReactNode[], key: Key, glyph = true, streaming = false): ReactNode {
+  return <MarkdownDestination key={key} url={url} glyph={glyph} streaming={streaming}>{children}</MarkdownDestination>
+}
+
+function MarkdownDestination({ url, glyph, streaming, children }: {
+  url: string; glyph: boolean; streaming: boolean; children: ReactNode[]
+}): ReactNode {
+  const { resolveApplicationLink } = useMarkdownDelegate()
+  const activate = resolveApplicationLink?.(url)
+  if (activate !== undefined) {
+    if (streaming) return <>{children}</>
+    return <button type="button" className={clsx(css.fileMention, css.fileLink)} onClick={activate}>{children}</button>
+  }
   const file = parseFileLink(url)
   if (file !== undefined) {
-    if (streaming) return <Fragment key={key}>{children}</Fragment>
-    return <MarkdownFileLink key={key} file={file} glyph={glyph}>{children}</MarkdownFileLink>
+    if (streaming) return <>{children}</>
+    return <MarkdownFileLink file={file} glyph={glyph}>{children}</MarkdownFileLink>
   }
-  return renderSafeLink(normalizeUri(url), children, key, glyph)
+  return renderSafeLink(normalizeUri(url), children, 'link', glyph)
 }
 
 function MarkdownFileLink({ file, glyph, children }: {

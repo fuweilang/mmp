@@ -552,3 +552,22 @@ describe('Chat inject API', () => {
 })
 
 const fileDrag = { prepare: vi.fn(async () => ({ start: () => true, release: () => {} })), reportFailure: vi.fn() }
+
+it('resolves application links in the owning Session and leaves activation to the message click', async () => {
+  const b = await bench()
+  try {
+    let resolvedSession: SessionId | undefined
+    const activate = vi.fn()
+    b.runtime.ctx.on('chat/resolve-application-link', (sessionId, href) => {
+      resolvedSession = sessionId
+      return href === '/feature/source?version=1' ? activate : undefined
+    })
+    const { injected } = b.chatViewApi(b.rootReference)
+    const action = injected.resolveApplicationLink?.('/feature/source?version=1')
+    expect(resolvedSession).toBe(b.rootReference.sessionId)
+    expect(activate).not.toHaveBeenCalled()
+    expect(action).toBeTypeOf('function'); action?.()
+    expect(activate).toHaveBeenCalledOnce()
+    expect(injected.resolveApplicationLink?.('https://example.test/ordinary')).toBeUndefined()
+  } finally { await b.runtime.dispose() }
+})

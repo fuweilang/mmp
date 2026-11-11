@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { fetchLibraryItems, fetchLibrarySource, LibraryRequestError, libraryItemsUrl, readLibraryItems } from '../src/client/api.ts'
 import {
   addLibraryChip, choiceBlock, libraryRef, librarySourceText, parseLibraryRef, stageLocalFile,
@@ -108,4 +108,31 @@ describe('library selection', () => {
     expect(attachLibraryReference(undefined, ready)).toEqual({ sent: false, attached: false })
     expect(attachLibraryReference(input, { ...ready, parseStatus: 'FAILED', parseReason: '失败' }).attached).toBe(false)
   })
+})
+
+it('preserves a server purge refusal on library rows without changing attachment readiness', () => {
+  const rows = readLibraryItems({ items: [{ id: 'protected', name: 'protected.md', kind: 'FILE', canManage: true,
+    purgeBlockedReason: 'File purge is temporarily unavailable',
+    currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'READY' } }] })
+  expect(rows[0]?.purgeBlockedReason).toBe('File purge is temporarily unavailable')
+  expect(choiceBlock(rows[0]!).disabled).toBe(false)
+})
+
+it('serializes a clickable source link whose fixed version and locator survive persistence', () => {
+  const text = librarySourceText({ nodeId: 'node-1', name: 'A [title].md', versionId: 'ver-1', locator: 'paragraph:2', quote: 'stored evidence' })
+  expect(text).toContain('[LIB-ver-1](/ground-library/nodes/node-1/source?versionId=ver-1&locator=paragraph%3A2)')
+  expect(text).toContain('stored evidence')
+  expect(text).not.toContain('[A [title].md]')
+})
+
+it('reopens the exact requested locator and returns server version metadata', async () => {
+  const fetchImpl = vi.fn(async (_url: string, _init?: RequestInit) => Response.json({ nodeId: 'n', name: 'Server title', versionId: 'v', versionNo: 3, locator: 'paragraph:2', quote: 'second paragraph', preciseHighlight: false, highlightNote: 'Stored paragraph' }))
+  const opened = await fetchLibrarySource('', 'n', 'v', fetchImpl, undefined, 'preview', 'paragraph:2')
+  const init = fetchImpl.mock.calls[0]?.[1] as RequestInit
+  expect(JSON.parse(String(init.body))).toEqual({ nodeId: 'n', versionId: 'v', locator: 'paragraph:2' })
+  expect(opened).toMatchObject({ nodeId: 'n', versionNo: 3, name: 'Server title', locator: 'paragraph:2', quote: 'second paragraph', highlightNote: 'Stored paragraph' })
+})
+
+it('refuses a response for a different node even when the version label matches', async () => {
+  await expect(fetchLibrarySource('', 'n', 'v', async () => Response.json({nodeId:'other',name:'Other.md',versionId:'v',locator:'page:1',quote:'wrong source'}))).rejects.toThrow('different version')
 })

@@ -5,7 +5,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { LibraryError } from './library.errors';
 import { resolveUnderRoot } from './library.files';
-import type { LibraryStore, NewFileCommit, ReplacementCommit, TenantBrief } from './library.store';
+import type { LibraryStore, NewFileCommit, ParseCommit, ReplacementCommit, TenantBrief } from './library.store';
 import type {
   AuditRecord,
   ChunkRecord,
@@ -132,6 +132,31 @@ export class PrismaLibraryStore implements LibraryStore {
     if (quota === undefined) return;
     const aggregate = await tx.libraryVersion.aggregate({ where: { tenantId: version.tenantId, node: { state: { not: 'PURGED' } } }, _sum: { sizeBytes: true } });
     if ((aggregate._sum.sizeBytes ?? 0) + version.sizeBytes > quota) throw new LibraryError(409, '企业资料容量不足', 'QUOTA');
+  }
+
+  async commitParseResult(input: ParseCommit): Promise<'committed' | 'unchanged'> {
+    return this.transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM library_node WHERE id=${input.nodeId} AND tenant_id=${input.tenantId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM library_version WHERE id=${input.versionId} AND tenant_id=${input.tenantId} FOR UPDATE`;
+      const node = await tx.libraryNode.findUnique({ where: { id: input.nodeId } });
+      const version = await tx.libraryVersion.findUnique({ where: { id: input.versionId } });
+      if (!node || node.tenantId !== input.tenantId || node.state !== 'ACTIVE'
+        || node.currentVersionId !== input.versionId || !version
+        || version.nodeId !== node.id || version.tenantId !== input.tenantId) {
+        throw new LibraryError(409, '资料已更新，请刷新后重试', 'VERSION_CONFLICT');
+      }
+      if (version.parseStatus === 'READY' || version.parseStatus === 'DOWNLOAD_ONLY') return 'unchanged';
+      await tx.libraryVersion.update({ where: { id: version.id }, data: {
+        parseStatus: input.parseStatus, parseReason: input.parseReason, extractTruncated: input.extractTruncated,
+      } });
+      await tx.libraryChunk.deleteMany({ where: { versionId: version.id, tenantId: input.tenantId } });
+      if (input.chunks.length) await tx.libraryChunk.createMany({ data: input.chunks.map(chunkData) });
+      await tx.auditLog.create({ data: {
+        id: input.audit.id, tenantId: input.audit.tenantId, userId: input.audit.userId,
+        action: input.audit.action, meta: input.audit.meta, createdAt: new Date(input.audit.createdAt),
+      } });
+      return 'committed';
+    });
   }
 
   async updateVersion(id: string, patch: Partial<VersionRecord>): Promise<void> {

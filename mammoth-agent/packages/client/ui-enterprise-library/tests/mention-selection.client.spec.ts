@@ -9,6 +9,7 @@ function fixture() {
   const shell = new SessionInputShell({ actx: {} as Context, defaultSink: vi.fn(),
     commandAttachments: { serialize: async () => [], release: () => {}, unsupportedNotice: token => token } })
   apply({
+    on: () => () => {},
     locale: { register: () => () => {}, bind: () => (key: string) => key },
     slots: { inject: () => () => {} }, effect: (fn: () => unknown) => fn(), inject: () => {},
     sessions: { binding: () => ({ ctx: {} }) }, conversation: { input: { for: () => shell } },

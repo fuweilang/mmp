@@ -29,6 +29,7 @@ function harness(current?: string) {
     return binding
   }
   const ctx = {
+    on: vi.fn((_event: string, _handler: (sessionId: string, href: string) => (() => void) | undefined) => () => {}),
     locale: { register: () => () => {}, bind: () => (key: string) => key },
     slots: {
       inject: (_key: string, fn: () => unknown) => { fn(); return () => {} },
@@ -58,7 +59,7 @@ function harness(current?: string) {
     },
     uiSession: { adapter: { current: { getSnapshot: () => ({ props: { sessionId: active } }) } } },
     uiWorkspace: { workspaceForNewSession: () => 'workspace', openSession: open },
-    layout: { selectPanel: () => {} },
+    layout: { selectPanel: vi.fn() },
   }
   vi.stubGlobal('fetch', vi.fn(async () => Response.json({})))
   apply(ctx as never)
@@ -130,6 +131,21 @@ it('keeps the dialog request and draft after an atomic replacement is refused', 
   h.replace.mockReturnValue(false)
   await expect(h.overlay().onConfirm([item])).rejects.toThrow('attachFailed')
   expect(h.overlay().hooks.pickerRequest.getSnapshot()).not.toBeNull()
+  expect(h.append).not.toHaveBeenCalled()
+  expect(h.send).not.toHaveBeenCalled()
+})
+
+it('resolves only valid application citation links and opens the library on activation', () => {
+  const h = harness('existing')
+  vi.stubGlobal('document', { baseURI: 'https://mmp.test/' })
+  const resolve = h.ctx.on.mock.calls.find(([event]) => event === 'chat/resolve-application-link')?.[1]
+  expect(resolve).toBeDefined()
+  expect(resolve?.('existing', 'https://other.test/ground-library/nodes/n/source?versionId=v&locator=paragraph:1')).toBeUndefined()
+  const activate = resolve?.('existing', '/ground-library/nodes/n/source?versionId=v&locator=paragraph:1')
+  expect(activate).toBeTypeOf('function')
+  expect(h.ctx.layout.selectPanel).not.toHaveBeenCalled()
+  activate?.()
+  expect(h.ctx.layout.selectPanel).toHaveBeenCalledWith('library')
   expect(h.append).not.toHaveBeenCalled()
   expect(h.send).not.toHaveBeenCalled()
 })

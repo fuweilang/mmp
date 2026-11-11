@@ -1,3 +1,5 @@
+export const FILE_PURGE_BLOCKED_REASON = '文件暂不支持彻底删除，可回收或恢复';
+
 export class LibraryError extends Error {
   constructor(
     readonly status: number,

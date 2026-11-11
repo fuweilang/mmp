@@ -305,6 +305,8 @@ export interface WebScaffold {
 
 /** Options for {@link launchWebScaffold}. */
 export interface LaunchOptions {
+  /** Ground's normally issued login cookie, when an overlay enables Ground Web SSO. */
+  groundSessionCookie?: string
   /** Override the developer-tools preference; omitted uses the shipped default. */
   developerTools?: boolean
   /** Enable the real Open In rows with deterministic launch-environment facts. */
@@ -919,12 +921,25 @@ export async function launchWebScaffold(options: LaunchOptions = {}): Promise<We
     // listeners bind loopback, including the optional prefix proxy.
     const loginUrl = new URL(authenticatedUrl)
     loginUrl.hostname = '127.0.0.1'
-    const login = await fetch(loginUrl, { redirect: 'manual' })
+    const login = await fetch(options.groundSessionCookie === undefined ? loginUrl : new URL('/', loginUrl), {
+      redirect: 'manual',
+      ...(options.groundSessionCookie === undefined ? {} : { headers: { cookie: options.groundSessionCookie } }),
+    })
     const setCookie = login.headers.get('set-cookie')
-    if (login.status !== 303 || login.headers.get('location') !== './' || setCookie === null) {
+    if (options.groundSessionCookie !== undefined) {
+      if (login.status !== 303 || login.headers.get('location') !== './' || setCookie === null) {
+        throw new Error(`web e2e scaffold: Ground session refused (${login.status})`)
+      }
+      cookieHeader = `${options.groundSessionCookie}; ${setCookie.split(';', 1)[0] ?? ''}`
+      const admitted = await fetch(new URL('/', loginUrl), { headers: { cookie: cookieHeader }, redirect: 'manual' })
+      if (admitted.status !== 200) throw new Error(`web e2e scaffold: Ground session index refused (${admitted.status})`)
+      await admitted.body?.cancel()
+      authenticatedUrl = baseUrl
+    } else if (login.status !== 303 || login.headers.get('location') !== './' || setCookie === null) {
       throw new Error('web e2e scaffold: browser token exchange did not return its session cookie')
+    } else {
+      cookieHeader = setCookie.split(';', 1)[0] ?? ''
     }
-    cookieHeader = setCookie.split(';', 1)[0] ?? ''
     if (cookieHeader.length === 0) {
       throw new Error('web e2e scaffold: browser token exchange returned an empty session cookie')
     }

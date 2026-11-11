@@ -1,6 +1,8 @@
 /** Real Auth/JwtGuard/LibraryController/Postgres tests, isolated on 55439; no .env, user session, or model key. */
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
+const { readFile } = require('node:fs/promises');
+const { join } = require('node:path');
 const { withLibraryHttpFixture } = require('./library.http-fixture.cjs');
 const hiddenTitle = '仅所有者的中文验收资料.md';
 const secretText = '海鸥项目保留期为7天。';
@@ -11,7 +13,7 @@ const deny = response => {
 };
 
 test('real HTTP authorization, immutable versions, recycle, file failures', { timeout: 45000 }, async t => {
-  await withLibraryHttpFixture(async ({ request, upload, prisma, users, tenants }) => {
+  await withLibraryHttpFixture(async ({ request, upload, prisma, users, tenants, directory }) => {
     const created = await upload('owner', hiddenTitle, secretText);
     assert.equal(created.status, 201);
     assert.equal(created.body.failed.length, 0);
@@ -97,6 +99,37 @@ test('real HTTP authorization, immutable versions, recycle, file failures', { ti
       const preview = await request('owner', `nodes/${b.id}/preview`); assert.ok(preview.body.parseReason);
       const rejected = await upload('owner', '禁止.exe', 'binary'); assert.equal(rejected.body.items.length, 0); assert.equal(rejected.body.failed.length, 1);
     });
+    await t.test('protected file deletion changes no bytes or metadata; mixed batches only purge empty metadata', async () => {
+      const file = (await upload('owner', 'protected.md', 'protected v1')).body.items[0];
+      await upload('owner', 'protected.md', 'protected v2', file.id);
+      await request('owner', `nodes/${file.id}/scope`, 'POST', { scope: 'ENTERPRISE', confirmShare: true });
+      await request('owner', `nodes/${file.id}/recycle`, 'POST');
+      const before = await prisma.libraryNode.findUnique({ where: { id: file.id } });
+      const versions = await prisma.libraryVersion.findMany({ where: { nodeId: file.id }, orderBy: { versionNo: 'asc' } });
+      const chunks = await prisma.libraryChunk.findMany({ where: { versionId: { in: versions.map(v => v.id) } }, orderBy: { id: 'asc' } });
+      const originals = await Promise.all(versions.map(v => readFile(join(directory, v.storageKey))));
+      const auditCount = await prisma.auditLog.count({ where: { action: 'library_purge', meta: { path: ['nodeId'], equals: file.id } } });
+      for (const who of ['owner', 'tenantAdmin']) {
+        const refused = await request(who, `nodes/${file.id}`, 'DELETE');
+        assert.equal(refused.status, 409); assert.equal(refused.body.code, 'REFERENCE_UNVERIFIED');
+      }
+      assert.deepEqual(await prisma.libraryNode.findUnique({ where: { id: file.id } }), before);
+      assert.deepEqual(await prisma.libraryVersion.findMany({ where: { nodeId: file.id }, orderBy: { versionNo: 'asc' } }), versions);
+      assert.deepEqual(await prisma.libraryChunk.findMany({ where: { versionId: { in: versions.map(v => v.id) } }, orderBy: { id: 'asc' } }), chunks);
+      assert.deepEqual(await Promise.all(versions.map(v => readFile(join(directory, v.storageKey)))), originals);
+      assert.equal(await prisma.auditLog.count({ where: { action: 'library_purge', meta: { path: ['nodeId'], equals: file.id } } }), auditCount);
+      const trash = await request('owner', 'items?view=trash');
+      assert.ok(trash.body.items.find(row => row.id === file.id).purgeBlockedReason);
+      const folder = (await request('owner', 'folders', 'POST', { name: 'purge empty folder' })).body;
+      const link = (await request('owner', 'links', 'POST', { name: 'purge link', url: 'https://example.test/purge' })).body;
+      for (const row of [folder, link]) await request('owner', `nodes/${row.id}/recycle`, 'POST');
+      const batch = await request('owner', 'batch', 'POST', { ids: [file.id, folder.id, link.id], action: 'purge' });
+      assert.deepEqual(batch.body.ok, [folder.id, link.id]);
+      assert.deepEqual(batch.body.failed.map(row => row.id), [file.id]);
+      await request('owner', `nodes/${file.id}/restore`, 'POST');
+      const source = await request('owner', 'open', 'POST', { nodeId: file.id, versionId: versions[0].id });
+      assert.equal(source.body.quote, 'protected v1');
+    });
     await t.test('recycle/purge reject old citations; restore keeps the same version lineage', async () => {
       assert.equal((await request('owner', `nodes/${id}/recycle`, 'POST')).status, 201);
       deny(await request('owner', 'open', 'POST', { nodeId: id, versionId: v1 }));
@@ -104,7 +137,8 @@ test('real HTTP authorization, immutable versions, recycle, file failures', { ti
       assert.equal((await request('owner', 'open', 'POST', { nodeId: id, versionId: v1 })).body.quote, secretText);
       assert.equal((await request('owner', `nodes/${id}`, 'DELETE')).status, 400);
       assert.equal((await request('owner', `nodes/${id}/recycle`, 'POST')).status, 201);
-      assert.equal((await request('owner', `nodes/${id}`, 'DELETE')).status, 200);
+      const refused = await request('owner', `nodes/${id}`, 'DELETE');
+      assert.equal(refused.status, 409); assert.equal(refused.body.code, 'REFERENCE_UNVERIFIED');
       deny(await request('owner', 'open', 'POST', { nodeId: id, versionId: v1 }));
       assert.ok(!(await request('owner', 'items?view=recent')).bytes.toString().includes(hiddenTitle));
     });
