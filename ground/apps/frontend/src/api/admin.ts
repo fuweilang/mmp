@@ -1132,6 +1132,11 @@ export type OfficialSkillRow = {
   packageRevision: number;
   contentSource?: 'zip' | 'form' | 'none';
   resourceCount: number;
+  fileCount?: number;
+  scriptCount?: number;
+  referenceCount?: number;
+  assetCount?: number;
+  totalBytes?: number;
   instructionBytes: number;
   linkedAgents: Array<{ id: string; key: string; name: string }>;
   linkedAgentCount: number;
@@ -1159,6 +1164,11 @@ export type OfficialSkillZipPreview = {
   category: OfficialSkillCategory | null;
   categories?: OfficialSkillCategory[];
   resourceCount: number;
+  fileCount?: number;
+  scriptCount?: number;
+  referenceCount?: number;
+  assetCount?: number;
+  totalBytes?: number;
   instructionBytes: number;
   keyConflict: boolean;
   existingId: string | null;

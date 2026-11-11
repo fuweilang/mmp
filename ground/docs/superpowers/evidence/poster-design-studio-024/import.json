@@ -1,0 +1,159 @@
+{
+  "archiveSha256": "ff9931d0cbfab691301a3ee0a3f0168fbc7c486c8ce297bcad83b58c2f7911a8",
+  "archiveBytes": 91935,
+  "preview": {
+    "key": "poster-design-studio",
+    "name": "poster-design-studio",
+    "summary": "将一段活动描述、一张产品照片或品牌参考图，转化为抓人眼球的活动海报、宣传 banner 或社交媒体配图。这款 AI海报设计与制作工具生成图片丰富的海报，在海报排版上搭配清晰视觉层级、按品类匹配的风格和预留文字区域，覆盖活动、音乐节、电影、产品发布和促销场景。你可以把它当作 AI宣",
+    "category": null,
+    "categories": [],
+    "resourceCount": 21,
+    "fileCount": 22,
+    "scriptCount": 4,
+    "referenceCount": 14,
+    "assetCount": 0,
+    "totalBytes": 280076,
+    "instructionBytes": 10127,
+    "keyDerived": true,
+    "license": null,
+    "source": null
+  },
+  "files": [
+    {
+      "path": "SKILL.md",
+      "bytes": 10127,
+      "sha256": "8858e107d97d4968cf453488deae57ab1805ac1b03af11226e1fdedecbc178ec",
+      "executable": false
+    },
+    {
+      "path": "_meta.json",
+      "bytes": 113,
+      "sha256": "ae9823728974fa01d5de410746eed564151c001b43a470f6fe4bfa5102945bea",
+      "executable": false
+    },
+    {
+      "path": "install-source.json",
+      "bytes": 41,
+      "sha256": "0725028ba2f0aef894ec9dddfcc9444b562149d1da2336559f5a6a793be9ee6f",
+      "executable": false
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 5659,
+      "sha256": "a1aaff8a8464effde7b10b6de2e5b84b7276550af792b578f4428923b7152342",
+      "executable": false
+    },
+    {
+      "path": "references/animate-a-delivered-image.md",
+      "bytes": 5166,
+      "sha256": "0b07c88b94b9da33dbea84a85a90cc653d1ce73f20af09eff40023bcd58c1694",
+      "executable": false
+    },
+    {
+      "path": "references/billing-errors-and-recovery.md",
+      "bytes": 4900,
+      "sha256": "754a969e0b8f95e950f19f9239ab6f91e59283bb3d057f925e85965eac3446bd",
+      "executable": false
+    },
+    {
+      "path": "references/installation-and-auth.md",
+      "bytes": 8752,
+      "sha256": "78b6aaed5ee44dfebcfb1faaec8954df13940fa0b7190b6990cea179743881ac",
+      "executable": false
+    },
+    {
+      "path": "references/installation-registration.md",
+      "bytes": 2087,
+      "sha256": "88ecc348ea807aabc1eedee3a5c88553a3739d15af5fe0813b8b474a2587ede9",
+      "executable": false
+    },
+    {
+      "path": "references/mcp-connection.md",
+      "bytes": 3348,
+      "sha256": "0318005fb74782c017ecdb92573a2082a0c921899a6cb5374faf4c693274722b",
+      "executable": false
+    },
+    {
+      "path": "references/next-step-offers.md",
+      "bytes": 2989,
+      "sha256": "3f83e06572850c2a306118b2c18bd33b46f299dfe749adb69b9ff3824f4c5290",
+      "executable": false
+    },
+    {
+      "path": "references/next-step.md",
+      "bytes": 1512,
+      "sha256": "e66bac371b1c95ae53786a18a356c28456bdbf0f643bed38a994a8e06667be5c",
+      "executable": false
+    },
+    {
+      "path": "references/poster-craft.md",
+      "bytes": 5838,
+      "sha256": "0d87fb7be029cb5ce1ab5af1e4e958d91b7449a00cae8e0f89829ca48b0359be",
+      "executable": false
+    },
+    {
+      "path": "references/poster-routing.md",
+      "bytes": 6341,
+      "sha256": "12547c1858ef41183453eecf161428e082b4bfb5d728c8194a0f5d4724b2385e",
+      "executable": false
+    },
+    {
+      "path": "references/review-and-recovery.md",
+      "bytes": 3829,
+      "sha256": "2b3467d8c465ef8fb38973effe6271757c86cd32b3b771c61ccb03c3804d3355",
+      "executable": false
+    },
+    {
+      "path": "references/tasks-and-results.md",
+      "bytes": 2254,
+      "sha256": "128abcbab5f3634745c0bc336dcf76da1101eaaf959a1ad21d8e1cf6ac1f658d",
+      "executable": false
+    },
+    {
+      "path": "references/uninstall-and-disconnect.md",
+      "bytes": 2739,
+      "sha256": "f169f10a1bad698fc5926a686858ca1d1bec23139929b22caf3f223793e75901",
+      "executable": false
+    },
+    {
+      "path": "references/updates-and-security.md",
+      "bytes": 12313,
+      "sha256": "d6da5e0e4115930e35d5f0bc996c70782068be324aac383757a5af0288e85b83",
+      "executable": false
+    },
+    {
+      "path": "references/workflow.md",
+      "bytes": 6058,
+      "sha256": "8901d2554d49a0581136684437848a657a4a4c3c793eed2e319a0c24026b7c9f",
+      "executable": false
+    },
+    {
+      "path": "scripts/authorize.py",
+      "bytes": 62044,
+      "sha256": "364dac20faa72c23abbb970941dcdb4f63a1d0f558ba05c94e3eca940c828974",
+      "executable": false
+    },
+    {
+      "path": "scripts/auto_update.py",
+      "bytes": 30170,
+      "sha256": "d24b2138c1825a23f93c4bb2abd9d904a29d9fe13a556ec2939b4e98f0554606",
+      "executable": false
+    },
+    {
+      "path": "scripts/mcp_client.py",
+      "bytes": 90892,
+      "sha256": "01e12d6970ba2afadda152a7cfbafc1e7c6c4cbf56484067b61be933f300a01e",
+      "executable": false
+    },
+    {
+      "path": "scripts/uninstall.py",
+      "bytes": 12904,
+      "sha256": "6ea495042141d6b1d23d66e4987b33b50bf5974fdc4b6020f8ee2469339e3415",
+      "executable": false
+    }
+  ],
+  "packageDigest": "8a8621d24b308bd53ddd728de645e5d87fccb4f1e5f7d2cbd9fa5440c90f0a02",
+  "resourceCountVerified": 22,
+  "originalArchivePreserved": true,
+  "packageScriptsExecutedDuringImport": false
+}

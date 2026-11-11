@@ -1,0 +1,31 @@
+{
+  "newCases": 70,
+  "newPassed": 67,
+  "newFailed": 3,
+  "withRelevantRegression": {
+    "total": 117,
+    "passed": 114,
+    "failed": 3
+  },
+  "findings": [
+    {
+      "id": "SKILL-ADV-01",
+      "kind": "ZIP CRC integrity",
+      "fixed": false
+    },
+    {
+      "id": "SKILL-ADV-02",
+      "kind": "overlong path component accepted before persistence",
+      "fixed": false
+    },
+    {
+      "id": "SKILL-ADV-03",
+      "kind": "rejected directory promise reused after repair",
+      "fixed": false
+    }
+  ],
+  "hostTypes": "passed",
+  "clientTypes": "five unchanged baseline errors",
+  "productCodeChangedThisTurn": false,
+  "deployed": false
+}

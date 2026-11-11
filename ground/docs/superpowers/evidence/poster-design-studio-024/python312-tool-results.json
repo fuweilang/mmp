@@ -1,0 +1,85 @@
+{
+  "archiveSha256": "ff9931d0cbfab691301a3ee0a3f0168fbc7c486c8ce297bcad83b58c2f7911a8",
+  "archiveBytes": 91935,
+  "packageDigest": "8a8621d24b308bd53ddd728de645e5d87fccb4f1e5f7d2cbd9fa5440c90f0a02",
+  "filesVerified": 22,
+  "originalFilesUnchanged": true,
+  "model": "scripted mock",
+  "GroundHTTP": "fixture using actual import payload and bytes",
+  "execution": "real Loader/fs/bash and unmodified bundled Python helpers",
+  "BeatraRemoteCalled": false,
+  "paidGeneration": false,
+  "pythonCommand": "/Users/luoxiaojun/.local/share/uv/python/cpython-3.12-macos-aarch64-none/bin/python3",
+  "results": [
+    {
+      "callId": "uploaded-guide",
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "<path>/private/var/folders/29/d5zz2rw15yj74xrbjph4p6740000gn/T/mmp-gallery-business-zCxvSP/.mmp/runtime/skill-packages/owner-Uk8Xid/load-6jAbxH/references/poster-routing.md</path>\n<type>file</type>\n<content>\n1: # Poster routing\n2: \n3: ## Start from the creator's actual starting point\n4: \n5: A poster request arrives in one of three shapes. Identify which one before\n6: choosing a tool.\n7: \n8: | Starting point | What is enough to start | Route |\n9: | --- | --- | --- |\n10: | Topic or campaign description only, no source photo | A topic description and one style direction | `beatra.images.generate` |\n11: | One photo + style or topic | The source image plus one target look | `beatra.images.transform` |\n12: | One photo + multiple style references | Ordered references (source first, style/color after) | `beatra.images.transform` |\n13: | Accepted draft + specific fix | The accepted poster plus the requested change | `beatra.images.edit` |\n14: \n15: A topic-only brief with no explicit style preference is enough to propose a\n16: category-appropriate look and include it in the single paid-call confirmation.\n17: \n18: ## Extract the poster brief\n19: \n20: Collect what is already known and fill gaps only when they materially change\n21: the result.\n22: \n23: - **Poster type.** What the poster is for—event poster, promotional banner,\n24:   music or concert poster, movie poster, product launch, sale or flyer, or\n25:   social media graphic. The type determines the composition template and\n26:   reading order.\n27: - **Headline message.** The event name, film title, sale offer, or campaign\n28:   line that sits at the top of the visual hierarchy.\n29: - **Focal subject.** The single element that anchors the poster—the performer,\n30:   the product, the hero scene, the film still, or the key visual. A strong\n31:   poster works with one clear focal point, not a busy collage.\n32: - **Style direction.** Clean and futuristic (tech), warm and appetizing (food),\n33:   editorial and bold (fashion), vibrant and energetic (music), professional and\n34:   clean (corporate), or friendly and approachable (education).\n35: - **Canvas and destination.** A-series print (A3, A4), social media (1:1 square,\n36:   9:16 story, 16:9 banner), or standard poster (2:3, 3:4). The destination\n37:   decides the ratio and resolution tier.\n38: - **Text-safe zone.** Where the user plans to place the headline and details—top\n39:   band, center, or lower third. The image composition must preserve clean,\n40:   uncluttered space in that zone.\n41: - **Visual references.** Brand color reference, style inspiration, or a\n42:   composition reference—ordered with the source photo first when one exists.\n43: \n44: ## Poster type matrix\n45: \n46: Each poster type has a dominant layout pattern. When the user names a type but\n47: no style, infer the look and composition from the type.\n48: \n49: - **Event poster** — bold headline at the top, single hero visual below, date\n50:   and venue details in a clean lower band. Strong color, energetic mood, one\n51:   focal performer or scene.\n52: - **Promotional banner** — product or offer as hero, value line prominent,\n53:   horizontal-friendly composition, call-to-action space. High contrast, brand\n54:   colors, clean negative space.\n55: - **Music or concert poster** — vibrant and energetic, stage or performer as\n56:   focal anchor, bold typographic mood, glow and stage-light atmosphere. 2:3 or\n57:   3:4 vertical canvas.\n58: - **Movie poster** — cinematic, dramatic lighting, title-treatment space at the\n59:   bottom or center billing block, strong focal still or character composite.\n60:   2:3 vertical canvas with deep contrast.\n61: - **Product launch** — clean futuristic or premium look, product centered as\n62:   hero, brand color integration, space for features and logo. Tech leans clean\n63:   and futuristic; lifestyle leans editorial.\n64: - **Sale or flyer** — warm and appetizing or high-energy, offer and discount as\n65:   hero text area, product photo supporting, bold price callout zone. Print A4\n66:   or square social.\n67: - **Social media graphic** — platform-native ratio (1:1 square, 9:16 story, 16:9\n68:   banner), single focal subject, large text-safe zone, high contrast readiness.\n69: \n70: These are starting points, not constraints. Override with the user's stated\n71: preference whenever available.\n72: \n73: ## Category style language\n74: \n75: Posters reward a style matched to the subject category. When the user names a\n76: category but not a style, infer from the category:\n77: \n78: - **Tech** — clean, futuristic, dark or bright gradient backgrounds, neon or\n79:   electric accents, geometric shapes, generous negative space.\n80: - **Food** — warm and appetizing tones, natural light, shallow depth of field,\n81:   steam and freshness cues, the dish as hero.\n82: - **Fashion** — editorial and bold, strong typography, high-contrast or\n83:   monochrome palette, full-frame subject.\n84: - **Music** — vibrant and energetic, saturated color, glow, motion blur, stage\n85:   atmosphere, dynamic type.\n86: - **Corporate** — professional and clean, restrained palette, structured grid,\n87:   generous white space, brand color integration.\n88: - **Education** — friendly and approachable, rounded shapes, soft palette,\n89:   clear icon metaphors, room for explanatory text.\n90: \n91: ## Canvas defaults that avoid unnecessary questions\n92: \n93: - Topic-led event, music, movie, or product launch poster: vertical `2:3` or\n94:   `3:4` at `2K` tier. This is the recommended standard poster proportion.\n95: - Print flyer or handout: A-series (`A3` or `A4`) at `2K` tier.\n96: - Social media graphic: `1:1` square, `9:16` story, or `16:9` banner depending\n97:   on the named platform placement.\n98: - Horizontal promotional banner: `16:9` at `2K` tier.\n99: - Count: 1 (a poster requires precision, not variation).\n100: - Model: `auto`.\n101: \n102: ## Text-safe zone\n103: \n104: A poster carries headline text, dates, prices, and call-to-action lines. The\n105: generated poster must preserve space for that text overlay:\n106: \n107: - **Top band** — the most common placement for the headline and event name.\n108:   Keep the upper area clean and high-contrast.\n109: - **Center** — for bold statement posters and movie title treatments. Keep the\n110:   center area relatively free of busy detail.\n111: - **Lower third** — common for dates, venue, price, and billing block. Keep the\n112:   lower band structured and uncluttered.\n113: \n114: State the text-safe zone in the prompt: \"reserve a clean text-safe band across\n115: the top third of the frame for the headline and date overlay.\"\n116: \n117: ## Visual access\n118: \n119: Local files enter the workflow through `beatra.assets.upload`. Upload makes the\n120: bytes available to the remote tool; it does not itself inspect the image.\n121: Review only visual facts the host can actually see. When the host cannot view an\n122: image, state that visual verification was not possible and proceed on the\n123: user's declared intent.\n\n(End of file - total 123 lines)\n</content>"
+        }
+      ]
+    },
+    {
+      "callId": "uploaded-client-help",
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "usage: mcp_client.py [-h]\n                     {verify,tools,call,upload,update,network,install-source}\n                     ...\n\nCall Beatra through Streamable HTTP\n\npositional arguments:\n  {verify,tools,call,upload,update,network,install-source}\n    verify              Run the non-billable connection check\n    tools               List available Beatra tools\n    call                Call one tool with a JSON object on stdin\n    upload              Upload one local regular file and print its artifact\n                        reference\n    update              Check, install, or configure Beatra package self-\n                        updates\n    network             Show or choose the Beatra network this computer uses\n    install-source      Record where this Skill was installed from, when the\n                        conversation shows it\n\noptions:\n  -h, --help            show this help message and exit\n"
+        }
+      ]
+    },
+    {
+      "callId": "uploaded-update-help",
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "usage: mcp_client.py update [-h] [--check] [--auto {on,off}]\n\noptions:\n  -h, --help       show this help message and exit\n  --check          Check the official discovery document without changing\n                   files\n  --auto {on,off}  Enable or disable automatic silent updates for this\n                   installation\n"
+        }
+      ]
+    },
+    {
+      "callId": "uploaded-auth-help",
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "usage: authorize.py [-h] [--platform PLATFORM] [--force]\n                    [--wait-seconds WAIT_SECONDS] [--approval-link {ai,auto}]\n\nAuthorize the Poster Design Studio Skill\n\noptions:\n  -h, --help            show this help message and exit\n  --platform PLATFORM   Name of the agent environment running this install\n                        (for example claude-code, codex, workbuddy). Detected\n                        from the environment when omitted.\n  --force               Start a new Beatra Device Authorization even when a\n                        credential exists.\n  --wait-seconds WAIT_SECONDS\n                        Return within about this many seconds while the\n                        approval is still pending (30-900); running the same\n                        command again continues the same approval.\n  --approval-link {ai,auto}\n                        Show approval links on Beatra's international site\n                        (ai), for sign-in methods such as Google, or follow\n                        this computer's network again (auto).\n"
+        }
+      ]
+    },
+    {
+      "callId": "uploaded-uninstall-help",
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "usage: uninstall.py [-h] [--dry-run]\n\nUninstall the Poster Design Studio Skill from this device\n\noptions:\n  -h, --help  show this help message and exit\n  --dry-run   Report the decision without revoking or changing any file.\n"
+        }
+      ]
+    },
+    {
+      "callId": "uploaded-python-parse",
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "SCRIPTS_PARSED 4\nPYTHON_VERSION 3.12.14\n"
+        }
+      ]
+    },
+    {
+      "callId": "uploaded-missing-auth",
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "EXPECTED_AUTH_REQUIRED\nBeatra credentials are missing. Reconnect with `python3 scripts/authorize.py` and follow its output until it prints \"Beatra is ready\".\n"
+        }
+      ]
+    }
+  ]
+}

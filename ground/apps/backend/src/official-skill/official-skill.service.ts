@@ -1,3 +1,4 @@
+import { completeSkillManifest, isSkillPackagePath, skillPackageStats } from './skill-package-format';
 import { normalizeDiscoveryDetail, publicDiscoveryDetail } from '../official-agent/discovery-detail';
 import { catalogQuery, catalogFacets, catalogDiscoveryWhere, discoveryOf, displaySummary, DESCRIPTIONS, nextCatalogCursor, type CatalogQuery } from '../official-agent/catalog-discovery';
 import { uploadedCatalogIconUrl } from '../official-agent/gallery-avatars';
@@ -485,7 +486,7 @@ export class OfficialSkillService {
     });
   }
 
-  async publicContent(id: string, revision?: number) {
+  async publicContent(id: string, revision?: number, packageFormat?: number) {
     const row = await this.prisma.officialSkill.findUnique({
       where: { id },
       include: { currentPackage: true, packages: true },
@@ -513,6 +514,14 @@ export class OfficialSkillService {
       description?: string;
       key?: string;
     };
+    const complete = completeSkillManifest(pkg.manifest);
+    if (complete) {
+      if (packageFormat !== 2) throw skillPackageError('SKILL_CLIENT_UPGRADE_REQUIRED', '此技能包含完整包内容，请更新客户端后使用', 409);
+      return {
+        id: row.id, key: row.key, name: row.name, summary: row.summary,
+        packageRevision: pkg.revision, instruction, ...complete,
+      };
+    }
     return {
       id: row.id,
       key: row.key,
@@ -538,21 +547,17 @@ export class OfficialSkillService {
       pinnedRevision: revision,
     });
     if (!decision.ok) throw skillPackageError(decision.code, decision.message, 403);
-    const safe = String(resourcePath || '')
-      .replace(/\\/g, '/')
-      .replace(/^\/+/, '');
-    if (!safe.startsWith('references/') || safe.includes('..')) {
-      throw skillPackageError('SKILL_RESOURCE_NOT_FOUND', '资源不存在', 404);
-    }
+    const safe = String(resourcePath || '');
+    if (!isSkillPackagePath(safe)) throw skillPackageError('SKILL_RESOURCE_NOT_FOUND', '资源不存在', 404);
     const targetRevision = revision ?? row.currentRevision;
     const pkg = row.packages.find((item) => item.revision === targetRevision);
     if (!pkg) {
       throw skillPackageError('SKILL_REVISION_UNAVAILABLE', '技能包版本不可用', 404);
     }
     const manifest = pkg.manifest as { references?: Array<{ path: string }> };
-    const allowed = new Set(
-      Array.isArray(manifest.references) ? manifest.references.map((item) => item.path) : [],
-    );
+    const complete = completeSkillManifest(pkg.manifest);
+    const allowed = new Set(complete ? complete.files.map(file => file.path) :
+      (Array.isArray(manifest.references) ? manifest.references.map(item => item.path).filter(path => path.startsWith('references/')) : []));
     if (!allowed.has(safe)) {
       throw skillPackageError('SKILL_RESOURCE_NOT_FOUND', '资源不存在', 404);
     }
@@ -831,7 +836,9 @@ export class OfficialSkillService {
       where: { id: row.currentPackage.id },
       data: { manifest: next as Prisma.InputJsonValue },
     });
-    // Also rewrite skill.json on disk best-effort.
+    // Complete package files retain their uploaded bytes; display metadata is database-owned.
+    if (prev.packageFormat === 2) return;
+    // Legacy packages have a platform-generated skill.json.
     try {
       const abs = join(absoluteUploadPath(row.currentPackage.storagePath), 'skill.json');
       const { writeFile } = await import('fs/promises');
@@ -945,6 +952,8 @@ export class OfficialSkillService {
       packageRevision: row.currentRevision,
       contentSource: !row.currentPackage ? 'none' : row.currentPackage.sourceZipPath ? 'zip' : 'form',
       resourceCount: row.currentPackage?.resourceCount ?? 0,
+      ...(row.currentPackage?.manifest && completeSkillManifest(row.currentPackage.manifest)?.files
+        ? skillPackageStats(completeSkillManifest(row.currentPackage.manifest)!.files) : {}),
       instructionBytes: row.currentPackage?.instructionBytes ?? 0,
       discoveryDetail: publicDiscoveryDetail(row.discoveryDetail),
       linkedAgents: row.agentLinks.map((link) => ({

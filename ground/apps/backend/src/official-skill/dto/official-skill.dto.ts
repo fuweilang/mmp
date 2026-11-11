@@ -19,6 +19,11 @@ export class ListOfficialSkillsQueryDto {
 export class OfficialSkillContentQueryDto {
   @IsOptional()
   @Type(() => Number)
+  @IsIn([2])
+  packageFormat?: number;
+
+  @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   revision?: number;

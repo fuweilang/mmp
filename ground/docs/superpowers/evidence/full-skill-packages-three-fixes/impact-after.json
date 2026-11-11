@@ -1,0 +1,12 @@
+{
+  "filesystem": "darwin",
+  "longName": {
+    "previewRejected": true,
+    "componentCharacters": 256,
+    "message": "技能包包含不安全路径：assets/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "crc": {
+    "rejected": true,
+    "message": "技能包文件 CRC 校验失败：assets/value.txt"
+  }
+}

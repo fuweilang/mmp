@@ -59,11 +59,13 @@ export class OfficialSkillController {
     @Query() query: OfficialSkillContentQueryDto,
   ) {
     void user;
-    return this.skills.publicContent(id, query.revision);
+    return this.skills.publicContent(id, query.revision, query.packageFormat);
   }
 
   @Get(':id/resources')
   @Header('Cache-Control', 'private, no-store')
+  @Header('Content-Type', 'application/octet-stream')
+  @Header('X-Content-Type-Options', 'nosniff')
   async resource(
     @CurrentUser() user: User,
     @Param('id') id: string,
@@ -73,7 +75,7 @@ export class OfficialSkillController {
     const info = await this.skills.publicResource(id, query.path, query.revision);
     const encoded = encodeURIComponent(info.path.split('/').pop() || 'resource');
     return new StreamableFile(info.stream, {
-      disposition: `inline; filename="${encoded}"; filename*=UTF-8''${encoded}`,
+      disposition: `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`,
     });
   }
 

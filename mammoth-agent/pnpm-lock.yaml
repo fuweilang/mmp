@@ -14170,6 +14170,9 @@ importers:
       '@mammoth-ai/mmp-typert-registry':
         specifier: workspace:*
         version: link:../../typert/registry
+      '@mammoth-ai/mmp-working-directory':
+        specifier: workspace:*
+        version: link:../../session/working-directory
       '@mammoth-ai/mmp-workspace':
         specifier: workspace:*
         version: link:../../workspace/workspace

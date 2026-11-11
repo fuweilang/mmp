@@ -14,7 +14,7 @@ pnpm monorepo：`apps/backend`（Nest）、`apps/frontend`（Vue）、`packages/
 
 ## 前置
 
-- Node.js >= 22（`.nvmrc` 为 `22`）
+- Node.js >= 22.2.0（`.nvmrc` 为 `22`）
 - pnpm `10.32.1`（`packageManager`）
 - Docker / Colima：Postgres 见 `infra/docker-compose.yml`，宿主机 **5433**
 - 无 `apps/backend/.env` 时：`cp apps/backend/.env.example apps/backend/.env`

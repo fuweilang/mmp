@@ -1,0 +1,20 @@
+{
+  "archiveSha256": "ff9931d0cbfab691301a3ee0a3f0168fbc7c486c8ce297bcad83b58c2f7911a8",
+  "packageDigest": "8a8621d24b308bd53ddd728de645e5d87fccb4f1e5f7d2cbd9fa5440c90f0a02",
+  "filesVerified": 22,
+  "originalFilesUnchanged": true,
+  "skillToolInvoked": true,
+  "skillToolName": "poster-design-studio",
+  "generationAttempt": {
+    "operation": "beatra.images.generate",
+    "status": "blocked_missing_credentials",
+    "remoteRequests": 0,
+    "error": "Beatra credentials are missing. Reconnect with `python3 scripts/authorize.py` and follow its output until it prints \"Beatra is ready\"."
+  },
+  "pythonCommand": "/Users/luoxiaojun/.local/share/uv/python/cpython-3.12-macos-aarch64-none/bin/python3",
+  "BeatraRemoteCalled": false,
+  "paidGeneration": false,
+  "model": "scripted mock",
+  "GroundHTTP": "fixture using actual import payload and bytes",
+  "execution": "real Loader/fs/bash and unmodified bundled Python helpers"
+}

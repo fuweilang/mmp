@@ -1,3 +1,4 @@
+import { completeSkillFields } from './skill-package-format.ts'
 import type { CatalogQuery } from './types.ts'
 import { z } from 'zod'
 
@@ -58,15 +59,46 @@ const skillSessionBindingSchema = z.object({
   }).strict(),
 }).strict()
 
-const skillContentSchema = z.object({
-  id: z.string().min(1),
-  key: z.string().min(1),
-  name: z.string().min(1),
-  summary: z.string(),
-  packageRevision: z.number().int().nonnegative(),
-  instruction: z.string(),
-  references: z.array(z.object({ path: z.string().min(1) }).strict()),
-}).strict()
+const skillContentIdentity = {
+  id: z.string().min(1), key: z.string().min(1), name: z.string().min(1), summary: z.string(),
+  packageRevision: z.number().int().nonnegative(), instruction: z.string(),
+}
+const skillContentSchema = z.union([
+  z.object({ ...skillContentIdentity, references: z.array(z.object({ path: z.string().min(1) }).strict()) }).strict(),
+  z.object({ ...skillContentIdentity, ...completeSkillFields }).strict(),
+])
+
+async function boundedBody(response: Response, maxBytes: number, signal?: AbortSignal): Promise<Uint8Array> {
+  signal?.throwIfAborted()
+  if (Number(response.headers.get('content-length')) > maxBytes) {
+    await response.body?.cancel()
+    throw new Error('Ground skill response byte limit exceeded')
+  }
+  if (!response.body) return new Uint8Array()
+  const reader = response.body.getReader(), chunks: Uint8Array[] = []
+  let bytes = 0
+  const abort = () => { void reader.cancel(signal?.reason).catch(() => {}) }
+  signal?.addEventListener('abort', abort, { once: true })
+  try {
+    for (;;) {
+      signal?.throwIfAborted()
+      const chunk = await reader.read()
+      signal?.throwIfAborted()
+      if (chunk.done) break
+      bytes += chunk.value.byteLength
+      if (bytes > maxBytes) throw new Error('Ground skill response byte limit exceeded')
+      chunks.push(chunk.value)
+    }
+    const result = new Uint8Array(bytes)
+    let offset = 0
+    for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.byteLength }
+    return result
+  } finally {
+    signal?.removeEventListener('abort', abort)
+    reader.releaseLock()
+    await response.body.cancel().catch(() => {})
+  }
+}
 
 const cardSchema = z.object({
   id: z.string().min(1),
@@ -376,7 +408,7 @@ export class GroundOfficialAgentClient {
   }
 
   /**
-   * Load one frozen skill instruction body (+ reference guide) on demand.
+   * Negotiate a frozen complete package or read a legacy instruction/reference payload.
    * Pass an explicit revision so disabled skills remain readable for existing Sessions.
    */
   async fetchSkillContent(
@@ -384,21 +416,24 @@ export class GroundOfficialAgentClient {
     revision: number,
     signal?: AbortSignal,
   ): Promise<GroundOfficialSkillContent> {
-    const path = `/api/official-skills/${encodeURIComponent(skillId)}/content?revision=${encodeURIComponent(String(revision))}`
+    const path = `/api/official-skills/${encodeURIComponent(skillId)}/content?revision=${encodeURIComponent(String(revision))}&packageFormat=2`
     return this.request(path, skillContentSchema, {
       ...signal === undefined ? {} : { signal },
-    })
+    // 500 paths × 512 UTF-16 units × 3 UTF-8 bytes, 100KiB instruction
+    // × 6 JSON escape bytes, plus bounded identity/display fields fit within 2MiB.
+    }, 2 * 1024 * 1024)
   }
 
   /**
    * Load one declared skill package resource at a frozen revision.
-   * Path must already be Ground-validated (`references/...`); Host does not trust model paths blindly.
+   * Ground checks the exact revision's file index; Host enforces the supplied byte bound while reading.
    */
   async fetchSkillResource(
     skillId: string,
     revision: number,
     resourcePath: string,
     signal?: AbortSignal,
+    maxBytes = 1048576,
   ): Promise<Uint8Array> {
     const url = new URL(`/api/official-skills/${encodeURIComponent(skillId)}/resources`, this.origin)
     url.searchParams.set('path', resourcePath)
@@ -415,13 +450,14 @@ export class GroundOfficialAgentClient {
       if (response.status === 401) throw new Error('猛犸登录已失效，请重新登录。')
       throw new Error(`Ground official skill resource failed with HTTP ${response.status}`)
     }
-    return new Uint8Array(await response.arrayBuffer())
+    return boundedBody(response, maxBytes, signal)
   }
 
   private async request<Schema extends z.ZodType>(
     path: string,
     schema: Schema,
     init: RequestInit,
+    maxBytes?: number,
   ): Promise<z.infer<Schema>> {
     const response = await this.fetcher(new URL(path, this.origin), {
       ...init,
@@ -432,7 +468,7 @@ export class GroundOfficialAgentClient {
       },
     })
     if (!response.ok) {
-      const text = await response.text().catch(() => '')
+      const text = await boundedBody(response, 8192, init.signal ?? undefined).then(bytes => new TextDecoder().decode(bytes)).catch(() => '')
       if (response.status === 401) throw new Error('猛犸登录已失效，请重新登录。')
       let code = ''
       let message = ''
@@ -446,6 +482,7 @@ export class GroundOfficialAgentClient {
       if (code === 'OFFICIAL_SKILL_DELETED') throw new Error(message || '技能已删除，请重新选择')
       throw new Error(message || `Ground official Expert request failed with HTTP ${response.status}`)
     }
-    return schema.parse(await response.json()) as z.infer<Schema>
+    const value: unknown = maxBytes === undefined ? await response.json() : JSON.parse(new TextDecoder().decode(await boundedBody(response, maxBytes, init.signal ?? undefined)))
+    return schema.parse(value) as z.infer<Schema>
   }
 }
