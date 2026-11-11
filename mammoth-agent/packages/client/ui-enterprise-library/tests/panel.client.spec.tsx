@@ -660,6 +660,46 @@ describe('file purge protection', () => {
 
 
 describe('inline citation navigation', () => {
+
+  it('retains the exact citation excerpt and historical download when Office conversion fails', async () => {
+    const request = { nodeId: 'n', versionId: 'old-v', locator: 'paragraph:2' }
+    const selectSource = <T,>(select: (value: typeof request | null) => T): T => select(request)
+    const fetchImpl = vi.fn(async (url: string) => url.endsWith('/open')
+      ? Response.json({ nodeId: 'n', name: 'Historical.docx', versionId: 'old-v', versionNo: 1, locator: 'paragraph:2', quote: 'Stored historical paragraph' })
+      : url.includes('/preview?') ? Response.json({ nodeId: 'n', name: 'Historical.docx', originalName: 'Original.docx', versionId: 'old-v' })
+        : url.includes('/render?') ? Response.json({ message: 'Office conversion unavailable' }, { status: 503 })
+          : Response.json({ items: [] }))
+    render(<Panel useSourceRequest={selectSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    await preview().findByText(/Office conversion unavailable/)
+    expect(preview().getByRole('heading', { name: 'Historical.docx' })).toBeTruthy()
+    expect(preview().getByText('Stored historical paragraph')).toBeTruthy()
+    expect(preview().getByText(/v1.*paragraph:2/)).toBeTruthy()
+    const clicked: string[] = []
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { clicked.push(this.href) })
+    try {
+      fireEvent.click(preview().getByRole('button', { name: zh.download }))
+      expect(new URL(clicked[0]!).pathname).toBe('/ground-library/nodes/n/download')
+      expect(new URL(clicked[0]!).searchParams.get('versionId')).toBe('old-v')
+    } finally { click.mockRestore() }
+  })
+
+  it.each([401, 403, 404, 409, 410])('clears an authorized citation if the subsequent original read is refused (%s)', async status => {
+    const request = { nodeId: 'n', versionId: 'old-v', locator: 'paragraph:2' }
+    const selectSource = <T,>(select: (value: typeof request | null) => T): T => select(request)
+    const original = Promise.withResolvers<Response>()
+    const fetchImpl = vi.fn(async (url: string) => url.endsWith('/open')
+      ? Response.json({ nodeId: 'n', name: 'Historical.docx', versionId: 'old-v', versionNo: 1, locator: 'paragraph:2', quote: 'Stored historical paragraph' })
+      : url.includes('/preview?') ? Response.json({ nodeId: 'n', name: 'Historical.docx', originalName: 'Original.docx', versionId: 'old-v' })
+        : url.includes('/render?') ? original.promise : Response.json({ items: [] }))
+    render(<Panel useSourceRequest={selectSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    await preview().findByText('Stored historical paragraph')
+    await act(async () => { original.resolve(Response.json({ message: 'Original read refused' }, { status })) })
+    await preview().findByText(/Original read refused/)
+    expect(preview().queryByRole('heading', { name: 'Historical.docx' })).toBeNull()
+    expect(preview().queryByText('Stored historical paragraph')).toBeNull()
+    expect(preview().queryByRole('button', { name: zh.download })).toBeNull()
+  })
+
   it('does not let an earlier manual preview replace a later citation preview', async () => {
     let request: { nodeId: string; versionId: string; locator: string } | null = null
     const selectSource = <T,>(select: (value: typeof request) => T): T => select(request)

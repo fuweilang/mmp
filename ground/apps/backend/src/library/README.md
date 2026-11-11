@@ -12,6 +12,8 @@ New file writes commit node, version and chunks in that order in one database tr
 
 Recycling blocks new source access. Restore preserves IDs, versions and scope. File purge is blocked with `409 / REFERENCE_UNVERIFIED`; empty folders and links retain explicit cleanup. The configured retention period is informational until an independently authorized maintenance action is implemented; listing or reading statistics never permanently deletes files.
 
+The in-memory store serializes tree writes and parse commits through one write queue. Nested writes join the active transaction; a failed unrelated tree write cannot roll back a completed parse commit.
+
 ## Local checks
 
 - `pnpm exec tsc --noEmit -p tsconfig.build.json`

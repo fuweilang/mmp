@@ -216,14 +216,15 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       const opened = await libraryRequest(origin, `nodes/${encodeURIComponent(requested.nodeId)}/preview?versionId=${encodeURIComponent(requested.versionId)}`, 'GET', undefined, transport) as Source
       if (control.signal.aborted || generation !== previewGeneration.current) return
       if (opened.versionId !== requested.versionId || !opened.name || (opened.nodeId && opened.nodeId !== requested.nodeId)) throw new Error(t('operationFailed'))
+      const authorized: Source = { ...opened, ...(citation ? { name: citation.name, versionNo: citation.versionNo,
+        locator: citation.locator, citationQuote: citation.quote, highlightNote: citation.highlightNote,
+        truncated: citation.truncated, truncationNote: citation.truncationNote } : {}), nodeId: requested.nodeId, versionId: requested.versionId }
+      setSource(authorized)
       const contents = await fetchLibraryPreviewBytes(origin, requested.nodeId, requested.versionId, opened.originalName ?? opened.name, fetchImpl, control.signal)
-      if (!control.signal.aborted && generation === previewGeneration.current) {
-        setSource({ ...opened, ...contents, ...(citation ? { name: citation.name, versionNo: citation.versionNo,
-          locator: citation.locator, citationQuote: citation.quote, highlightNote: citation.highlightNote,
-          truncated: citation.truncated, truncationNote: citation.truncationNote } : {}), nodeId: requested.nodeId, versionId: requested.versionId })
-      }
+      if (!control.signal.aborted && generation === previewGeneration.current) setSource({ ...authorized, ...contents })
     })().catch(error => {
       if (!control.signal.aborted && generation === previewGeneration.current) {
+        if (error instanceof LibraryRequestError && [401, 403, 404, 409, 410].includes(error.status)) setSource(undefined)
         setPreviewError(error instanceof Error ? error.message : t('operationFailed'))
       }
     }).finally(() => {

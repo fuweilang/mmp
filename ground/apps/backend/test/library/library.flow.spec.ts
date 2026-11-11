@@ -568,6 +568,50 @@ describe('t191 Console flat mine management', () => {
 });
 
 describe('atomic parse retry', () => {
+  it('keeps a completed parse when a queued tree transaction fails', { timeout: 2000 }, async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const item = await upload(service, owner, 'queued.md', Buffer.from('committed source'));
+    const versionId = item.currentVersion!.id;
+    await store.updateVersion(versionId, { parseStatus: 'FAILED', parseReason: 'retryable' });
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredParse = new Promise<void>(resolve => { entered = resolve; });
+    const allowParse = new Promise<void>(resolve => { release = resolve; });
+    const listChunks = store.listChunks.bind(store);
+    let pause = true;
+    store.listChunks = async id => {
+      if (pause) { pause = false; entered(); await allowParse; }
+      return listChunks(id);
+    };
+    const parsed = service.retryParse(owner, item.id);
+    await enteredParse;
+    const tree = store.withTenantWrite('ta', async () => {
+      await parsed;
+      throw new Error('tree write failed');
+    });
+    const failedTree = assert.rejects(tree, /tree write failed/);
+    release();
+    assert.equal((await parsed).currentVersion?.parseStatus, 'READY');
+    await failedTree;
+    assert.equal((await store.getVersion(versionId))?.parseStatus, 'READY');
+    assert.deepEqual((await store.listChunks(versionId)).map(row => ({ content: row.content, locator: row.locator })),
+      [{ content: 'committed source', locator: 'paragraph:1' }]);
+    assert.equal(store.audits.filter(row => row.action === 'library_retry_parse').length, 1);
+  });
+
+  it('joins a parse retry inside an existing tree transaction without waiting on itself', { timeout: 2000 }, async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const item = await upload(service, owner, 'nested.md', Buffer.from('nested source'));
+    const versionId = item.currentVersion!.id;
+    await store.updateVersion(versionId, { parseStatus: 'FAILED', parseReason: 'retryable' });
+    const parsed = await store.withTenantWrite('ta', () => service.retryParse(owner, item.id));
+    assert.equal(parsed.currentVersion?.parseStatus, 'READY');
+    assert.equal((await store.listChunks(versionId))[0]?.content, 'nested source');
+    assert.equal(store.audits.filter(row => row.action === 'library_retry_parse').length, 1);
+  });
+
   it('rolls back status and chunks after a chunk write fails, then permits a retry', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');

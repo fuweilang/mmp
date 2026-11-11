@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { LibraryError } from './library.errors';
 import type {
   AuditRecord,
@@ -87,25 +88,28 @@ export class MemoryLibraryStore implements LibraryStore {
   readonly tenants = new Map<string, string>();
   private seq = 0;
   private writeTail: Promise<void> = Promise.resolve();
+  private readonly writeScope = new AsyncLocalStorage<{ active: boolean }>();
 
   async withTenantWrite<T>(_tenantId: string, work: (store: LibraryStore) => Promise<T>): Promise<T> {
+    if (this.writeScope.getStore()?.active) return work(this);
     const previous = this.writeTail;
     let release!: () => void;
     this.writeTail = new Promise<void>(resolve => { release = resolve; });
     await previous;
     const snapshot = this.snapshot();
     const auditLength = this.audits.length;
+    const scope = { active: true };
     try {
-      return await work(this);
+      return await this.writeScope.run(scope, () => work(this));
     } catch (error) {
       this.restore(snapshot);
       this.audits.length = auditLength;
       throw error;
     } finally {
+      scope.active = false;
       release();
     }
   }
-  private parseCommitQueue: Promise<void> = Promise.resolve();
   /** 每个版本 replaceChunks 的调用次数，用来确认重试不是追加。 */
   readonly chunkWrites: number[] = [];
 
@@ -185,7 +189,7 @@ export class MemoryLibraryStore implements LibraryStore {
   }
 
   async commitParseResult(input: ParseCommit): Promise<'committed' | 'unchanged'> {
-    const commit = this.parseCommitQueue.then(async () => {
+    return this.withTenantWrite(input.tenantId, async () => {
       const node = this.nodes.get(input.nodeId);
       const version = this.versions.get(input.versionId);
       if (!node || node.tenantId !== input.tenantId || node.state !== 'ACTIVE'
@@ -211,8 +215,6 @@ export class MemoryLibraryStore implements LibraryStore {
         throw error;
       }
     });
-    this.parseCommitQueue = commit.then(() => undefined, () => undefined);
-    return commit;
   }
 
   private checkCommitQuota(version: VersionRecord, quota?: number) {
