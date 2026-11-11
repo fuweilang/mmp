@@ -8,6 +8,10 @@
  */
 
 import { describe, expect, it } from 'vitest'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { indexExportedTypes, scanSlotFiles, slotDeclarations } from './slot-walk.ts'
 import { collectSlotEntries, oversizedSlotReports, resolveSlotEntries, validateSlotContracts } from './gen-client-catalog.ts'
 import type { SlotDeclaration, SlotRegistration, TypeDeclaration } from './slot-walk.ts'
 
@@ -248,7 +252,7 @@ describe('the real workspace surface', () => {
     // so a dynamic package registering there replaces the whole UI.
     const root = entries.find(entry => entry.key === 'root')
     expect(root?.replaceRisk).toBe('shadows-shipped-ui')
-    expect(root?.occupants.join(' ')).toContain('AppFrame')
+    expect(root?.occupants.join(' ')).toContain('client-ui-layout RootFrame')
     expect(entries.find(entry => entry.key === 'conversation.session')?.declaredBy)
       .toContain("factory 'conversation.content' (client-ui-conversation)")
     const tool = entries.find(entry => entry.key === 'tool.call.toolview')!
@@ -260,5 +264,43 @@ describe('the real workspace surface', () => {
     expect(owner).not.toContain('truncated')
     expect(tool.ownerPropsReferences).not.toContain('ToolCallCommonProps')
     expect(tool.ownerPropsReferences).not.toContain('ToolCallPhaseProps')
+  })
+})
+
+
+describe('source discovery after package rescope', () => {
+  const patterns = ['packages/*/*/src/**/*.ts', 'packages/*/*/src/**/*.tsx']
+  function withSource(run: (root: string, source: string) => void): void {
+    const root = mkdtempSync(join(tmpdir(), 'mmp-slot-source-'))
+    try {
+      const packageRoot = join(root, 'packages/client/demo')
+      const source = join(packageRoot, 'src')
+      mkdirSync(source, { recursive: true })
+      writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({ name: '@mammoth-ai/mmp-client-demo' }))
+      run(root, source)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  }
+
+  it('discovers current-namespace slot declarations in TSX without a registration call', () => {
+    withSource((root, source) => {
+      writeFileSync(join(source, 'contract.tsx'), `declare module '@mammoth-ai/mmp-client-ui-slots' {
+        interface SlotMap { /** Fixture seat. */ 'demo.preview': { kind: 'single'; scope: 'session' } }
+      }`)
+      const files = scanSlotFiles(root, patterns)
+      expect(files.flatMap(slotDeclarations).map(slot => slot.key)).toEqual(['demo.preview'])
+    })
+  })
+
+  it('indexes original owner props without treating emitted declarations as ambiguous', () => {
+    withSource((root, source) => {
+      writeFileSync(join(source, 'contract.ts'), 'export interface OwnerProps { live: string }')
+      writeFileSync(join(source, 'contract.d.ts'), 'export interface OwnerProps { stale: number }')
+      const owner = indexExportedTypes(root, patterns).get('OwnerProps')
+      expect(owner?.text).toContain('live: string')
+      expect(owner?.source).toContain('contract.ts:')
+      expect(owner?.text).not.toContain('stale')
+    })
   })
 })
