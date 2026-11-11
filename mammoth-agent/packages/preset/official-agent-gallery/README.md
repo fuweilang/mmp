@@ -17,6 +17,16 @@ The Host creates native standard sessions from published experts or immutable cr
 
 `openKnowledgeSource` resolves a persisted record ID and citation label inside the authorized Session, checks the original account/space, and sends the exact release/document/revision/index/chunk tuple to Ground. Unknown labels fail. The client reads body-free source metadata from the session projection; it never receives credentials, hidden prompts, or arbitrary storage URLs.
 
+## Complete skill packages
+
+Skill Sessions use the native standard preset's existing file and command tools. `skill` lists frozen summaries and returns the selected instruction and resource directory on demand. Package preparation never executes scripts or installs dependencies.
+
+The Host requests `packageFormat=2` from Ground. A v2 revision declares every file's relative path, byte length, SHA-256 and executable flag, plus its sorted-tuple package digest and admission limits. Legacy instruction/reference responses remain supported; an unsupported or damaged complete response cannot downgrade to legacy preparation. Ground rejects old readers of complete revisions with an update-required error.
+
+Complete execution copies live under the selected physical workspace's `.mmp/runtime/skill-packages/` directory, outside filesystem skill discovery roots. The Provider validates all identities before publishing a directory, bounds downloads while reading, and rejects symlinked roots. Failed directory reservations are cleared so repaired roots can be retried. Each path component is limited to 255 UTF-8 bytes, within the 512 UTF-16-unit relative-path ceiling shared with Ground. Reuse rechecks declared source files; changed sources create a fresh verified copy while old copies remain owned until cleanup. Selection invalidation cancels preparations and joins disposal before the next authorized model step. Each Provider owns its directories and shares no writable copies across Sessions.
+
+Protocol ceilings are 500 files, 10MiB expanded bytes and 100KiB for SKILL.md. `skillMaxFiles`, `skillMaxTotalBytes` and `skillMaxInstructionBytes` configure lower local caps. Resource locations enter the model through the existing skill result; actual resource reads and script commands use the original tool policy and logs. Package files add no initial catalog tokens; loaded instructions and subsequent tool results add their actual content, with no separate KV-cache policy.
+
 ## Model Experience
 
 ### Current-request knowledge
@@ -35,22 +45,12 @@ Frozen roles append to the native prompt. Active knowledge experts also receive 
 
 Replacing superseded evidence snapshots changes the request series and may reduce prefix reuse. All original records remain in the protected session log. Replays and compaction retain exact source lineage and reauthorize it before model resend; they never silently retrieve a newer document. Previously transmitted facts cannot be retracted.
 
-## Complete skill packages
-
-Skill Sessions use the native standard preset's existing file and command tools. `skill` lists frozen summaries and returns the selected instruction and resource directory on demand. Package preparation never executes scripts or installs dependencies.
-
-The Host requests `packageFormat=2` from Ground. A v2 revision declares every file's relative path, byte length, SHA-256 and executable flag, plus its sorted-tuple package digest and admission limits. Legacy instruction/reference responses remain supported; an unsupported or damaged complete response cannot downgrade to legacy preparation. Ground rejects old readers of complete revisions with an update-required error.
-
-Complete execution copies live under the selected physical workspace's `.mmp/runtime/skill-packages/` directory, outside filesystem skill discovery roots. The Provider validates all identities before publishing a directory, bounds downloads while reading, and rejects symlinked roots. Failed directory reservations are cleared so repaired roots can be retried. Each path component is limited to 255 UTF-8 bytes, within the 512 UTF-16-unit relative-path ceiling shared with Ground. Reuse rechecks declared source files; changed sources create a fresh verified copy while old copies remain owned until cleanup. Selection invalidation cancels preparations and joins disposal before the next authorized model step. Each Provider owns its directories and shares no writable copies across Sessions.
-
-Protocol ceilings are 500 files, 10MiB expanded bytes and 100KiB for SKILL.md. `skillMaxFiles`, `skillMaxTotalBytes` and `skillMaxInstructionBytes` configure lower local caps. Resource locations enter the model through the existing skill result; actual resource reads and script commands use the original tool policy and logs. Package files add no initial catalog tokens; loaded instructions and subsequent tool results add their actual content, with no separate KV-cache policy.
-
 ## Known Limitations and Deferred Work
 
-Exact historical source text checks are deduplicated and serial, followed by one server statement snapshot authorizing all bindings and sources together. `maxHistoricalSources` defaults to 128 distinct sources or bindings; exceeding it stops resend and asks for a new chat. No embedding or rerank call occurs during authorization. A missing source, account change, expired preview, or changed lineage blocks resend, including summaries derived from that source.
+- Exact historical source text checks are deduplicated and serial, followed by one server statement snapshot authorizing all bindings and sources together. `maxHistoricalSources` defaults to 128 distinct sources or bindings; exceeding it stops resend and asks for a new chat. No embedding or rerank call occurs during authorization. A missing source, account change, expired preview, or changed lineage blocks resend, including summaries derived from that source.
 
-Engineering checks use synthetic Ground/model responses. Live provider semantic quality, supplier invoices and customer-account acceptance require separate verification. Legacy knowledge preview requires migration to new knowledge releases or explicit KNOWLEDGE_CORE/OFF; existing published legacy experts retain their old retrieval path. Internal Ground delegation to new REQUIRED/AUTO knowledge children remains unsupported.
+- Engineering checks use synthetic Ground/model responses. Live provider semantic quality, supplier invoices and customer-account acceptance require separate verification. Legacy knowledge preview requires migration to new knowledge releases or explicit KNOWLEDGE_CORE/OFF; existing published legacy experts retain their old retrieval path. Internal Ground delegation to new REQUIRED/AUTO knowledge children remains unsupported.
 
-Recorded coverage includes the shipped `sdk` profile scenario `snapshots/sdk/official-expert-knowledge` and the Python SDK `sdk-official-expert` smoke projection. Both restore a recorded expert binding and use the real runtime with external account/Ground/model boundaries mocked.
+- Recorded coverage includes the shipped `sdk` profile scenario `snapshots/sdk/official-expert-knowledge` and the Python SDK `sdk-official-expert` smoke projection. Both restore a recorded expert binding and use the real runtime with external account/Ground/model boundaries mocked.
 
-When a user names a method or framework but current evidence does not define it, the citation policy asks for a focused lookup by that name within the remaining lookup budget before applying it; missing support must still be disclosed.
+- When a user names a method or framework but current evidence does not define it, the citation policy asks for a focused lookup by that name within the remaining lookup budget before applying it; missing support must still be disclosed.

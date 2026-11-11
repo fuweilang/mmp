@@ -12,14 +12,18 @@ import type { GroundOfficialAgentClient } from './ground.ts';
 const bindingSchema = z.object({ agentId: z.string(), versionId: z.string().nullable(), preview: previewSchema.optional() }).strict();
 const citationSchema = evidenceSchema.extend({ label: z.string() }).strict();
 const recordSchema = z.object({ id: z.string(), turn: z.number().int(), messageId: z.string(), lookup: z.number().int(), binding: bindingSchema, authScope: z.object({ userId: z.string(), scope: z.string() }).strict(), query: z.string(), status: z.string(), retrievalId: z.string(), evidence: z.array(citationSchema), context: z.string(), budgetTokens: z.number().int(), budgetMethod: z.literal('utf8-bytes-upper-bound-v1'), bytes: z.number().int(), truncated: z.boolean() }).strict();
+/** Durable lookup admission with its frozen binding, account scope and exact evidence. */
 export type KnowledgeRecord = z.infer<typeof recordSchema>;
+/** Retrieved source passage with the stable label used in a recorded answer. */
 export type KnowledgeCitation = KnowledgeEvidence & {
     label: string;
 };
 const runtimeRowSchema = z.object({ seq: z.number().int(), sections: z.array(z.object({ name: z.string(), text: z.string() })) });
 const sourceViewSchema = z.object({ recordId: z.string(), turn: z.number(), messageId: z.string(), label: z.string(), title: z.string(), locator: z.string() });
+/** Client-safe source label and locator for one persisted lookup. */
 export type KnowledgeSourceView = z.infer<typeof sourceViewSchema>;
 const visibleRowSchema = z.object({turn:z.number().int(),role:z.enum(['user','assistant']),content:z.string()});
+/** Projected lookup lineage, bounded visible conversation and client source references. */
 export interface KnowledgeState {
     visible: z.infer<typeof visibleRowSchema>[];
     visibleBoundary: string | null;
@@ -106,8 +110,13 @@ export class ExpertKnowledgeRuntime {
     }
     private records() { const binding = this.binding(); return binding ? this.read().records.filter(r => r.turn === this.turn && identity(r.binding) === identity(binding)) : []; }
     private currentText() { const records = this.records(); return records.at(-1)?.context ?? ''; }
-    /** Prepare REQUIRED from the actual claimed user input before the registered context refresh. */
-    async prepare(turn: number, messages: readonly UserMessage[], signal: AbortSignal) {
+    /**
+     * Prepare REQUIRED from the actual claimed user input before the registered context refresh.
+     * @param turn - Claimed Agent turn number.
+     * @param messages - Claimed user messages for this step.
+     * @param signal - Cancellation for history authorization and retrieval.
+     */
+    async prepare(turn: number, messages: readonly UserMessage[], signal: AbortSignal): Promise<void> {
         if (this.turn !== turn)
             this.messageId = '';
         this.turn = turn;
@@ -147,8 +156,12 @@ export class ExpertKnowledgeRuntime {
         const effective = status === 'READY' ? 'NO_EVIDENCE' : status;
         throw new LlmError(messages[effective] ?? 'Knowledge evidence is unavailable. Start a new question after the knowledge service is ready.', `EXPERT_KNOWLEDGE_${effective}`);
     }
-    /** Compare the final fitted provider body with exact durable evidence text, never silently repair it. */
-    assertWire(request: GenerateOptions, body: { readonly messages: readonly {readonly role: string; readonly content?: unknown}[] }) {
+    /**
+     * Compare the final fitted provider body with exact durable evidence text, never silently repair it.
+     * @param request - Native request containing the admitted evidence sections.
+     * @param body - Final provider messages after context and byte fitting.
+     */
+    assertWire(request: GenerateOptions, body: { readonly messages: readonly {readonly role: string; readonly content?: unknown}[] }): void {
         if (request.purpose === undefined) this.requireEvidence();
         const fragments = new Set<string>();
         for (const message of request.messages) {
@@ -178,8 +191,13 @@ export class ExpertKnowledgeRuntime {
             this.agent.session.append('user/message', message, { surfaceOp: { op: 'replace', startSeq: seq, endSeq: seq }, sourceEventSeqs: [seq] });
         }
     }
-    /** One bounded supplemental operation; tool output contains labels/status only, never evidence bodies. */
-    async supplemental(query: string, signal: AbortSignal) {
+    /**
+     * One bounded supplemental operation; tool output contains labels/status only, never evidence bodies.
+     * @param query - Focused question submitted through the expert knowledge tool.
+     * @param signal - Cancellation for retrieval and authorization.
+     * @returns The recorded lookup status or the per-turn lookup limit status.
+     */
+    async supplemental(query: string, signal: AbortSignal): Promise<{status: string}> {
         if (this.pending)
             await this.pending;
         const binding = this.binding(), policy = binding?.executionConfig;
@@ -269,8 +287,11 @@ export class ExpertKnowledgeRuntime {
             throw Error('EXPERT_RETRIEVAL_CONTEXT_CHANGED');
         this.agent.session.append('official-agent/knowledge', record);
     }
-    /** Check all lineage, including compacted answers and summaries, before any model resend. */
-    async authorizeHistory(signal?: AbortSignal) { await this.authorizeRecords(this.read().records, signal); }
+    /**
+     * Check all lineage, including compacted answers and summaries, before any model resend.
+     * @param signal - Cancellation for exact source reads and final batch authorization.
+     */
+    async authorizeHistory(signal?: AbortSignal): Promise<void> { await this.authorizeRecords(this.read().records, signal); }
     private async authorizeRecords(records: readonly KnowledgeRecord[], signal?: AbortSignal) {
         if (!records.length)
             return;

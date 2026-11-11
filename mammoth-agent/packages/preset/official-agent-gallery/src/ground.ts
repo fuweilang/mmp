@@ -1,5 +1,5 @@
 import { completeSkillFields } from './skill-package-format.ts'
-import { executionConfigSchema, previewSchema, knowledgeResultSchema, openedSourceSchema, runtimeReference, type RuntimeBinding, type ExactSource, type ExpertPreview } from './knowledge-protocol.ts'
+import { executionConfigSchema, previewSchema, knowledgeResultSchema, openedSourceSchema, runtimeReference, type RuntimeBinding, type ExactSource, type ExpertPreview, type KnowledgeResult, type OpenedSource } from './knowledge-protocol.ts'
 import type { CatalogQuery } from './types.ts'
 import { z } from 'zod'
 
@@ -309,24 +309,56 @@ export class GroundOfficialAgentClient {
     })
   }
 
-  /** Resolve a creator-only preview ID without manufacturing snapshot metadata. */
-  resolvePreview(agentId:string,previewId:string,signal?:AbortSignal){
+  /**
+   * Resolve a creator-only preview ID without manufacturing snapshot metadata.
+   * @param agentId - Official expert identity.
+   * @param previewId - Immutable creator-owned preview identity.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @returns The validated immutable execution snapshot.
+   */
+  resolvePreview(agentId:string,previewId:string,signal?:AbortSignal):Promise<GroundOfficialExecution>{
     return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/runtime/resolve`,executionSchema,{method:'POST',body:JSON.stringify({executionProtocol:2,previewId}),...signal?{signal}:{}})
   }
-  /** Resolve one immutable published or creator-only preview snapshot. */
-  resolveRuntime(binding:RuntimeBinding,signal?:AbortSignal){
+  /**
+   * Resolve one immutable published or creator-only preview snapshot.
+   * @param binding - Frozen published version or creator-owned preview.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @returns The validated immutable execution snapshot.
+   */
+  resolveRuntime(binding:RuntimeBinding,signal?:AbortSignal):Promise<GroundOfficialExecution>{
     return this.request(`/api/official-agents/${encodeURIComponent(binding.agentId)}/runtime/resolve`,executionSchema,{method:'POST',body:JSON.stringify(runtimeReference(binding)),...signal?{signal}:{}})
   }
-  /** Retrieve with Host-owned session/turn identity; model arguments contain only query. */
-  retrieveRuntime(binding:RuntimeBinding,sessionId:string,turnId:string,query:string,signal?:AbortSignal,context:readonly {role:'user'|'assistant';content:string}[]=[]){
+  /**
+   * Retrieve with Host-owned session/turn identity; model arguments contain only query.
+   * @param binding - Frozen published version or creator-owned preview.
+   * @param sessionId - Host-owned Session identity.
+   * @param turnId - Host-owned turn identity.
+   * @param query - Visible user question or focused supplemental question.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @param context - Bounded visible conversation preceding the current question.
+   * @returns The validated retrieval result and rendered context.
+   */
+  retrieveRuntime(binding:RuntimeBinding,sessionId:string,turnId:string,query:string,signal?:AbortSignal,context:readonly {role:'user'|'assistant';content:string}[]=[]):Promise<KnowledgeResult>{
     return this.request(`/api/official-agents/${encodeURIComponent(binding.agentId)}/runtime/retrieve`,knowledgeResultSchema,{method:'POST',body:JSON.stringify({...runtimeReference(binding),sessionId,turnId,query,context}),...signal?{signal}:{}})
   }
-  /** Terminal server snapshot for the whole historical lineage, after exact text reads. */
-  authorizeHistory(scope:{userId:string;scope:string},entries:readonly {binding:RuntimeBinding;sources:ExactSource[]}[],signal?:AbortSignal){
+  /**
+   * Terminal server snapshot for the whole historical lineage, after exact text reads.
+   * @param scope - Original user and account-space identity.
+   * @param entries - Nonempty frozen runtime bindings and their exact source references.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @returns Successful authorization of the complete historical lineage.
+   */
+  authorizeHistory(scope:{userId:string;scope:string},entries:readonly {binding:RuntimeBinding;sources:ExactSource[]}[],signal?:AbortSignal):Promise<{authorized:true}>{
     return this.request(`/api/official-agents/${encodeURIComponent(entries[0]!.binding.agentId)}/runtime/history/authorize`,z.object({authorized:z.literal(true)}).strict(),{method:'POST',body:JSON.stringify({...scope,entries:entries.map(({binding,sources})=>({agentId:binding.agentId,...runtimeReference(binding),sources}))}),...signal?{signal}:{}})
   }
-  /** Reauthorize and open exactly the persisted source tuple, never the latest revision. */
-  openSource(binding:RuntimeBinding,source:ExactSource,signal?:AbortSignal){
+  /**
+   * Reauthorize and open exactly the persisted source tuple, never the latest revision.
+   * @param binding - Frozen published version or creator-owned preview.
+   * @param source - Exact immutable source identifiers persisted with the answer.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @returns The authorized original source passage and offsets.
+   */
+  openSource(binding:RuntimeBinding,source:ExactSource,signal?:AbortSignal):Promise<OpenedSource>{
     return this.request(`/api/official-agents/${encodeURIComponent(binding.agentId)}/runtime/sources/open`,openedSourceSchema,{method:'POST',body:JSON.stringify({...runtimeReference(binding),...source}),...signal?{signal}:{}})
   }
 
@@ -352,6 +384,7 @@ export class GroundOfficialAgentClient {
    * @param query - user search question; provider keys stay on Ground.
    * @param signal - optional caller cancellation forwarded to Ground.
    * @returns validated search hits.
+   * @param preview - Optional creator-owned preview replacing the published version reference.
    */
   async search(agentId: string, versionId: string|null, query: string, signal?: AbortSignal, preview?:ExpertPreview): Promise<GroundOfficialWebSearch> {
     return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/${preview?'runtime/':''}search`, searchSchema, {
@@ -363,6 +396,7 @@ export class GroundOfficialAgentClient {
 
   /**
    * Run entitlement-checked tabular analysis for one frozen official Expert version.
+   * @param preview - Optional creator-owned preview replacing the published version reference.
    */
   async analyzeTabular(
     agentId: string,
@@ -379,6 +413,7 @@ export class GroundOfficialAgentClient {
 
   /**
    * Fetch one public URL under entitlement checks; provider keys stay on Ground.
+   * @param preview - Optional creator-owned preview replacing the published version reference.
    */
   async fetchUrl(agentId: string, versionId: string|null, url: string, signal?: AbortSignal, preview?:ExpertPreview): Promise<GroundOfficialFetch> {
     return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/${preview?'runtime/':''}fetch-url`, fetchSchema, {
@@ -389,6 +424,7 @@ export class GroundOfficialAgentClient {
 
   /**
    * Single-layer official Expert delegation for the boss orchestrator.
+   * @param preview - Optional creator-owned preview replacing the published version reference.
    */
   async delegate(
     agentId: string,
@@ -436,6 +472,10 @@ export class GroundOfficialAgentClient {
   /**
    * Negotiate a frozen complete package or read a legacy instruction/reference payload.
    * Pass an explicit revision so disabled skills remain readable for existing Sessions.
+   * @param skillId - Frozen official skill identity.
+   * @param revision - Frozen package revision selected by the Session.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @returns A validated complete package manifest or legacy instruction/reference payload.
    */
   async fetchSkillContent(
     skillId: string,
@@ -453,6 +493,12 @@ export class GroundOfficialAgentClient {
   /**
    * Load one declared skill package resource at a frozen revision.
    * Ground checks the exact revision's file index; Host enforces the supplied byte bound while reading.
+   * @param skillId - Frozen official skill identity.
+   * @param revision - Frozen package revision selected by the Session.
+   * @param resourcePath - Exact relative path declared by that revision.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @param maxBytes - Maximum response bytes accepted while reading the resource.
+   * @returns Verified-length-bounded resource bytes for subsequent integrity validation.
    */
   async fetchSkillResource(
     skillId: string,

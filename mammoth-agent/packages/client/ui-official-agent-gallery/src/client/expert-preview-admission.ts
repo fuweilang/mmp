@@ -1,6 +1,10 @@
 import type { SessionInput } from '@mammoth-ai/mmp-client-ui-conversation/client'
 
-/** Await the ordinary input machine's admission and return only its unchanged failed draft to the parent. */
+/**
+ * Await the ordinary input machine's admission and return only its unchanged failed draft to the parent.
+ * @param input - Preview input machine owning the draft and queue admission.
+ * @param signal - Cancellation when the preview view is replaced or disposed.
+ */
 export function submitExpertPreviewInput(input: SessionInput, signal: AbortSignal): Promise<void> {
   const initial = input.state.getSnapshot()
   return new Promise((resolve, reject) => {

@@ -211,4 +211,5 @@ export interface ExpertKnowledgeSource {recordId:string;turn:number;messageId:st
 declare module '@mammoth-ai/mmp-session-projection/types' {interface SessionProjectionMap {officialExpertKnowledge: import('@mammoth-ai/mmp-session-projection/types').SessionProjectionSummaryExcluded<ExpertKnowledgeSource[]>}}
 
 export type { OpenedSource } from './knowledge-protocol.ts'
+/** Request to create a creator-owned preview in a granted Workspace. */
 export interface OfficialPreviewSessionRequest extends OfficialAgentSessionRequest {readonly previewId:string}

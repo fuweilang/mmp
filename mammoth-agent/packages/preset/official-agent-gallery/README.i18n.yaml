@@ -14,6 +14,9 @@
 /mammoth-ai-mmp-official-agent-gallery/remote-api:
   en: 61cb72c900d4335c
   zh: 7a118aa6db667942
+/mammoth-ai-mmp-official-agent-gallery/complete-skill-packages:
+  en: b6d1417455667030
+  zh: 464d7d1237cc543a
 /mammoth-ai-mmp-official-agent-gallery/model-experience:
   en: 215e7ba838619b7b
   zh: a311da3843709f90
@@ -29,9 +32,6 @@
 /mammoth-ai-mmp-official-agent-gallery/model-experience/current-request-knowledge/kv-cache-effect:
   en: 8f16a78856687b95
   zh: 94f0ec13ad79294d
-/mammoth-ai-mmp-official-agent-gallery/complete-skill-packages:
-  en: b6d1417455667030
-  zh: 464d7d1237cc543a
 /mammoth-ai-mmp-official-agent-gallery/known-limitations-and-deferred-work:
-  en: f61079fb2b221492
-  zh: b85bbf26572eccd6
+  en: 6396578bbc46027d
+  zh: 0de9bd67dce951f5
