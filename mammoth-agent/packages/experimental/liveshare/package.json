@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-experimental-liveshare",
   "description": "Opt-in LiveShare host bundle: share a Session through a separate Relay at the view or bounded-write tier, with forking and attachment uploads as independent switches",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "icon": "./icon.svg",
   "repository": {
     "type": "git",

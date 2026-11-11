@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-file-actions",
   "description": "Original-file saving and image clipboard actions for Web and Desktop",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "publishConfig": {
     "access": "public"
   },

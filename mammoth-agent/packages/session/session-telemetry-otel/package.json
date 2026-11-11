@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-session-telemetry-otel",
   "description": "Feedback-authorized Session logs over byte-bounded OpenTelemetry HTTP requests",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "publishConfig": {
     "access": "public"
   },

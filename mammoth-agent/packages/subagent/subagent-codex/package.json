@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-subagent-codex",
   "description": "One-shot Codex subagent provider over the official app-server protocol",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "publishConfig": {
     "access": "public"
   },

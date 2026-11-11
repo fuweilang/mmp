@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-skill-office",
   "description": "Bundled Word, PowerPoint, and Excel workflows and LibreOffice Kit operations",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "publishConfig": {
     "access": "public"
   },

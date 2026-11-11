@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-workflow-run",
   "description": "Durable workflow-run Conversation Node and nested member disclosure for mmp web",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-experimental-tool-subagent-oar",
   "description": "Delegate standalone tasks to configured external subagent providers",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "publishConfig": {
     "access": "public"
   },

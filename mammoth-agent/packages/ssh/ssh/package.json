@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-ssh",
   "description": "Shared OpenSSH connection and versioned POSIX remote helper",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-plugin-manager",
   "description": "Plugin management for the mmp web client: the sidebar Plugins panel installs, enables, disables, retries, and composes installed plugin packages",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "publishConfig": {
     "access": "public"
   },

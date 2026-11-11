@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-file-upload",
   "description": "Agent-scoped browser file upload, streaming intake, and staged receipt service",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "publishConfig": {
     "access": "public"
   },

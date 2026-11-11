@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-trajectory",
   "description": "Trajectory event ledger and timing overview with live tool-result inspection",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "publishConfig": {
     "access": "public"
   },
