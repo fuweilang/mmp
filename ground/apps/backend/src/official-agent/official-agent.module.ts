@@ -1,3 +1,6 @@
+import { ExpertRuntimeService } from './expert-runtime.service';
+import { KnowledgeCoreModule } from '../knowledge-core/knowledge-core.module';
+import { ExpertRuntimeController } from './expert-runtime.controller';
 import { CatalogPreferenceController } from './catalog-preference.controller';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
@@ -14,9 +17,10 @@ import { OfficialOrchestrateService } from './orchestrate.service';
 import { OfficialSkillModule } from '../official-skill/official-skill.module';
 
 @Module({
-  imports: [AuthModule, TenantModule, KnowledgeModule, OfficialSkillModule],
-  controllers: [CatalogPreferenceController, OfficialAgentController, OfficialAgentAvatarController],
+  imports: [KnowledgeCoreModule, AuthModule, TenantModule, KnowledgeModule, OfficialSkillModule],
+  controllers: [ExpertRuntimeController,CatalogPreferenceController, OfficialAgentController, OfficialAgentAvatarController],
   providers: [
+    ExpertRuntimeService,
     OfficialAgentService,
     OfficialKbService,
     OfficialWebSearchService,
@@ -24,6 +28,6 @@ import { OfficialSkillModule } from '../official-skill/official-skill.module';
     OfficialTabularAnalyzeService,
     OfficialOrchestrateService,
   ],
-  exports: [OfficialAgentService, OfficialKbService],
+  exports: [ExpertRuntimeService, OfficialAgentService, OfficialKbService],
 })
 export class OfficialAgentModule {}

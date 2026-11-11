@@ -1,3 +1,4 @@
+import type { ExpertExecutionConfig, ExpertPreview } from './knowledge-protocol.ts'
 import type { WorkspaceId } from '@mammoth-ai/mmp-workspace/types'
 
 export type OfficialAgentCategory =
@@ -92,13 +93,15 @@ export interface OfficialAgentSessionRequest {
 /** Frozen execution data replayed exclusively on the Host. */
 export interface OfficialAgentBinding {
   readonly agentId: string
-  readonly versionId: string
+  readonly versionId: string | null
   readonly kind: 'GENERAL' | 'KNOWLEDGE'
   readonly name: string
   readonly systemPrompt: string
   readonly toolScope: readonly string[]
   /** Enabled linked skill summaries frozen for Host; bodies load on demand via SkillProvider. */
   readonly linkedSkills?: readonly OfficialSkillSummary[] | undefined
+  readonly executionConfig?: ExpertExecutionConfig | undefined
+  readonly preview?: ExpertPreview | undefined
 }
 
 /** Host-only projection state restored from the Session event log. */
@@ -124,7 +127,7 @@ export type OfficialGallerySource =
     readonly id: string
     readonly key: string
     readonly name: string
-    readonly versionId: string
+    readonly versionId: string | null
   }
   | {
     readonly type: 'skill'
@@ -202,3 +205,10 @@ export interface OfficialSkillAvailability { readonly id:string; readonly name:s
 
 export interface GalleryRuntimeView {phase:string;attemptId:string;turn:number;generation:number;loaded:boolean;artifactCount:number;lastArtifact:{id:string;name:string}|null}
 declare module '@mammoth-ai/mmp-session-projection/types' {interface SessionProjectionMap {officialGalleryRuntime:GalleryRuntimeView}}
+
+/** Exact source labels indexed by their owning turn and lookup; bodies require fresh Remote authorization. */
+export interface ExpertKnowledgeSource {recordId:string;turn:number;messageId:string;label:string;title:string;locator:string}
+declare module '@mammoth-ai/mmp-session-projection/types' {interface SessionProjectionMap {officialExpertKnowledge: import('@mammoth-ai/mmp-session-projection/types').SessionProjectionSummaryExcluded<ExpertKnowledgeSource[]>}}
+
+export type { OpenedSource } from './knowledge-protocol.ts'
+export interface OfficialPreviewSessionRequest extends OfficialAgentSessionRequest {readonly previewId:string}

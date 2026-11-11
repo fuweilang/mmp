@@ -9,7 +9,7 @@ import type {
 } from '@mammoth-ai/mmp-llm'
 import type { DeepSeekAccount } from '@mammoth-ai/mmp-deepseek-account'
 import type { SessionId } from '@mammoth-ai/mmp-session'
-import type { GroundOfficialAttribution } from './attribution.ts'
+import type { GroundOfficialAttribution, GroundWireGuard } from './attribution.ts'
 import { chatCompletionsUrl, modelsUrl } from './config.ts'
 import { OpenAiSseTranslator, toOpenAiMessages, toOpenAiTools } from './openai-map.ts'
 import { loggedFetch } from './http-log.ts'
@@ -30,6 +30,8 @@ export interface GroundAdapterOptions {
   account: () => DeepSeekAccount | undefined
   /** Official version bound to the requesting Session, when this is an official Agent run. */
   officialFor?: (sessionId: SessionId) => GroundOfficialAttribution | undefined
+  /** Validates logged Session invariants after final fitting and before HTTP. */
+  validateWire?: GroundWireGuard
 }
 
 async function readSseOrJsonError(response: Response): Promise<string> {
@@ -181,7 +183,7 @@ export class GroundLlmAdapter extends LlmAdapter {
         row.id.endsWith(`/${id}`) || row.name === id || row.name === model)
     }
     // Sticky/default refs removed from the Admin pool must never hit the old ID.
-    if(hit===undefined)hit=rows.find(row=>row.id!=='auto'&&row.preferred)??rows.find(row=>row.id==='auto')
+    if(hit===undefined)throw new LlmError('Selected cloud model is unavailable. Choose Automatic or an enabled model.','UNKNOWN_MODEL')
     if(hit===undefined)throw new LlmError('Admin cloud model catalog unavailable.','UNKNOWN_MODEL')
 
     return {
@@ -228,14 +230,24 @@ export class GroundLlmAdapter extends LlmAdapter {
       Accept: 'text/event-stream',
       ...attributionHeaders(),
     }
-    if (options.purpose === undefined && options.sessionId !== undefined) {
+    if (options.sessionId !== undefined) {
       headers['x-mmp-session-id'] = options.sessionId
       const official = this.options.officialFor?.(options.sessionId)
-      if (official !== undefined) {
+      if (options.purpose === 'compaction' || options.purpose === 'session-title') {
+        headers['x-mmp-helper-purpose'] = options.purpose
+        if (official !== undefined) {
+          headers['x-mmp-origin-agent-id'] = official.agentId
+          if (official.previewId) headers['x-mmp-origin-preview-id'] = official.previewId
+          else if (official.versionId) headers['x-mmp-origin-version-id'] = official.versionId
+        }
+      }
+      if (official !== undefined && options.purpose === undefined) {
         headers['x-mmp-official-agent-id'] = official.agentId
-        headers['x-mmp-official-agent-version-id'] = official.versionId
+        if(official.previewId)headers['x-mmp-expert-preview-id']=official.previewId
+        else if(official.versionId)headers['x-mmp-official-agent-version-id'] = official.versionId
       }
     }
+    this.options.validateWire?.(options, body)
     const serializedBody=JSON.stringify(body)
     options.signal?.throwIfAborted()
     let response: Response

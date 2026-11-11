@@ -1,3 +1,4 @@
+import { ExpertRuntimeService } from '../src/official-agent/expert-runtime.service';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { BadRequestException } from '@nestjs/common';
@@ -44,7 +45,8 @@ function harness(seed: {
       create: async ({ data }: { data: Record<string, unknown> }) => ({ id: 'ver-1', ...data }),
     },
     auditLog: { create: async ({ data }: { data: unknown }) => data },
-    user: { findMany: async () => [{ id: 'admin-1', name: '平台管理员' }] },
+    userRole: {findFirst: async()=>({roleId:"super"})},
+    user: {findUnique: async()=>({status:"active"}), findMany: async () => [{ id: 'admin-1', name: '平台管理员' }] },
   };
   (prisma as { $transaction: Function }).$transaction = async (
     cb: (tx: Record<string, unknown>) => Promise<unknown>,
@@ -54,6 +56,7 @@ function harness(seed: {
     { adminScope: async () => null } as never,
     { loadAssetFiles: () => [], syncFromAssets: async () => [] } as never,
     { setAgentSkillLinks: async () => undefined, snapshotLinkedSkills: async () => [] } as never,
+    new ExpertRuntimeService(prisma as never, {} as never),
   );
   return { service, actor };
 }

@@ -101,6 +101,12 @@ export class AdminOfficialAgentsController {
   @Delete(':id/avatar')
   removeAvatar(@CurrentUser() actor:User,@Param('id') id:string){return this.agents.removeAvatar(actor,id);}
 
+  @Post(':id/preview')
+  createPreview(@CurrentUser() actor:User,@Param('id') id:string){return this.agents.createPreview(actor,id);}
+
+  @Post(':id/rollback/:versionId')
+  rollback(@CurrentUser() actor:User,@Param('id') id:string,@Param('versionId') versionId:string){return this.agents.rollback(actor,id,versionId);}
+
   @Post(':id/publish')
   @HttpCode(200)
   publish(@CurrentUser() actor: User, @Param('id') id: string) {

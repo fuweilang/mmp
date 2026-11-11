@@ -32,7 +32,8 @@ description: "查找从 V0 到工作区写入器版本的每个 Session 格式�
 | 1 | PR #3349 | [V1](v1.zh.md) | [JSON](v1.schema.json) | 54 / 415 |
 | 2 | `mmp-v0.1.3-alpha.2` | [V2](v2.zh.md) | [JSON](v2.schema.json) | 56 / 435 |
 | 3 | PR #4320 | [V3](v3.zh.md) | [JSON](v3.schema.json) | 60 / 467 |
-| 4 | 当前工作树 | [当前目录](../../persistence-catalog.zh.md) | [JSON](../../persistence-schema.json) | 65 / 626 |
+| 4 | 未接受的工作树快照 | [V4](v4.zh.md) | [JSON](v4.schema.json) | 74 / 736 |
+| 5 | 当前工作树 | [当前目录](../../persistence-catalog.zh.md) | [JSON](../../persistence-schema.json) | 74 / 737 |
 
 <!-- persistence-format-index:end -->
 
@@ -73,3 +74,5 @@ pnpm run doc-sync
 ## 开发备注
 
 无。
+
+本地迁出归档可以使用唯一的 `workingTreeSnapshot` 来源，值为 schema 文件精确字节的小写 SHA-256。它标识尚未接受的工作树捕获，不代表 Git 提交、发布或 PR；验证器拒绝混合来源身份及改变的字节。

@@ -81,7 +81,7 @@ describe('first-party Session format catalog', () => {
 
     expect(() => restore([{
       type: 'ordinary/not-installed', seq: 0, time: 1, data: 'future',
-    }])).toThrow(/unknown event type/)
+    }])).toThrow(/unknown to this harness/)
 
     const extension = restore([{
       type: 'ordinary/external', seq: 0, time: 1, data: null, ignorable: true,
@@ -270,7 +270,7 @@ describe('first-party Session format catalog', () => {
     stream.decodeRow({ type: 'feedback/record', seq: 0, time: 2, data: { text: 'retained' } })
 
     expect(stream.finish()).toMatchObject({
-      header: { version: 4, id: 'streaming' },
+      header: { version: SESSION_FORMAT_VERSION, id: 'streaming' },
       inheritedEventCount: 0,
       events: [{ type: 'feedback/record', seq: 0 }],
     })

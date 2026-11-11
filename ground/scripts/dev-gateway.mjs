@@ -6,8 +6,8 @@ import httpProxy from 'http-proxy';
 import os from 'node:os';
 
 const PORT = Number(process.env.GATEWAY_PORT || 5201);
-const WEB = 'http://127.0.0.1:5202';
-const CONSOLE_API = 'http://127.0.0.1:3100';
+const WEB = process.env.MAMMOTH_WEB_ORIGIN || 'http://127.0.0.1:5202';
+const CONSOLE_API = process.env.MAMMOTH_API_ORIGIN || 'http://127.0.0.1:3100';
 // 终端 Web 页面（mammoth-agent 的 mmp web，默认 :3080），挂在 /agent 前缀下
 const AGENT_WEB = process.env.MAMMOTH_AGENT_WEB || 'http://127.0.0.1:3080';
 const DOWNLOADS_DIR =
@@ -20,6 +20,16 @@ const CLIENT_DOWNLOAD_REDIRECTS = {
 };
 
 const proxy = httpProxy.createProxyServer({ ws: true, xfwd: true });
+
+// http-proxy installs its client error listener only after the upstream upgrade.
+proxy.on('proxyReqWs', (proxyReq, _req, socket) => {
+  socket.on('error', (error) => {
+    console.warn(`[gateway] WebSocket 连接中断：${error.code || error.message}`);
+    proxyReq.destroy();
+    socket.destroy();
+  });
+  socket.once('close', () => proxyReq.destroy());
+});
 
 function pathOf(url) {
   return (url || '/').split('?')[0];
@@ -36,14 +46,14 @@ function targetOf(url) {
   if (path === '/agent' || path.startsWith('/agent/')) {
     return {
       target: AGENT_WEB,
-      name: 'mmp web :3080',
+      name: `mmp web ${AGENT_WEB}`,
       rewrite: (u) => u.replace(/^\/agent(?=\/|$)/, '') || '/',
     };
   }
   if (path === '/admin/api' || path.startsWith('/admin/api/')) {
     return {
       target: CONSOLE_API,
-      name: 'dev:api :3100',
+      name: `dev:api ${CONSOLE_API}`,
       rewrite: (u) => u.replace(/^\/admin\/api/, '/api/admin'),
     };
   }
@@ -56,7 +66,7 @@ function targetOf(url) {
     const apiPrefix = path.startsWith('/middle') ? '/middle/api' : '/console/api';
     return {
       target: CONSOLE_API,
-      name: 'dev:api :3100',
+      name: `dev:api ${CONSOLE_API}`,
       apiPrefix,
       rewrite: (u) => u.replace(/^\/(console|middle)\/api/, '/api'),
     };
@@ -68,9 +78,9 @@ function targetOf(url) {
     path === '/api/pay' ||
     path.startsWith('/api/pay/')
   ) {
-    return { target: CONSOLE_API, name: 'dev:api :3100' };
+    return { target: CONSOLE_API, name: `dev:api ${CONSOLE_API}` };
   }
-  return { target: WEB, name: 'dev:web :5202' };
+  return { target: WEB, name: `dev:web ${WEB}` };
 }
 
 proxy.on('error', (err, req, res) => {
@@ -187,7 +197,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`[gw] Local:   http://127.0.0.1:${PORT}   ← 浏览器只开这个`);
   for (const u of nets) console.log(`[gw] Network: ${u}`);
   console.log(`[gw]   /login /console /admin /agent`);
-  console.log(`[gw] web→5202  api→3100  agent→3080`);
+  console.log(`[gw] web→${WEB}  api→${CONSOLE_API}  agent→${AGENT_WEB}`);
   console.log(`[gw] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   console.log('');
 });

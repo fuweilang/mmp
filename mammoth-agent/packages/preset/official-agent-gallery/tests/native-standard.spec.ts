@@ -64,7 +64,7 @@ async function nativeFixture(script:ConstructorParameters<typeof MockAdapter>[0]
  const workspace={id:WorkspaceId('fixture-workspace'),path:directory,attachSession:vi.fn(async()=>{})}
  ctx.provide('workspaceRegistry',{get:(id:string)=>id===workspace.id?workspace:undefined} as never)
  ctx.provide('deepseekAccount',{resolveToken:async()=> 'fixture-token-not-a-live-credential'} as never)
- ctx.provide('groundRequestAttribution',{bind:()=>{},unbind:()=>{}} as never)
+ ctx.provide('groundRequestAttribution',{bind:()=>{},unbind:()=>{},guard:()=>()=>{}} as never)
  const wires:Record<string,unknown>[]=[]
  let deny=false,corrupt=false,scope='tenant:fixture',contentReads=0,holdContent:undefined|{started:()=>void;wait:Promise<void>}
  const json=(v:unknown,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json'}})

@@ -50,7 +50,8 @@ function recordDigest(entry: PersistenceHistoryEntry): string {
     roots: [...entry.snapshot.roots].sort((a, b) => compare(a.key, b.key)).map(root => ({
       key: root.key, ...identity(root), schema: root.schema,
     })) } }
-  return createHash('sha256').update('mmp-persistence-finalization-record-v1\n').update(JSON.stringify(semantic)).digest('hex')
+  // Accepted checkpoints retain this fingerprint domain across product renames.
+  return createHash('sha256').update('dsh-persistence-finalization-record-v1\n').update(JSON.stringify(semantic)).digest('hex')
 }
 
 function writerVersion(roots: readonly PersistenceRoot[]): number {

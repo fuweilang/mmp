@@ -1,0 +1,8 @@
+version: 1
+scenario: official-expert-knowledge
+profile: sdk
+composition: sdk-official-expert-knowledge
+recording: authored
+header:
+  class: official-expert-knowledge
+  pin: true

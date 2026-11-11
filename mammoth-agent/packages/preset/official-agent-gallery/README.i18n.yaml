@@ -3,35 +3,35 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/preset/official-agent-gallery/README.md
 /:
-  en: 5c1068f9d22609c9
-  zh: 47b4de5f6edd1c9d
+  en: 56187518536e68a5
+  zh: 11cb4f34b9afbb03
 /mammoth-ai-mmp-official-agent-gallery:
   en: df35dd6f672c2372
   zh: 7b14ac472d791442
 /mammoth-ai-mmp-official-agent-gallery/summary:
-  en: 767f2fcfc2688e5a
-  zh: 6f15a9d9473720ac
+  en: 387444670087bace
+  zh: f677a0e86f522e19
 /mammoth-ai-mmp-official-agent-gallery/remote-api:
-  en: 6a227e19a2ae3e27
-  zh: 15c8c225b1dbfd5b
+  en: 61cb72c900d4335c
+  zh: 7a118aa6db667942
 /mammoth-ai-mmp-official-agent-gallery/model-experience:
   en: 215e7ba838619b7b
   zh: a311da3843709f90
-/mammoth-ai-mmp-official-agent-gallery/model-experience/frozen-official-agent:
-  en: ab5f89907fd98635
-  zh: f6e26156688d135c
-/mammoth-ai-mmp-official-agent-gallery/model-experience/frozen-official-agent/what-the-model-sees:
-  en: 36df918a4ae8c806
-  zh: 8938f74f4aaa5acb
-/mammoth-ai-mmp-official-agent-gallery/model-experience/frozen-official-agent/token-effect:
-  en: ea99edd6ca65b866
-  zh: 73f8a8be19fee47b
-/mammoth-ai-mmp-official-agent-gallery/model-experience/frozen-official-agent/kv-cache-effect:
-  en: 876e79dfe16e0478
-  zh: 62c45663bd7918a3
+/mammoth-ai-mmp-official-agent-gallery/model-experience/current-request-knowledge:
+  en: d3215bc824b01ec7
+  zh: 35282fd157c87ef1
+/mammoth-ai-mmp-official-agent-gallery/model-experience/current-request-knowledge/what-the-model-sees:
+  en: 1b78aa356aa78a0a
+  zh: e05661131ed90876
+/mammoth-ai-mmp-official-agent-gallery/model-experience/current-request-knowledge/token-effect:
+  en: 783528bda0b5c090
+  zh: c649cf4f089f9674
+/mammoth-ai-mmp-official-agent-gallery/model-experience/current-request-knowledge/kv-cache-effect:
+  en: 8f16a78856687b95
+  zh: 94f0ec13ad79294d
 /mammoth-ai-mmp-official-agent-gallery/complete-skill-packages:
   en: b6d1417455667030
   zh: 464d7d1237cc543a
 /mammoth-ai-mmp-official-agent-gallery/known-limitations-and-deferred-work:
-  en: b2e60e45042f30c5
-  zh: 235c5ab35fee2efc
+  en: d515acbcadaec134
+  zh: dc586f4d4c441d49

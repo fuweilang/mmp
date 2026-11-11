@@ -318,7 +318,16 @@ describe.each(modes)('EOF migration refusal ($compression, $access)', ({ compres
     await expectOnlyGenerations([path])
   })
 
-  it.each([5, 99])('retains a V3 watermark claiming V%s unchanged through native reopening', async (sessionFormatVersion) => {
+  it('refuses a historical V3 watermark that would acquire active V5 meaning', async () => {
+    const path = await store(3, compression, [...releasedPrefix, { type: 'session-log-deepseek/delivery-accepted', data: { sessionId: id, throughSeq: 0, sessionFormatVersion: 5 } }])
+    const original = await observe(path)
+    const ctx = await mount(compression)
+    await expect(ctx.sessionPersistence.open(id, access)).rejects.toThrow('claims target format v5')
+    expect(await observe(path)).toEqual(original)
+    await expectOnlyGenerations([path])
+  })
+
+  it.each([99])('retains a V3 watermark claiming V%s unchanged through native reopening', async (sessionFormatVersion) => {
     const marker = { type: 'session-log-deepseek/delivery-accepted', data: {
       sessionId: id, throughSeq: 0, sessionFormatVersion,
     } }

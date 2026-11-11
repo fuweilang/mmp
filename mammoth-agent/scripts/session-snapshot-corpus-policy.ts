@@ -21,7 +21,7 @@ export interface SnapshotCorpusGenerationSummary {
   readonly retainedScenarios: number
 }
 
-const RETAINED_BASELINE_VERSION = 3
+const RETAINED_BASELINE_VERSIONS = new Set([3, 4])
 // Includes native and PTC Office recordings that retain removed tools.
 const MAX_RETAINED_ROLES = 13
 const REQUIRED_V0_COVERAGE = new Set([
@@ -43,6 +43,7 @@ export function assertSnapshotCorpusPolicy(
 ): SnapshotCorpusGenerationSummary {
   let currentRoles = 0
   let baselineRoles = 0
+  const baselineVersions = new Set<number>()
   let retainedRoles = 0
   let retainedScenarios = 0
   const coverageByVersion = new Map<number, Set<string>>()
@@ -53,13 +54,14 @@ export function assertSnapshotCorpusPolicy(
     }
     if (scenario.retained === undefined) {
       for (const version of scenario.selectedVersions) {
-        if (version === RETAINED_BASELINE_VERSION) {
+        if (RETAINED_BASELINE_VERSIONS.has(version)) {
           baselineRoles += 1
+          baselineVersions.add(version)
         } else if (version === SESSION_FORMAT_VERSION) {
           currentRoles += 1
         } else {
           throw new Error(
-            `${scenario.key}: selected Session generation v${version} must be retained baseline v${RETAINED_BASELINE_VERSION} or current v${SESSION_FORMAT_VERSION}`,
+            `${scenario.key}: selected Session generation v${version} must be retained baseline ${[...RETAINED_BASELINE_VERSIONS].map(value => `v${value}`).join("/")} or current v${SESSION_FORMAT_VERSION}`,
           )
         }
       }
@@ -93,7 +95,7 @@ export function assertSnapshotCorpusPolicy(
     for (const item of scenario.retained.coverage) coverage.add(item)
   }
 
-  if (baselineRoles > 0) coverageByVersion.set(RETAINED_BASELINE_VERSION, new Set(REQUIRED_ADJACENT_COVERAGE))
+  for (const version of baselineVersions) coverageByVersion.set(version, new Set(REQUIRED_ADJACENT_COVERAGE))
   for (let version = 0; version < SESSION_FORMAT_VERSION; version += 1) {
     const required = version === 0 ? REQUIRED_V0_COVERAGE : REQUIRED_ADJACENT_COVERAGE
     const coverage = coverageByVersion.get(version)

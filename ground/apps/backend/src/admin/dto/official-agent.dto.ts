@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 
 export class CreateOfficialAgentDto {
+  @IsOptional() @IsObject() executionConfig?: Record<string, unknown>;
   @IsString()
   /** 允许 latest 风格 key，如 mammoth / c3274112ed041 / copy-polish-master */
   @Matches(/^[a-z][a-z0-9-]{1,63}$/, {
@@ -71,6 +72,7 @@ export class CreateOfficialAgentDto {
 }
 
 export class UpdateOfficialAgentDto {
+  @IsOptional() @IsObject() executionConfig?: Record<string, unknown>;
   @IsOptional()
   @IsString()
   @MinLength(2)

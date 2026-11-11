@@ -1,3 +1,4 @@
+import { seedMissingOfficialDraft } from '../src/official-agent/legacy-inventory';
 import {
   AccessScope,
   KbStatus,
@@ -293,38 +294,10 @@ async function ensureOfficialAgentAssetsDrafts() {
     return;
   }
   for (const asset of assets) {
-    const existing = await prisma.officialAgent.findUnique({ where: { key: asset.key } });
-    if (!existing) {
-      await prisma.officialAgent.create({
-        data: {
-          key: asset.key,
-          kind: asset.kind,
-          name: asset.name,
-          summary: asset.summary,
-          openingQuestions: asset.openingQuestions,
-          systemPrompt: asset.systemPrompt,
-          toolScope: asset.toolScope,
-        },
-      });
-      console.log('official agent asset draft created:', asset.key);
-      continue;
-    }
-    if (existing.status === OfficialAgentStatus.DRAFT && !existing.onlineVersionId) {
-      await prisma.officialAgent.update({
-        where: { id: existing.id },
-        data: {
-          kind: asset.kind,
-          name: asset.name,
-          summary: asset.summary,
-          openingQuestions: asset.openingQuestions,
-          systemPrompt: asset.systemPrompt,
-          toolScope: asset.toolScope,
-        },
-      });
-      console.log('official agent asset draft updated:', asset.key);
-      continue;
-    }
-    console.log('official agent asset skipped (keep published/admin):', asset.key);
+    await seedMissingOfficialDraft(prisma,{
+      key:asset.key,kind:asset.kind,name:asset.name,summary:asset.summary,
+      openingQuestions:asset.openingQuestions,systemPrompt:asset.systemPrompt,toolScope:asset.toolScope,
+    });
   }
 }
 

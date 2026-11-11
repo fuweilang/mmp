@@ -2524,7 +2524,7 @@ describe('JsonlSessionPersistence: nested Assistant streams', () => {
       JSON.stringify({ type: 'text-chunks', seq0: 1, time0: 2, data: { turn: 1, step: 1, index: 0, dt: [1, 1], texts: ['a', 'b', 'c'] } }),
       JSON.stringify({ type: 'turn/end', seq: SessionSeq(4), time: 5, data: { turn: 1, reason: { kind: 'completed' } } }),
     ].join('\n') + '\n'
-    expect(() => scanLog(Buffer.from(logText))).toThrow(/lacks .*seq/)
+    expect(() => scanLog(Buffer.from(logText))).toThrow(/unknown to this harness/)
   })
 
   it('scanLog treats a malformed removed packed row as a committed seq hole', () => {
@@ -2537,10 +2537,10 @@ describe('JsonlSessionPersistence: nested Assistant streams', () => {
       JSON.stringify({ type: 'text-chunks', seq0: 0, time0: 1, data: { turn: 1, step: 1, index: 0, dt: [], texts: ['a', 'b'] } }),
       JSON.stringify({ type: 'turn/end', seq: SessionSeq(2), time: 3, data: { turn: 1, reason: { kind: 'completed' } } }),
     ].join('\n') + '\n'
-    expect(() => scanLog(Buffer.from(logText))).toThrow(/lacks .*seq/)
+    expect(() => scanLog(Buffer.from(logText))).toThrow(/unknown to this harness/)
   })
 
-  it('scanLog: a packed row with a mid-run seq gap after the last turn/end drops the whole row', () => {
+  it('scanLog refuses a removed packed row after the last turn/end before recovery', () => {
     const logText = [
       JSON.stringify({
         type: 'session', version: SESSION_FORMAT_VERSION, id: 'row-gap', createdAt: 1,
@@ -2550,11 +2550,7 @@ describe('JsonlSessionPersistence: nested Assistant streams', () => {
       // seq0 skips 1 — the run's first member is already a gap; no turn/end follows.
       JSON.stringify({ type: 'text-chunks', seq0: 2, time0: 2, data: { turn: 1, step: 1, index: 0, dt: [1, 1], texts: ['a', 'b', 'c'] } }),
     ].join('\n') + '\n'
-    const scanned = scanLog(Buffer.from(logText))
-    expect(scanned.events.map(e => e.seq)).toEqual([0])
-    // committedBytes stays on the line boundary BEFORE the dropped row.
-    const headerAndTurn = logText.split('\n').slice(0, 2).join('\n') + '\n'
-    expect(scanned.committedBytes).toBe(Buffer.byteLength(headerAndTurn, 'utf8'))
+    expect(() => scanLog(Buffer.from(logText))).toThrow(/unknown to this harness/)
   })
 
   it('eventLines keeps one event per line with nested compact stream records', () => {

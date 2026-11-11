@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 /** Format reference coverage follows the writer version and retains complete historical schemas. */
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -215,6 +216,28 @@ describe('complete persistence format references', () => {
     expect(formats.entries[1]?.source).toEqual({ pullRequest: 3349 })
     expect(formats.entries[3]).toMatchObject({ document: 'docs/persistence-catalog.md', schemaPath: 'docs/persistence-schema.json' })
     expect(formats.entries[3]?.source).toBeUndefined()
+  })
+
+  it('binds a working-tree source to the exact archived schema bytes', () => {
+    const root = fixture()
+    const path = join(root, 'docs/persistence-changes/historical-formats/v1.schema.json')
+    const digest = createHash('sha256').update(readFileSync(path)).digest('hex')
+    editPair(root, 1, 'pullRequest: 3349', `workingTreeSnapshot: "${digest}"`)
+    expect(loadPersistenceFormats(root).entries[1]?.source).toEqual({ workingTreeSnapshot: digest })
+    writeFileSync(path, readFileSync(path, 'utf8') + '\n')
+    expect(() => loadPersistenceFormats(root)).toThrow('workingTreeSnapshot does not match archived schema bytes')
+  })
+
+  it.each(['invalid', 'a'.repeat(63), 'G'.repeat(64)])('rejects invalid working-tree digest %s', digest => {
+    const root = fixture()
+    editPair(root, 1, 'pullRequest: 3349', `workingTreeSnapshot: "${digest}"`)
+    expect(() => loadPersistenceFormats(root)).toThrow('workingTreeSnapshot must be a lowercase SHA-256')
+  })
+
+  it('rejects mixed working-tree and release source identities', () => {
+    const root = fixture()
+    editPair(root, 1, 'pullRequest: 3349', `workingTreeSnapshot: "${'a'.repeat(64)}"\n  pullRequest: 3349`)
+    expect(() => loadPersistenceFormats(root)).toThrow('expected fields')
   })
 
   it('accepts a version-zero writer without a historical directory', () => {

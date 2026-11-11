@@ -300,6 +300,8 @@ export class LlmProvidersService {
     const modelIds = existing.models.map((m) => m.id);
     // 真删干净：企业分配 → 模型 → 厂商（DB 亦有 ON DELETE CASCADE；此处显式级联便于审计）
     const deleted = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM llm_provider WHERE id = ${id} FOR UPDATE`;
+      if (await tx.knowledgeProfile.count({ where: { providerId: id } })) throw this.retrievalDependencyConflict();
       const tenantAssignments = modelIds.length
         ? await tx.llmTenantModel.deleteMany({ where: { modelRowId: { in: modelIds } } })
         : { count: 0 };
@@ -311,7 +313,7 @@ export class LlmProvidersService {
         tenantAssignmentCount: tenantAssignments.count,
         modelCount: models.count,
       };
-    });
+    }).catch(error => this.rethrowProviderDelete(error));
 
     await this.prisma.auditLog.create({
       data: {
@@ -415,17 +417,18 @@ export class LlmProvidersService {
     if (!existing) throw new NotFoundException('模型不存在');
 
     const result = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM llm_provider WHERE id = ${existing.providerId} FOR UPDATE`;
       await tx.llmTenantModel.deleteMany({ where: { modelRowId } });
       await tx.llmModel.delete({ where: { id: modelRowId } });
       const left = await tx.llmModel.count({ where: { providerId: existing.providerId } });
       let providerDeleted = false;
-      if (left === 0) {
-        // 删光模型后清掉空厂商，短名可被新建复用为全新厂商
+      if (left === 0 && !(await tx.knowledgeProfile.count({ where: { providerId: existing.providerId } }))) {
+        // Immutable retrieval profiles retain their encrypted credential owner.
         await tx.llmProvider.delete({ where: { id: existing.providerId } });
         providerDeleted = true;
       }
       return { providerDeleted };
-    });
+    }).catch(error => this.rethrowProviderDelete(error));
 
     await this.prisma.auditLog.create({
       data: {
@@ -442,6 +445,17 @@ export class LlmProvidersService {
     return { ok: true };
   }
 
+
+  private retrievalDependencyConflict() {
+    return new ConflictException('供应商仍被不可变检索配置引用，不能删除。请保留供应商；如需撤销访问，可停用供应商或检索配置。');
+  }
+
+  private rethrowProviderDelete(error: unknown): never {
+    // Concurrent new references must roll back the whole deletion, never become a generic 500.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003')
+      throw this.retrievalDependencyConflict();
+    throw error;
+  }
 
   /** 拼上游 URL：chat 或 models 列表。 */
   private buildUpstreamPath(baseUrl: string, kind: 'chat' | 'models'): string {

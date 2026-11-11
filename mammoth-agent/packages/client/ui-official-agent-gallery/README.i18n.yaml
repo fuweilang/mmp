@@ -3,14 +3,14 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-official-agent-gallery/README.md
 /:
-  en: 3dac48ed43885902
+  en: 18c13703cfba4d0a
   zh: 9ab0a0278bf9255f
 /mammoth-ai-mmp-client-ui-official-agent-gallery:
   en: c4c1e3100836a697
   zh: 0b7da241ca08f1d7
 /mammoth-ai-mmp-client-ui-official-agent-gallery/summary:
-  en: 76aa7d270bc86b35
-  zh: b15f29a76f234676
+  en: 7473e1df911e877a
+  zh: b7c12ec32388dd4a
 /mammoth-ai-mmp-client-ui-official-agent-gallery/model-experience:
   en: e6aedf7cd5bcf059
   zh: b918b737a1f23b6c
@@ -18,5 +18,5 @@
   en: 3ea75ba385041342
   zh: d402d639e8d0b1e3
 /mammoth-ai-mmp-client-ui-official-agent-gallery/known-limitations-and-deferred-work:
-  en: 8e90f6d7b88a7445
-  zh: 4a66785eba41a867
+  en: c9098338eeb90622
+  zh: 333011e80a537400

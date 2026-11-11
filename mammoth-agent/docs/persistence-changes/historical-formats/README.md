@@ -32,7 +32,8 @@ The index is generated from validated snapshots and the current writer constant.
 | 1 | PR #3349 | [V1](v1.md) | [JSON](v1.schema.json) | 54 / 415 |
 | 2 | `mmp-v0.1.3-alpha.2` | [V2](v2.md) | [JSON](v2.schema.json) | 56 / 435 |
 | 3 | PR #4320 | [V3](v3.md) | [JSON](v3.schema.json) | 60 / 467 |
-| 4 | Current checkout | [Current catalog](../../persistence-catalog.md) | [JSON](../../persistence-schema.json) | 65 / 626 |
+| 4 | Unaccepted working-tree snapshot | [V4](v4.md) | [JSON](v4.schema.json) | 74 / 736 |
+| 5 | Current checkout | [Current catalog](../../persistence-catalog.md) | [JSON](../../persistence-schema.json) | 74 / 737 |
 
 <!-- persistence-format-index:end -->
 
@@ -73,3 +74,5 @@ pnpm run doc-sync
 ## Dev Note
 
 None.
+
+A local outgoing archive may use exactly one `workingTreeSnapshot` source containing the lowercase SHA-256 of its exact schema-file bytes. This identifies an unaccepted working-tree capture, not a Git commit, release or PR; the verifier rejects mixed source identities and changed bytes.

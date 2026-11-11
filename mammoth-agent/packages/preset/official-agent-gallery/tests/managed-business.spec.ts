@@ -49,7 +49,7 @@ async function fixture(script:ConstructorParameters<typeof MockAdapter>[0]){
  const workspace={id:WorkspaceId('fixture-workspace'),path:directory,attachSession:vi.fn(async()=>{})}
  ctx.provide('workspaceRegistry',{get:(id:string)=>id===workspace.id?workspace:undefined} as never)
  ctx.provide('deepseekAccount',{resolveToken:async()=> 'fixture-token-not-a-live-credential'} as never)
- ctx.provide('groundRequestAttribution',{bind:()=>{},unbind:()=>{}} as never)
+ ctx.provide('groundRequestAttribution',{bind:()=>{},unbind:()=>{},guard:()=>()=>{}} as never)
  let deny=false,corrupt=false,scope='tenant:fixture',contentReads=0,holdContent:undefined|{started:()=>void;wait:Promise<void>}
  const json=(v:unknown,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json'}})
  vi.stubGlobal('fetch',vi.fn(async(input:unknown,init?:RequestInit)=>{
@@ -179,7 +179,7 @@ describe('gallery managed business focused evidence',()=>{
   expect(()=>verifyWireRequest(JSON.stringify({messages:[{role:'system',content:'truncated'}]}),'frozen method')).toThrow('WIRE_CONTEXT_MISSING')
   expect(()=>verifyWireRequest(JSON.stringify({messages:[],tools:[{type:'function',function:{name:'bash'}}]}),undefined)).toThrow('WIRE_TOOL_POLICY')
  })
- it('actual Ground adapter validates exact post-budget wire before mocked HTTP and replaces invalid cloud sticky ID',async()=>{
+ it('actual Ground adapter rejects unavailable explicit models and validates exact Automatic wire',async()=>{
   let sent='',validated='';let chatCalls=0
   vi.stubGlobal('fetch',vi.fn(async(input:unknown,init:RequestInit)=>{
    if(String(input).endsWith('/models'))return new Response(JSON.stringify({data:[{id:'cloud/active',is_preferred:true,capabilities:{contextWindow:128000}}]}),{headers:{'Content-Type':'application/json'}})
@@ -188,10 +188,11 @@ describe('gallery managed business focused evidence',()=>{
   }))
   const adapter=new GroundLlmAdapter({providerId:'mammoth-ground',displayName:'fixture',origin:'https://fixture.invalid',account:()=>({resolveToken:async()=> 'fixture-not-live'} as never)})
   const options={provider:'mammoth-ground',model:'deleted-sticky',messages:[createSystemMessage('PINNED_METHOD')]}
-  for await(const _chunk of adapter.stream(options)){/* consume actual SSE parser */}
-  expect(chatCalls).toBe(1);expect(JSON.parse(sent).model).toBe('cloud/active');expect(sha(sent)).toBe(validated);await evidence('WIRE-EVIDENCE.json',JSON.stringify({adapter:'actual GroundLlmAdapter + actual body-budget + actual SSE parser',HTTP:'mock, not a live model call',requestFingerprint:validated,oldInvalidModel:'deleted-sticky',sentModel:JSON.parse(sent).model,methodPreserved:true},null,2))
-  await expect(async()=>{for await(const _chunk of adapter.stream({...options,messages:[]})){/* must not send */}}).rejects.toThrow('WIRE_CONTEXT_MISSING')
-  expect(chatCalls).toBe(1)
+  await expect(async()=>{for await(const _chunk of adapter.stream(options)){/* unavailable explicit route must not fall back */}}).rejects.toThrow('Choose Automatic')
+  expect(chatCalls).toBe(0)
+  for await(const _chunk of adapter.stream({...options,model:'auto'})){/* consume actual SSE parser */}
+  expect(chatCalls).toBe(1);expect(JSON.parse(sent).model).toBe('auto');expect(sha(sent)).toBe(validated);await evidence('WIRE-EVIDENCE.json',JSON.stringify({adapter:'actual GroundLlmAdapter + actual body-budget + actual SSE parser',HTTP:'mock, not a live model call',requestFingerprint:validated,oldInvalidModel:'deleted-sticky',sentModel:JSON.parse(sent).model,methodPreserved:true},null,2))
+  expect(()=>verifyWireRequest(JSON.stringify({...JSON.parse(sent),messages:[]}), 'PINNED_METHOD')).toThrow('WIRE_CONTEXT_MISSING')
  })
 
  it('rejects same-name scoped replacement instead of treating a registered name as authorization',async()=>{

@@ -1,0 +1,28 @@
+# Bilingual-pair consistency record for 2026-11-10-official-expert-knowledge.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/persistence-changes/2026-11-10-official-expert-knowledge.md
+/:
+  en: 3d5a424ae7d7e46b
+  zh: c22a8e4a62d8cc1a
+/2026-11-10-official-expert-knowledge:
+  en: 76da4a9ed9a1fe30
+  zh: 8df0f1ea18783a65
+/2026-11-10-official-expert-knowledge/summary:
+  en: 935826b4c1bbcb59
+  zh: 3169c283517edc44
+/2026-11-10-official-expert-knowledge/table-of-contents:
+  en: 6cf314a069ceb451
+  zh: 9adff678e9ecab3b
+/2026-11-10-official-expert-knowledge/declaration:
+  en: 6907136f28e48c90
+  zh: 02f8298485f3d8e7
+/2026-11-10-official-expert-knowledge/compatibility:
+  en: 58c0cddb1da7927d
+  zh: 76374fdfb3045025
+/2026-11-10-official-expert-knowledge/verification:
+  en: 06972a51881836f0
+  zh: ba5d8dc806255386
+/2026-11-10-official-expert-knowledge/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

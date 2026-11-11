@@ -212,6 +212,8 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'userQuestions/answer': 'owner-only', // owner answers a pending question
   'userQuestions/attachWait': 'owner-only', // owner answers a pending question
   'llm/discoverModels': 'owner-only', // owner discovers models
+  'officialAgentGallery/createPreview': 'owner-only', // preview requires the creating administrator's authority
+  'officialAgentGallery/openKnowledgeSource': 'owner-only', // sharing a Session does not grant account/space knowledge access
   'officialAgentGallery/create': 'owner-only', // owner starts an official-gallery Session; never a share viewer
   'officialAgentGallery/catalogDetail': 'owner-only', // authenticated Ground account/tenant safe-display catalog; no share-viewer grant
   'officialAgentGallery/createSkill': 'owner-only', // creates and freezes a task using owner account authority

@@ -200,7 +200,9 @@ model OfficialAgent {
   @@map("official_agent")
   /// 增量专家定义与来源；旧记录为空，不回写旧指令。
   expertDefinition Json @default("{}") @map("expert_definition")
+  executionConfig Json @default("{\"route\":\"LEGACY\"}") @map("execution_config")
 
+  ownedKnowledgeBase KnowledgeBase? @relation("ExpertOwnedKnowledgeBase")
 }
 
 /// 发布时冻结展示和执行配置；版本行发布后不再更新。
@@ -229,6 +231,7 @@ model OfficialAgentVersion {
   @@map("official_agent_version")
   /// 增量专家定义与来源；旧记录为空，不回写旧指令。
   expertDefinition Json @default("{}") @map("expert_definition")
+  executionConfig Json @default("{\"route\":\"LEGACY\"}") @map("execution_config")
 
 }
 
@@ -740,6 +743,7 @@ model LlmProvider {
   sortOrder   Int        @default(0) @map("sort_order")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
+  knowledgeProfiles KnowledgeProfile[]
   health      LlmHealthState?
   models      LlmModel[]
 
@@ -1008,4 +1012,227 @@ model LibraryCustody {
 
   @@index([tenantId, granteeUserId])
   @@map("library_custody")
+}
+
+// Isolated V1 knowledge core; legacy kb_* / official knowledge tables stay unchanged.
+model KnowledgeBase {
+  id String @id @default(cuid())
+  name String
+  scope String
+  tenantId String? @map("tenant_id")
+  enabled Boolean @default(true)
+  ownerAgentId String? @unique @map("owner_agent_id")
+  ownerAgentName String? @map("owner_agent_name")
+  autoUpdate Boolean @default(false) @map("auto_update")
+  currentReleaseId String? @unique @map("current_release_id")
+  ownerAgent OfficialAgent? @relation("ExpertOwnedKnowledgeBase", fields:[ownerAgentId], references:[id], onDelete:SetNull)
+  currentRelease KnowledgeRelease? @relation("CurrentKnowledgeRelease", fields:[currentReleaseId], references:[id], onDelete:SetNull)
+  createdAt DateTime @default(now()) @map("created_at")
+  documents KnowledgeDocument[]
+  ingestionRequests KnowledgeIngestionRequest[]
+  releases KnowledgeRelease[] @relation("KnowledgeBaseReleases")
+  @@index([scope, tenantId, enabled])
+  @@map("kc_base")
+}
+model KnowledgeProfile {
+  id String @id @default(cuid())
+  providerId String @map("provider_id")
+  task String
+  adapter String
+  model String
+  endpoint String
+  dimension Int?
+  tokenizer String
+  timeoutMs Int @map("timeout_ms")
+  batchSize Int @map("batch_size")
+  maxInputTokens Int @map("max_input_tokens")
+  maxResponseBytes Int @map("max_response_bytes")
+  enabled Boolean @default(true)
+  predecessorId String? @map("predecessor_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  provider LlmProvider @relation(fields:[providerId],references:[id],onDelete:Restrict)
+  indexes KnowledgeIndexRevision[]
+  usage KnowledgeProviderUsage[]
+  @@index([providerId, task, enabled])
+  @@map("kc_profile")
+}
+model KnowledgeDocument {
+  id String @id @default(cuid())
+  baseId String @map("base_id")
+  title String
+  enabled Boolean @default(true)
+  deletedAt DateTime? @map("deleted_at")
+  requestedIndexId String? @unique @map("requested_index_id")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  requestedIndex KnowledgeIndexRevision? @relation("RequestedFileIndex",fields:[requestedIndexId],references:[id],onDelete:SetNull)
+  createdAt DateTime @default(now()) @map("created_at")
+  base KnowledgeBase @relation(fields:[baseId],references:[id],onDelete:Restrict)
+  revisions KnowledgeDocumentRevision[]
+  @@index([baseId, enabled])
+  @@map("kc_document")
+}
+model KnowledgeDocumentRevision {
+  id String @id @default(cuid())
+  documentId String @map("document_id")
+  contentHash String @map("content_hash")
+  parserFormat String @map("parser_format")
+  originalName String @map("original_name")
+  mediaType String @map("media_type")
+  sizeBytes Int @map("size_bytes")
+  storageKey String @map("storage_key")
+  createdAt DateTime @default(now()) @map("created_at")
+  document KnowledgeDocument @relation(fields:[documentId],references:[id],onDelete:Restrict)
+  indexes KnowledgeIndexRevision[]
+  @@unique([documentId, contentHash, parserFormat], map:"kc_revision_content_format_key")
+  @@map("kc_document_revision")
+}
+model KnowledgeIndexRevision {
+  id String @id @default(cuid())
+  revisionId String @map("revision_id")
+  profileId String @map("profile_id")
+  parserVersion String @map("parser_version")
+  chunkerVersion String @map("chunker_version")
+  chunkerConfig Json @map("chunker_config")
+  indexConfigHash String @map("index_config_hash")
+  status String @default("PENDING")
+  reasonCode String? @map("reason_code")
+  chunkCount Int @default(0) @map("chunk_count")
+  tokenCount Int @default(0) @map("token_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  readyAt DateTime? @map("ready_at")
+  revision KnowledgeDocumentRevision @relation(fields:[revisionId],references:[id],onDelete:Restrict)
+  profile KnowledgeProfile @relation(fields:[profileId],references:[id],onDelete:Restrict)
+  chunks KnowledgeChunk[]
+  job KnowledgeIngestionJob?
+  releaseItems KnowledgeReleaseItem[]
+  requestedFor KnowledgeDocument? @relation("RequestedFileIndex")
+  @@unique([revisionId, profileId, indexConfigHash], map:"kc_index_revision_config_key")
+  @@index([status])
+  @@map("kc_index_revision")
+}
+model KnowledgeChunk {
+  id String @id @default(cuid())
+  indexRevisionId String @map("index_revision_id")
+  ordinal Int
+  text String @db.Text
+  sourceText String @map("source_text") @db.Text
+  contentHash String @map("content_hash")
+  tokenCount Int @map("token_count")
+  tokenizer String
+  sourceStart Int @map("source_start")
+  sourceEnd Int @map("source_end")
+  locator Json
+  index KnowledgeIndexRevision @relation(fields:[indexRevisionId],references:[id],onDelete:Restrict)
+  embedding KnowledgeEmbedding?
+  @@unique([indexRevisionId, ordinal])
+  @@map("kc_chunk")
+}
+model KnowledgeEmbedding {
+  chunkId String @id @map("chunk_id")
+  dimension Int
+  vector Unsupported("vector")
+  chunk KnowledgeChunk @relation(fields:[chunkId],references:[id],onDelete:Restrict)
+  @@map("kc_embedding")
+}
+model KnowledgeIngestionJob {
+  id String @id @default(cuid())
+  baseId String @map("base_id")
+  idempotencyKey String @map("idempotency_key")
+  requestHash String @map("request_hash")
+  indexRevisionId String @unique @map("index_revision_id")
+  status String @default("QUEUED")
+  stage String @default("UPLOADED")
+  attempts Int @default(0)
+  availableAt DateTime @default(now()) @map("available_at")
+  leaseToken String? @map("lease_token")
+  leaseUntil DateTime? @map("lease_until")
+  heartbeatAt DateTime? @map("heartbeat_at")
+  cancelledAt DateTime? @map("cancelled_at")
+  errorCode String? @map("error_code")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  index KnowledgeIndexRevision @relation(fields:[indexRevisionId],references:[id],onDelete:Restrict)
+  requests KnowledgeIngestionRequest[]
+  @@unique([baseId, id], map:"kc_ingestion_job_base_id_id_key")
+  @@unique([baseId, idempotencyKey])
+  @@index([status, availableAt, leaseUntil])
+  @@map("kc_ingestion_job")
+}
+/// Every accepted upload/reindex request key is immutable, including requests that reuse a job.
+model KnowledgeIngestionRequest {
+  baseId String @map("base_id")
+  idempotencyKey String @map("idempotency_key")
+  requestHash String @map("request_hash")
+  jobId String @map("job_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  base KnowledgeBase @relation(fields:[baseId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  job KnowledgeIngestionJob @relation(fields:[baseId,jobId],references:[baseId,id],onDelete:Restrict,onUpdate:Restrict)
+  @@id([baseId,idempotencyKey])
+  @@index([jobId])
+  @@map("kc_ingestion_request")
+}
+model KnowledgeRelease {
+  sealed Boolean @default(false)
+  id String @id @default(cuid())
+  baseId String @map("base_id")
+  version Int
+  createdAt DateTime @default(now()) @map("created_at")
+  base KnowledgeBase @relation("KnowledgeBaseReleases",fields:[baseId],references:[id],onDelete:Restrict)
+  currentFor KnowledgeBase? @relation("CurrentKnowledgeRelease")
+  items KnowledgeReleaseItem[]
+  @@unique([baseId, version])
+  @@map("kc_release")
+}
+model KnowledgeReleaseItem {
+  releaseId String @map("release_id")
+  indexRevisionId String @map("index_revision_id")
+  release KnowledgeRelease @relation(fields:[releaseId],references:[id],onDelete:Restrict)
+  index KnowledgeIndexRevision @relation(fields:[indexRevisionId],references:[id],onDelete:Restrict)
+  @@id([releaseId, indexRevisionId])
+  @@map("kc_release_item")
+}
+model KnowledgeRetrievalTrace {
+  id String @id @default(cuid())
+  requestId String @map("request_id")
+  actorUserId String @map("actor_user_id")
+  tenantId String? @map("tenant_id")
+  scope String
+  expertVersionId String? @map("expert_version_id")
+  previewId String? @map("preview_id")
+  expertId String? @map("expert_id")
+  releaseIds String[] @map("release_ids")
+  status String
+  evidence Json
+  degradation String[]
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([actorUserId, requestId])
+  @@index([tenantId, createdAt])
+  @@map("kc_retrieval_trace")
+}
+model KnowledgeProviderUsage {
+  id String @id @default(cuid())
+  profileId String @map("profile_id")
+  operationId String? @map("operation_id")
+  task String
+  inputCount Int @map("input_count")
+  estimatedTokens Int @map("estimated_tokens")
+  actualTokens Int? @map("actual_tokens")
+  status String
+  errorCode String? @map("error_code")
+  createdAt DateTime @default(now()) @map("created_at")
+  profile KnowledgeProfile @relation(fields:[profileId],references:[id],onDelete:Restrict)
+  @@index([operationId])
+  @@index([profileId, createdAt])
+  @@map("kc_provider_usage")
+}
+
+model OfficialExpertPreview {
+  id String @id @default(cuid())
+  agentId String @map("agent_id")
+  actorUserId String @map("actor_user_id")
+  snapshot Json
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([actorUserId, expiresAt])
+  @@map("official_expert_preview")
 }

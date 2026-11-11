@@ -1,3 +1,6 @@
+import { assertSuperAdmin } from '../auth/super-admin';
+import { expertExecutionPrompt } from '../official-agent/expert-definition';
+import { ExpertRuntimeService, normalizeExecutionConfig, executionDraftProjection } from '../official-agent/expert-runtime.service';
 import { normalizeDiscoveryDetail, expertDiscoveryDetail } from '../official-agent/discovery-detail';
 import {
   BadRequestException,
@@ -84,6 +87,7 @@ export class AdminOfficialAgentsService {
     private support: AdminSupportService,
     private officialKb: OfficialKbService,
     private officialSkills: OfficialSkillService,
+    private runtime?: ExpertRuntimeService,
   ) {}
 
   async discovery(actor:User,id:string){
@@ -95,7 +99,7 @@ export class AdminOfficialAgentsService {
   }
 
   async saveDiscovery(actor:User,id:string,body:{expectedUpdatedAt:string;discoveryDetail:unknown}) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     await this.prisma.$transaction(async tx=>{
       const row=await tx.officialAgent.findUnique({where:{id}});
       if(!row)throw new NotFoundException('专家不存在');
@@ -172,7 +176,7 @@ export class AdminOfficialAgentsService {
   }
 
   async create(actor: User, dto: CreateOfficialAgentDto) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     const existing = await this.prisma.officialAgent.findUnique({ where: { key: dto.key } });
     if (existing) throw new ConflictException('专家标识已存在');
 
@@ -183,6 +187,7 @@ export class AdminOfficialAgentsService {
         key: dto.key,
         kind: dto.kind,
         ...draft,
+        executionConfig: normalizeExecutionConfig(dto.executionConfig) as unknown as Prisma.InputJsonValue,
         expertDefinition: normalizeExpertDefinition(dto.expertDefinition, draft),
         ...(dto.category && isOfficialAgentCategory(dto.category)
           ? { category: dto.category }
@@ -242,7 +247,7 @@ export class AdminOfficialAgentsService {
   }
 
   async importAssets(actor: User, keys?: string[]) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     const requested = [...new Set((keys ?? []).map((key) => key.trim()).filter(Boolean))];
     const assets = loadOfficialAgentAssets(requested.length ? requested : undefined);
     const found = new Set(assets.map((asset) => asset.key));
@@ -315,7 +320,7 @@ export class AdminOfficialAgentsService {
   }
 
   async bulkOffline(actor: User, ids: string[]) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     const uniqueIds = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
     if (!uniqueIds.length) throw new BadRequestException('请选择要下架的专家');
     const results: Array<{
@@ -369,7 +374,7 @@ export class AdminOfficialAgentsService {
   }
 
   async bulkGrant(actor: User, id: string, tenantIds: string[], versionId?: string) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     const agent = await this.requireAgent(id);
     if (agent.status !== OfficialAgentStatus.PUBLISHED || !agent.onlineVersionId) {
       throw new BadRequestException('请先发布专家，再开通企业');
@@ -477,7 +482,7 @@ export class AdminOfficialAgentsService {
   }
 
   async bulkRevoke(actor: User, id: string, tenantIds: string[]) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     await this.requireAgent(id);
     const uniqueTenantIds = [...new Set(tenantIds.map((value) => value.trim()).filter(Boolean))];
     if (!uniqueTenantIds.length) throw new BadRequestException('请选择要撤销的企业');
@@ -530,9 +535,10 @@ export class AdminOfficialAgentsService {
   }
 
   async update(actor: User, id: string, dto: UpdateOfficialAgentDto) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     const existing = await this.requireAgent(id);
     const data: Prisma.OfficialAgentUpdateInput = {};
+    if (dto.executionConfig !== undefined) data.executionConfig = normalizeExecutionConfig(dto.executionConfig) as unknown as Prisma.InputJsonValue;
     if (dto.name !== undefined) data.name = this.requiredText(dto.name, '名称');
     if (dto.summary !== undefined) data.summary = dto.summary.trim();
     if (dto.openingQuestions !== undefined) {
@@ -571,7 +577,7 @@ export class AdminOfficialAgentsService {
   }
 
   async publish(actor: User, id: string) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     try {
       await this.prisma.$transaction(async (tx) => {
         const agent = await tx.officialAgent.findUnique({
@@ -581,6 +587,8 @@ export class AdminOfficialAgentsService {
         if (!agent) throw new NotFoundException('官方专家不存在');
         this.assertPublishable(agent);
         const linkedSkillSummaries = await this.officialSkills.snapshotLinkedSkills(id, tx);
+        if(linkedSkillSummaries.length!==agent.skillLinks.length)throw new BadRequestException('SKILL_DEPENDENCY_DISABLED');
+        const executionConfig = await this.runtime!.freeze(agent.executionConfig, this.frozenStringList(agent.toolScope, "工具范围"), linkedSkillSummaries, tx);
         const latest = await tx.officialAgentVersion.findFirst({
           where: { agentId: id },
           orderBy: { version: 'desc' },
@@ -598,6 +606,7 @@ export class AdminOfficialAgentsService {
             customAvatarPath: agent.customAvatarPath || null,
             linkedSkillSummaries: linkedSkillSummaries as unknown as Prisma.InputJsonValue,
             expertDefinition: normalizeExpertDefinition(agent.expertDefinition, agent),
+            executionConfig: executionConfig as unknown as Prisma.InputJsonValue,
             publishedByUserId: actor.id,
           },
         });
@@ -627,7 +636,7 @@ export class AdminOfficialAgentsService {
     }
     const published = await this.load(id);
     const asset = loadOfficialAgentAssets([published.key])[0];
-    if (asset?.kbFiles?.length) {
+    if (asset?.kbFiles?.length && (published.onlineVersion?.executionConfig as {route?:string})?.route !== 'KNOWLEDGE_CORE') {
       await this.syncOfficialKb(
         actor.id,
         published.id,
@@ -639,8 +648,37 @@ export class AdminOfficialAgentsService {
     return published;
   }
 
+  async createPreview(actor:User,id:string) {
+    await assertSuperAdmin(this.prisma,actor.id);
+    const preview=await this.prisma.$transaction(async tx=>{
+      const agent=await tx.officialAgent.findUnique({where:{id},include:{skillLinks:true}});
+      if(!agent)throw new NotFoundException('专家不存在');
+      const draftExecution=normalizeExecutionConfig(agent.executionConfig);
+      if(draftExecution.route==='LEGACY' && (this.frozenStringList(agent.toolScope,'工具范围').includes('enterprise_knowledge') || await tx.officialKbDocument.count({where:{agentId:id}})>0)) {
+        throw new BadRequestException({code:'LEGACY_KNOWLEDGE_PREVIEW_REQUIRES_MIGRATION',message:'旧知识库暂不支持不可变预览。请绑定已就绪的新知识库发布版本，或显式选择 KNOWLEDGE_CORE / OFF 关闭知识检索后预览。已发布旧专家仍可正常使用。'});
+      }
+      this.assertPublishable(agent);
+      const linkedSkills=await this.officialSkills.snapshotLinkedSkills(id,tx);
+      if(linkedSkills.length!==agent.skillLinks.length)throw new BadRequestException('SKILL_DEPENDENCY_DISABLED');
+      const executionConfig=await this.runtime!.freeze(agent.executionConfig,this.frozenStringList(agent.toolScope,'工具范围'),linkedSkills,tx);
+      return tx.officialExpertPreview.create({data:{agentId:id,actorUserId:actor.id,expiresAt:new Date(Date.now()+30*60*1000),snapshot:{agentId:id,key:agent.key,kind:agent.kind,versionId:null,version:0,systemPrompt:expertExecutionPrompt(agent.systemPrompt,normalizeExpertDefinition(agent.expertDefinition,agent) as Prisma.JsonValue),toolScope:agent.toolScope,linkedSkills,executionConfig} as unknown as Prisma.InputJsonValue}});
+    },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+    return {previewId:preview.id,agentId:id,expiresAt:preview.expiresAt.toISOString(),executionProtocol:2,launch:{entry:'expertPreview',path:`/agent?expertPreview=${encodeURIComponent(preview.id)}&expertId=${encodeURIComponent(id)}`}};
+  }
+
+  async rollback(actor:User,id:string,versionId:string){
+    await assertSuperAdmin(this.prisma,actor.id);
+    await this.prisma.$transaction(async tx=>{
+      const version=await tx.officialAgentVersion.findFirst({where:{id:versionId,agentId:id}});
+      if(!version)throw new NotFoundException('专家版本不存在');
+      await tx.officialAgent.update({where:{id},data:{status:'PUBLISHED',onlineVersionId:versionId}});
+      await tx.auditLog.create({data:{userId:actor.id,action:'admin_rollback_official_agent',meta:{agentId:id,versionId}}});
+    });
+    return this.load(id);
+  }
+
   async offline(actor: User, id: string) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     const agent = await this.requireAgent(id);
     if (agent.status !== OfficialAgentStatus.PUBLISHED) {
       throw new BadRequestException('只有已发布的专家可以下架');
@@ -662,7 +700,7 @@ export class AdminOfficialAgentsService {
    * Host sessions keep frozen binding snapshots; new starts fail because the catalog row is gone.
    */
   async remove(actor: User, id: string) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     let avatarPath: string | null | undefined;
     let snapshot: { id: string; key: string; name: string; status: OfficialAgentStatus };
     try {
@@ -716,7 +754,7 @@ export class AdminOfficialAgentsService {
   }
 
   async grant(actor: User, id: string, dto: GrantOfficialAgentDto) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     const agent = await this.requireAgent(id);
     if (agent.status !== OfficialAgentStatus.PUBLISHED || !agent.onlineVersionId) {
       throw new BadRequestException('请先发布专家，再开通企业');
@@ -763,7 +801,7 @@ export class AdminOfficialAgentsService {
   }
 
   async revoke(actor: User, id: string, tenantId: string) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     await this.requireAgent(id);
     const grant = await this.prisma.officialAgentTenantGrant.findUnique({
       where: { agentId_tenantId: { agentId: id, tenantId } },
@@ -898,6 +936,7 @@ export class AdminOfficialAgentsService {
         ? ((online as { customAvatarPath?: string | null }).customAvatarPath || null)
         : null;
     return !(
+      this.stableJson(executionDraftProjection(row.executionConfig)) === this.stableJson(executionDraftProjection(online.executionConfig)) &&
       row.name === online.name &&
       row.summary === online.summary &&
       row.systemPrompt === online.systemPrompt &&
@@ -942,6 +981,7 @@ export class AdminOfficialAgentsService {
         systemPrompt: row.systemPrompt,
         toolScope: row.toolScope,
         expertDefinition: row.expertDefinition,
+        executionConfig: row.executionConfig,
       },
       onlineVersion: row.onlineVersion
         ? this.presentVersion(row.onlineVersion, publisherNames)
@@ -998,7 +1038,7 @@ export class AdminOfficialAgentsService {
       | { originalname: string; mimetype: string; size: number; buffer: Buffer }
       | undefined,
   ) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     if (!file?.buffer?.length) throw new BadRequestException('请选择头像图片');
     const current = await this.prisma.officialAgent.findUnique({ where: { id } });
     if (!current) throw new NotFoundException('官方专家不存在');
@@ -1040,7 +1080,7 @@ export class AdminOfficialAgentsService {
   }
 
   async removeAvatar(actor: User, id: string) {
-    await this.support.adminScope(actor);
+    await assertSuperAdmin(this.prisma, actor.id);
     const current = await this.requireAgent(id);
     const previous = current.customAvatarPath || null;
     await this.prisma.officialAgent.update({ where: { id }, data: { customAvatarPath: '' } });
@@ -1075,6 +1115,7 @@ export class AdminOfficialAgentsService {
       linkedSkillSummaries: Array.isArray(version.linkedSkillSummaries)
         ? version.linkedSkillSummaries
         : [],
+      executionConfig: version.executionConfig,
       publishedByUserId,
       // Only expose a real name when the user row still exists; never invent operators.
       publishedByName,

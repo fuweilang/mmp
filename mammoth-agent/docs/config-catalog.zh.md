@@ -12,7 +12,7 @@
 每个包的条目用三个标识符标注：`inject` 列出插件注入的服务键，其 `cordis.yml` 树还必须加载这些服务的提供者；`refs` 列出声明引用、但未粘贴在此处的类型；`source` 链接到声明配置的源文件。范围限定为 harness 层级（`packages/`）；配置树还可能加载的 vendored cordis 插件（控制台日志记录器等）固定为上游源代码（参见 [vendoring policy](../vendor/README.md)），未收录于此目录。
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-acp -->
-<a id="deepseek-aidsh-acp"></a>
+<a id="mammoth-aimmp-acp"></a>
 
 ## `@mammoth-ai/mmp-acp`
 
@@ -36,7 +36,7 @@ export interface AcpConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-acp -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-action-cards -->
-<a id="deepseek-aidsh-action-cards"></a>
+<a id="mammoth-aimmp-action-cards"></a>
 
 ## `@mammoth-ai/mmp-action-cards`
 
@@ -51,7 +51,7 @@ export type Config = z.infer<typeof Config>
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-action-cards -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-agent-default-model -->
-<a id="deepseek-aidsh-agent-default-model"></a>
+<a id="mammoth-aimmp-agent-default-model"></a>
 
 ## `@mammoth-ai/mmp-agent-default-model`
 
@@ -72,7 +72,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-agent-default-model -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-agent-instructions -->
-<a id="deepseek-aidsh-agent-instructions"></a>
+<a id="mammoth-aimmp-agent-instructions"></a>
 
 ## `@mammoth-ai/mmp-agent-instructions`
 
@@ -107,7 +107,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-agent-instructions -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-agent-loop -->
-<a id="deepseek-aidsh-agent-loop"></a>
+<a id="mammoth-aimmp-agent-loop"></a>
 
 ## `@mammoth-ai/mmp-agent-loop`
 
@@ -139,7 +139,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-agent-loop -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-agent-preset -->
-<a id="deepseek-aidsh-agent-preset"></a>
+<a id="mammoth-aimmp-agent-preset"></a>
 
 ## `@mammoth-ai/mmp-agent-preset`
 
@@ -154,7 +154,7 @@ export type Config = PresetDefinition
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-agent-preset -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-agent-preset-registry -->
-<a id="deepseek-aidsh-agent-preset-registry"></a>
+<a id="mammoth-aimmp-agent-preset-registry"></a>
 
 ## `@mammoth-ai/mmp-agent-preset-registry`
 
@@ -174,7 +174,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-agent-preset-registry -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-agent-tool-presentation -->
-<a id="deepseek-aidsh-agent-tool-presentation"></a>
+<a id="mammoth-aimmp-agent-tool-presentation"></a>
 
 ## `@mammoth-ai/mmp-agent-tool-presentation`
 
@@ -200,7 +200,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-agent-tool-presentation -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-api-gateway -->
-<a id="deepseek-aidsh-api-gateway"></a>
+<a id="mammoth-aimmp-api-gateway"></a>
 
 ## `@mammoth-ai/mmp-api-gateway`
 
@@ -221,7 +221,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-api-gateway -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-api-job-controller -->
-<a id="deepseek-aidsh-api-job-controller"></a>
+<a id="mammoth-aimmp-api-job-controller"></a>
 
 ## `@mammoth-ai/mmp-api-job-controller`
 
@@ -240,7 +240,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-api-job-controller -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-api-session-controller -->
-<a id="deepseek-aidsh-api-session-controller"></a>
+<a id="mammoth-aimmp-api-session-controller"></a>
 
 ## `@mammoth-ai/mmp-api-session-controller`
 
@@ -259,7 +259,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-api-session-controller -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-api-settings-controller -->
-<a id="deepseek-aidsh-api-settings-controller"></a>
+<a id="mammoth-aimmp-api-settings-controller"></a>
 
 ## `@mammoth-ai/mmp-api-settings-controller`
 
@@ -275,7 +275,7 @@ export interface SettingsControllerInternals {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-api-settings-controller -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-api-terminal-controller -->
-<a id="deepseek-aidsh-api-terminal-controller"></a>
+<a id="mammoth-aimmp-api-terminal-controller"></a>
 
 ## `@mammoth-ai/mmp-api-terminal-controller`
 
@@ -321,7 +321,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-api-terminal-controller -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-api-workspace-controller -->
-<a id="deepseek-aidsh-api-workspace-controller"></a>
+<a id="mammoth-aimmp-api-workspace-controller"></a>
 
 ## `@mammoth-ai/mmp-api-workspace-controller`
 
@@ -340,7 +340,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-api-workspace-controller -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-api-workspace-files -->
-<a id="deepseek-aidsh-api-workspace-files"></a>
+<a id="mammoth-aimmp-api-workspace-files"></a>
 
 ## `@mammoth-ai/mmp-api-workspace-files`
 
@@ -369,7 +369,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-api-workspace-files -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-attachment-local -->
-<a id="deepseek-aidsh-attachment-local"></a>
+<a id="mammoth-aimmp-attachment-local"></a>
 
 ## `@mammoth-ai/mmp-attachment-local`
 
@@ -406,7 +406,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-attachment-local -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-bash-local -->
-<a id="deepseek-aidsh-bash-local"></a>
+<a id="mammoth-aimmp-bash-local"></a>
 
 ## `@mammoth-ai/mmp-bash-local`
 
@@ -434,12 +434,12 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-bash-local -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-bash-sandbox -->
-<a id="deepseek-aidsh-bash-sandbox"></a>
+<a id="mammoth-aimmp-bash-sandbox"></a>
 
 ## `@mammoth-ai/mmp-bash-sandbox`
 
 - `inject`: `subprocess` · `sandbox` · `sandboxPolicy`
-- `refs`: [`LocalConfig`](#deepseek-aidsh-bash-local)
+- `refs`: [`LocalConfig`](#mammoth-aimmp-bash-local)
 - `source`: [`packages/shell/bash-sandbox/src/index.ts:36`](../packages/shell/bash-sandbox/src/index.ts)
 
 ```ts config-catalog
@@ -455,12 +455,12 @@ export type Config = LocalConfig
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-bash-sandbox -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-client-connection -->
-<a id="deepseek-aidsh-client-connection"></a>
+<a id="mammoth-aimmp-client-connection"></a>
 
 ## `@mammoth-ai/mmp-client-connection`
 
 - `inject`: `credentials`
-- `source`: [`packages/client/connection/src/index.ts:96`](../packages/client/connection/src/index.ts)
+- `source`: [`packages/client/connection/src/index.ts:97`](../packages/client/connection/src/index.ts)
 
 ```ts config-catalog
 /** Browser authentication, request limits, and connection recovery configuration. */
@@ -500,7 +500,7 @@ export interface ConnectionRecoveryConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-client-connection -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-client-hmr -->
-<a id="deepseek-aidsh-client-hmr"></a>
+<a id="mammoth-aimmp-client-hmr"></a>
 
 ## `@mammoth-ai/mmp-client-hmr`
 
@@ -510,6 +510,8 @@ export interface ConnectionRecoveryConfig {
 ```ts config-catalog
 /** Plugin config, validated by the same-named schemastery schema. */
 export interface Config {
+  /** Observe rebuilt workspace bundles; disabled by the Desktop composition. */
+  watchBundles?: boolean
   /** Bundle stat-poll interval in milliseconds (default 500, the build-side watcher's polling default). */
   pollIntervalMs?: number
 }
@@ -517,7 +519,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-client-hmr -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-client-product-analytics -->
-<a id="deepseek-aidsh-client-product-analytics"></a>
+<a id="mammoth-aimmp-client-product-analytics"></a>
 
 ## `@mammoth-ai/mmp-client-product-analytics`
 
@@ -541,7 +543,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-client-product-analytics -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-client-shortcuts -->
-<a id="deepseek-aidsh-client-shortcuts"></a>
+<a id="mammoth-aimmp-client-shortcuts"></a>
 
 ## `@mammoth-ai/mmp-client-shortcuts`
 
@@ -557,7 +559,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-client-shortcuts -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-client-ui-plugin-manager -->
-<a id="deepseek-aidsh-client-ui-plugin-manager"></a>
+<a id="mammoth-aimmp-client-ui-plugin-manager"></a>
 
 ## `@mammoth-ai/mmp-client-ui-plugin-manager`
 
@@ -577,7 +579,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-client-ui-plugin-manager -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-client-ui-settings-account -->
-<a id="deepseek-aidsh-client-ui-settings-account"></a>
+<a id="mammoth-aimmp-client-ui-settings-account"></a>
 
 ## `@mammoth-ai/mmp-client-ui-settings-account`
 
@@ -627,7 +629,7 @@ export type OnboardingProcess = 'compact' | 'standard' | 'detailed'
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-client-ui-settings-account -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-client-ui-settings-models -->
-<a id="deepseek-aidsh-client-ui-settings-models"></a>
+<a id="mammoth-aimmp-client-ui-settings-models"></a>
 
 ## `@mammoth-ai/mmp-client-ui-settings-models`
 
@@ -638,12 +640,14 @@ export type OnboardingProcess = 'compact' | 'standard' | 'detailed'
 export interface Config {
   /** Offer the browser API-key step when no native shell owns credential onboarding. */
   credentialOnboarding: boolean
+  /** Cloud-only product mode: Models settings is a read-only notice; no provider API-key forms. */
+  cloudOnly: boolean
 }
 ```
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-client-ui-settings-models -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-client-ui-sidebar-documentpreview -->
-<a id="deepseek-aidsh-client-ui-sidebar-documentpreview"></a>
+<a id="mammoth-aimmp-client-ui-sidebar-documentpreview"></a>
 
 ## `@mammoth-ai/mmp-client-ui-sidebar-documentpreview`
 
@@ -677,7 +681,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-client-ui-sidebar-documentpreview -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-client-ui-theme -->
-<a id="deepseek-aidsh-client-ui-theme"></a>
+<a id="mammoth-aimmp-client-ui-theme"></a>
 
 ## `@mammoth-ai/mmp-client-ui-theme`
 
@@ -709,7 +713,7 @@ export type ThemePreference = typeof THEME_PREFERENCES[number]
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-client-ui-theme -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-client-ui-trajectory -->
-<a id="deepseek-aidsh-client-ui-trajectory"></a>
+<a id="mammoth-aimmp-client-ui-trajectory"></a>
 
 ## `@mammoth-ai/mmp-client-ui-trajectory`
 
@@ -726,7 +730,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-client-ui-trajectory -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-compaction-basic -->
-<a id="deepseek-aidsh-compaction-basic"></a>
+<a id="mammoth-aimmp-compaction-basic"></a>
 
 ## `@mammoth-ai/mmp-compaction-basic`
 
@@ -775,7 +779,7 @@ export interface ModelCompactPolicyConfig extends CompactionPolicyConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-compaction-basic -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-compaction-tool-result-pruner -->
-<a id="deepseek-aidsh-compaction-tool-result-pruner"></a>
+<a id="mammoth-aimmp-compaction-tool-result-pruner"></a>
 
 ## `@mammoth-ai/mmp-compaction-tool-result-pruner`
 
@@ -796,7 +800,7 @@ export interface ToolResultPruneConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-compaction-tool-result-pruner -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-cordis-host-runner -->
-<a id="deepseek-aidsh-cordis-host-runner"></a>
+<a id="mammoth-aimmp-cordis-host-runner"></a>
 
 ## `@mammoth-ai/mmp-cordis-host-runner`
 
@@ -815,7 +819,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-cordis-host-runner -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-credentials-local -->
-<a id="deepseek-aidsh-credentials-local"></a>
+<a id="mammoth-aimmp-credentials-local"></a>
 
 ## `@mammoth-ai/mmp-credentials-local`
 
@@ -837,18 +841,41 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-credentials-local -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-deepseek-account-platform -->
-<a id="deepseek-aidsh-deepseek-account-platform"></a>
+<a id="mammoth-aimmp-deepseek-account-platform"></a>
 
 ## `@mammoth-ai/mmp-deepseek-account-platform`
 
 - `inject`: `credentials` · `authorization`
-- `source`: [`packages/credentials/deepseek-account-platform/src/index.ts:23`](../packages/credentials/deepseek-account-platform/src/index.ts)
+- `source`: [`packages/credentials/deepseek-account-platform/src/index.ts:32`](../packages/credentials/deepseek-account-platform/src/index.ts)
 
 ```ts config-catalog
 /** Deployment-specific platform and request deadlines. */
 export interface Config {
+  /** Reuse Ground browser cookies for a single-user local Web profile; Desktop stays on PKCE. */
+  webSso?: boolean
+  /** Browser-facing origin when the local identity router owns the public listener. */
+  webSsoOrigin?: string
+  /** Ground session cookie name; must match the Ground deployment. */
+  groundCookieName?: string
+
   /** Platform origin serving auth-api and browser pages. */
+  historySync?: boolean
+  /** Milliseconds between incremental cloud history synchronization attempts. */
+  historySyncIntervalMs?: number
+  /** Maximum transcript messages sent per cloud history synchronization request. */
+  historyBatchSize?: number
+  /** Ground platform origin used for account and cloud service requests. */
   platformOrigin?: string
+  /**
+   * Authentication protocol.
+   * - deepseek: DeepSeek Platform auth_init / auth_exchange (default)
+   * - oidc: Ground OIDC authorize + token + userinfo (猛犸 SSO)
+   */
+  authMode?: 'deepseek' | 'oidc'
+  /** OIDC client_id registered at Ground (default harness-desktop). */
+  oidcClientId?: string
+  /** Ground public API prefix for OIDC (/console/api or /middle/api). */
+  oidcApiPrefix?: '/console/api' | '/middle/api'
   /** Native desktop identity for Host API and embedded Platform requests; null identifies the client as web. */
   desktopPlatform?: 'darwin' | 'win32' | null
   /** Optional frontend deployment selector for embedded Usage and Top-up pages. */
@@ -878,7 +905,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-deepseek-account-platform -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-agent-team -->
-<a id="deepseek-aidsh-experimental-agent-team"></a>
+<a id="mammoth-aimmp-experimental-agent-team"></a>
 
 ## `@mammoth-ai/mmp-experimental-agent-team`
 
@@ -901,7 +928,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-agent-team -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-api-speech-to-text -->
-<a id="deepseek-aidsh-experimental-api-speech-to-text"></a>
+<a id="mammoth-aimmp-experimental-api-speech-to-text"></a>
 
 ## `@mammoth-ai/mmp-experimental-api-speech-to-text`
 
@@ -920,7 +947,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-api-speech-to-text -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-browser-use-chrome-devtools-mcp -->
-<a id="deepseek-aidsh-experimental-browser-use-chrome-devtools-mcp"></a>
+<a id="mammoth-aimmp-experimental-browser-use-chrome-devtools-mcp"></a>
 
 ## `@mammoth-ai/mmp-experimental-browser-use-chrome-devtools-mcp`
 
@@ -935,7 +962,7 @@ export type Config = BrowserMcpConfig
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-browser-use-chrome-devtools-mcp -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-browser-use-playwright-mcp -->
-<a id="deepseek-aidsh-experimental-browser-use-playwright-mcp"></a>
+<a id="mammoth-aimmp-experimental-browser-use-playwright-mcp"></a>
 
 ## `@mammoth-ai/mmp-experimental-browser-use-playwright-mcp`
 
@@ -950,7 +977,7 @@ export type Config = BrowserMcpConfig
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-browser-use-playwright-mcp -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-browser-use-stagehand-native -->
-<a id="deepseek-aidsh-experimental-browser-use-stagehand-native"></a>
+<a id="mammoth-aimmp-experimental-browser-use-stagehand-native"></a>
 
 ## `@mammoth-ai/mmp-experimental-browser-use-stagehand-native`
 
@@ -992,7 +1019,7 @@ export interface StagehandModelConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-browser-use-stagehand-native -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-claude-code-mods -->
-<a id="deepseek-aidsh-experimental-claude-code-mods"></a>
+<a id="mammoth-aimmp-experimental-claude-code-mods"></a>
 
 ## `@mammoth-ai/mmp-experimental-claude-code-mods`
 
@@ -1019,7 +1046,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-claude-code-mods -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-client-ui-cot-translation -->
-<a id="deepseek-aidsh-experimental-client-ui-cot-translation"></a>
+<a id="mammoth-aimmp-experimental-client-ui-cot-translation"></a>
 
 ## `@mammoth-ai/mmp-experimental-client-ui-cot-translation`
 
@@ -1047,7 +1074,7 @@ export interface CotTranslationPreferences {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-client-ui-cot-translation -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-client-ui-forge -->
-<a id="deepseek-aidsh-experimental-client-ui-forge"></a>
+<a id="mammoth-aimmp-experimental-client-ui-forge"></a>
 
 ## `@mammoth-ai/mmp-experimental-client-ui-forge`
 
@@ -1085,7 +1112,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-client-ui-forge -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-computer-use-cua-driver-mcp -->
-<a id="deepseek-aidsh-experimental-computer-use-cua-driver-mcp"></a>
+<a id="mammoth-aimmp-experimental-computer-use-cua-driver-mcp"></a>
 
 ## `@mammoth-ai/mmp-experimental-computer-use-cua-driver-mcp`
 
@@ -1109,7 +1136,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-computer-use-cua-driver-mcp -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-cua-macos -->
-<a id="deepseek-aidsh-experimental-cua-macos"></a>
+<a id="mammoth-aimmp-experimental-cua-macos"></a>
 
 ## `@mammoth-ai/mmp-experimental-cua-macos`
 
@@ -1124,7 +1151,7 @@ export type Config = CuaConfig
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-cua-macos -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-forge -->
-<a id="deepseek-aidsh-experimental-forge"></a>
+<a id="mammoth-aimmp-experimental-forge"></a>
 
 ## `@mammoth-ai/mmp-experimental-forge`
 
@@ -1146,7 +1173,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-forge -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-forge-github -->
-<a id="deepseek-aidsh-experimental-forge-github"></a>
+<a id="mammoth-aimmp-experimental-forge-github"></a>
 
 ## `@mammoth-ai/mmp-experimental-forge-github`
 
@@ -1169,7 +1196,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-forge-github -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-forge-session -->
-<a id="deepseek-aidsh-experimental-forge-session"></a>
+<a id="mammoth-aimmp-experimental-forge-session"></a>
 
 ## `@mammoth-ai/mmp-experimental-forge-session`
 
@@ -1186,7 +1213,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-forge-session -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-inspector -->
-<a id="deepseek-aidsh-experimental-inspector"></a>
+<a id="mammoth-aimmp-experimental-inspector"></a>
 
 ## `@mammoth-ai/mmp-experimental-inspector`
 
@@ -1255,7 +1282,7 @@ export interface InspectorOptions {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-inspector -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-ptc-runtime-python -->
-<a id="deepseek-aidsh-experimental-ptc-runtime-python"></a>
+<a id="mammoth-aimmp-experimental-ptc-runtime-python"></a>
 
 ## `@mammoth-ai/mmp-experimental-ptc-runtime-python`
 
@@ -1324,7 +1351,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-ptc-runtime-python -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-speech-to-text -->
-<a id="deepseek-aidsh-experimental-speech-to-text"></a>
+<a id="mammoth-aimmp-experimental-speech-to-text"></a>
 
 ## `@mammoth-ai/mmp-experimental-speech-to-text`
 
@@ -1343,7 +1370,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-speech-to-text -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-speech-to-text-sensevoice -->
-<a id="deepseek-aidsh-experimental-speech-to-text-sensevoice"></a>
+<a id="mammoth-aimmp-experimental-speech-to-text-sensevoice"></a>
 
 ## `@mammoth-ai/mmp-experimental-speech-to-text-sensevoice`
 
@@ -1404,7 +1431,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-speech-to-text-sensevoice -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-subagent-oar -->
-<a id="deepseek-aidsh-experimental-subagent-oar"></a>
+<a id="mammoth-aimmp-experimental-subagent-oar"></a>
 
 ## `@mammoth-ai/mmp-experimental-subagent-oar`
 
@@ -1433,7 +1460,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-subagent-oar -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-tool-agent-team -->
-<a id="deepseek-aidsh-experimental-tool-agent-team"></a>
+<a id="mammoth-aimmp-experimental-tool-agent-team"></a>
 
 ## `@mammoth-ai/mmp-experimental-tool-agent-team`
 
@@ -1454,7 +1481,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-tool-agent-team -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-tool-subagent-oar -->
-<a id="deepseek-aidsh-experimental-tool-subagent-oar"></a>
+<a id="mammoth-aimmp-experimental-tool-subagent-oar"></a>
 
 ## `@mammoth-ai/mmp-experimental-tool-subagent-oar`
 
@@ -1473,7 +1500,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-tool-subagent-oar -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-translator -->
-<a id="deepseek-aidsh-experimental-translator"></a>
+<a id="mammoth-aimmp-experimental-translator"></a>
 
 ## `@mammoth-ai/mmp-experimental-translator`
 
@@ -1512,7 +1539,7 @@ export type PaidTranslationProvider = 'deepseek-account' | 'deepseek-official'
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-translator -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-experimental-worktree -->
-<a id="deepseek-aidsh-experimental-worktree"></a>
+<a id="mammoth-aimmp-experimental-worktree"></a>
 
 ## `@mammoth-ai/mmp-experimental-worktree`
 
@@ -1541,7 +1568,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-worktree -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-file-reference-local -->
-<a id="deepseek-aidsh-file-reference-local"></a>
+<a id="mammoth-aimmp-file-reference-local"></a>
 
 ## `@mammoth-ai/mmp-file-reference-local`
 
@@ -1562,7 +1589,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-file-reference-local -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-fs-local -->
-<a id="deepseek-aidsh-fs-local"></a>
+<a id="mammoth-aimmp-fs-local"></a>
 
 ## `@mammoth-ai/mmp-fs-local`
 
@@ -1583,12 +1610,12 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-fs-local -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-fs-sandbox -->
-<a id="deepseek-aidsh-fs-sandbox"></a>
+<a id="mammoth-aimmp-fs-sandbox"></a>
 
 ## `@mammoth-ai/mmp-fs-sandbox`
 
 - `inject`: `sandboxPolicy`
-- `refs`: [`LocalConfig`](#deepseek-aidsh-fs-local)
+- `refs`: [`LocalConfig`](#mammoth-aimmp-fs-local)
 - `source`: [`packages/fs/fs-sandbox/src/index.ts:45`](../packages/fs/fs-sandbox/src/index.ts)
 
 ```ts config-catalog
@@ -1603,7 +1630,7 @@ export type Config = LocalConfig
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-fs-sandbox -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-goal -->
-<a id="deepseek-aidsh-goal"></a>
+<a id="mammoth-aimmp-goal"></a>
 
 ## `@mammoth-ai/mmp-goal`
 
@@ -1620,7 +1647,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-goal -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-headless -->
-<a id="deepseek-aidsh-headless"></a>
+<a id="mammoth-aimmp-headless"></a>
 
 ## `@mammoth-ai/mmp-headless`
 
@@ -1646,7 +1673,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-headless -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-hmr -->
-<a id="deepseek-aidsh-hmr"></a>
+<a id="mammoth-aimmp-hmr"></a>
 
 ## `@mammoth-ai/mmp-hmr`
 
@@ -1669,7 +1696,7 @@ export interface HmrConfig extends ChokidarOptions {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-hmr -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-hooks-claude-code -->
-<a id="deepseek-aidsh-hooks-claude-code"></a>
+<a id="mammoth-aimmp-hooks-claude-code"></a>
 
 ## `@mammoth-ai/mmp-hooks-claude-code`
 
@@ -1708,7 +1735,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-hooks-claude-code -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-hooks-codex -->
-<a id="deepseek-aidsh-hooks-codex"></a>
+<a id="mammoth-aimmp-hooks-codex"></a>
 
 ## `@mammoth-ai/mmp-hooks-codex`
 
@@ -1736,7 +1763,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-hooks-codex -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-host-directory-picker-browse -->
-<a id="deepseek-aidsh-host-directory-picker-browse"></a>
+<a id="mammoth-aimmp-host-directory-picker-browse"></a>
 
 ## `@mammoth-ai/mmp-host-directory-picker-browse`
 
@@ -1752,7 +1779,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-host-directory-picker-browse -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-host-frontend-static -->
-<a id="deepseek-aidsh-host-frontend-static"></a>
+<a id="mammoth-aimmp-host-frontend-static"></a>
 
 ## `@mammoth-ai/mmp-host-frontend-static`
 
@@ -1769,7 +1796,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-host-frontend-static -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-host-open-in-app -->
-<a id="deepseek-aidsh-host-open-in-app"></a>
+<a id="mammoth-aimmp-host-open-in-app"></a>
 
 ## `@mammoth-ai/mmp-host-open-in-app`
 
@@ -1801,7 +1828,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-host-open-in-app -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-host-product-telemetry-otel -->
-<a id="deepseek-aidsh-host-product-telemetry-otel"></a>
+<a id="mammoth-aimmp-host-product-telemetry-otel"></a>
 
 ## `@mammoth-ai/mmp-host-product-telemetry-otel`
 
@@ -1838,7 +1865,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-host-product-telemetry-otel -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-host-webserver -->
-<a id="deepseek-aidsh-host-webserver"></a>
+<a id="mammoth-aimmp-host-webserver"></a>
 
 ## `@mammoth-ai/mmp-host-webserver`
 
@@ -1891,7 +1918,7 @@ export interface TlsConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-host-webserver -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-jobs-local -->
-<a id="deepseek-aidsh-jobs-local"></a>
+<a id="mammoth-aimmp-jobs-local"></a>
 
 ## `@mammoth-ai/mmp-jobs-local`
 
@@ -1920,7 +1947,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-jobs-local -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-llm-deepseek-account -->
-<a id="deepseek-aidsh-llm-deepseek-account"></a>
+<a id="mammoth-aimmp-llm-deepseek-account"></a>
 
 ## `@mammoth-ai/mmp-llm-deepseek-account`
 
@@ -1938,7 +1965,7 @@ export interface Config extends Omit<ProtocolConfig, 'models'>, ModelListingConf
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-llm-deepseek-account -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-llm-deepseek-api-key -->
-<a id="deepseek-aidsh-llm-deepseek-api-key"></a>
+<a id="mammoth-aimmp-llm-deepseek-api-key"></a>
 
 ## `@mammoth-ai/mmp-llm-deepseek-api-key`
 
@@ -1955,8 +1982,30 @@ export interface Config extends ProtocolConfig, ModelListingConfig {
 ```
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-llm-deepseek-api-key -->
 
+<!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-llm-ground -->
+<a id="mammoth-aimmp-llm-ground"></a>
+
+## `@mammoth-ai/mmp-llm-ground`
+
+- `inject`: `llm`
+- `source`: [`packages/llm/llm-ground/src/config.ts:4`](../packages/llm/llm-ground/src/config.ts)
+
+```ts config-catalog
+export interface Config {
+  /** Ground public origin (no path), e.g. http://127.0.0.1:5201 */
+  groundOrigin: string
+  /** Provider route id registered with ctx.llm */
+  providerId: string
+  /** Display name in model picker */
+  displayName: string
+  /** Interval for observing the cloud model pool; zero disables background refresh. */
+  catalogPollIntervalMs?: number
+}
+```
+<!-- END GENERATED config-catalog:@mammoth-ai/mmp-llm-ground -->
+
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-llm-pi-ai -->
-<a id="deepseek-aidsh-llm-pi-ai"></a>
+<a id="mammoth-aimmp-llm-pi-ai"></a>
 
 ## `@mammoth-ai/mmp-llm-pi-ai`
 
@@ -2231,7 +2280,7 @@ export type PiAiThinkingTokenBudgetField = NonNullable<OpenAICompletionsCompat['
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-llm-pi-ai -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-llm-replay -->
-<a id="deepseek-aidsh-llm-replay"></a>
+<a id="mammoth-aimmp-llm-replay"></a>
 
 ## `@mammoth-ai/mmp-llm-replay`
 
@@ -2314,7 +2363,7 @@ export interface ReplayModelConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-llm-replay -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-llm-retry -->
-<a id="deepseek-aidsh-llm-retry"></a>
+<a id="mammoth-aimmp-llm-retry"></a>
 
 ## `@mammoth-ai/mmp-llm-retry`
 
@@ -2328,7 +2377,7 @@ export type Config = Readonly<Record<string, never>>
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-llm-retry -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-lsp-stdio -->
-<a id="deepseek-aidsh-lsp-stdio"></a>
+<a id="mammoth-aimmp-lsp-stdio"></a>
 
 ## `@mammoth-ai/mmp-lsp-stdio`
 
@@ -2371,7 +2420,7 @@ export interface LspLocalServerConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-lsp-stdio -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-mcp-client -->
-<a id="deepseek-aidsh-mcp-client"></a>
+<a id="mammoth-aimmp-mcp-client"></a>
 
 ## `@mammoth-ai/mmp-mcp-client`
 
@@ -2449,7 +2498,7 @@ export interface ReconnectConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-mcp-client -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-message-feedback -->
-<a id="deepseek-aidsh-message-feedback"></a>
+<a id="mammoth-aimmp-message-feedback"></a>
 
 ## `@mammoth-ai/mmp-message-feedback`
 
@@ -2466,7 +2515,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-message-feedback -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-office-to-pdf -->
-<a id="deepseek-aidsh-office-to-pdf"></a>
+<a id="mammoth-aimmp-office-to-pdf"></a>
 
 ## `@mammoth-ai/mmp-office-to-pdf`
 
@@ -2517,8 +2566,27 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-office-to-pdf -->
 
+<!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-official-agent-gallery -->
+<a id="mammoth-aimmp-official-agent-gallery"></a>
+
+## `@mammoth-ai/mmp-official-agent-gallery`
+
+- `inject`: `agents` · `sessionProjections` · `systemPrompt` · `tools` · `skills` · `workspaceRegistry` · `deepseekAccount` · `groundRequestAttribution` · `attachments` · `agentPresets`
+- `source`: [`packages/preset/official-agent-gallery/src/index.ts:76`](../packages/preset/official-agent-gallery/src/index.ts)
+
+```ts config-catalog
+/** Ground connection shared by gallery reads and trusted execution checks. */
+export interface Config {
+  /** Ground public HTTP(S) origin without a path. */
+  groundOrigin: string
+  /** Maximum distinct historical exact sources reauthorized before resend; exceeding it requires a new chat. */
+  maxHistoricalSources?: number
+}
+```
+<!-- END GENERATED config-catalog:@mammoth-ai/mmp-official-agent-gallery -->
+
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-permission-presets -->
-<a id="deepseek-aidsh-permission-presets"></a>
+<a id="mammoth-aimmp-permission-presets"></a>
 
 ## `@mammoth-ai/mmp-permission-presets`
 
@@ -2558,7 +2626,7 @@ export interface PresetSpec {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-permission-presets -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-persona -->
-<a id="deepseek-aidsh-persona"></a>
+<a id="mammoth-aimmp-persona"></a>
 
 ## `@mammoth-ai/mmp-persona`
 
@@ -2588,7 +2656,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-persona -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-plan-mode -->
-<a id="deepseek-aidsh-plan-mode"></a>
+<a id="mammoth-aimmp-plan-mode"></a>
 
 ## `@mammoth-ai/mmp-plan-mode`
 
@@ -2605,7 +2673,7 @@ export interface PlanModeConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-plan-mode -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-plugin-manager -->
-<a id="deepseek-aidsh-plugin-manager"></a>
+<a id="mammoth-aimmp-plugin-manager"></a>
 
 ## `@mammoth-ai/mmp-plugin-manager`
 
@@ -2655,7 +2723,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-plugin-manager -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-plugin-market -->
-<a id="deepseek-aidsh-plugin-market"></a>
+<a id="mammoth-aimmp-plugin-market"></a>
 
 ## `@mammoth-ai/mmp-plugin-market`
 
@@ -2695,7 +2763,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-plugin-market -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-plugin-package-inventory-deepseek -->
-<a id="deepseek-aidsh-plugin-package-inventory-deepseek"></a>
+<a id="mammoth-aimmp-plugin-package-inventory-deepseek"></a>
 
 ## `@mammoth-ai/mmp-plugin-package-inventory-deepseek`
 
@@ -2712,7 +2780,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-plugin-package-inventory-deepseek -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-ptc-runtime-node -->
-<a id="deepseek-aidsh-ptc-runtime-node"></a>
+<a id="mammoth-aimmp-ptc-runtime-node"></a>
 
 ## `@mammoth-ai/mmp-ptc-runtime-node`
 
@@ -2762,7 +2830,7 @@ export type LaunchConfig = {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-ptc-runtime-node -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-pwsh-local -->
-<a id="deepseek-aidsh-pwsh-local"></a>
+<a id="mammoth-aimmp-pwsh-local"></a>
 
 ## `@mammoth-ai/mmp-pwsh-local`
 
@@ -2797,12 +2865,12 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-pwsh-local -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-pwsh-sandbox -->
-<a id="deepseek-aidsh-pwsh-sandbox"></a>
+<a id="mammoth-aimmp-pwsh-sandbox"></a>
 
 ## `@mammoth-ai/mmp-pwsh-sandbox`
 
 - `inject`: `subprocess` · `sandbox` · `sandboxPolicy`
-- `refs`: [`LocalConfig`](#deepseek-aidsh-pwsh-local)
+- `refs`: [`LocalConfig`](#mammoth-aimmp-pwsh-local)
 - `source`: [`packages/shell/pwsh-sandbox/src/index.ts:40`](../packages/shell/pwsh-sandbox/src/index.ts)
 
 ```ts config-catalog
@@ -2819,7 +2887,7 @@ export type Config = LocalConfig
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-pwsh-sandbox -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-repeat-tool-reminder -->
-<a id="deepseek-aidsh-repeat-tool-reminder"></a>
+<a id="mammoth-aimmp-repeat-tool-reminder"></a>
 
 ## `@mammoth-ai/mmp-repeat-tool-reminder`
 
@@ -2855,7 +2923,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-repeat-tool-reminder -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-sandbox-local -->
-<a id="deepseek-aidsh-sandbox-local"></a>
+<a id="mammoth-aimmp-sandbox-local"></a>
 
 ## `@mammoth-ai/mmp-sandbox-local`
 
@@ -2889,7 +2957,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-sandbox-local -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-sandbox-policy -->
-<a id="deepseek-aidsh-sandbox-policy"></a>
+<a id="mammoth-aimmp-sandbox-policy"></a>
 
 ## `@mammoth-ai/mmp-sandbox-policy`
 
@@ -2927,7 +2995,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-sandbox-policy -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-schedule -->
-<a id="deepseek-aidsh-schedule"></a>
+<a id="mammoth-aimmp-schedule"></a>
 
 ## `@mammoth-ai/mmp-schedule`
 
@@ -2957,7 +3025,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-schedule -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-sdk-app -->
-<a id="deepseek-aidsh-sdk-app"></a>
+<a id="mammoth-aimmp-sdk-app"></a>
 
 ## `@mammoth-ai/mmp-sdk-app`
 
@@ -2974,7 +3042,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-sdk-app -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-sdk-jsonrpc-server -->
-<a id="deepseek-aidsh-sdk-jsonrpc-server"></a>
+<a id="mammoth-aimmp-sdk-jsonrpc-server"></a>
 
 ## `@mammoth-ai/mmp-sdk-jsonrpc-server`
 
@@ -2998,7 +3066,7 @@ export interface JsonRpcConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-sdk-jsonrpc-server -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-session-log-deepseek -->
-<a id="deepseek-aidsh-session-log-deepseek"></a>
+<a id="mammoth-aimmp-session-log-deepseek"></a>
 
 ## `@mammoth-ai/mmp-session-log-deepseek`
 
@@ -3022,7 +3090,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-session-log-deepseek -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-session-log-export -->
-<a id="deepseek-aidsh-session-log-export"></a>
+<a id="mammoth-aimmp-session-log-export"></a>
 
 ## `@mammoth-ai/mmp-session-log-export`
 
@@ -3042,11 +3110,11 @@ export type SessionLogCompressionLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-session-log-export -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-session-persistence-jsonl -->
-<a id="deepseek-aidsh-session-persistence-jsonl"></a>
+<a id="mammoth-aimmp-session-persistence-jsonl"></a>
 
 ## `@mammoth-ai/mmp-session-persistence-jsonl`
 
-- `source`: [`packages/session/session-persistence-jsonl/src/index.ts:94`](../packages/session/session-persistence-jsonl/src/index.ts)
+- `source`: [`packages/session/session-persistence-jsonl/src/index.ts:95`](../packages/session/session-persistence-jsonl/src/index.ts)
 
 ```ts config-catalog
 /** Plugin config for the JSONL backend's root, physical encoding, and listing concurrency. */
@@ -3075,7 +3143,7 @@ export type JsonlCompression = 'zstd' | 'none'
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-session-persistence-jsonl -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-session-projection-cache -->
-<a id="deepseek-aidsh-session-projection-cache"></a>
+<a id="mammoth-aimmp-session-projection-cache"></a>
 
 ## `@mammoth-ai/mmp-session-projection-cache`
 
@@ -3100,7 +3168,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-session-projection-cache -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-session-query-sqlite -->
-<a id="deepseek-aidsh-session-query-sqlite"></a>
+<a id="mammoth-aimmp-session-query-sqlite"></a>
 
 ## `@mammoth-ai/mmp-session-query-sqlite`
 
@@ -3148,7 +3216,7 @@ export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-session-query-sqlite -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-session-reference -->
-<a id="deepseek-aidsh-session-reference"></a>
+<a id="mammoth-aimmp-session-reference"></a>
 
 ## `@mammoth-ai/mmp-session-reference`
 
@@ -3171,7 +3239,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-session-reference -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-session-telemetry-otel -->
-<a id="deepseek-aidsh-session-telemetry-otel"></a>
+<a id="mammoth-aimmp-session-telemetry-otel"></a>
 
 ## `@mammoth-ai/mmp-session-telemetry-otel`
 
@@ -3218,7 +3286,7 @@ export enum SessionTelemetryMode {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-session-telemetry-otel -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-session-title -->
-<a id="deepseek-aidsh-session-title"></a>
+<a id="mammoth-aimmp-session-title"></a>
 
 ## `@mammoth-ai/mmp-session-title`
 
@@ -3239,7 +3307,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-session-title -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-session-title-all-prompts-llm -->
-<a id="deepseek-aidsh-session-title-all-prompts-llm"></a>
+<a id="mammoth-aimmp-session-title-all-prompts-llm"></a>
 
 ## `@mammoth-ai/mmp-session-title-all-prompts-llm`
 
@@ -3259,7 +3327,7 @@ export interface Config extends SessionTitleLlmConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-session-title-all-prompts-llm -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-session-title-first-prompt-llm -->
-<a id="deepseek-aidsh-session-title-first-prompt-llm"></a>
+<a id="mammoth-aimmp-session-title-first-prompt-llm"></a>
 
 ## `@mammoth-ai/mmp-session-title-first-prompt-llm`
 
@@ -3279,7 +3347,7 @@ export interface Config extends SessionTitleLlmConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-session-title-first-prompt-llm -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-shell-env -->
-<a id="deepseek-aidsh-shell-env"></a>
+<a id="mammoth-aimmp-shell-env"></a>
 
 ## `@mammoth-ai/mmp-shell-env`
 
@@ -3295,7 +3363,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-shell-env -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-skill -->
-<a id="deepseek-aidsh-skill"></a>
+<a id="mammoth-aimmp-skill"></a>
 
 ## `@mammoth-ai/mmp-skill`
 
@@ -3311,7 +3379,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-skill -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-skill-filesystem -->
-<a id="deepseek-aidsh-skill-filesystem"></a>
+<a id="mammoth-aimmp-skill-filesystem"></a>
 
 ## `@mammoth-ai/mmp-skill-filesystem`
 
@@ -3350,7 +3418,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-skill-filesystem -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-skill-office -->
-<a id="deepseek-aidsh-skill-office"></a>
+<a id="mammoth-aimmp-skill-office"></a>
 
 ## `@mammoth-ai/mmp-skill-office`
 
@@ -3371,7 +3439,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-skill-office -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-spill-local -->
-<a id="deepseek-aidsh-spill-local"></a>
+<a id="mammoth-aimmp-spill-local"></a>
 
 ## `@mammoth-ai/mmp-spill-local`
 
@@ -3402,7 +3470,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-spill-local -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-spill-policy -->
-<a id="deepseek-aidsh-spill-policy"></a>
+<a id="mammoth-aimmp-spill-policy"></a>
 
 ## `@mammoth-ai/mmp-spill-policy`
 
@@ -3419,7 +3487,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-spill-policy -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-ssh -->
-<a id="deepseek-aidsh-ssh"></a>
+<a id="mammoth-aimmp-ssh"></a>
 
 ## `@mammoth-ai/mmp-ssh`
 
@@ -3466,7 +3534,7 @@ export type HelperLaunch = {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-ssh -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-storage-domain -->
-<a id="deepseek-aidsh-storage-domain"></a>
+<a id="mammoth-aimmp-storage-domain"></a>
 
 ## `@mammoth-ai/mmp-storage-domain`
 
@@ -3490,7 +3558,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-storage-domain -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-storage-json -->
-<a id="deepseek-aidsh-storage-json"></a>
+<a id="mammoth-aimmp-storage-json"></a>
 
 ## `@mammoth-ai/mmp-storage-json`
 
@@ -3512,7 +3580,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-storage-json -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-storage-sqlite -->
-<a id="deepseek-aidsh-storage-sqlite"></a>
+<a id="mammoth-aimmp-storage-sqlite"></a>
 
 ## `@mammoth-ai/mmp-storage-sqlite`
 
@@ -3553,7 +3621,7 @@ export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-storage-sqlite -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-subagent -->
-<a id="deepseek-aidsh-subagent"></a>
+<a id="mammoth-aimmp-subagent"></a>
 
 ## `@mammoth-ai/mmp-subagent`
 
@@ -3573,7 +3641,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-subagent -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-subagent-acp -->
-<a id="deepseek-aidsh-subagent-acp"></a>
+<a id="mammoth-aimmp-subagent-acp"></a>
 
 ## `@mammoth-ai/mmp-subagent-acp`
 
@@ -3619,7 +3687,7 @@ export type PermissionPolicy = 'allow' | 'reject'
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-subagent-acp -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-subagent-claude-code -->
-<a id="deepseek-aidsh-subagent-claude-code"></a>
+<a id="mammoth-aimmp-subagent-claude-code"></a>
 
 ## `@mammoth-ai/mmp-subagent-claude-code`
 
@@ -3655,7 +3723,7 @@ export type ClaudeCodePermissionMode = typeof CLAUDE_CODE_PERMISSION_MODES[numbe
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-subagent-claude-code -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-subagent-codex -->
-<a id="deepseek-aidsh-subagent-codex"></a>
+<a id="mammoth-aimmp-subagent-codex"></a>
 
 ## `@mammoth-ai/mmp-subagent-codex`
 
@@ -3688,8 +3756,25 @@ export type CodexPermissionMode =
 ```
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-subagent-codex -->
 
+<!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-subagent-fork-in-process -->
+<a id="mammoth-aimmp-subagent-fork-in-process"></a>
+
+## `@mammoth-ai/mmp-subagent-fork-in-process`
+
+- `inject`: `subagents`
+- `source`: [`packages/subagent/subagent-fork-in-process/src/index.ts:29`](../packages/subagent/subagent-fork-in-process/src/index.ts)
+
+```ts config-catalog
+/** Config: the registry name to register the provider under. */
+export interface Config {
+  /** Provider name on `ctx.subagents` (default `fork`). */
+  providerName: string
+}
+```
+<!-- END GENERATED config-catalog:@mammoth-ai/mmp-subagent-fork-in-process -->
+
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-subagent-mmp-sdk -->
-<a id="deepseek-aidsh-subagent-mmp-sdk"></a>
+<a id="mammoth-aimmp-subagent-mmp-sdk"></a>
 
 ## `@mammoth-ai/mmp-subagent-mmp-sdk`
 
@@ -3736,25 +3821,8 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-subagent-mmp-sdk -->
 
-<!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-subagent-fork-in-process -->
-<a id="deepseek-aidsh-subagent-fork-in-process"></a>
-
-## `@mammoth-ai/mmp-subagent-fork-in-process`
-
-- `inject`: `subagents`
-- `source`: [`packages/subagent/subagent-fork-in-process/src/index.ts:29`](../packages/subagent/subagent-fork-in-process/src/index.ts)
-
-```ts config-catalog
-/** Config: the registry name to register the provider under. */
-export interface Config {
-  /** Provider name on `ctx.subagents` (default `fork`). */
-  providerName: string
-}
-```
-<!-- END GENERATED config-catalog:@mammoth-ai/mmp-subagent-fork-in-process -->
-
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-subagent-spawn-in-process -->
-<a id="deepseek-aidsh-subagent-spawn-in-process"></a>
+<a id="mammoth-aimmp-subagent-spawn-in-process"></a>
 
 ## `@mammoth-ai/mmp-subagent-spawn-in-process`
 
@@ -3771,7 +3839,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-subagent-spawn-in-process -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-system-prompt -->
-<a id="deepseek-aidsh-system-prompt"></a>
+<a id="mammoth-aimmp-system-prompt"></a>
 
 ## `@mammoth-ai/mmp-system-prompt`
 
@@ -3805,7 +3873,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-system-prompt -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-terminal-bash -->
-<a id="deepseek-aidsh-terminal-bash"></a>
+<a id="mammoth-aimmp-terminal-bash"></a>
 
 ## `@mammoth-ai/mmp-terminal-bash`
 
@@ -3865,7 +3933,7 @@ export type ShellDialect = 'bash' | 'pwsh'
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-terminal-bash -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-time-context -->
-<a id="deepseek-aidsh-time-context"></a>
+<a id="mammoth-aimmp-time-context"></a>
 
 ## `@mammoth-ai/mmp-time-context`
 
@@ -3884,7 +3952,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-time-context -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tmux-context -->
-<a id="deepseek-aidsh-tmux-context"></a>
+<a id="mammoth-aimmp-tmux-context"></a>
 
 ## `@mammoth-ai/mmp-tmux-context`
 
@@ -3901,7 +3969,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tmux-context -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-token-meter -->
-<a id="deepseek-aidsh-token-meter"></a>
+<a id="mammoth-aimmp-token-meter"></a>
 
 ## `@mammoth-ai/mmp-token-meter`
 
@@ -3915,7 +3983,7 @@ export type TokenMeterConfig = Record<string, never>
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-token-meter -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-ask-user -->
-<a id="deepseek-aidsh-tool-ask-user"></a>
+<a id="mammoth-aimmp-tool-ask-user"></a>
 
 ## `@mammoth-ai/mmp-tool-ask-user`
 
@@ -3934,7 +4002,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-ask-user -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-bash -->
-<a id="deepseek-aidsh-tool-bash"></a>
+<a id="mammoth-aimmp-tool-bash"></a>
 
 ## `@mammoth-ai/mmp-tool-bash`
 
@@ -3964,7 +4032,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-bash -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-bash-persistent -->
-<a id="deepseek-aidsh-tool-bash-persistent"></a>
+<a id="mammoth-aimmp-tool-bash-persistent"></a>
 
 ## `@mammoth-ai/mmp-tool-bash-persistent`
 
@@ -3987,7 +4055,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-bash-persistent -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-executor-ptc -->
-<a id="deepseek-aidsh-tool-executor-ptc"></a>
+<a id="mammoth-aimmp-tool-executor-ptc"></a>
 
 ## `@mammoth-ai/mmp-tool-executor-ptc`
 
@@ -4004,7 +4072,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-executor-ptc -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-fs -->
-<a id="deepseek-aidsh-tool-fs"></a>
+<a id="mammoth-aimmp-tool-fs"></a>
 
 ## `@mammoth-ai/mmp-tool-fs`
 
@@ -4037,7 +4105,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-fs -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-fs-search -->
-<a id="deepseek-aidsh-tool-fs-search"></a>
+<a id="mammoth-aimmp-tool-fs-search"></a>
 
 ## `@mammoth-ai/mmp-tool-fs-search`
 
@@ -4073,7 +4141,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-fs-search -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-goal -->
-<a id="deepseek-aidsh-tool-goal"></a>
+<a id="mammoth-aimmp-tool-goal"></a>
 
 ## `@mammoth-ai/mmp-tool-goal`
 
@@ -4090,7 +4158,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-goal -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-jobs -->
-<a id="deepseek-aidsh-tool-jobs"></a>
+<a id="mammoth-aimmp-tool-jobs"></a>
 
 ## `@mammoth-ai/mmp-tool-jobs`
 
@@ -4134,7 +4202,7 @@ export type CompletionDelivery = 'quiet' | 'wakeup'
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-jobs -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-lsp -->
-<a id="deepseek-aidsh-tool-lsp"></a>
+<a id="mammoth-aimmp-tool-lsp"></a>
 
 ## `@mammoth-ai/mmp-tool-lsp`
 
@@ -4155,7 +4223,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-lsp -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-present -->
-<a id="deepseek-aidsh-tool-present"></a>
+<a id="mammoth-aimmp-tool-present"></a>
 
 ## `@mammoth-ai/mmp-tool-present`
 
@@ -4172,7 +4240,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-present -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-pwsh -->
-<a id="deepseek-aidsh-tool-pwsh"></a>
+<a id="mammoth-aimmp-tool-pwsh"></a>
 
 ## `@mammoth-ai/mmp-tool-pwsh`
 
@@ -4202,7 +4270,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-pwsh -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-pwsh-persistent -->
-<a id="deepseek-aidsh-tool-pwsh-persistent"></a>
+<a id="mammoth-aimmp-tool-pwsh-persistent"></a>
 
 ## `@mammoth-ai/mmp-tool-pwsh-persistent`
 
@@ -4225,7 +4293,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-pwsh-persistent -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-ralph -->
-<a id="deepseek-aidsh-tool-ralph"></a>
+<a id="mammoth-aimmp-tool-ralph"></a>
 
 ## `@mammoth-ai/mmp-tool-ralph`
 
@@ -4248,7 +4316,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-ralph -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-session-query -->
-<a id="deepseek-aidsh-tool-session-query"></a>
+<a id="mammoth-aimmp-tool-session-query"></a>
 
 ## `@mammoth-ai/mmp-tool-session-query`
 
@@ -4267,7 +4335,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-session-query -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-skill -->
-<a id="deepseek-aidsh-tool-skill"></a>
+<a id="mammoth-aimmp-tool-skill"></a>
 
 ## `@mammoth-ai/mmp-tool-skill`
 
@@ -4284,7 +4352,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-skill -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-str-replace-editor -->
-<a id="deepseek-aidsh-tool-str-replace-editor"></a>
+<a id="mammoth-aimmp-tool-str-replace-editor"></a>
 
 ## `@mammoth-ai/mmp-tool-str-replace-editor`
 
@@ -4303,7 +4371,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-str-replace-editor -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-subagent -->
-<a id="deepseek-aidsh-tool-subagent"></a>
+<a id="mammoth-aimmp-tool-subagent"></a>
 
 ## `@mammoth-ai/mmp-tool-subagent`
 
@@ -4361,7 +4429,7 @@ export interface PresetSelectionConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-subagent -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-terminal -->
-<a id="deepseek-aidsh-tool-terminal"></a>
+<a id="mammoth-aimmp-tool-terminal"></a>
 
 ## `@mammoth-ai/mmp-tool-terminal`
 
@@ -4380,7 +4448,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-terminal -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-todo -->
-<a id="deepseek-aidsh-tool-todo"></a>
+<a id="mammoth-aimmp-tool-todo"></a>
 
 ## `@mammoth-ai/mmp-tool-todo`
 
@@ -4403,7 +4471,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-todo -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-web -->
-<a id="deepseek-aidsh-tool-web"></a>
+<a id="mammoth-aimmp-tool-web"></a>
 
 ## `@mammoth-ai/mmp-tool-web`
 
@@ -4434,7 +4502,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-web -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-workflow -->
-<a id="deepseek-aidsh-tool-workflow"></a>
+<a id="mammoth-aimmp-tool-workflow"></a>
 
 ## `@mammoth-ai/mmp-tool-workflow`
 
@@ -4461,7 +4529,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-workflow -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-tool-workspace-dependencies -->
-<a id="deepseek-aidsh-tool-workspace-dependencies"></a>
+<a id="mammoth-aimmp-tool-workspace-dependencies"></a>
 
 ## `@mammoth-ai/mmp-tool-workspace-dependencies`
 
@@ -4484,7 +4552,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-tool-workspace-dependencies -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-typert-loader -->
-<a id="deepseek-aidsh-typert-loader"></a>
+<a id="mammoth-aimmp-typert-loader"></a>
 
 ## `@mammoth-ai/mmp-typert-loader`
 
@@ -4501,7 +4569,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-typert-loader -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-user-approval -->
-<a id="deepseek-aidsh-user-approval"></a>
+<a id="mammoth-aimmp-user-approval"></a>
 
 ## `@mammoth-ai/mmp-user-approval`
 
@@ -4535,7 +4603,7 @@ export type ApprovalPolicy = 'ask' | 'never'
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-user-approval -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-web -->
-<a id="deepseek-aidsh-web"></a>
+<a id="mammoth-aimmp-web"></a>
 
 ## `@mammoth-ai/mmp-web`
 
@@ -4561,7 +4629,7 @@ export interface WebRuntimeConfig {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-web -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-web-app -->
-<a id="deepseek-aidsh-web-app"></a>
+<a id="mammoth-aimmp-web-app"></a>
 
 ## `@mammoth-ai/mmp-web-app`
 
@@ -4593,7 +4661,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-web-app -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-web-deepseek-api -->
-<a id="deepseek-aidsh-web-deepseek-api"></a>
+<a id="mammoth-aimmp-web-deepseek-api"></a>
 
 ## `@mammoth-ai/mmp-web-deepseek-api`
 
@@ -4619,7 +4687,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-web-deepseek-api -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-web-fetch-http -->
-<a id="deepseek-aidsh-web-fetch-http"></a>
+<a id="mammoth-aimmp-web-fetch-http"></a>
 
 ## `@mammoth-ai/mmp-web-fetch-http`
 
@@ -4644,7 +4712,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-web-fetch-http -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-web-search-deepseek -->
-<a id="deepseek-aidsh-web-search-deepseek"></a>
+<a id="mammoth-aimmp-web-search-deepseek"></a>
 
 ## `@mammoth-ai/mmp-web-search-deepseek`
 
@@ -4674,7 +4742,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-web-search-deepseek -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-web-search-exa -->
-<a id="deepseek-aidsh-web-search-exa"></a>
+<a id="mammoth-aimmp-web-search-exa"></a>
 
 ## `@mammoth-ai/mmp-web-search-exa`
 
@@ -4699,7 +4767,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-web-search-exa -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-web-search-perplexity -->
-<a id="deepseek-aidsh-web-search-perplexity"></a>
+<a id="mammoth-aimmp-web-search-perplexity"></a>
 
 ## `@mammoth-ai/mmp-web-search-perplexity`
 
@@ -4724,7 +4792,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-web-search-perplexity -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-webhook-github -->
-<a id="deepseek-aidsh-webhook-github"></a>
+<a id="mammoth-aimmp-webhook-github"></a>
 
 ## `@mammoth-ai/mmp-webhook-github`
 
@@ -4747,7 +4815,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-webhook-github -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-workflow-ptc -->
-<a id="deepseek-aidsh-workflow-ptc"></a>
+<a id="mammoth-aimmp-workflow-ptc"></a>
 
 ## `@mammoth-ai/mmp-workflow-ptc`
 
@@ -4772,7 +4840,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-workflow-ptc -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-working-directory -->
-<a id="deepseek-aidsh-working-directory"></a>
+<a id="mammoth-aimmp-working-directory"></a>
 
 ## `@mammoth-ai/mmp-working-directory`
 
@@ -4789,7 +4857,7 @@ export interface Config {
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-working-directory -->
 
 <!-- BEGIN GENERATED config-catalog:@mammoth-ai/mmp-workspace-changes -->
-<a id="deepseek-aidsh-workspace-changes"></a>
+<a id="mammoth-aimmp-workspace-changes"></a>
 
 ## `@mammoth-ai/mmp-workspace-changes`
 
@@ -4840,6 +4908,7 @@ export interface Config {
 | `@mammoth-ai/mmp-client-ui-attachment` | — | [`packages/client/ui-attachment/src/index.ts`](../packages/client/ui-attachment/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-brand-official` | — | [`packages/client/ui-brand-official/src/index.ts`](../packages/client/ui-brand-official/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-chat` | — | [`packages/client/ui-chat/src/index.ts`](../packages/client/ui-chat/src/index.ts) |
+| `@mammoth-ai/mmp-client-ui-client-download` | — | [`packages/client/ui-client-download/src/index.ts`](../packages/client/ui-client-download/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-commands` | — | [`packages/client/ui-commands/src/index.ts`](../packages/client/ui-commands/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-context-menu` | — | [`packages/client/ui-context-menu/src/index.ts`](../packages/client/ui-context-menu/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-conversation` | — | [`packages/client/ui-conversation/src/index.ts`](../packages/client/ui-conversation/src/index.ts) |
@@ -4848,6 +4917,7 @@ export interface Config {
 | `@mammoth-ai/mmp-client-ui-deliverables` | `connection` · `sessionQuery` · `sessionController` · `workspaceFiles` · `fs` · `sandboxPolicy` · `workspaceChanges` | [`packages/client/ui-deliverables/src/index.ts`](../packages/client/ui-deliverables/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-directory-picker-browse` | — | [`packages/client/ui-directory-picker-browse/src/index.ts`](../packages/client/ui-directory-picker-browse/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-directory-picker-native` | — | [`packages/client/ui-directory-picker-native/src/index.ts`](../packages/client/ui-directory-picker-native/src/index.ts) |
+| `@mammoth-ai/mmp-client-ui-enterprise-library` | — | [`packages/client/ui-enterprise-library/src/index.ts`](../packages/client/ui-enterprise-library/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-entry-customization` | — | [`packages/client/ui-entry-customization/src/index.ts`](../packages/client/ui-entry-customization/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-file-actions` | — | [`packages/client/ui-file-actions/src/index.ts`](../packages/client/ui-file-actions/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-file-drag` | — | [`packages/client/ui-file-drag/src/index.ts`](../packages/client/ui-file-drag/src/index.ts) |
@@ -4857,6 +4927,7 @@ export interface Config {
 | `@mammoth-ai/mmp-client-ui-layout` | — | [`packages/client/ui-layout/src/index.ts`](../packages/client/ui-layout/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-message-feedback` | — | [`packages/client/ui-message-feedback/src/index.ts`](../packages/client/ui-message-feedback/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-model-selection` | — | [`packages/client/ui-model-selection/src/index.ts`](../packages/client/ui-model-selection/src/index.ts) |
+| `@mammoth-ai/mmp-client-ui-official-agent-gallery` | — | [`packages/client/ui-official-agent-gallery/src/index.ts`](../packages/client/ui-official-agent-gallery/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-open-in-app` | — | [`packages/client/ui-open-in-app/src/index.ts`](../packages/client/ui-open-in-app/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-permission-presets` | — | [`packages/client/ui-permission-presets/src/index.ts`](../packages/client/ui-permission-presets/src/index.ts) |
 | `@mammoth-ai/mmp-client-ui-plan` | — | [`packages/client/ui-plan/src/index.ts`](../packages/client/ui-plan/src/index.ts) |

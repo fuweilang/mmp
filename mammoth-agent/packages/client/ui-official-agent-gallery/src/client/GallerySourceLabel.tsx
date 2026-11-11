@@ -1,3 +1,4 @@
+import { KnowledgeSources } from './KnowledgeSources.tsx'
 /**
  * Session-header origin chip for plaza-created expert/skill Sessions.
  * Read-only: shows 「专家 · {name}」 / 「技能 · {name}」 from the frozen projection.
@@ -13,6 +14,7 @@ import {IconAppsAddOutlineRegular} from '@mammoth-ai/mmp-client-ui-primitives'
 export type GallerySourceLabelProps =
   (PropsRuntime<'conversation.session.header.actions'> | PropsRuntime<'conversation.input.left'>)
   & PropsLocale<'officialAgentGallery'> & {
+    openKnowledgeSource?:(sessionId:string,recordId:string,label:string)=>Promise<{text:string;locator:unknown}>
     download?:(sessionId:string,id:string)=>Promise<{name:string;data:string;sha256:string}>
     skillAvailability?:(id:string)=>Promise<{deleted:boolean}>
   }
@@ -22,7 +24,7 @@ export type GallerySourceLabelProps =
  * @returns the label, or null when this session has no plaza source.
  */
 export function GallerySourceLabel({
-  sessionId, useSessions, t, download, skillAvailability,
+  sessionId, useSessions, useProjection, t, download, skillAvailability, openKnowledgeSource,
 }: GallerySourceLabelProps) {
   const source = useSessions((state) => {
     const value = state.byId[sessionId]?.projectionValues?.officialGallerySource
@@ -37,6 +39,7 @@ export function GallerySourceLabel({
       id: typeof record.id === 'string' ? record.id : '',
     }
   })
+  const knowledge=useProjection('officialExpertKnowledge')
   const [deleted, setDeleted] = useState(false)
   useEffect(() => {
     if (!source || source.type !== 'skill' || !source.id || !skillAvailability) {
@@ -72,12 +75,13 @@ export function GallerySourceLabel({
       </span>
     )
   }
-  if (source === undefined) return null
+  if (source === undefined) return knowledge&&openKnowledgeSource?<KnowledgeSources key={sessionId} sources={knowledge} open={(recordId,label)=>openKnowledgeSource(sessionId,recordId,label)} t={t}/>:null
 
   const key: OfficialAgentGalleryLocaleKey = source.type === 'expert' ? 'sourceExpert' : 'sourceSkill'
   const text = t(key, { name: source.type === 'skill' && deleted ? t('skillDeletedMark', { name: source.name }) : source.name })
   return (
     <span className={css.group}>
+      {knowledge&&openKnowledgeSource?<KnowledgeSources key={sessionId} sources={knowledge} open={(recordId,label)=>openKnowledgeSource(sessionId,recordId,label)} t={t}/>:null}
       <span className={css.label}><IconAppsAddOutlineRegular size={14}/> <span>{t('sourceCreation')} {text}</span></span>
     </span>
   )

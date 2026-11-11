@@ -15,6 +15,8 @@ describe('viewer endpoint classification', () => {
   it('classifies officialAgentGallery list as reader-global-read and create as owner-only', () => {
     expect(VIEWER_ENDPOINT_CLASSES['officialAgentGallery/list']).toBe('reader-global-read')
     expect(VIEWER_ENDPOINT_CLASSES['officialAgentGallery/create']).toBe('owner-only')
+    expect(VIEWER_ENDPOINT_CLASSES['officialAgentGallery/createPreview']).toBe('owner-only')
+    expect(VIEWER_ENDPOINT_CLASSES['officialAgentGallery/openKnowledgeSource']).toBe('owner-only')
   })
   it('reports the endpoint a classification is missing', () => {
     const incomplete = Object.fromEntries(

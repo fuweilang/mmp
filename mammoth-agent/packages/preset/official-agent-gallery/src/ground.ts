@@ -1,4 +1,5 @@
 import { completeSkillFields } from './skill-package-format.ts'
+import { executionConfigSchema, previewSchema, knowledgeResultSchema, openedSourceSchema, runtimeReference, type RuntimeBinding, type ExactSource, type ExpertPreview } from './knowledge-protocol.ts'
 import type { CatalogQuery } from './types.ts'
 import { z } from 'zod'
 
@@ -121,7 +122,7 @@ const expertPageSchema=z.object({items:z.array(cardSchema.extend({discovery:disc
 const skillPageSchema=z.object({items:z.array(skillCardSchema.extend({avatarUrl:z.string().nullable().optional()})),total:z.number(),hasMore:z.boolean(),nextCursor:z.string().nullable()}).strict()
 const facetSchema=z.object({total:z.number(),capabilities:z.array(z.object({id:z.string(),count:z.number()}).strict()),industries:z.array(z.object({id:z.string(),count:z.number()}).strict())}).strict()
 
-const executionSchema = z.object({
+const legacyExecutionSchema = z.object({
   agentId: z.string().min(1),
   key: z.string().min(1),
   kind: z.enum(['GENERAL', 'KNOWLEDGE']),
@@ -131,6 +132,8 @@ const executionSchema = z.object({
   toolScope: z.array(z.string()),
   linkedSkills: z.array(skillSummarySchema).optional(),
 }).strict()
+
+const executionSchema = z.union([legacyExecutionSchema.extend({executionProtocol:z.literal(2),versionId:z.string().nullable(),version:z.number().int().nonnegative(),executionConfig:executionConfigSchema,preview:previewSchema.optional()}).strict(),legacyExecutionSchema])
 
 const retrievalSchema = z.object({
   tenantId: z.string().min(1),
@@ -244,7 +247,7 @@ export class GroundOfficialAgentClient {
     private readonly fetcher: typeof fetch = fetch,
   ) {}
 
-  currentScope(){return this.request('/api/official-agents/catalog-preferences/scope',z.object({userId:z.string().min(1),scope:z.string().min(1)}),{})}
+  currentScope(signal?:AbortSignal){return this.request('/api/official-agents/catalog-preferences/scope',z.object({userId:z.string().min(1),scope:z.string().min(1)}),{...signal?{signal}:{}})}
   preferences(kind:'expert'|'skill',view:'favourites'|'recent') {
     return this.request(`/api/official-agents/catalog-preferences?kind=${kind}&view=${view}`,z.array(z.object({kind:z.enum(['expert','skill']),resourceId:z.string(),favourite:z.boolean(),lastUsedAt:z.string().nullable()})),{})
   }
@@ -301,9 +304,30 @@ export class GroundOfficialAgentClient {
    */
   async resolve(agentId: string, versionId: string, signal?: AbortSignal): Promise<GroundOfficialExecution> {
     return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/resolve`, executionSchema, {
-      method: 'POST', body: JSON.stringify({ versionId }),
+      method: 'POST', body: JSON.stringify({ versionId, executionProtocol:2 }),
       ...signal === undefined ? {} : { signal },
     })
+  }
+
+  /** Resolve a creator-only preview ID without manufacturing snapshot metadata. */
+  resolvePreview(agentId:string,previewId:string,signal?:AbortSignal){
+    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/runtime/resolve`,executionSchema,{method:'POST',body:JSON.stringify({executionProtocol:2,previewId}),...signal?{signal}:{}})
+  }
+  /** Resolve one immutable published or creator-only preview snapshot. */
+  resolveRuntime(binding:RuntimeBinding,signal?:AbortSignal){
+    return this.request(`/api/official-agents/${encodeURIComponent(binding.agentId)}/runtime/resolve`,executionSchema,{method:'POST',body:JSON.stringify(runtimeReference(binding)),...signal?{signal}:{}})
+  }
+  /** Retrieve with Host-owned session/turn identity; model arguments contain only query. */
+  retrieveRuntime(binding:RuntimeBinding,sessionId:string,turnId:string,query:string,signal?:AbortSignal,context:readonly {role:'user'|'assistant';content:string}[]=[]){
+    return this.request(`/api/official-agents/${encodeURIComponent(binding.agentId)}/runtime/retrieve`,knowledgeResultSchema,{method:'POST',body:JSON.stringify({...runtimeReference(binding),sessionId,turnId,query,context}),...signal?{signal}:{}})
+  }
+  /** Terminal server snapshot for the whole historical lineage, after exact text reads. */
+  authorizeHistory(scope:{userId:string;scope:string},entries:readonly {binding:RuntimeBinding;sources:ExactSource[]}[],signal?:AbortSignal){
+    return this.request(`/api/official-agents/${encodeURIComponent(entries[0]!.binding.agentId)}/runtime/history/authorize`,z.object({authorized:z.literal(true)}).strict(),{method:'POST',body:JSON.stringify({...scope,entries:entries.map(({binding,sources})=>({agentId:binding.agentId,...runtimeReference(binding),sources}))}),...signal?{signal}:{}})
+  }
+  /** Reauthorize and open exactly the persisted source tuple, never the latest revision. */
+  openSource(binding:RuntimeBinding,source:ExactSource,signal?:AbortSignal){
+    return this.request(`/api/official-agents/${encodeURIComponent(binding.agentId)}/runtime/sources/open`,openedSourceSchema,{method:'POST',body:JSON.stringify({...runtimeReference(binding),...source}),...signal?{signal}:{}})
   }
 
   /**
@@ -329,9 +353,9 @@ export class GroundOfficialAgentClient {
    * @param signal - optional caller cancellation forwarded to Ground.
    * @returns validated search hits.
    */
-  async search(agentId: string, versionId: string, query: string, signal?: AbortSignal): Promise<GroundOfficialWebSearch> {
-    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/search`, searchSchema, {
-      method: 'POST', body: JSON.stringify({ versionId, query }),
+  async search(agentId: string, versionId: string|null, query: string, signal?: AbortSignal, preview?:ExpertPreview): Promise<GroundOfficialWebSearch> {
+    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/${preview?'runtime/':''}search`, searchSchema, {
+      method: 'POST', body: JSON.stringify({ ...(preview?{executionProtocol:2,previewId:preview.id}:{versionId}), query }),
       ...signal === undefined ? {} : { signal },
     })
   }
@@ -342,12 +366,13 @@ export class GroundOfficialAgentClient {
    */
   async analyzeTabular(
     agentId: string,
-    versionId: string,
+    versionId: string|null,
     body: { content: string; format?: 'csv' | 'json' | 'auto'; groupBy?: string; metrics?: string[]; goal?: string },
     signal?: AbortSignal,
+    preview?:ExpertPreview,
   ): Promise<GroundOfficialTabular> {
-    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/analyze-tabular`, tabularSchema, {
-      method: 'POST', body: JSON.stringify({ versionId, ...body }),
+    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/${preview?'runtime/':''}analyze-tabular`, tabularSchema, {
+      method: 'POST', body: JSON.stringify({ ...(preview?{executionProtocol:2,previewId:preview.id}:{versionId}), ...body }),
       ...signal === undefined ? {} : { signal },
     })
   }
@@ -355,9 +380,9 @@ export class GroundOfficialAgentClient {
   /**
    * Fetch one public URL under entitlement checks; provider keys stay on Ground.
    */
-  async fetchUrl(agentId: string, versionId: string, url: string, signal?: AbortSignal): Promise<GroundOfficialFetch> {
-    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/fetch-url`, fetchSchema, {
-      method: 'POST', body: JSON.stringify({ versionId, url }),
+  async fetchUrl(agentId: string, versionId: string|null, url: string, signal?: AbortSignal, preview?:ExpertPreview): Promise<GroundOfficialFetch> {
+    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/${preview?'runtime/':''}fetch-url`, fetchSchema, {
+      method: 'POST', body: JSON.stringify({ ...(preview?{executionProtocol:2,previewId:preview.id}:{versionId}), url }),
       ...signal === undefined ? {} : { signal },
     })
   }
@@ -367,12 +392,13 @@ export class GroundOfficialAgentClient {
    */
   async delegate(
     agentId: string,
-    versionId: string,
+    versionId: string|null,
     body: { targetKey: string; task: string; tabularContent?: string; tabularFormat?: 'csv' | 'json' | 'auto' },
     signal?: AbortSignal,
+    preview?:ExpertPreview,
   ): Promise<GroundOfficialDelegate> {
-    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/delegate`, delegateSchema, {
-      method: 'POST', body: JSON.stringify({ versionId, ...body }),
+    return this.request(`/api/official-agents/${encodeURIComponent(agentId)}/${preview?'runtime/':''}delegate`, delegateSchema, {
+      method: 'POST', body: JSON.stringify({ ...(preview?{executionProtocol:2,previewId:preview.id}:{versionId}), ...body }),
       ...signal === undefined ? {} : { signal },
     })
   }
@@ -468,18 +494,12 @@ export class GroundOfficialAgentClient {
       },
     })
     if (!response.ok) {
-      const text = await boundedBody(response, 8192, init.signal ?? undefined).then(bytes => new TextDecoder().decode(bytes)).catch(() => '')
-      if (response.status === 401) throw new Error('猛犸登录已失效，请重新登录。')
-      let code = ''
-      let message = ''
-      try {
-        const body = JSON.parse(text) as { code?: unknown; message?: unknown }
-        code = typeof body.code === 'string' ? body.code : ''
-        message = typeof body.message === 'string' ? body.message : ''
-      } catch {
-        code = ''
-      }
-      if (code === 'OFFICIAL_SKILL_DELETED') throw new Error(message || '技能已删除，请重新选择')
+      if (response.status === 401) {await response.body?.cancel();throw new Error('猛犸登录已失效，请重新登录。')}
+      let message=''
+      if(response.headers.get('content-type')?.includes('application/json')){
+        const body:unknown=await boundedBody(response,8192,init.signal??undefined).then(bytes=>JSON.parse(new TextDecoder().decode(bytes))).catch(()=>null)
+        if(body&&typeof body==='object'&&'code' in body&&body.code==='OFFICIAL_SKILL_DELETED'&&'message' in body&&typeof body.message==='string')message=body.message
+      }else await response.body?.cancel()
       throw new Error(message || `Ground official Expert request failed with HTTP ${response.status}`)
     }
     const value: unknown = maxBytes === undefined ? await response.json() : JSON.parse(new TextDecoder().decode(await boundedBody(response, maxBytes, init.signal ?? undefined)))

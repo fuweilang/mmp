@@ -5,6 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { TenantModule } from './tenant/tenant.module';
 import { TenantRoleModule } from './tenant-role/tenant-role.module';
+import { KnowledgeCoreAdminModule } from './knowledge-core/admin.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { LibraryModule } from './library/library.module';
 import { WorkbenchModule } from './workbench/workbench.module';
@@ -32,6 +33,7 @@ import { OfficialSkillModule } from './official-skill/official-skill.module';
     TenantModule,
     TenantRoleModule,
     KnowledgeModule,
+    KnowledgeCoreAdminModule,
     LibraryModule,
     WorkbenchModule,
     UsageModule,

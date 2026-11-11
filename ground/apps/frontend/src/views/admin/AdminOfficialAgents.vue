@@ -7,7 +7,7 @@
       </div>
       <div class="header-actions">
         <el-button @click="openAuditDrawer">运营审计</el-button>
-        <el-button type="primary" @click="openCreate">新建专家</el-button>
+        <el-button v-if="canAuthor" type="primary" @click="openCreate">新建专家</el-button>
       </div>
     </div>
 
@@ -25,6 +25,7 @@
       <el-button type="primary" @click="onSearchNow">搜索</el-button>
       <el-button @click="onReset">重置</el-button>
       <el-button
+        v-if="canAuthor"
         type="warning"
         :disabled="!selectedRows.length"
         :loading="bulkOfflineLoading"
@@ -56,7 +57,7 @@
       :row-class-name="rowClassName"
       @selection-change="onSelectionChange"
     >
-      <el-table-column type="selection" width="48" :selectable="canSelectOffline" />
+      <el-table-column v-if="canAuthor" type="selection" width="48" :selectable="canSelectOffline" />
       <el-table-column label="专家" min-width="260">
         <template #default="{ row }">
           <div class="agent-identity">
@@ -111,19 +112,21 @@
         <template #default="{ row }">
           <div class="operation-buttons">
             <el-button text type="primary" @click="openViewer(row)">查看</el-button>
-            <el-button text type="primary" @click="discoveryId = row.id">专家介绍</el-button>
-            <el-button text type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button v-if="canAuthor" text type="primary" @click="discoveryId = row.id">专家介绍</el-button>
+            <el-button v-if="canAuthor" text type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button text type="primary" @click="openPublishRecords(row)">发布记录</el-button>
+            <el-button v-if="canAuthor" text type="primary" :loading="previewingId===row.id" @click="onPreview(row)">不可变预览</el-button>
             <el-button
               text
               type="primary"
+              v-if="canAuthor"
               :loading="publishingId === row.id"
               @click="onPublish(row)"
             >
               发布
             </el-button>
             <el-button
-              v-if="row.status === 'PUBLISHED'"
+              v-if="canAuthor && row.status === 'PUBLISHED'"
               text
               type="warning"
               :loading="offlineId === row.id"
@@ -134,6 +137,7 @@
             <el-button
               text
               type="danger"
+              v-if="canAuthor"
               :loading="deletingId === row.id"
               @click="onDelete(row)"
             >
@@ -144,7 +148,7 @@
       </el-table-column>
       <template #empty>
         <el-empty :description="hasFilters ? '没有符合条件的专家' : '还没有官方专家'">
-          <el-button v-if="!hasFilters" type="primary" @click="openCreate">新建专家</el-button>
+          <el-button v-if="canAuthor && !hasFilters" type="primary" @click="openCreate">新建专家</el-button>
         </el-empty>
       </template>
     </el-table>
@@ -162,30 +166,56 @@
     </div>
 
     <el-dialog
+      v-if="canAuthor"
       v-model="editorOpen"
       :title="editingId ? '编辑专家' : '新建官方专家'"
-      width="720px"
-      class="official-agent-dialog official-agent-editor"
+      fullscreen
+      class="official-agent-dialog official-agent-editor expert-workspace"
       destroy-on-close
-      :close-on-press-escape="!saving && !iconValidating"
-      :show-close="!saving && !iconValidating"
+      :before-close="requestEditorClose"
+      :close-on-press-escape="!editorBusy"
+      :show-close="false"
       @closed="clearIconDraft"
-      align-center
       append-to-body
       :close-on-click-modal="false"
     >
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="108px" class="agent-form" :disabled="saving || publishingFromEditor">
-        <div class="form-section-title">基本信息</div>
-        <el-form-item label="专家头像">
-          <CatalogIconEditor profile="expert" v-model="pendingIcon" v-model:removed="removeIcon" :current-url="formAvatarUrl" :disabled="saving || publishingFromEditor" @validating="iconValidating=$event" />
+      <template #header="{ titleId }">
+        <div class="expert-workspace-header">
+          <el-button class="expert-back-button" text aria-label="返回专家列表" :disabled="editorBusy" @click="requestEditorClose()"><ArrowLeft :size="20" /></el-button>
+          <div class="expert-header-avatar" aria-hidden="true"><img v-if="editorAvatarUrl" :src="editorAvatarUrl" alt="" /><UserRound v-else :size="22" /></div>
+          <div class="expert-workspace-identity">
+            <h1 :id="titleId" class="expert-sr-only">{{ editingId ? '编辑专家' : '新建官方专家' }}</h1>
+            <button type="button" class="expert-name-button" :disabled="editorBusy" @click="openMetadata"><span>{{ form.name || '未命名专家' }}</span><SquarePen :size="14" /></button>
+            <p>{{ form.summary || '添加专家简介' }}</p>
+          </div>
+          <div class="expert-workspace-save">
+            <span role="status">{{ editorDirty ? '有未保存修改' : editingId ? '草稿已保存' : '尚未保存草稿' }}</span>
+            <el-button class="expert-document-button" :disabled="editorBusy || !editingId" @click="discoveryId = editingId"><FileText :size="14" />专家介绍</el-button>
+            <el-button class="expert-save-button" type="primary" aria-label="保存草稿" :loading="saving && !editorPreviewBusy" :disabled="editorBusy || iconValidating" @click="onSave">保存</el-button>
+            <el-dropdown trigger="click" :disabled="editorBusy" @command="onEditorCommand">
+              <el-button text class="expert-more-button" aria-label="更多专家操作" :disabled="editorBusy"><EllipsisVertical :size="20" /></el-button>
+              <template #dropdown><el-dropdown-menu><el-dropdown-item command="details">编辑专家信息</el-dropdown-item><el-dropdown-item v-if="editingId" command="publish" :disabled="editorBusy || iconValidating || !!executionBlockers.length">保存并发布</el-dropdown-item></el-dropdown-menu></template>
+            </el-dropdown>
+          </div>
+        </div>
+      </template>
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="agent-form expert-workspace-grid" :disabled="editorBusy" @submit.prevent>
+        <section class="expert-personalization-panel" aria-label="个性化配置">
+          <div class="expert-panel-heading"><h2>个性化</h2><el-tooltip content="描述专家的角色、工作方式和回答要求。"><CircleHelp :size="13" class="expert-help-icon" /></el-tooltip></div>
+          <el-form-item label="专家指令" prop="systemPrompt" class="expert-prompt-field">
+            <el-input v-model="form.systemPrompt" aria-label="专家指令" type="textarea" :rows="18" resize="none" maxlength="50000" show-word-limit placeholder="描述智能体的设定以及工作方式。" />
+          </el-form-item>
+          <el-dialog v-model="metadataOpen" title="编辑专家" width="388px" class="expert-metadata-dialog" align-center append-to-body :close-on-click-modal="false" :close-on-press-escape="!editorBusy" :show-close="!editorBusy">
+        <el-form-item label="专家头像" class="expert-metadata-avatar">
+          <CatalogIconEditor profile="expert" v-model="pendingIcon" v-model:removed="removeIcon" :current-url="formAvatarUrl" :disabled="editorBusy" @validating="iconValidating=$event" @preview-change="draftAvatarUrl=$event" />
         </el-form-item>
-        <el-form-item label="专家名称" prop="name" required>
-          <el-input v-model="form.name" maxlength="80" show-word-limit />
+        <el-form-item label="名称" prop="name" required>
+          <el-input v-model="form.name" aria-label="专家名称" maxlength="80" show-word-limit />
         </el-form-item>
-        <el-form-item label="一句话介绍" prop="summary" required>
-          <div class="form-hint field-req-hint">发布必填；保存草稿可暂空。</div>
+        <el-form-item label="描述（选填）" prop="summary">
           <el-input
             v-model="form.summary"
+            aria-label="一句话介绍"
             type="textarea"
             :rows="2"
             maxlength="1000"
@@ -193,6 +223,10 @@
             placeholder="用于广场卡片与详情首屏"
           />
         </el-form-item>
+          <el-collapse v-model="metadataSections" class="expert-metadata-more">
+            <el-collapse-item title="更多设置" name="more">
+          <el-collapse v-model="identityOpen">
+            <el-collapse-item title="分类与能力标签" name="identity">
         <el-form-item label="分类" prop="category">
           <el-select v-model="form.category" clearable placeholder="未设置" style="width: 100%">
             <el-option label="常用" value="common" />
@@ -211,30 +245,18 @@
             placeholder="每行一个中文能力标签（展示用，不授予执行权限）"
           />
         </el-form-item>
-        <el-form-item label="推荐提问">
-          <el-alert
-            type="info"
-            :closable="false"
-            title="推荐提问请在「专家介绍」维护（最多3条完整正文）。此处不重复填写。"
-          />
-          <div class="form-hint">
-            当前同步：
-            <template v-if="form.openingQuestionsText.trim()">{{ form.openingQuestionsText.split('\n').filter(Boolean).length }} 条</template>
-            <template v-else>暂无</template>
-            ·
-            <el-button v-if="editingId" text type="primary" @click="discoveryId = editingId">打开专家介绍</el-button>
-            <span v-else>保存新建后可直接打开专家介绍继续维护。</span>
-          </div>
-        </el-form-item>
 
-        <div class="form-section-title">执行配置</div>
+
+
+            </el-collapse-item>
+            <el-collapse-item title="角色、流程与交付要求" name="workflow">
         <el-form-item label="类型" prop="kind">
-          <el-radio-group v-model="form.kind" :disabled="Boolean(editingId)">
+          <el-radio-group v-model="form.kind" :disabled="editorBusy || Boolean(editingId)">
             <el-radio value="GENERAL">通用型</el-radio>
             <el-radio value="KNOWLEDGE">资料型</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="角色定位" prop="expertRole" required>
+        <el-form-item label="角色定位" prop="expertRole">
           <div class="form-hint field-req-hint">发布必填；保存草稿可暂空。</div>
           <el-input v-model="form.expertRole" placeholder="例如：负责关账计划与财务报告复核的财务负责人" maxlength="200" />
         </el-form-item>
@@ -244,94 +266,53 @@
         <el-form-item label="交付标准">
           <el-input v-model="form.deliverablesText" type="textarea" :rows="3" placeholder="每行一项交付物或验收标准" />
         </el-form-item>
-        <el-form-item label="专家指令" prop="systemPrompt" required>
-          <div class="form-hint field-req-hint">发布必填；保存草稿可暂空。仅管理员可见。</div>
-          <el-input
-            v-model="form.systemPrompt"
-            type="textarea"
-            :rows="8"
-            maxlength="50000"
-            placeholder="仅平台 Admin 可见，不会进入公开目录"
-          />
-        </el-form-item>
-        <el-form-item label="可用工具" prop="toolScope">
-          <el-select
-            v-model="form.toolScope"
-            multiple
-            clearable
-            collapse-tags
-            collapse-tags-tooltip
-            placeholder="从合法工具中选择；可不选"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="tool in TOOL_SCOPE_OPTIONS"
-              :key="tool.value"
-              :label="tool.label"
-              :value="tool.value"
-            />
-          </el-select>
-          <div class="form-hint">工具权限与能力标签分开：这里是执行授权，标签仅展示。</div>
-        </el-form-item>
-        <el-form-item label="关联技能">
-          <el-select
-            v-model="form.linkedSkillIds"
-            multiple
-            filterable
-            clearable
-            collapse-tags
-            collapse-tags-tooltip
-            placeholder="仅可选当前已启用技能"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="skill in selectableSkillOptions"
-              :key="skill.id"
-              :label="`${skill.name}（${skill.key}）${skill.enabledAt ? '' : ' · 已停用'}`"
-              :value="skill.id"
-            />
-          </el-select>
-          <div class="form-hint">可不关联技能。新会话按已发布版本冻结启用技能摘要；不自动授予工具权限。</div>
-          <ul v-if="selectedSkillPreviews.length" class="linked-skill-previews">
-            <li v-for="skill in selectedSkillPreviews" :key="skill.id"><strong>{{ skill.name }}</strong><span>{{ skill.summary }}</span></li>
-          </ul>
-        </el-form-item>
 
-        <el-collapse v-model="advancedOpen">
-          <el-collapse-item title="高级：自动标识" name="advanced">
-            <el-form-item label="标识" prop="key">
-              <el-input
-                v-model="form.key"
-                :disabled="Boolean(editingId)"
-                maxlength="64"
-                placeholder="可留空自动生成；创建后只读"
-              />
-            </el-form-item>
-          </el-collapse-item>
-        </el-collapse>
+            </el-collapse-item>
+          </el-collapse>
+          <el-collapse v-model="advancedOpen">
+            <el-collapse-item title="高级：自动标识" name="advanced">
+              <el-form-item label="标识" prop="key"><el-input v-model="form.key" :disabled="editorBusy || Boolean(editingId)" maxlength="64" placeholder="可留空自动生成；创建后只读" /></el-form-item>
+              <el-form-item v-if="form.toolScope.length" label="已有工具权限" prop="toolScope">
+                <p class="form-hint">保留历史配置；取消勾选可移除已有权限。</p>
+                <el-checkbox-group v-model="form.toolScope" class="expert-tool-options">
+                  <el-checkbox v-for="tool in existingToolOptions" :key="tool.value" :value="tool.value">{{ tool.label }}</el-checkbox>
+                </el-checkbox-group>
+              </el-form-item>
+            </el-collapse-item>
+          </el-collapse>
+            </el-collapse-item>
+          </el-collapse>
+          <template #footer><el-button type="primary" :disabled="editorBusy || iconValidating" @click="metadataOpen=false">确认</el-button></template>
+          </el-dialog>
+        </section>
+        <section class="expert-capabilities-panel" aria-label="专家能力配置">
+          <ExpertExecutionEditor v-if="editorOpen" ref="executionEditor" v-model="form.executionConfig" :expert-id="editingId" :expert-name="form.name" :disabled="editorBusy" :tool-scope="form.toolScope" :skills="executionSkillDependencies" @blockers="executionBlockers=$event">
+            <template #skills>
+              <div v-for="skill in selectedSkillPreviews" :key="skill.id" class="expert-selected-skill">
+                <span class="expert-skill-glyph"><Box :size="14" /></span><span class="expert-skill-name">{{ skill.name }}</span>
+                <el-button text :aria-label="`查看技能 ${skill.name}`" :disabled="editorBusy" @click="inspectSkill(skill.id)"><FileText :size="15" /></el-button>
+                <el-button text :aria-label="`移除技能 ${skill.name}`" :disabled="editorBusy" @click="form.linkedSkillIds=form.linkedSkillIds.filter(id=>id!==skill.id)"><Trash2 :size="15" /></el-button>
+              </div>
+              <ExpertResourcePicker v-model="form.linkedSkillIds" :resources="skillResources" title="添加技能" resource-label="技能" manage-label="技能管理" manage-url="/admin/official-skills" :loading="skillLoading" :error="skillLoadError" :disabled="editorBusy" @refresh="loadEnabledSkills" @inspect="inspectSkill" />
+            </template>
+            <template #advanced>
+              <el-collapse-item title="会话开始" name="starters">
+                <el-form-item prop="openingQuestionsText" class="expert-starters-field">
+                  <ExpertConversationStarters v-model="form.openingQuestionsText" :disabled="editorBusy" />
+                </el-form-item>
+              </el-collapse-item>
+            </template>
+          </ExpertExecutionEditor>
+        </section>
+        <ExpertDraftPreview :name="form.name" :summary="form.summary" :starters="splitLines(form.openingQuestionsText)" :avatar-url="editorAvatarUrl" :launch-url="editorPreviewPath" :expires-at="editorPreviewExpiresAt" :approved-request-id="editorPreviewApprovedRequest" :rejected-request-id="editorPreviewRejectedRequest" :busy="editorPreviewBusy" :disabled="editorBusy || iconValidating || !!executionBlockers.length" :stale="editorPreviewStale" :error="editorPreviewError" @preview="onEditorPreview" />
       </el-form>
-      <template #footer>
-        <div class="editor-footer">
-          <span class="footer-hint">{{
-            editingId
-              ? '「保存并发布」会发布该专家全部已保存待发布修改，不只是本弹窗。'
-              : '新建请先保存生成专家；保存成功后可在本页继续编辑，或关闭后从列表发布。'
-          }}</span>
-          <div class="footer-actions">
-            <el-button :disabled="saving || publishingFromEditor" @click="editorOpen = false">取消</el-button>
-            <el-button :loading="saving && !publishingFromEditor" :disabled="saving || publishingFromEditor || iconValidating" @click="onSave">保存修改</el-button>
-            <el-button
-              v-if="editingId"
-              type="primary"
-              :loading="publishingFromEditor"
-              :disabled="saving || publishingFromEditor || iconValidating"
-              @click="onSaveAndPublish"
-            >
-              保存并发布
-            </el-button>
-          </div>
-        </div>
-      </template>
+    </el-dialog>
+
+    <el-dialog v-model="skillDetailOpen" :title="skillDetail?.name || '技能内容'" width="720px" class="expert-skill-content-dialog" append-to-body>
+      <div v-loading="skillDetailLoading">
+        <el-alert v-if="skillDetailError" :title="skillDetailError" type="error" :closable="false" />
+        <template v-if="skillDetail"><p>{{ skillDetail.summary }}</p><pre class="expert-resource-instruction">{{ skillDetail.instruction || '暂无技能正文' }}</pre></template>
+      </div>
     </el-dialog>
 
     <el-dialog
@@ -418,6 +399,7 @@
             </div>
             <span v-else class="muted">未声明工具（通用对话）</span>
           </el-descriptions-item>
+          <el-descriptions-item label="执行与知识策略"><pre class="viewer-prompt">{{JSON.stringify(viewerAgent.draft.executionConfig || {route:'LEGACY'},null,2)}}</pre></el-descriptions-item>
           <el-descriptions-item label="关联技能">
             <ul v-if="viewerAgent.linkedSkills?.length" class="linked-skill-previews"><li v-for="skill in viewerAgent.linkedSkills" :key="skill.id"><strong>{{ skill.name }} · r{{ skill.packageRevision }}{{ skill.enabledAt ? '' : ' · 已停用' }}</strong><span>{{ skill.summary }}</span></li></ul>
             <span v-else class="muted">未关联技能</span>
@@ -475,7 +457,7 @@
     <el-dialog
       v-model="publishRecordsOpen"
       title="发布记录"
-      width="640px"
+      width="900px"
       destroy-on-close
       class="official-agent-dialog"
     >
@@ -499,6 +481,7 @@
             {{ row.publishedByName || (row.publishedByUserId ? '账号已不可用' : '历史未知') }}
           </template>
         </el-table-column>
+        <el-table-column label="发布依赖与回滚" min-width="190"><template #default="{row}"><el-tag v-if="publishRecordsAgent?.onlineVersion?.id===row.id" type="success">当前在线</el-tag><el-button v-if="canAuthor" text :disabled="publishRecordsAgent?.onlineVersion?.id===row.id || !!rollbackId" @click="onRollback(row)">回滚到此版本</el-button><el-collapse><el-collapse-item title="冻结依赖"><pre class="viewer-prompt">{{JSON.stringify(row.executionConfig || {route:'LEGACY'},null,2)}}</pre><pre class="viewer-prompt">{{JSON.stringify(row.linkedSkillSummaries || [],null,2)}}</pre></el-collapse-item></el-collapse></template></el-table-column>
       </el-table>
       <template #footer>
         <el-button @click="publishRecordsOpen = false">关闭</el-button>
@@ -571,7 +554,8 @@
         <template #empty><el-empty description="暂无官方专家相关审计" /></template>
       </el-table>
     </el-drawer>
-    <CatalogDiscoveryEditor v-if="discoveryId" kind="expert" :resource-id="discoveryId" :agent-status="discoveryAgentStatus" @close="discoveryId=''" @saved="onDiscoverySaved" @published="onDiscoveryPublished" />
+    <el-dialog v-model="previewOpen" title="不可变预览已创建" width="660px"><el-alert title="预览仅创建者超级管理员可用，30 分钟有效。通过标准专家会话入口打开，使用冻结的提示词、工具、技能与知识配置；会话中的模型和检索服务调用可能产生费用。" type="info" :closable="false"/><p>到期时间：{{formatDate(previewExpiresAt)}}</p><el-alert v-if="previewError" :title="previewError" type="warning" :closable="false"/><p v-if="previewPath"><a :href="previewPath" target="_blank" rel="noopener">打开标准 Host 预览</a></p><p v-if="previewPath" style="overflow-wrap:anywhere">{{previewPath}}</p></el-dialog>
+    <CatalogDiscoveryEditor v-if="canAuthor && discoveryId" kind="expert" :resource-id="discoveryId" :agent-status="discoveryAgentStatus" @close="discoveryId=''" @saved="onDiscoverySaved" @published="onDiscoveryPublished" />
   </section>
 </template>
 
@@ -580,7 +564,7 @@ import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref } from
 import CatalogDiscoveryEditor from '../../components/CatalogDiscoveryEditor.vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type TagProps } from 'element-plus';
-import { Search, UserRound } from 'lucide-vue-next';
+import { ArrowLeft, Box, ChevronDown, CircleHelp, EllipsisVertical, FileText, Plus, Search, SquarePen, Trash2, UserRound } from 'lucide-vue-next';
 import CatalogIconEditor from '../../components/CatalogIconEditor.vue';
 import {
   formatPublishMissingToast,
@@ -601,10 +585,34 @@ import {
   type ExpertDefinition,
   type OfficialAgentStatus,
   type OfficialSkillOption,
+  type OfficialSkillRow,
 } from '../../api/admin';
 import { formatAgentDateTime } from './official-agent-version-presentation';
+import ExpertExecutionEditor from '../../components/admin/ExpertExecutionEditor.vue';
+import ExpertConversationStarters from '../../components/admin/ExpertConversationStarters.vue';
+import ExpertDraftPreview from '../../components/admin/ExpertDraftPreview.vue';
+import ExpertResourcePicker from '../../components/admin/ExpertResourcePicker.vue';
+import '../../styles/expertWorkspace.css';
+import {useAuthStore} from '../../stores/auth';
+import {agentWebUrl} from '../../utils/agent';
+import {canAuthorExperts,editableExecutionConfig,previewHostLaunchUrl} from '../../utils/knowledge-admin';
 
 const router = useRouter();
+const auth=useAuthStore();
+const canAuthor=computed(()=>canAuthorExperts(auth.session));
+const executionBlockers=ref<string[]>([]);
+const previewingId=ref(''),previewOpen=ref(false),previewPath=ref(''),previewExpiresAt=ref(''),rollbackId=ref(''),previewError=ref('');
+async function onPreview(row:OfficialAgentRow){
+ if(!canAuthor.value)return;previewingId.value=row.id;
+ try{const preview=await adminOfficialAgentApi.preview(row.id);previewPath.value='';previewError.value='';try{previewPath.value=previewHostLaunchUrl(preview,agentWebUrl);}catch(e){previewError.value=e instanceof Error?e.message:'预览启动地址无效';}previewExpiresAt.value=preview.expiresAt;previewOpen.value=true;}
+ catch(e){ElMessage.error(e instanceof Error?e.message:'预览创建失败');}finally{previewingId.value='';}
+}
+async function onRollback(version:OfficialAgentVersion){
+ const agent=publishRecordsAgent.value;if(!canAuthor.value || !agent)return;
+ try{await ElMessageBox.confirm(`将在线版本切换到 v${version.version}，草稿保持原样；新会话使用所选版本。`,'回滚版本',{type:'warning'});}catch{return;}
+ rollbackId.value=version.id;
+ try{const next=await adminOfficialAgentApi.rollback(agent.id,version.id);replaceRow(next);publishRecordsAgent.value=next;ElMessage.success('在线版本已回滚，草稿保持原样');await load();}catch(e){ElMessage.error(e instanceof Error?e.message:'回滚失败');}finally{rollbackId.value='';}
+}
 
 const rows = ref<OfficialAgentRow[]>([]);
 const statusCounts = ref({ all: 0, DRAFT: 0, PUBLISHED: 0, OFFLINE: 0 });
@@ -627,10 +635,71 @@ const editingId = ref('');
 const saving = ref(false);
 const formAvatarUrl = ref<string | null>(null);
 const pendingIcon=ref<File|null>(null);
+const draftAvatarUrl=ref<string|null>(null);
+const editorAvatarUrl=computed(()=>removeIcon.value ? null : draftAvatarUrl.value || formAvatarUrl.value);
 const removeIcon=ref(false);
 const iconValidating=ref(false);
-let editorBaseline='';
-function clearIconDraft(){pendingIcon.value=null;removeIcon.value=false;iconValidating.value=false;}
+const editorBaseline=ref('');
+const identityOpen=ref<string[]>([]);
+const metadataOpen=ref(false);
+const metadataSections=ref<string[]>([]);
+function openMetadata() {
+  metadataSections.value=[];
+  identityOpen.value=[];
+  metadataOpen.value=true;
+}
+function onEditorCommand(command: string) {
+  if (command === 'publish') void onSaveAndPublish();
+  else openMetadata();
+}
+const editorPreviewBusy=ref(false), editorPreviewPath=ref(''), editorPreviewExpiresAt=ref(''), editorPreviewError=ref(''), editorPreviewBaseline=ref('');
+const editorPreviewApprovedRequest=ref('');
+const editorPreviewRejectedRequest=ref('');
+const editorBusy=computed(()=>saving.value || publishingFromEditor.value || editorPreviewBusy.value);
+const editorDirty=computed(()=>editorFields()!==editorBaseline.value || !!pendingIcon.value || removeIcon.value);
+const editorPreviewStale=computed(()=>!!editorPreviewPath.value && (editorFields()!==editorPreviewBaseline.value || !!pendingIcon.value || removeIcon.value));
+async function requestEditorClose(done?: () => void) {
+  if (editorBusy.value || iconValidating.value) return;
+  if (editorDirty.value) {
+    try { await ElMessageBox.confirm('当前修改尚未保存，离开会丢弃这些修改。', '离开专家编辑', {confirmButtonText:'放弃修改并离开',cancelButtonText:'继续编辑',type:'warning'}); } catch { return; }
+  }
+  if (done) done(); else editorOpen.value=false;
+}
+async function onEditorPreview(question?: string, requestId?: string) {
+  if(editorBusy.value || iconValidating.value || executionBlockers.value.length) return;
+  editorPreviewError.value='';
+  editorPreviewApprovedRequest.value='';
+  editorPreviewRejectedRequest.value='';
+  if (!form.systemPrompt.trim()) {
+    editorPreviewRejectedRequest.value=requestId ?? '';
+    editorPreviewError.value='请先填写左侧专家指令，再发送试聊问题。';
+    await revealEditorField('systemPrompt');
+    return;
+  }
+  editorPreviewBusy.value=true;
+  try {
+    // Every question is approved against the current left-hand configuration.
+    if (question && requestId && editorPreviewPath.value && !editorPreviewStale.value && Date.parse(editorPreviewExpiresAt.value)>Date.now()) {
+      editorPreviewApprovedRequest.value=requestId;
+      return;
+    }
+    const saved=await persistEditorDraft();
+    if(!saved) return;
+    const baseline=editorFields();
+    const preview=await adminOfficialAgentApi.preview(saved.id);
+    const path=new URL(previewHostLaunchUrl(preview,agentWebUrl));
+    path.searchParams.set('expertEmbed','1');
+    editorPreviewPath.value=path.href; editorPreviewExpiresAt.value=preview.expiresAt; editorPreviewBaseline.value=baseline;
+    if (editorFields()!==baseline || pendingIcon.value || removeIcon.value) {
+      editorPreviewError.value='配置在准备试聊时发生了变化，请重新发送以使用最新配置。';
+      return;
+    }
+    editorPreviewApprovedRequest.value=requestId ?? '';
+  } catch(error) {editorPreviewError.value=apiErrorMessage(error,'试聊创建失败，请重试');}
+  finally { if(requestId && editorPreviewApprovedRequest.value!==requestId) editorPreviewRejectedRequest.value=requestId; editorPreviewBusy.value=false; }
+}
+function warnUnsavedEditor(event: BeforeUnloadEvent) {if(editorOpen.value && editorDirty.value){event.preventDefault();event.returnValue='';}}
+function clearIconDraft(){draftAvatarUrl.value=null;pendingIcon.value=null;removeIcon.value=false;iconValidating.value=false;}
 function editorFields(){return JSON.stringify(form);}
 const publishingId = ref('');
 const offlineId = ref('');
@@ -647,6 +716,7 @@ const viewerDiscovery = ref<{
   starters: Array<{ text: string }>;
 } | null>(null);
 const formRef = ref<FormInstance>();
+const executionEditor = ref<InstanceType<typeof ExpertExecutionEditor>>();
 const tableRef = ref();
 const selectedRows = ref<OfficialAgentRow[]>([]);
 const bulkOfflineLoading = ref(false);
@@ -658,6 +728,7 @@ let searchTimer = 0;
 let requestSequence = 0;
 
 const form = reactive({
+  executionConfig:editableExecutionConfig(),
   key: '',
   kind: 'GENERAL' as OfficialAgentKind,
   name: '',
@@ -674,10 +745,35 @@ const form = reactive({
 });
 
 const enabledSkillOptions = ref<OfficialSkillOption[]>([]);
+const skillLoading = ref(false);
+const skillLoadError = ref('');
+const skillDetailOpen = ref(false);
+const skillDetailLoading = ref(false);
+const skillDetailError = ref('');
+const skillDetail = ref<OfficialSkillRow | null>(null);
+let skillDetailRequest=0;
+async function inspectSkill(id: string) {
+  const request=++skillDetailRequest;
+  skillDetailOpen.value=true;
+  skillDetailLoading.value=true;
+  skillDetailError.value='';
+  skillDetail.value=null;
+  try { const detail=await adminOfficialSkillApi.detail(id); if(request===skillDetailRequest) skillDetail.value=detail; }
+  catch (error) { if(request===skillDetailRequest) skillDetailError.value=apiErrorMessage(error,'技能内容加载失败'); }
+  finally { if(request===skillDetailRequest) skillDetailLoading.value=false; }
+}
 const baseDefinition = ref<ExpertDefinition>({});
 const retainedSkillOptions = ref<OfficialSkillOption[]>([]);
 const selectableSkillOptions = computed(() => [...enabledSkillOptions.value, ...retainedSkillOptions.value.filter(skill => !enabledSkillOptions.value.some(item => item.id === skill.id))]);
 const selectedSkillPreviews = computed(() => selectableSkillOptions.value.filter(skill => form.linkedSkillIds.includes(skill.id)));
+const skillResources = computed(() => selectableSkillOptions.value.map(skill => ({
+  id: skill.id,
+  name: skill.name,
+  summary: skill.summary,
+  status: skill.enabledAt ? '已启用' : '未启用',
+  selectable: !!skill.enabledAt && skill.packageRevision > 0,
+})));
+const executionSkillDependencies=computed(()=>form.linkedSkillIds.map(id=>{const s=selectableSkillOptions.value.find(s=>s.id===id);return {enabled:!!s?.enabledAt,packageRevision:s?.packageRevision??0};}));
 const viewerDefinition = computed<ExpertDefinition>(() => viewerAgent.value?.draft.expertDefinition ?? {});
 
 
@@ -701,6 +797,12 @@ const rules: FormRules = {
     },
   ],
   name: [{ required: true, message: '请输入专家名称', trigger: 'blur' }],
+  openingQuestionsText: [{ validator: (_rule, value, callback) => {
+    const lines=splitLines(String(value ?? ''));
+    if (lines.length > 3) callback(new Error('开场白最多填写3条'));
+    else if (lines.some(line=>line.length > 500)) callback(new Error('每条开场白最多500字'));
+    else callback();
+  }, trigger:'blur' }],
 };
 
 const hasFilters = computed(() => Boolean(keyword.value.trim() || statusFilter.value !== 'ALL'));
@@ -753,13 +855,8 @@ const TOOL_SCOPE_LABELS: Record<string, string> = {
   delegate: '团队协作',
 };
 
-const TOOL_SCOPE_OPTIONS = [
-  { value: 'enterprise_knowledge', label: TOOL_SCOPE_LABELS.enterprise_knowledge },
-  { value: 'web_search', label: TOOL_SCOPE_LABELS.web_search },
-  { value: 'web_fetch', label: TOOL_SCOPE_LABELS.web_fetch },
-  { value: 'tabular_analyze', label: TOOL_SCOPE_LABELS.tabular_analyze },
-  { value: 'delegate_official_agent', label: TOOL_SCOPE_LABELS.delegate_official_agent },
-] as const;
+const existingToolOptions = computed(() => form.toolScope
+  .map(value => ({ value, label: TOOL_SCOPE_LABELS[value] ?? `不可用工具 · ${value}` })));
 
 const advancedOpen = ref<string[]>([]);
 
@@ -930,6 +1027,13 @@ function onReset() {
 }
 
 function resetEditor() {
+  form.executionConfig=editableExecutionConfig({route:'KNOWLEDGE_CORE'});
+  identityOpen.value=[];
+  metadataSections.value=[];
+  metadataOpen.value=false;
+  advancedOpen.value=[];
+  editorPreviewPath.value=''; editorPreviewExpiresAt.value=''; editorPreviewError.value=''; editorPreviewBaseline.value=''; editorPreviewApprovedRequest.value='';
+  executionBlockers.value=[];
   editingId.value = '';
   formAvatarUrl.value = null;
   clearIconDraft();
@@ -952,17 +1056,25 @@ function resetEditor() {
 }
 
 async function loadEnabledSkills() {
+  skillLoading.value=true;
+  skillLoadError.value='';
   try {
-    enabledSkillOptions.value = await adminOfficialSkillApi.enabledOptions();
-  } catch {
-    ElMessage.warning('技能选项加载失败，已有关联保留，请稍后重新打开重试');
-  }
+    const catalog=await adminOfficialSkillApi.list();
+    const options=catalog.map(skill => ({ ...skill, category:skill.category as OfficialSkillOption['category'] }));
+    enabledSkillOptions.value=options.filter(skill => !!skill.enabledAt && skill.packageRevision > 0);
+    const unavailable=retainedSkillOptions.value.filter(skill => !options.some(option => option.id===skill.id)).map(skill => ({...skill,enabledAt:null,packageRevision:0}));
+    retainedSkillOptions.value=[...options,...unavailable];
+  } catch (error) {
+    skillLoadError.value=apiErrorMessage(error,'平台技能加载失败，请刷新重试');
+  } finally { skillLoading.value=false; }
 }
 
 function openCreate() {
   void loadEnabledSkills();
   resetEditor();
-  editorBaseline=editorFields();
+  editorBaseline.value=editorFields();
+  identityOpen.value=[];
+  metadataOpen.value=true;
   editorOpen.value = true;
 }
 
@@ -974,6 +1086,7 @@ function openEdit(row: OfficialAgentRow) {
   form.key = row.key;
   form.kind = row.kind;
   form.name = row.draft.name;
+  form.executionConfig=editableExecutionConfig(row.draft.executionConfig);
   form.summary = row.draft.summary;
   form.openingQuestionsText = row.draft.openingQuestions.join('\n');
   form.systemPrompt = row.draft.systemPrompt;
@@ -986,7 +1099,7 @@ function openEdit(row: OfficialAgentRow) {
   form.expertRole = baseDefinition.value.profile?.role || row.draft.name;
   form.workflowText = (baseDefinition.value.workflow ?? []).join('\n');
   form.deliverablesText = (baseDefinition.value.deliverables ?? []).join('\n');
-  editorBaseline=editorFields();
+  editorBaseline.value=editorFields();
   editorOpen.value = true;
 }
 
@@ -999,13 +1112,18 @@ function replaceRow(next: OfficialAgentRow) {
 }
 
 async function revealEditorField(prop: string | null) {
-  if (prop === 'key' && !advancedOpen.value.includes('advanced')) {
+  if (prop === 'openingQuestionsText') executionEditor.value?.revealOpening();
+  if (prop && !['systemPrompt','openingQuestionsText'].includes(prop)) metadataOpen.value=true;
+  if (prop && !['name','summary','systemPrompt','openingQuestionsText'].includes(prop)) metadataSections.value=['more'];
+  if (['category','capabilitiesText'].includes(prop ?? '') && !identityOpen.value.includes('identity')) identityOpen.value.push('identity');
+  if (['kind','expertRole'].includes(prop ?? '') && !identityOpen.value.includes('workflow')) identityOpen.value.push('workflow');
+  if (['key','toolScope'].includes(prop ?? '') && !advancedOpen.value.includes('advanced')) {
     advancedOpen.value = [...advancedOpen.value, 'advanced'];
   }
   await nextTick();
   if (prop) formRef.value?.scrollToField?.(prop);
   await nextTick();
-  const root = document.querySelector('.official-agent-editor .agent-form');
+  const root = metadataOpen.value ? document.querySelector('.expert-metadata-dialog') : document.querySelector('.official-agent-editor .agent-form');
   const item =
     (prop && root?.querySelector(`.el-form-item[prop="${prop}"]`)) ||
     root?.querySelector('.el-form-item.is-error');
@@ -1035,7 +1153,14 @@ async function validateEditorForm(): Promise<boolean> {
 async function persistEditorDraft(): Promise<OfficialAgentRow | null> {
   const valid = await validateEditorForm();
   if (!valid) return null;
+  const openingQuestions=splitLines(form.openingQuestionsText);
+  const previousDiscovery=baseDefinition.value.discoveryDetail;
+  const discovery=previousDiscovery && typeof previousDiscovery==='object' && !Array.isArray(previousDiscovery) ? previousDiscovery as Record<string,unknown> : {};
+  const previousStarters=Array.isArray(discovery.starters) ? discovery.starters.filter((item): item is Record<string,unknown> => !!item && typeof item==='object' && !Array.isArray(item)) : [];
+  const starters=openingQuestions.map(text => ({...previousStarters.find(item=>item.text===text),text}));
   const draft = {
+    openingQuestions,
+    executionConfig:editableExecutionConfig(form.executionConfig),
     name: form.name.trim(),
     summary: form.summary.trim(),
     systemPrompt: form.systemPrompt.trim(),
@@ -1045,24 +1170,23 @@ async function persistEditorDraft(): Promise<OfficialAgentRow | null> {
     linkedSkillIds: form.linkedSkillIds,
     expertDefinition: {
       ...baseDefinition.value,
+      discoveryDetail: { ...discovery, starters },
       profile: { ...baseDefinition.value.profile, role: form.expertRole.trim(), mission: form.summary.trim() },
       workflow: splitLines(form.workflowText), deliverables: splitLines(form.deliverablesText),
     },
   };
   const wasNew = !editingId.value;
   let next: OfficialAgentRow | undefined;
-  if (wasNew || editorFields() !== editorBaseline) {
+  if (wasNew || editorFields() !== editorBaseline.value) {
     next = editingId.value
       ? await adminOfficialAgentApi.update(editingId.value, draft)
       : await adminOfficialAgentApi.create({
           ...draft,
-          // Example questions are owned by 专家介绍 (starters); create with empty legacy mirror.
-          openingQuestions: [],
           key: form.key.trim() || `expert-${crypto.randomUUID().slice(0, 12)}`,
           kind: form.kind,
         });
     editingId.value = next.id;
-    editorBaseline = editorFields();
+    editorBaseline.value = editorFields();
     replaceRow(next);
   }
   if (pendingIcon.value) {
@@ -1085,6 +1209,7 @@ async function persistEditorDraft(): Promise<OfficialAgentRow | null> {
   }
   const current = next ?? rows.value.find((row) => row.id === editingId.value) ?? null;
   if (current) form.openingQuestionsText = (current.draft.openingQuestions ?? []).join('\n');
+  editorBaseline.value=editorFields();
   return current;
 }
 
@@ -1141,8 +1266,7 @@ async function onSave() {
       ElMessage.success('已保存并生成专家。可继续编辑后使用「保存并发布」，或关闭后从列表发布。');
       // Keep editor open; editingId is set so发布按钮会出现。
     } else {
-      editorOpen.value = false;
-      ElMessage.success('已保存（未自动发布）');
+      ElMessage.success('草稿已保存（未自动发布）');
     }
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, '保存失败'));
@@ -1152,6 +1276,7 @@ async function onSave() {
 }
 
 async function onSaveAndPublish() {
+  if(executionBlockers.value.length){ElMessage.error(executionBlockers.value.join('；'));return;}
   if (!editingId.value) {
     ElMessage.warning('请先保存新建专家，再发布');
     return;
@@ -1440,8 +1565,9 @@ async function openViewer(row: OfficialAgentRow) {
   }
 }
 
-onMounted(load);
+onMounted(()=>{void load();window.addEventListener('beforeunload',warnUnsavedEditor);});
 onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload',warnUnsavedEditor);
   window.clearTimeout(searchTimer);
   window.clearTimeout(highlightTimer);
   requestSequence += 1;

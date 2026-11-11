@@ -14,7 +14,7 @@ import type {} from '@mammoth-ai/mmp-client-ui-session/client'
 import type {} from '@mammoth-ai/mmp-client-ui-theme/client'
 import type { HostObservable, SnapshotSelectorHook } from '@mammoth-ai/mmp-client-ui-slots'
 import type { PanelInfo } from './service.ts'
-import { AppFrame } from './AppFrame.tsx'
+import { RootFrame } from './RootFrame.tsx'
 import type { AppFrameInjected } from './AppFrame.tsx'
 import { createLayoutStore } from './stores.ts'
 import { LayoutController } from './service.ts'
@@ -52,6 +52,8 @@ declare module '@mammoth-ai/mmp-client-ui-slots' {
   }
 
   interface SlotMap {
+    /** Optional dedicated presentation replacing the shell without replacing its declared seats. */
+    'rootframe': { kind: 'single'; scope: 'root' }
     // The 'root' entry itself is the runtime's built-in slot (declared
     // there); these are the frame's children, declared by the same
     // register() call that contributes AppFrame. Session owners never pass
@@ -193,6 +195,7 @@ export function apply(ctx: ClientContext): void {
       name: 'root',
       locale: 'common',
       children: {
+        'rootframe': { kind: 'single', scope: 'root' },
         'sidebar': { kind: 'single', scope: 'root' },
         'main': { kind: 'keyed', scope: 'root' },
         'rightbar': { kind: 'single', scope: 'root' },
@@ -202,7 +205,7 @@ export function apply(ctx: ClientContext): void {
       },
       store,
       inject: (): AppFrameInjected => ({ hooks: { foldedLandscape } }),
-    }, AppFrame)
+    }, RootFrame)
     const disposeShortcut = ctx.shortcuts.register({
       id: 'sidebar.left.toggle' as ShortcutCommandId, label: () => t('toggle'), aliases: ['sidebar', 'toggle left sidebar'],
       defaults: {

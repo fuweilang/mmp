@@ -569,9 +569,9 @@ async function onDeleteModel(m: AdminLlmModelRow) {
   try {
     await ElMessageBox.confirm(
       lastOfProvider
-        ? `确认删除模型「${m.modelId}」？这是该厂商最后一个模型，将同时删除厂商「${provider?.displayName || provider?.name}」及其企业分配。`
+        ? `确认删除模型「${m.modelId}」？这是该厂商最后一个模型，将移除模型的企业分配；若厂商「${provider?.displayName || provider?.name}」仍被检索配置引用，将保留厂商。`
         : `确认删除模型「${m.modelId}」？`,
-      lastOfProvider ? '删除模型与厂商' : '删除模型',
+      '删除模型',
       { type: 'warning' },
     );
   } catch {
@@ -580,7 +580,7 @@ async function onDeleteModel(m: AdminLlmModelRow) {
   busyModelId.value = m.id;
   try {
     await adminLlmProviderApi.removeModel(m.id);
-    ElMessage.success(lastOfProvider ? '已删除模型与厂商' : '已删除');
+    ElMessage.success('已删除模型');
     await reload();
   } catch (e) {
     ElMessage.error(e instanceof ApiError ? e.message : '删除失败');

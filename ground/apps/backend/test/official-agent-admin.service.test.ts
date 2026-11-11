@@ -1,3 +1,4 @@
+import { ExpertRuntimeService } from '../src/official-agent/expert-runtime.service';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { OfficialAgentGrantStatus, OfficialAgentStatus, User } from '@prisma/client';
@@ -19,6 +20,7 @@ function createHarness() {
     systemPrompt: '保留事实',
     toolScope: [] as string[],
     expertDefinition: {} as Record<string, unknown>,
+    executionConfig: {route:'LEGACY'} as Record<string,unknown>,
     onlineVersionId: null as string | null,
     createdAt: new Date('2026-11-05T08:00:00Z'),
     updatedAt: new Date('2026-11-05T08:00:00Z'),
@@ -60,6 +62,7 @@ function createHarness() {
         if (typeof data.name === 'string') agent.name = data.name;
         if (typeof data.summary === 'string') agent.summary = data.summary;
         if (typeof data.systemPrompt === 'string') agent.systemPrompt = data.systemPrompt;
+        if(data.executionConfig)agent.executionConfig=data.executionConfig as Record<string,unknown>;
         if (Array.isArray(data.openingQuestions)) agent.openingQuestions = data.openingQuestions as string[];
         if (Array.isArray(data.toolScope)) agent.toolScope = data.toolScope as string[];
         if (data.expertDefinition && typeof data.expertDefinition === 'object') {
@@ -144,7 +147,8 @@ function createHarness() {
         return data;
       },
     },
-    user: {
+    userRole: {findFirst: async()=>({roleId:"super"})},
+    user: {findUnique: async()=>({status:"active"}),
       findMany: async ({ where }: { where: { id: { in: string[] } } }) =>
         where.id.in
           .filter((id) => id === actor.id)
@@ -158,6 +162,7 @@ function createHarness() {
     { adminScope: async () => null } as never,
     { loadAssetFiles: () => [], syncFromAssets: async () => [] } as never,
     { setAgentSkillLinks: async () => undefined, snapshotLinkedSkills: async () => [] } as never,
+    new ExpertRuntimeService(prisma as never, {} as never),
   );
   return { service, agent, versions, grants, audit };
 }
@@ -347,4 +352,14 @@ test('广场介绍或主配置相对线上有真实差异时 hasUnpublishedChang
   const pending = await service.detail(actor, agent.id);
   assert.equal(pending.hasUnpublishedChanges, true);
   assert.equal(pending.onlineVersion?.name, '文案润色大师');
+});
+test('publishing a built-in key through knowledge-core never resynchronizes the legacy corpus',async()=>{
+ const {service,agent}=createHarness();agent.key='gzh';let syncs=0;
+ (service as any).officialKb={loadAssetFiles:()=>[],syncFromAssets:async()=>{syncs++;return[];}};
+ await service.update(actor,agent.id,{executionConfig:{route:'KNOWLEDGE_CORE',retrievalPolicy:'OFF'}});
+ await service.publish(actor,agent.id);
+ assert.equal(syncs,0);
+ await service.update(actor,agent.id,{executionConfig:{route:'LEGACY'}});
+ await service.publish(actor,agent.id);
+ assert.equal(syncs,1);
 });

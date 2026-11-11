@@ -963,7 +963,7 @@ describe('connection node half over a real HTTP server', () => {
   })
 })
 
-it('requires both a verified external identity and a signed browser cookie, and fails closed on policy removal', async () => {
+it.each(['/', '/index.html'])('requires verified external identity and a signed browser cookie for %s, and fails closed on policy removal', async (indexPath) => {
   const owned = await mounted()
   try {
     const authority = '127.0.0.1:3080'
@@ -984,8 +984,9 @@ it('requires both a verified external identity and a signed browser cookie, and 
     expect(anonymous.state.status).toBe(303)
     expect(anonymous.state.headers?.location).toBe('http://127.0.0.1:5201/login')
     const exchange = fakeResponse()
-    await owned.connection.authorizeIndex(fakeRequest({ host: authority, cookie: external }, '/'), exchange.response)
+    await owned.connection.authorizeIndex(fakeRequest({ host: authority, cookie: external }, `${indexPath}?expertPreview=preview-one&expertId=expert-one&expertEmbed=1`), exchange.response)
     expect(exchange.state.status).toBe(303)
+    expect(exchange.state.headers?.location).toBe('./?expertPreview=preview-one&expertId=expert-one&expertEmbed=1')
     const localCookie = exchange.state.headers?.['set-cookie']?.split(';')[0]
     expect(localCookie).toBeDefined()
     const headers = { host: authority, cookie: `${external}; ${localCookie}` }

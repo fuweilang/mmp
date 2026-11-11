@@ -576,6 +576,17 @@ export class LibraryService {
     };
   }
 
+  /** Server-selected exact version only. No ordinal/character prefilter; owning ACL is rechecked on every read. */
+  async readRetrievalVersion(actor: Actor, nodeId: string, versionId: string) {
+    const opened = await this.openBytes(actor, nodeId, versionId, false);
+    if (opened.blocked || !opened.version || opened.version.parseStatus !== 'READY' || opened.version.extractTruncated)
+      throw new LibraryError(409, '来源未完整就绪', 'SOURCE_NOT_READY');
+    const chunks = await this.store.listChunks(opened.version.id);
+    await this.auditCustodyRead(actor, opened.node);
+    return {nodeId:opened.node.id,versionId:opened.version.id,tenantId:opened.node.tenantId,
+      name:opened.node.name,contentHash:opened.version.sha256,chunks};
+  }
+
   async markUsed(actor: Actor, nodeId: string, versionId: string) {
     this.requireMember(actor);
     const opened = await this.openBytes(actor, nodeId, versionId, false);

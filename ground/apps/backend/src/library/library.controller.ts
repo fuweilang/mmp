@@ -47,12 +47,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 type UploadFile = { originalname: string; mimetype: string; size: number; buffer: Buffer };
 
-/** Multer reads multipart filenames as latin1. A browser UTF-8 name has no code point above 255 until this repair. */
-function uploadedName(name: string): string {
-  if ([...name].some((char) => char.charCodeAt(0) > 255)) return name;
-  const repaired = Buffer.from(name, 'latin1').toString('utf8');
-  return repaired.includes('\uFFFD') ? name : repaired;
-}
+import { uploadedName } from '../common/uploaded-name';
 
 @Controller('library')
 @UseGuards(JwtGuard)

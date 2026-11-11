@@ -1,42 +1,22 @@
 <template>
-  <!-- Expert: minimal horizontal preview + single upload button (t74/t75). -->
+  <!-- Expert avatar: the whole circle and pencil share one two-action menu. -->
   <div v-if="profile === 'expert'" class="catalog-icon-editor catalog-icon-editor--expert">
-    <div class="catalog-icon-preview catalog-icon-preview--expert" aria-hidden="true">
-      <img v-if="preview && !broken" :src="preview" alt="" @error="broken = true" />
-      <ImageIcon v-else :size="22" />
-    </div>
-    <div class="catalog-icon-controls catalog-icon-controls--expert">
-      <div class="catalog-icon-buttons">
-        <el-upload
-          ref="upload"
-          :accept="accept"
-          :auto-upload="false"
-          :show-file-list="false"
-          :disabled="disabled || checking"
-          :on-change="picked"
-        >
-          <el-button :disabled="disabled" :loading="checking">上传图片</el-button>
-        </el-upload>
-        <el-button
-          v-if="preview || modelValue"
-          text
-          type="danger"
-          :disabled="disabled || checking"
-          @click="remove"
-        >
-          移除
-        </el-button>
-        <el-button
-          v-if="removed && currentUrl"
-          text
-          :disabled="disabled || checking"
-          @click="emit('update:removed', false)"
-        >
-          保留原图
-        </el-button>
-      </div>
-      <p class="catalog-icon-hint">支持 PNG/JPG/WebP/GIF/SVG，最大 5MB。</p>
-    </div>
+    <el-popover v-model:visible="menuOpen" trigger="click" placement="bottom" :width="104" :show-arrow="false" popper-class="catalog-avatar-menu">
+      <template #reference>
+        <button type="button" class="catalog-avatar-trigger" aria-label="编辑头像" :disabled="disabled || checking">
+          <span class="catalog-icon-preview catalog-icon-preview--expert"><img v-if="preview && !broken" :src="preview" alt="专家头像" @error="broken=true" /><ImageIcon v-else :size="22" /></span>
+          <span class="catalog-avatar-edit"><Pencil :size="12" /></span>
+        </button>
+      </template>
+      <el-upload ref="upload" :accept="accept" :auto-upload="false" :show-file-list="false" :disabled="disabled || checking" :on-change="picked" class="catalog-avatar-upload">
+        <button type="button" class="catalog-avatar-action" :disabled="disabled || checking" @click="menuOpen=false">上传图片</button>
+      </el-upload>
+      <button type="button" class="catalog-avatar-action" :disabled="disabled || checking" @click="openGeneration">AI 生成</button>
+    </el-popover>
+    <el-dialog v-model="generationOpen" title="AI 生成头像" width="388px" class="catalog-avatar-generation" align-center append-to-body>
+      <div class="catalog-avatar-generation-empty"><Sparkles :size="28" /><p>尚未配置生图模型</p><span>配置生图模型后，可在这里生成专家头像。</span><a href="/admin/models" target="_blank" rel="noopener">前往模型管理</a></div>
+      <template #footer><el-button type="primary" @click="generationOpen=false">知道了</el-button></template>
+    </el-dialog>
   </div>
 
   <!-- Skill: legacy compact icon picker (unchanged semantics). -->
@@ -85,7 +65,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { ElMessage, type UploadFile, type UploadInstance } from 'element-plus';
-import { Image as ImageIcon } from 'lucide-vue-next';
+import { Image as ImageIcon, Pencil, Sparkles } from 'lucide-vue-next';
 import {
   sanitizeSvgTextForPreview,
   validateCatalogImage,
@@ -107,13 +87,17 @@ const emit = defineEmits<{
   'update:modelValue': [File | null];
   'update:removed': [boolean];
   validating: [boolean];
+  'preview-change': [string];
 }>();
 
 const upload = ref<UploadInstance>();
 const checking = ref(false);
+const menuOpen=ref(false),generationOpen=ref(false);
+function openGeneration() {if(props.disabled || checking.value) return;menuOpen.value=false;generationOpen.value=true;}
 const localUrl = ref('');
 const broken = ref(false);
 let sequence = 0;
+let previewSequence = 0;
 
 const preview = computed(() => (props.removed ? '' : localUrl.value || props.currentUrl || ''));
 const accept = computed(() =>
@@ -137,18 +121,21 @@ async function buildPreviewUrl(file: File): Promise<string> {
 watch(
   () => props.modelValue,
   async (file) => {
+    const request=++previewSequence;
     if (localUrl.value) URL.revokeObjectURL(localUrl.value);
     localUrl.value = '';
     if (!file) return;
     try {
-      localUrl.value = await buildPreviewUrl(file);
+      const url=await buildPreviewUrl(file);
+      if(request!==previewSequence) {URL.revokeObjectURL(url);return;}
+      localUrl.value=url;
     } catch {
-      // Fallback object URL; broken flag handles decode failures in <img>.
-      localUrl.value = URL.createObjectURL(file);
+      // Keep the saved avatar when a preview cannot be built.
     }
   },
   { immediate: true },
 );
+watch(preview,url=>emit('preview-change',url),{immediate:true});
 watch(preview, () => {
   broken.value = false;
 });
@@ -162,7 +149,7 @@ async function picked(value: UploadFile) {
   emit('validating', true);
   try {
     await validateCatalogImage(file, props.profile);
-    if (request !== sequence) return;
+    if (request !== sequence || props.disabled) return;
     // Keep the original bytes for upload; backend does safe format conversion. No client crop/scale.
     emit('update:modelValue', file);
     emit('update:removed', false);
@@ -183,6 +170,7 @@ function remove() {
 
 onBeforeUnmount(() => {
   sequence += 1;
+  previewSequence += 1;
   if (localUrl.value) URL.revokeObjectURL(localUrl.value);
   emit('validating', false);
 });

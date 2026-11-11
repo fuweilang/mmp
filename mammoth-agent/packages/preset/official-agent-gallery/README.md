@@ -1,6 +1,6 @@
 ---
 kind: package-reference
-description: "Execute Ground official Agents with frozen Sessions and current enterprise authorization."
+description: "Execute official experts through native standard sessions with frozen knowledge and current authorization."
 ---
 
 # @mammoth-ai/mmp-official-agent-gallery
@@ -9,29 +9,31 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Host service for Ground official Agents. It lists only public authorized cards, creates a Session with a frozen version event, rechecks Ground authorization before every model step and knowledge call, and sends official version usage attribution through `llm-ground`.
-
-GENERAL Agents deny every tool. KNOWLEDGE Agents can expose only `enterprise_knowledge`; its arguments contain a query, never tenant or folder identifiers. Ground intersects the server-owned Agent folder scope with the member document ACL. The browser never receives tokens, system prompts, tool scopes, or folder scopes.
+The Host creates native standard sessions from published experts or immutable creator-only previews. Frozen roles, skills, retrieval policy and generation model do not grant capabilities; native filesystem, shell, skills and their existing authorization remain available. Cloud tool scope controls only additional cloud tools.
 
 ## Remote API
 
-`list()` returns public `OfficialAgentCard` values. `create(request)` accepts an `OfficialAgentSessionRequest` with an Agent ID, a Workspace ID, and an optional opening question. The Host checks access before creating the Session.
+`create` accepts an expert and workspace. `createPreview` also accepts the immutable preview ID consumed by the gallery client's `expertPreview` URL entry. Both mount the standard preset. The Host negotiates execution protocol 2 while accepting exact legacy responses. Preview requests use the normal Ground adapter and preview attribution, with no fabricated published version or free provider path.
+
+`openKnowledgeSource` resolves a persisted record ID and citation label inside the authorized Session, checks the original account/space, and sends the exact release/document/revision/index/chunk tuple to Ground. Unknown labels fail. The client reads body-free source metadata from the session projection; it never receives credentials, hidden prompts, or arbitrary storage URLs.
 
 ## Model Experience
 
-### Frozen official Agent
+### Current-request knowledge
 
 #### What the model sees
 
-The `official-agent/bound` Session event records the complete frozen prompt and tool scope so replay reconstructs the model input. The version does not drift when a newer release appears. Revocation, unpublishing, membership removal, and enterprise suspension reject later steps. Knowledge results contain bounded snippets and source URLs; ordinary model requests carry official usage attribution, while auxiliary-purpose requests do not.
+REQUIRED retrieves from the current claimed visible user question before the first outgoing request. AUTO exposes on-demand retrieval without automatic admission. Both allow at most two operations per turn; OFF disables the knowledge tool. Tool arguments contain only the query. Tool results contain status only; required dynamic context carries bounded untrusted evidence and labels naming the owning turn and lookup. Failure and empty statuses remain distinct. REQUIRED without useful current evidence deterministically stops before model generation and exposes an actionable typed error. A failed supplemental lookup may continue only with still-authorized current evidence; AUTO retains explicit degradation.
+
+The required context refresh runs after pre-step. Earlier runtime snapshots are replaced through logged native message replacements that remove only the `OFFICIAL_EXPERT_KNOWLEDGE` section and preserve other sections. The required evidence event records the binding, original account/space, operation reservation, order, exact source identities, budget, and rendered context. Historical labels never resolve through a later lookup's map. A Session-owned guard checks the exact logged evidence text after Ground body fitting; a changed or missing section stops HTTP rather than sending an unlogged excerpt.
 
 #### Token effect
 
-The frozen prompt replaces the default persona. Retrieved snippets add tokens only when the knowledge tool returns them.
+Frozen roles append to the native prompt. Active knowledge experts also receive a system instruction requiring exact bracketed source labels for document claims, forbidding invented source URLs or reconstructed passages, and separating creative examples from source facts. Evidence uses a conservative UTF-8 byte upper bound against the configured token allowance, including a framing reserve; supplemental data cannot duplicate the full body through a tool result. Tight budgets can truncate evidence or stop admission with actionable guidance. FIXED selects the actual Host model before prompt/capability budgeting; Ground remains authoritative at dispatch.
 
 #### KV Cache effect
 
-Each official Agent uses its frozen system prompt instead of the deployment persona. Knowledge snippets enter the model history only through the controlled tool result. Authorization failures add no model input.
+Replacing superseded evidence snapshots changes the request series and may reduce prefix reuse. All original records remain in the protected session log. Replays and compaction retain exact source lineage and reauthorize it before model resend; they never silently retrieve a newer document. Previously transmitted facts cannot be retracted.
 
 ## Complete skill packages
 
@@ -45,4 +47,8 @@ Protocol ceilings are 500 files, 10MiB expanded bytes and 100KiB for SKILL.md. `
 
 ## Known Limitations and Deferred Work
 
-- Source URLs require a valid Ground browser login. Full Mac and Web model conversations and pilot-user acceptance require separate end-to-end checks.
+Exact historical source text checks are deduplicated and serial, followed by one server statement snapshot authorizing all bindings and sources together. `maxHistoricalSources` defaults to 128 distinct sources or bindings; exceeding it stops resend and asks for a new chat. No embedding or rerank call occurs during authorization. A missing source, account change, expired preview, or changed lineage blocks resend, including summaries derived from that source.
+
+Engineering checks use synthetic Ground/model responses. Live provider semantic quality, supplier invoices and customer-account acceptance require separate verification. Legacy knowledge preview requires migration to new knowledge releases or explicit KNOWLEDGE_CORE/OFF; existing published legacy experts retain their old retrieval path. Internal Ground delegation to new REQUIRED/AUTO knowledge children remains unsupported.
+
+Recorded coverage includes the shipped `sdk` profile scenario `snapshots/sdk/official-expert-knowledge` and the Python SDK `sdk-official-expert` smoke projection. Both restore a recorded expert binding and use the real runtime with external account/Ground/model boundaries mocked.

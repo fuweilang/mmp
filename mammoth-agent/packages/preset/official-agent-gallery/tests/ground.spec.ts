@@ -75,7 +75,7 @@ describe('GroundOfficialAgentClient', () => {
       },
       {
         url: 'https://ground.test/api/official-agents/agent%2Fone/resolve', method: 'POST',
-        body: JSON.stringify({ versionId: card.versionId }), signal: resolveSignal,
+        body: JSON.stringify({ versionId: card.versionId, executionProtocol: 2 }), signal: resolveSignal,
         headers: expect.any(Headers) as Headers,
       },
       {
@@ -150,4 +150,14 @@ describe('GroundOfficialAgentClient', () => {
     expect(publicCard).not.toHaveProperty('kbFolderIds')
     expect(publicCard).not.toHaveProperty('token')
   })
+})
+
+it('negotiates protocol 2 for normal resolve without breaking exact legacy decoding', async () => {
+  let sent: Record<string,unknown> = {}
+  const client = new GroundOfficialAgentClient('https://ground.test', async () => 'synthetic', async (_url,init) => {
+    sent=JSON.parse(String(init?.body))
+    return json({agentId:'a',key:'a',kind:'GENERAL',versionId:'v',version:1,systemPrompt:'',toolScope:[]})
+  })
+  await client.resolve('a','v')
+  expect(sent).toEqual({versionId:'v',executionProtocol:2})
 })

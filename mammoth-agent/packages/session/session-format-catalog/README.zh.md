@@ -108,3 +108,5 @@ Production 历史读取使用 `{ recovery: 'recoverable', validation: 'transform
 无。
 
 </details>
+
+固定的 `historicalV4SessionFormatCatalog` 读取 V4 子会话发现前置数据，不应用迁出的 V4→V5 边。当前目录包含 [V4→V5 恒等转换边](../session-format-v4-to-v5/README.zh.md)。

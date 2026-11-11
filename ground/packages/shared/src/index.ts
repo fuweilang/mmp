@@ -288,3 +288,31 @@ export type SessionMe = {
   effectivePermissions: string[];
   platformRoleKey: string | null;
 };
+
+/** Ground/Host protocol 2: fields are frozen at publication; credentials never cross this boundary. */
+export type ExpertExecutionConfig = {
+  route:'LEGACY'|'KNOWLEDGE_CORE'; releaseIds:string[];
+  retrievalPolicy:'REQUIRED'|'AUTO'|'OFF'; budgetTokens:number; rerankProfileId?:string;
+  generationModel:{mode:'AUTO'}|{mode:'FIXED';modelId:string};
+};
+export type FrozenExpertExecutionConfig = Omit<ExpertExecutionConfig,'generationModel'> & {
+  generationModel:{mode:'AUTO'}|{mode:'FIXED';modelId:string;modelRef?:string};
+  knowledge:Array<{releaseId:string;baseId:string;indexes:Array<{indexRevisionId:string;revisionId:string;documentId:string;profileId:string;configHash:string}>}>;
+  skillPackages:Array<{skillId:string;packageRevision:number;packageId:string}>;
+  builtinToolRevision:string;
+};
+export type OfficialExpertExecutionV2 = {
+  executionProtocol:2;agentId:string;key:string;kind:'GENERAL'|'KNOWLEDGE';
+  versionId:string|null;version:number;systemPrompt:string;toolScope:string[];
+  linkedSkills:Array<{id:string;key:string;name:string;summary:string;category:string|null;packageRevision:number;enabledAt:string|null}>;
+  executionConfig:FrozenExpertExecutionConfig;
+  preview?:{id:string;expiresAt:string;actorUserId:string;usagePurpose:'PLATFORM_OPERATIONAL_PREVIEW'};
+};
+export type ExpertRuntimeBindingV2={executionProtocol:2;versionId?:string;previewId?:string};
+export type ExpertRetrievalTransportV2=ExpertRuntimeBindingV2 & {
+  sessionId:string;turnId:string;query:string;context?:Array<{role:'user'|'assistant';content:string}>;
+};
+export type ExpertSourceReferenceV2=ExpertRuntimeBindingV2 & {
+  knowledgeReleaseId:string;documentId:string;revisionId:string;indexRevisionId:string;chunkId:string;
+};
+export type ExpertPreviewLaunchV2={previewId:string;agentId:string;expiresAt:string;executionProtocol:2;launch:{entry:'expertPreview';path:string}};

@@ -35,7 +35,7 @@ export class OfficialWebSearchService {
     provider: 'deepseek-tools-search';
     hits: OfficialWebSearchHit[];
   }> {
-    const apiKey = await this.resolveDeepSeekApiKey();
+    const apiKey = await resolveDeepSeekSearchKey(this.prisma);
     const count = Math.min(Math.max(opts?.count ?? 8, 1), 20);
     let response: Response;
     try {
@@ -76,8 +76,11 @@ export class OfficialWebSearchService {
     return { provider: 'deepseek-tools-search', hits };
   }
 
-  private async resolveDeepSeekApiKey(): Promise<string> {
-    const provider = await this.prisma.llmProvider.findFirst({
+
+}
+
+export async function resolveDeepSeekSearchKey(db:Pick<PrismaService,'llmProvider'>): Promise<string> {
+    const provider = await db.llmProvider.findFirst({
       where: {
         enabled: true,
         apiKeyEnc: { not: null },
@@ -104,7 +107,6 @@ export class OfficialWebSearchService {
       );
     }
   }
-}
 
 function mapDeepSeekSearch(payload: unknown): OfficialWebSearchHit[] {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return [];

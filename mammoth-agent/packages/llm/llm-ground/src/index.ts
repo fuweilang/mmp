@@ -11,7 +11,7 @@ import { GroundLlmAdapter } from './adapter.ts'
 import { GroundRequestAttribution } from './attribution.ts'
 
 export { Config } from './config.ts'
-export type { GroundOfficialAttribution } from './attribution.ts'
+export type { GroundOfficialAttribution, GroundWireBody, GroundWireGuard } from './attribution.ts'
 export const name = 'llm-ground'
 export const inject = ['llm']
 
@@ -40,6 +40,7 @@ export function apply(ctx: Context, config: Config): void {
     origin,
     account: () => ctx.get('deepseekAccount'),
     officialFor: sessionId => attribution.officialFor(sessionId),
+    validateWire: (request, body) => attribution.validateWire(request, body),
   })
 
   // Cloud route only: do not register as configurable (no BYOK / settings key form).

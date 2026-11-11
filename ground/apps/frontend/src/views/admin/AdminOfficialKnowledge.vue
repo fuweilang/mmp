@@ -1,11 +1,15 @@
 <template>
   <section class="official-kb-page">
+    <el-button v-if="knowledgeView==='legacy' && canAuthor" text @click="knowledgeView='core'">返回知识库文件夹</el-button>
+    <KnowledgeFolderManager v-if="canAuthor && knowledgeView==='core'" @legacy="knowledgeView='legacy'" />
+    <div v-show="knowledgeView==='legacy'">
+    <el-alert title="旧专家知识库：保持现有发布和工具行为。新知识核心是独立的不可变索引与发布版本，不会自动迁移旧资料。" type="info" :closable="false" />
     <div class="page-header">
       <div>
         <h2>猛犸知识库</h2>
         <p>管理官方专家专属资料。</p>
       </div>
-      <el-button type="primary" @click="openUpload">上传资料</el-button>
+      <el-button v-if="canAuthor" type="primary" @click="openUpload">上传资料</el-button>
     </div>
 
     <div class="toolbar">
@@ -80,15 +84,15 @@
         <template #default="{ row }">
           <div class="operation-buttons">
             <el-button text type="primary" @click="openViewer(row)">查看</el-button>
-            <el-button text type="primary" :disabled="!row.active" @click="openReplace(row)">替换</el-button>
+            <el-button v-if="canAuthor" text type="primary" :disabled="!row.active" @click="openReplace(row)">替换</el-button>
             <el-button text type="primary" @click="onDownload(row)">下载</el-button>
-            <el-button text type="primary" @click="onReindex(row)">刷新索引</el-button>
+            <el-button v-if="canAuthor" text type="primary" @click="onReindex(row)">刷新索引</el-button>
           </div>
         </template>
       </el-table-column>
       <template #empty>
         <el-empty description="暂无官方资料">
-          <el-button type="primary" @click="openUpload">上传资料</el-button>
+          <el-button v-if="canAuthor" type="primary" @click="openUpload">上传资料</el-button>
         </el-empty>
       </template>
     </el-table>
@@ -150,7 +154,7 @@
       </template>
     </el-dialog>
 
-    <LibraryUploadDialog v-if="uploadOpen" :title="replaceTarget ? '替换官方知识资料' : '上传官方知识资料'" :multiple="!replaceTarget" accept=".md,.markdown,.txt,.pdf,.docx,.pptx" hint="支持 Markdown / TXT / PDF / DOCX / PPTX，单文件 ≤20MB；索引成功后生效，失败保留旧知识。" :load-limits="officialUploadLimits" :prepare="prepareOfficialUpload" :upload-file="uploadOfficialFile" @close="uploadOpen = false; resetUploadForm()" @complete="officialUploaded">
+    <LibraryUploadDialog v-if="canAuthor && uploadOpen" :title="replaceTarget ? '替换官方知识资料' : '上传官方知识资料'" :multiple="!replaceTarget" accept=".md,.markdown,.txt,.pdf,.docx,.pptx" hint="支持 Markdown / TXT / PDF / DOCX / PPTX，单文件 ≤20MB；索引成功后生效，失败保留旧知识。" :load-limits="officialUploadLimits" :prepare="prepareOfficialUpload" :upload-file="uploadOfficialFile" @close="uploadOpen = false; resetUploadForm()" @complete="officialUploaded">
       <template #default="{ busy, count }">
         <el-form label-position="top" :disabled="busy">
           <el-form-item v-if="!replaceTarget" label="所属官方专家" required><el-select v-model="uploadAgentId" filterable placeholder="仅列出可绑定官方知识库的专家" style="width:100%"><el-option v-for="agent in agents" :key="agent.id" :label="`${agent.name}（${agent.key}）`" :value="agent.id" /></el-select></el-form-item>
@@ -159,11 +163,18 @@
         </el-form>
       </template>
     </LibraryUploadDialog>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import KnowledgeFolderManager from '../../components/admin/KnowledgeFolderManager.vue';
+import {useAuthStore} from '../../stores/auth';
+import {canAuthorExperts} from '../../utils/knowledge-admin';
+const auth=useAuthStore();
+const canAuthor=computed(()=>canAuthorExperts(auth.session));
+const knowledgeView=ref(canAuthor.value?'core':'legacy');
 import LibraryUploadDialog from '../../components/LibraryUploadDialog.vue';
 import { ElMessage } from 'element-plus';
 import {

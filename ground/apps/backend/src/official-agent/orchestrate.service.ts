@@ -104,6 +104,7 @@ export class OfficialOrchestrateService {
     bossAgentId: string,
     bossVersion: VersionRow,
     req: DelegateRequest,
+    previewOrigin?: {agentId:string;previewId:string},
   ): Promise<DelegateResult> {
     const bossScope = stringList(bossVersion.toolScope);
     if (!bossScope.includes(DELEGATE_OFFICIAL_AGENT_TOOL)) {
@@ -139,6 +140,8 @@ export class OfficialOrchestrateService {
       throw new BadRequestException('目标专家不可用或未发布');
     }
     const childVersion = child.onlineVersion;
+    const config=childVersion.executionConfig as {route?:string;retrievalPolicy?:string}|null;
+    if(config?.route==='KNOWLEDGE_CORE' && config.retrievalPolicy!=='OFF')throw new BadRequestException('KNOWLEDGE_DIRECT_DELEGATION_UNSUPPORTED: open this expert in a protocol 2 Host session');
     const childScope = stringList(childVersion.toolScope);
     const toolTrace: DelegateResult['toolTrace'] = [];
     const evidence: string[] = [];
@@ -258,7 +261,7 @@ export class OfficialOrchestrateService {
             { role: 'user', content: userContent },
           ],
         },
-        { agentId: child.id, versionId: childVersion.id },
+        { agentId: child.id, versionId: childVersion.id, previewOrigin },
       );
       answer = completion.content.trim();
       modelRef = completion.modelRef;
