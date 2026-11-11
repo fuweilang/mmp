@@ -5,7 +5,10 @@ import type { Agent } from '@mammoth-ai/mmp-agent';
 import type { Message } from '@mammoth-ai/mmp-llm';
 import Loader from '@mammoth-ai/cordis-plugin-loader';
 import { createUserMessage, createSystemMessage, ToolCallId } from '@mammoth-ai/mmp-llm';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { sha } from '../src/managed-runtime.ts';
 import { fileURLToPath } from 'node:url';
 import { restoreReleasedV4Artifact } from '../../../session/session-format-v3-to-v4/src/index.ts';
 import { KNOWN_SESSION_EVENT_TYPES, SessionId } from '@mammoth-ai/mmp-session';
@@ -22,20 +25,32 @@ import { knowledgeProjection, type KnowledgeState } from '../src/knowledge-runti
 import { GroundLlmAdapter } from '../../../llm/llm-ground/src/adapter.ts';
 import { GroundRequestAttribution } from '../../../llm/llm-ground/src/attribution.ts';
 const contexts: Context[] = [];
-afterEach(async () => { for (const ctx of contexts.splice(0))
-    await ctx.fiber.dispose(); vi.unstubAllGlobals(); });
+const packageRoots: string[] = [];
+afterEach(async () => {
+    try {
+        for (const ctx of contexts.splice(0)) await ctx.fiber.dispose();
+    } finally {
+        try {
+            for (const root of packageRoots.splice(0)) await rm(root, {recursive:true,force:true});
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    }
+});
 const card = { id: 'expert', key: 'expert', kind: 'GENERAL', category: 'common', versionId: 'v1', version: 1, name: 'Expert', summary: '', openingQuestions: [], capabilities: [], avatarUrl: null, executionGranted: true };
 const evidence = { knowledgeReleaseId: 'release1', documentId: 'doc1', revisionId: 'rev1', indexRevisionId: 'index1', chunkId: 'chunk1', text: 'FROZEN_EVIDENCE_ONE', locator: { page: 2 }, sourceTitle: 'Exact document' };
-async function fixture(policy: 'REQUIRED' | 'AUTO' | 'OFF' = 'REQUIRED', status = 'READY') {
+async function fixture(policy: 'REQUIRED' | 'AUTO' | 'OFF' = 'REQUIRED', status = 'READY', completeSkill = false) {
     const ctx = new Context();
     contexts.push(ctx);
-    await mountAgentLoopTestDependencies(ctx, { systemPrompt: { personaPrefix: 'STANDARD_NATIVE' } });
+    await mountAgentLoopTestDependencies(ctx, { workingDirectory: completeSkill, systemPrompt: { personaPrefix: 'STANDARD_NATIVE' } });
     await ctx.plugin(Skills);
     await ctx.plugin(Loader);
     ctx.loader.internal = { version: 'v2', loadCache: new Map(), import: async () => ({ apply() { } }), register() { }, getOrCreateModuleJob() { throw Error('unused'); }, resolveSync() { throw Error('unused'); }, load() { throw Error('unused'); } };
     await ctx.plugin(AgentPresetRegistry, { default: 'standard' });
     await ctx.agentPresets.register({ id: 'standard', plugins: [] });
-    const workspace = { id: WorkspaceId('rag-workspace'), path: '/tmp', attachSession: async () => { } };
+    const directory = completeSkill ? await mkdtemp(join(tmpdir(), 'mmp-rag-complete-')) : '/tmp';
+    if (completeSkill) packageRoots.push(directory);
+    const workspace = { id: WorkspaceId('rag-workspace'), path: directory, attachSession: async () => { } };
     ctx.provide('workspaceRegistry', { get: () => workspace } as never);
     ctx.provide('attachments', {} as never);
     const account = { resolveToken: async () => 'synthetic-rag-test-token', rejectToken: async () => { } };
@@ -51,10 +66,18 @@ async function fixture(policy: 'REQUIRED' | 'AUTO' | 'OFF' = 'REQUIRED', status 
         ready: () => void;
         wait: Promise<void>;
     };
-    const execution = { agentId: card.id, key: card.key, kind: 'GENERAL', versionId: 'v1', version: 1, systemPrompt: 'EXPERT_ROLE', toolScope: [], linkedSkills: [], executionProtocol: 2, executionConfig: { route: 'KNOWLEDGE_CORE', releaseIds: ['release1'], retrievalPolicy: policy, budgetTokens: 8000, generationModel: { mode: 'FIXED', modelId: 'db-model', modelRef: 'cloud/fixed' }, knowledge: [{ releaseId: 'release1', baseId: 'base1', indexes: [{ indexRevisionId: 'index1', revisionId: 'rev1', documentId: 'doc1', profileId: 'profile1', configHash: 'hash' }] }], skillPackages: [], builtinToolRevision: 'ground-builtins-v1' } };
+    const linkedSkill = {id:'complete-method',key:'complete-method',name:'Complete method',summary:'RAG companion',category:null,packageRevision:1,enabledAt:'2026-11-11'};
+    const packageData: Record<string,string> = {'SKILL.md':'# Complete method\nCOMPLETE_RAG_METHOD: read references/guide.md.', 'references/guide.md':'COMPLETE_RAG_GUIDE'};
+    const files = Object.entries(packageData).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([path,bytes])=>({path,bytes:Buffer.byteLength(bytes),sha256:sha(bytes),executable:false}));
+    const execution = { agentId: card.id, key: card.key, kind: 'GENERAL', versionId: 'v1', version: 1, systemPrompt: 'EXPERT_ROLE', toolScope: [], linkedSkills: completeSkill ? [linkedSkill] : [], executionProtocol: 2, executionConfig: { route: 'KNOWLEDGE_CORE', releaseIds: ['release1'], retrievalPolicy: policy, budgetTokens: 8000, generationModel: { mode: 'FIXED', modelId: 'db-model', modelRef: 'cloud/fixed' }, knowledge: [{ releaseId: 'release1', baseId: 'base1', indexes: [{ indexRevisionId: 'index1', revisionId: 'rev1', documentId: 'doc1', profileId: 'profile1', configHash: 'hash' }] }], skillPackages: [], builtinToolRevision: 'ground-builtins-v1' } };
     const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
     vi.stubGlobal('fetch', vi.fn(async (input: unknown, init?: RequestInit) => {
         const url = String(input), body = init?.body ? JSON.parse(String(init.body)) : {};
+        if (completeSkill && url.includes('/api/official-skills/complete-method/content?')) {
+            expect(new URL(url).searchParams.get('packageFormat')).toBe('2');
+            return json({...linkedSkill,category:undefined,enabledAt:undefined,instruction:packageData['SKILL.md'],packageFormat:2,files,packageDigest:sha(JSON.stringify(files.map(f=>[f.path,f.bytes,f.sha256,f.executable]))),limits:{maxFiles:500,maxTotalBytes:10485760,maxInstructionBytes:102400}});
+        }
+        if (completeSkill && url.includes('/api/official-skills/complete-method/resources?')) return new Response(packageData[new URL(url).searchParams.get('path')!]);
         if (url.endsWith('/models'))
             return json({ data: [{ id: 'cloud/fixed', capabilities: { contextWindow: pressure ? 16384 : 64000 } }, { id: 'cloud/other', is_preferred: true, capabilities: { contextWindow: 128000 } }] });
         if (url.endsWith('/chat/completions')) {
@@ -456,4 +479,47 @@ it('places exact citation and creative-claim rules in the system role without sp
     expect(system).toContain('Cite document facts and methods with their exact returned labels in square brackets');
     expect(system).toContain('File names, headings and guessed URLs are not citations');
     expect(system).toContain('Never quote or reconstruct a passage absent from the returned evidence');
+});
+
+it('keeps complete skill copies and REQUIRED evidence together across turns under the real wire guard', async () => {
+    const f = await fixture('REQUIRED', 'READY', true);
+    f.noAutomaticTool();
+    const id = await f.ctx.officialAgentGallery.create({agentId:'expert',workspaceId:f.workspace.id});
+    const agent = f.ctx.agents.get(id)!;
+    await f.ctx.skills.get('complete-method',{scope:agent,cwd:f.workspace.path});
+    const ask = async (text: string) => {
+        agent.followup(createUserMessage({content:[{type:'text',text}],source:{kind:'user'}}));
+        await agent.whenIdle();
+    };
+    const directoryFrom = (body: Record<string,unknown>) => {
+        const match = /Base directory for this skill: ([^\\"<]+)/.exec(JSON.stringify(body));
+        expect(match).not.toBeNull();
+        return match![1]!;
+    };
+    await ask('Use the complete method and cite the current evidence.');
+    expect(f.wires).toHaveLength(1);
+    const first = directoryFrom(f.wires[0]!.body);
+    expect(await readFile(join(first,'references/guide.md'),'utf8')).toBe('COMPLETE_RAG_GUIDE');
+    expect(JSON.stringify(f.wires[0]!.body)).toContain('COMPLETE_RAG_METHOD');
+    expect(JSON.stringify(f.wires[0]!.body)).toContain('FROZEN_EVIDENCE_ONE');
+    await ask('Use the same frozen method for this follow-up.');
+    expect(f.wires).toHaveLength(2);
+    const second = directoryFrom(f.wires[1]!.body);
+    expect(second).not.toBe(first);
+    await expect(readFile(join(first,'SKILL.md'))).rejects.toThrow();
+    expect(await readFile(join(second,'references/guide.md'),'utf8')).toBe('COMPLETE_RAG_GUIDE');
+    expect(JSON.stringify(f.wires[1]!.body)).toContain('COMPLETE_RAG_METHOD');
+    expect(JSON.stringify(f.wires[1]!.body)).toContain('FROZEN_EVIDENCE_TWO');
+    for (const wire of f.wires) {
+        expect(wire.body.model).toBe('cloud/fixed');
+        expect(wire.headers.get('x-mmp-official-agent-version-id')).toBe('v1');
+    }
+    const changedWire = {provider:'mammoth-ground',model:'cloud/fixed',sessionId:agent.id,messages:[createUserMessage({content:[{type:'text',text:'Evidence section removed after native assembly.'}],source:{kind:'user'}})]};
+    await expect(async () => { for await (const _ of f.adapter.stream(changedWire)) {} }).rejects.toMatchObject({code:'EXPERT_KNOWLEDGE_WIRE_CHANGED'});
+    expect(f.wires).toHaveLength(2);
+    f.revoke();
+    await ask('Do not resend revoked source text.');
+    expect(f.wires).toHaveLength(2);
+    await f.ctx.parallel('deepseek-account/signed-out');
+    await expect(readFile(join(second,'SKILL.md'))).rejects.toThrow();
 });

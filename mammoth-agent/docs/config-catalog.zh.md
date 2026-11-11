@@ -2572,13 +2572,19 @@ export interface Config {
 ## `@mammoth-ai/mmp-official-agent-gallery`
 
 - `inject`: `agents` · `sessionProjections` · `systemPrompt` · `tools` · `skills` · `workspaceRegistry` · `deepseekAccount` · `groundRequestAttribution` · `attachments` · `agentPresets`
-- `source`: [`packages/preset/official-agent-gallery/src/index.ts:76`](../packages/preset/official-agent-gallery/src/index.ts)
+- `source`: [`packages/preset/official-agent-gallery/src/index.ts:78`](../packages/preset/official-agent-gallery/src/index.ts)
 
 ```ts config-catalog
 /** Ground connection shared by gallery reads and trusted execution checks. */
 export interface Config {
   /** Ground public HTTP(S) origin without a path. */
   groundOrigin: string
+  /** Local maximum expanded bytes for a complete skill revision. */
+  skillMaxTotalBytes?: number
+  /** Local maximum files for a complete skill revision. */
+  skillMaxFiles?: number
+  /** Local maximum SKILL.md bytes. */
+  skillMaxInstructionBytes?: number
   /** Maximum distinct historical exact sources reauthorized before resend; exceeding it requires a new chat. */
   maxHistoricalSources?: number
 }
@@ -5108,6 +5114,7 @@ export interface Config {
 | `@mammoth-ai/mmp-session-format-v1-to-v2` | — | [`packages/session/session-format-v1-to-v2/src/index.ts`](../packages/session/session-format-v1-to-v2/src/index.ts) |
 | `@mammoth-ai/mmp-session-format-v2-to-v3` | — | [`packages/session/session-format-v2-to-v3/src/index.ts`](../packages/session/session-format-v2-to-v3/src/index.ts) |
 | `@mammoth-ai/mmp-session-format-v3-to-v4` | — | [`packages/session/session-format-v3-to-v4/src/index.ts`](../packages/session/session-format-v3-to-v4/src/index.ts) |
+| `@mammoth-ai/mmp-session-format-v4-to-v5` | — | [`packages/session/session-format-v4-to-v5/src/index.ts`](../packages/session/session-format-v4-to-v5/src/index.ts) |
 | `@mammoth-ai/mmp-session-snapshot` | — | [`packages/test-support/session-snapshot/src/index.ts`](../packages/test-support/session-snapshot/src/index.ts) |
 | `@mammoth-ai/mmp-session-telemetry` | — | [`packages/session/session-telemetry/src/index.ts`](../packages/session/session-telemetry/src/index.ts) |
 | `@mammoth-ai/mmp-session-title-llm` | — | [`packages/session/session-title-llm/src/index.ts`](../packages/session/session-title-llm/src/index.ts) |
