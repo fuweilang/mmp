@@ -60,8 +60,8 @@ function harness(payload: unknown, vision: boolean, download: () => Response = (
     ctx, images, calls, tool, exec,
     async run(q = '小悟空') {
       const value = await tool.execute({ q }, exec)
-      const fallback = tool.output.render({ q }, value)
-      const projected = tool.projectContent?.(exec, { isError: false, value, content: fallback } as ToolExecutionResult)
+      const fallback = tool.output.render({ q }, value as Parameters<typeof tool.output.render>[1])
+      const projected = tool.projectContent?.(exec, { isError: false, value, content: fallback } as unknown as ToolExecutionResult)
       return { value, projected: projected ?? fallback }
     },
   }

@@ -453,9 +453,12 @@ function makeHarness(
     }
     return imageSlotOverride?.(owner) ?? options?.fallback ?? null
   }
+  // The slot contract narrows the owner type by key, which a runtime stub does not need.
+  const callReasoningSlot = (key: string, owner: object, options?: { fallback?: React.ReactNode }) =>
+    (renderReasoningSlot as (key: string, owner: object, options?: { fallback?: React.ReactNode }) => React.ReactNode)(key, owner, options)
   const renderAssistantSlot: React.ComponentProps<typeof AssistantNodeView>['renderSlot'] = (name, owner, options) => {
     if (name === 'conversation.chat.assistant.expert') return null
-    return name === 'conversation.chat.message.images' ? renderImages(name, owner, options) : renderReasoningSlot(name, owner, options)
+    return name === 'conversation.chat.message.images' ? renderImages(name, owner, options) : callReasoningSlot(name, owner, options)
   }
   const renderNodeSlot: NodeRenderer = (key, owner, opts) => {
     if (nodeSlotOverride !== undefined) return nodeSlotOverride(key, owner, opts)

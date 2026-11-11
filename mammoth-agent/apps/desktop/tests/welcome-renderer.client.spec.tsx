@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { Welcome } from '../src/client/WelcomePage.tsx'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resolveDesktopLocale } from '../src/locale.ts'
-import type { AccountView } from '@mammoth-ai/mmp-deepseek-account/types'
+import type { AccountView, PasswordSignInResult } from '@mammoth-ai/mmp-deepseek-account/types'
 import type { WelcomeSaveResult, WelcomeNotice } from '../src/welcome-api.ts'
 
 const html = readFileSync(join(import.meta.dirname, '../renderer/welcome.html'), 'utf8')
@@ -20,8 +20,8 @@ function mount(language = 'zh-CN', takeNotice = vi.fn<() => Promise<WelcomeNotic
     analyticsEnabled: async () => true,
     onAccountState: vi.fn((_listener: (state: AccountView) => void) => stopAccount),
     startSignIn: vi.fn(async (): Promise<AccountView> => ({ links: { usageUrl: 'http://localhost/usage', topUpUrl: 'http://localhost/top_up' }, status: 'signed-out', attempt: null })),
-    signInWithPassword: vi.fn(async () => ({ ok: true as const })),
-    registerWithPassword: vi.fn(async () => ({ ok: true as const })),
+    signInWithPassword: vi.fn<(phone: string, password: string) => Promise<PasswordSignInResult>>(async () => ({ ok: true })),
+    registerWithPassword: vi.fn<(input: { name: string; phone: string; password: string; enterpriseName: string; slug: string }) => Promise<PasswordSignInResult>>(async () => ({ ok: true })),
     cancelSignIn: vi.fn(async (): Promise<AccountView> => ({ links: { usageUrl: 'http://localhost/usage', topUpUrl: 'http://localhost/top_up' }, status: 'signed-out', attempt: null })),
     copySignInLink: vi.fn(async () => undefined),
     ...resolveDesktopLocale(language),

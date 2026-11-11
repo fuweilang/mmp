@@ -64,7 +64,7 @@ describe('fitChatCompletionsBody', () => {
     expect(fitted.body.messages.at(-1)).toEqual({ role: 'user', content: 'latest ask' })
     const tool = fitted.body.messages.find(message => message.role === 'tool')
     if (tool && tool.role === 'tool') {
-      expect(tool.content.length).toBeLessThan(50_000)
+      expect(tool.content?.length).toBeLessThan(50_000)
       expect(tool.content).toContain('truncated for gateway body budget')
     }
   })

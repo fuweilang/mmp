@@ -1727,7 +1727,7 @@ it('OIDC SSO returns an empty ready balance without hitting DeepSeek wallet APIs
 it('stores a desktop password login without opening a browser or setting a cookie', async () => {
   const home = await mkdtemp(join(tmpdir(), 'mmp-account-password-'))
   cleanups.push(() => rm(home, { recursive: true, force: true }))
-  const seen: { cookie?: string; body?: string } = {}
+  const seen: { cookie?: string | undefined; body?: string } = {}
   const ground = createServer((req, res) => {
     if (req.url === '/api/auth/client-login' && req.method === 'POST') {
       const chunks: Buffer[] = []

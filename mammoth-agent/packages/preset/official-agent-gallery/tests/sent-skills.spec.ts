@@ -42,6 +42,6 @@ describe('sent skill projection', () => {
       { name: '品牌视觉规范', key: 'brand', icon: null, offset: 9 },
     ])
     const base = { expert: null, skill: null, skillHash: null, selectionHash: 's', authScope: { userId: 'u', scope: 't' } }
-    expect(compositionHashOf(base)).toBe(compositionHashOf({ ...base, skillMarks: [0, 9] }))
+    expect(compositionHashOf(base)).toBe(compositionHashOf({ ...base, skillMarks: [0, 9] } as unknown as Parameters<typeof compositionHashOf>[0]))
   })
 })
