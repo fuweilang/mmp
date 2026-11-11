@@ -6,341 +6,341 @@
   en: 0be8ffbf23193557
   zh: ce2c69aa86875171
 /tool-schema-catalog:
-  en: 6cc2cd9ced70bb09
-  zh: 1c0e6cb4ba2ed637
+  en: 20974dca68d5dc2b
+  zh: 004a895da883ac4f
 /tool-schema-catalog/tool-package-map:
-  en: fd4d90071c13dcbd
-  zh: 87867027203f0354
-/tool-schema-catalog/deepseek-ai-mmp-plugin-manager:
-  en: e0143916bb634762
-  zh: e0143916bb634762
-/tool-schema-catalog/deepseek-ai-mmp-plugin-manager/plugin-manager:
-  en: 2fbe2e5b88e81a54
-  zh: a9de46c13bda53d8
-/tool-schema-catalog/deepseek-ai-mmp-plugin-market:
-  en: 1ec7b4cbc3d98e28
-  zh: 1ec7b4cbc3d98e28
-/tool-schema-catalog/deepseek-ai-mmp-plugin-market/plugin-market:
-  en: ecb8ee73c7bc68b8
-  zh: 59af75c81d7d529d
-/tool-schema-catalog/deepseek-ai-mmp-mcp-resources:
-  en: dd78bd55ec83a539
-  zh: dd78bd55ec83a539
-/tool-schema-catalog/deepseek-ai-mmp-mcp-resources/list-mcp-resource-templates:
+  en: 636250e6ede6458c
+  zh: 2d0c03d84dc0e01f
+/tool-schema-catalog/mammoth-ai-mmp-plugin-manager:
+  en: 49a8f93a4cdc5ed6
+  zh: 49a8f93a4cdc5ed6
+/tool-schema-catalog/mammoth-ai-mmp-plugin-manager/plugin-manager:
+  en: 6bbd959a5d257218
+  zh: c4be8be79717d229
+/tool-schema-catalog/mammoth-ai-mmp-plugin-market:
+  en: 34a43126b18908f9
+  zh: 34a43126b18908f9
+/tool-schema-catalog/mammoth-ai-mmp-plugin-market/plugin-market:
+  en: a7c0d0678c041187
+  zh: 3a32de89b97b7cdd
+/tool-schema-catalog/mammoth-ai-mmp-mcp-resources:
+  en: 61e63074c7791e28
+  zh: 61e63074c7791e28
+/tool-schema-catalog/mammoth-ai-mmp-mcp-resources/list-mcp-resource-templates:
   en: 96275ece9d040944
   zh: 1fa9744642601ece
-/tool-schema-catalog/deepseek-ai-mmp-mcp-resources/list-mcp-resources:
+/tool-schema-catalog/mammoth-ai-mmp-mcp-resources/list-mcp-resources:
   en: bf4236607199d61e
   zh: 82f4f749dcabc89f
-/tool-schema-catalog/deepseek-ai-mmp-mcp-resources/read-mcp-resource:
-  en: 5d92c07fa062734f
-  zh: 2d6f0cb8116cf567
-/tool-schema-catalog/deepseek-ai-mmp-experimental-browser-use-stagehand-native:
-  en: 19e7df8d692b4375
-  zh: 19e7df8d692b4375
-/tool-schema-catalog/deepseek-ai-mmp-experimental-browser-use-stagehand-native/stagehand-act:
+/tool-schema-catalog/mammoth-ai-mmp-mcp-resources/read-mcp-resource:
+  en: 5acb8f8f890740b2
+  zh: ec329291b523cf9d
+/tool-schema-catalog/mammoth-ai-mmp-experimental-browser-use-stagehand-native:
+  en: 640e584c0805bfd7
+  zh: 640e584c0805bfd7
+/tool-schema-catalog/mammoth-ai-mmp-experimental-browser-use-stagehand-native/stagehand-act:
   en: c4b27bf62c534dcc
   zh: 70c53824ed57ac23
-/tool-schema-catalog/deepseek-ai-mmp-experimental-browser-use-stagehand-native/stagehand-extract:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-browser-use-stagehand-native/stagehand-extract:
   en: ec7462ab99848155
   zh: 632fe0249040708e
-/tool-schema-catalog/deepseek-ai-mmp-experimental-browser-use-stagehand-native/stagehand-navigate:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-browser-use-stagehand-native/stagehand-navigate:
   en: ef97f063a037a006
   zh: 27727ccc908e007f
-/tool-schema-catalog/deepseek-ai-mmp-experimental-browser-use-stagehand-native/stagehand-observe:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-browser-use-stagehand-native/stagehand-observe:
   en: 2068f1baa0a59e1b
   zh: 5743c7b33e2c5ccb
-/tool-schema-catalog/deepseek-ai-mmp-experimental-browser-use-stagehand-native/stagehand-screenshot:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-browser-use-stagehand-native/stagehand-screenshot:
   en: 4910ab327694ee97
   zh: 17e79e4366cb636d
-/tool-schema-catalog/deepseek-ai-mmp-experimental-browser-use-stagehand-native/stagehand-tabs:
-  en: a0d5b9b891358120
-  zh: 25793a62709770b5
-/tool-schema-catalog/deepseek-ai-mmp-action-cards:
-  en: 60c9df6ffda98a1d
-  zh: 60c9df6ffda98a1d
-/tool-schema-catalog/deepseek-ai-mmp-action-cards/propose-action:
-  en: 633c32b6df889830
-  zh: b88ea00b2033c11b
-/tool-schema-catalog/deepseek-ai-mmp-tool-ask-user:
-  en: e713a4a11a15d13c
-  zh: e713a4a11a15d13c
-/tool-schema-catalog/deepseek-ai-mmp-tool-ask-user/ask-user-question:
-  en: 664dae29d0eae65f
-  zh: 2efa5d3f2cb31bf9
-/tool-schema-catalog/deepseek-ai-mmp-tool-executor-ptc:
-  en: 8c8643ef46fd075f
-  zh: 8c8643ef46fd075f
-/tool-schema-catalog/deepseek-ai-mmp-tool-executor-ptc/run-code:
-  en: a5d49232a604a2fb
-  zh: 720040d11a3e31c2
-/tool-schema-catalog/deepseek-ai-mmp-plan-mode:
-  en: b500b530845e26a9
-  zh: b500b530845e26a9
-/tool-schema-catalog/deepseek-ai-mmp-plan-mode/exit-plan-mode:
-  en: b410483c2bd0c1a1
-  zh: a07ceea6abf1dda3
-/tool-schema-catalog/deepseek-ai-mmp-tool-bash:
-  en: 408ff0a5189bd7ec
-  zh: 408ff0a5189bd7ec
-/tool-schema-catalog/deepseek-ai-mmp-tool-bash/bash:
-  en: 5efe055aae48993c
-  zh: e0653e51ef1344ce
-/tool-schema-catalog/deepseek-ai-mmp-tool-present:
-  en: f656575e6df094f6
-  zh: f656575e6df094f6
-/tool-schema-catalog/deepseek-ai-mmp-tool-present/present:
-  en: c3ab3e71f3c5fd20
-  zh: d6afeb62bac77a24
-/tool-schema-catalog/deepseek-ai-mmp-tool-pwsh:
-  en: b222fc05f3f8ee4a
-  zh: b222fc05f3f8ee4a
-/tool-schema-catalog/deepseek-ai-mmp-tool-pwsh/pwsh:
-  en: 00489572a7e8cb3e
-  zh: c0ecb3909392ee89
-/tool-schema-catalog/deepseek-ai-mmp-tool-cordis:
-  en: 76c7c62f9029b6f5
-  zh: 76c7c62f9029b6f5
-/tool-schema-catalog/deepseek-ai-mmp-tool-cordis/cordis-inspect-list:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-browser-use-stagehand-native/stagehand-tabs:
+  en: 5b524d927882ef40
+  zh: 3cf1a87b551b5075
+/tool-schema-catalog/mammoth-ai-mmp-action-cards:
+  en: da9b31ab559a308a
+  zh: da9b31ab559a308a
+/tool-schema-catalog/mammoth-ai-mmp-action-cards/propose-action:
+  en: a07679a9cf064bd6
+  zh: f707a393ea7ae4ec
+/tool-schema-catalog/mammoth-ai-mmp-tool-ask-user:
+  en: a11676b95197c66a
+  zh: a11676b95197c66a
+/tool-schema-catalog/mammoth-ai-mmp-tool-ask-user/ask-user-question:
+  en: 26927701015ea251
+  zh: e7b2cb596ff14308
+/tool-schema-catalog/mammoth-ai-mmp-tool-executor-ptc:
+  en: baeb7f2c51b4f5d3
+  zh: baeb7f2c51b4f5d3
+/tool-schema-catalog/mammoth-ai-mmp-tool-executor-ptc/run-code:
+  en: bfbcbd33854113c0
+  zh: 08840741eecc7caa
+/tool-schema-catalog/mammoth-ai-mmp-plan-mode:
+  en: 3a7b1a3303331900
+  zh: 3a7b1a3303331900
+/tool-schema-catalog/mammoth-ai-mmp-plan-mode/exit-plan-mode:
+  en: 12d4ebd594a05a8a
+  zh: dc7f0c868b109776
+/tool-schema-catalog/mammoth-ai-mmp-tool-bash:
+  en: 1f5a79da3495d0df
+  zh: 1f5a79da3495d0df
+/tool-schema-catalog/mammoth-ai-mmp-tool-bash/bash:
+  en: a1380d5560955f4e
+  zh: ce1bca25d440c7bf
+/tool-schema-catalog/mammoth-ai-mmp-tool-present:
+  en: d8ddda4c3656e2dc
+  zh: d8ddda4c3656e2dc
+/tool-schema-catalog/mammoth-ai-mmp-tool-present/present:
+  en: bb3cd6f67aeb10bb
+  zh: a79fca8fa8ff4505
+/tool-schema-catalog/mammoth-ai-mmp-tool-pwsh:
+  en: 8162096d2025c6e7
+  zh: 8162096d2025c6e7
+/tool-schema-catalog/mammoth-ai-mmp-tool-pwsh/pwsh:
+  en: 68d1632481016113
+  zh: e9739cee87f31296
+/tool-schema-catalog/mammoth-ai-mmp-tool-cordis:
+  en: b6a7d861ff8cde98
+  zh: b6a7d861ff8cde98
+/tool-schema-catalog/mammoth-ai-mmp-tool-cordis/cordis-inspect-list:
   en: 594e5b42047969cc
   zh: 72189ca21345c210
-/tool-schema-catalog/deepseek-ai-mmp-tool-cordis/cordis-inspect-query:
-  en: 42a647ba98527f9e
-  zh: c53ade6a47ea523f
-/tool-schema-catalog/deepseek-ai-mmp-tool-bash-persistent:
-  en: bdd9e88c49029e05
-  zh: bdd9e88c49029e05
-/tool-schema-catalog/deepseek-ai-mmp-tool-bash-persistent/bash:
-  en: 86421501a9d65ccc
-  zh: d1dc400507952331
-/tool-schema-catalog/deepseek-ai-mmp-tool-pwsh-persistent:
-  en: 40a053607298a4c5
-  zh: 40a053607298a4c5
-/tool-schema-catalog/deepseek-ai-mmp-tool-pwsh-persistent/pwsh:
-  en: 214866b3419c8e12
-  zh: c23368fc61772d52
-/tool-schema-catalog/deepseek-ai-mmp-tool-str-replace-editor:
-  en: 591f6e54dbbc38fe
-  zh: 591f6e54dbbc38fe
-/tool-schema-catalog/deepseek-ai-mmp-tool-str-replace-editor/str-replace-editor:
-  en: 3d11196a13e69228
-  zh: 56019c74cf0633cd
-/tool-schema-catalog/deepseek-ai-mmp-tool-fs:
-  en: 07d595ce1f1a5184
-  zh: 07d595ce1f1a5184
-/tool-schema-catalog/deepseek-ai-mmp-tool-fs/apply-patch:
+/tool-schema-catalog/mammoth-ai-mmp-tool-cordis/cordis-inspect-query:
+  en: 8980c64a57a13d8a
+  zh: 5fd6673c025f1e8a
+/tool-schema-catalog/mammoth-ai-mmp-tool-bash-persistent:
+  en: dde5b0d144741fcc
+  zh: dde5b0d144741fcc
+/tool-schema-catalog/mammoth-ai-mmp-tool-bash-persistent/bash:
+  en: a8f166f4554a2b38
+  zh: 6f420d223b36acc4
+/tool-schema-catalog/mammoth-ai-mmp-tool-pwsh-persistent:
+  en: d6130848e5407585
+  zh: d6130848e5407585
+/tool-schema-catalog/mammoth-ai-mmp-tool-pwsh-persistent/pwsh:
+  en: c598897635566e65
+  zh: 4dd693e72e2b4677
+/tool-schema-catalog/mammoth-ai-mmp-tool-str-replace-editor:
+  en: d8404636aead917d
+  zh: d8404636aead917d
+/tool-schema-catalog/mammoth-ai-mmp-tool-str-replace-editor/str-replace-editor:
+  en: eb8be674ff19d890
+  zh: d090aeff042faefc
+/tool-schema-catalog/mammoth-ai-mmp-tool-fs:
+  en: d5eeade74a51120f
+  zh: d5eeade74a51120f
+/tool-schema-catalog/mammoth-ai-mmp-tool-fs/apply-patch:
   en: 882f2fa9fac236d6
   zh: e8320796a5cb038f
-/tool-schema-catalog/deepseek-ai-mmp-tool-fs/edit:
+/tool-schema-catalog/mammoth-ai-mmp-tool-fs/edit:
   en: 5b6a252adde51af6
   zh: 7aa172a5d8b9cbd2
-/tool-schema-catalog/deepseek-ai-mmp-tool-fs/read:
+/tool-schema-catalog/mammoth-ai-mmp-tool-fs/read:
   en: 94bfc5b03c63baef
   zh: 339338a0e74696c3
-/tool-schema-catalog/deepseek-ai-mmp-tool-fs/read-image:
+/tool-schema-catalog/mammoth-ai-mmp-tool-fs/read-image:
   en: f6f7a1140066ce04
   zh: d528e01a0939795a
-/tool-schema-catalog/deepseek-ai-mmp-tool-fs/write:
-  en: af50ae531075cf26
-  zh: 974da3c5fbfa5959
-/tool-schema-catalog/deepseek-ai-mmp-tool-fs-search:
-  en: 703fea005ce84c50
-  zh: 703fea005ce84c50
-/tool-schema-catalog/deepseek-ai-mmp-tool-fs-search/glob:
+/tool-schema-catalog/mammoth-ai-mmp-tool-fs/write:
+  en: 451829513bfecbea
+  zh: f9367b45edfb308c
+/tool-schema-catalog/mammoth-ai-mmp-tool-fs-search:
+  en: df9ac899ff534a9e
+  zh: df9ac899ff534a9e
+/tool-schema-catalog/mammoth-ai-mmp-tool-fs-search/glob:
   en: 3ba734ba7852cdd5
   zh: c6ce31ff2c195520
-/tool-schema-catalog/deepseek-ai-mmp-tool-fs-search/grep:
-  en: 6e1f7da62cc9a35b
-  zh: 594817b0befeea86
-/tool-schema-catalog/deepseek-ai-mmp-tool-terminal:
-  en: 77501c1b592b6a88
-  zh: 77501c1b592b6a88
-/tool-schema-catalog/deepseek-ai-mmp-tool-terminal/terminal-close:
+/tool-schema-catalog/mammoth-ai-mmp-tool-fs-search/grep:
+  en: ae97f70768e907b1
+  zh: 91e0c7147d8f2a1e
+/tool-schema-catalog/mammoth-ai-mmp-tool-terminal:
+  en: c6f7eae0ad781eb5
+  zh: c6f7eae0ad781eb5
+/tool-schema-catalog/mammoth-ai-mmp-tool-terminal/terminal-close:
   en: 4da73ab1c95aadc6
   zh: 998471bc4f5af00a
-/tool-schema-catalog/deepseek-ai-mmp-tool-terminal/terminal-list:
+/tool-schema-catalog/mammoth-ai-mmp-tool-terminal/terminal-list:
   en: 4cde2b1d38f93e04
   zh: 2c93f43d54ec9da2
-/tool-schema-catalog/deepseek-ai-mmp-tool-terminal/terminal-open:
+/tool-schema-catalog/mammoth-ai-mmp-tool-terminal/terminal-open:
   en: 7051c20587ae426d
   zh: 39a6aad70d643fbc
-/tool-schema-catalog/deepseek-ai-mmp-tool-terminal/terminal-read:
+/tool-schema-catalog/mammoth-ai-mmp-tool-terminal/terminal-read:
   en: 833b47cca9b00b9d
   zh: 24b3db5b48f0446a
-/tool-schema-catalog/deepseek-ai-mmp-tool-terminal/terminal-send:
+/tool-schema-catalog/mammoth-ai-mmp-tool-terminal/terminal-send:
   en: 60a8805611533884
   zh: 50e4ac6e7f7b9b0a
-/tool-schema-catalog/deepseek-ai-mmp-tool-terminal/terminal-signal:
-  en: 0191964f5be70426
-  zh: 501c2769633a2a0b
-/tool-schema-catalog/deepseek-ai-mmp-tool-goal:
-  en: 74fff3741e7c13de
-  zh: 74fff3741e7c13de
-/tool-schema-catalog/deepseek-ai-mmp-tool-goal/create-goal:
+/tool-schema-catalog/mammoth-ai-mmp-tool-terminal/terminal-signal:
+  en: 60f1556eb030efa8
+  zh: 0e128b9667c8a8e5
+/tool-schema-catalog/mammoth-ai-mmp-tool-goal:
+  en: 1d6567639ec856ea
+  zh: 1d6567639ec856ea
+/tool-schema-catalog/mammoth-ai-mmp-tool-goal/create-goal:
   en: 9ae877cdf8a641a3
   zh: f83c3c09e80e4190
-/tool-schema-catalog/deepseek-ai-mmp-tool-goal/get-goal:
+/tool-schema-catalog/mammoth-ai-mmp-tool-goal/get-goal:
   en: 0b517f13dfde11fe
   zh: b7ee7482e8ecde56
-/tool-schema-catalog/deepseek-ai-mmp-tool-goal/update-goal:
-  en: 5f8a1d6e44e57d09
-  zh: d757489fdacde22d
-/tool-schema-catalog/deepseek-ai-mmp-tool-schedule:
-  en: 9fd2eccb1ee51372
-  zh: 9fd2eccb1ee51372
-/tool-schema-catalog/deepseek-ai-mmp-tool-schedule/schedule-create:
+/tool-schema-catalog/mammoth-ai-mmp-tool-goal/update-goal:
+  en: 050893579bff2a15
+  zh: 9ba4732ce8f828d5
+/tool-schema-catalog/mammoth-ai-mmp-tool-schedule:
+  en: 4db2019a53811bac
+  zh: 4db2019a53811bac
+/tool-schema-catalog/mammoth-ai-mmp-tool-schedule/schedule-create:
   en: 7237e492f01fb8fb
   zh: 2fd2bea81919baf6
-/tool-schema-catalog/deepseek-ai-mmp-tool-schedule/schedule-edit:
+/tool-schema-catalog/mammoth-ai-mmp-tool-schedule/schedule-edit:
   en: 08db239b9e1c3e8f
   zh: c3860a8f20a01965
-/tool-schema-catalog/deepseek-ai-mmp-tool-schedule/schedule-list:
+/tool-schema-catalog/mammoth-ai-mmp-tool-schedule/schedule-list:
   en: e2c657d431fd02a8
   zh: 7651bf05938eff69
-/tool-schema-catalog/deepseek-ai-mmp-tool-schedule/schedule-view:
-  en: 008cd46ab3c05305
-  zh: 8ef5a0f40640013e
-/tool-schema-catalog/deepseek-ai-mmp-tool-lsp:
-  en: 32982123b1f0e5bc
-  zh: 32982123b1f0e5bc
-/tool-schema-catalog/deepseek-ai-mmp-tool-lsp/lsp:
-  en: 877f1dc0f69e2038
-  zh: 5dda8001fb614315
-/tool-schema-catalog/deepseek-ai-mmp-tool-ralph:
-  en: 45bd083870e2c92d
-  zh: 45bd083870e2c92d
-/tool-schema-catalog/deepseek-ai-mmp-tool-ralph/ralph:
-  en: e97552156225cf10
-  zh: 9ea32b8485e950ec
-/tool-schema-catalog/deepseek-ai-mmp-tool-skill:
-  en: 927a5ac0974b7642
-  zh: 927a5ac0974b7642
-/tool-schema-catalog/deepseek-ai-mmp-tool-skill/skill:
-  en: 9b159d5831855afb
-  zh: 275ee82af0e0f59a
-/tool-schema-catalog/deepseek-ai-mmp-tool-session-query:
-  en: eac1dff4b6d9e195
-  zh: eac1dff4b6d9e195
-/tool-schema-catalog/deepseek-ai-mmp-tool-session-query/session-event-read:
+/tool-schema-catalog/mammoth-ai-mmp-tool-schedule/schedule-view:
+  en: 20d5cf8b4805a8af
+  zh: 11affd1289835704
+/tool-schema-catalog/mammoth-ai-mmp-tool-lsp:
+  en: e4c69bc9285ca152
+  zh: e4c69bc9285ca152
+/tool-schema-catalog/mammoth-ai-mmp-tool-lsp/lsp:
+  en: 1efb983cf967d026
+  zh: 9af6a475f51b0d19
+/tool-schema-catalog/mammoth-ai-mmp-tool-ralph:
+  en: 45df2a86262f27a5
+  zh: 45df2a86262f27a5
+/tool-schema-catalog/mammoth-ai-mmp-tool-ralph/ralph:
+  en: 2554d0fc13560e60
+  zh: bd6332f4a93a3810
+/tool-schema-catalog/mammoth-ai-mmp-tool-skill:
+  en: 16c9a66b3dcda678
+  zh: 16c9a66b3dcda678
+/tool-schema-catalog/mammoth-ai-mmp-tool-skill/skill:
+  en: 66d479b406bbec28
+  zh: b654d8e606208d2f
+/tool-schema-catalog/mammoth-ai-mmp-tool-session-query:
+  en: 220dff77fa6a3589
+  zh: 220dff77fa6a3589
+/tool-schema-catalog/mammoth-ai-mmp-tool-session-query/session-event-read:
   en: 285bab0bd6b50949
   zh: 9c839e05237a7226
-/tool-schema-catalog/deepseek-ai-mmp-tool-session-query/session-event-search:
+/tool-schema-catalog/mammoth-ai-mmp-tool-session-query/session-event-search:
   en: 5cd9f05b83f5797e
   zh: dc6880566b0c5138
-/tool-schema-catalog/deepseek-ai-mmp-tool-session-query/session-event-trace:
+/tool-schema-catalog/mammoth-ai-mmp-tool-session-query/session-event-trace:
   en: de64e837459d7313
   zh: 60bfcb3691ab862c
-/tool-schema-catalog/deepseek-ai-mmp-tool-session-query/session-search:
+/tool-schema-catalog/mammoth-ai-mmp-tool-session-query/session-search:
   en: c7bc2ee2892bf0e9
   zh: 1cd6a5d6f7494ca1
-/tool-schema-catalog/deepseek-ai-mmp-tool-session-query/session-trace:
-  en: 73d2146c02eaa16a
-  zh: 34caad3065de7148
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-subagent-oar:
-  en: 8daafae6faf7898e
-  zh: 8daafae6faf7898e
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-subagent-oar/subagent-oar:
-  en: 6283c3023d6ea436
-  zh: 9c018b8c12a3f1e7
-/tool-schema-catalog/deepseek-ai-mmp-tool-subagent:
-  en: 841abe0dd5913ea7
-  zh: 841abe0dd5913ea7
-/tool-schema-catalog/deepseek-ai-mmp-tool-subagent/list-subagent-models:
+/tool-schema-catalog/mammoth-ai-mmp-tool-session-query/session-trace:
+  en: 43955b9443958a4c
+  zh: 3d8679eb9bf35478
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-subagent-oar:
+  en: 7c9d7ffa06ef52de
+  zh: 7c9d7ffa06ef52de
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-subagent-oar/subagent-oar:
+  en: 61430ae0a436b9f8
+  zh: 34eab48721ee82b8
+/tool-schema-catalog/mammoth-ai-mmp-tool-subagent:
+  en: 061fc7a670ff7f7d
+  zh: 061fc7a670ff7f7d
+/tool-schema-catalog/mammoth-ai-mmp-tool-subagent/list-subagent-models:
   en: 207228068bc61885
   zh: 36e9344ee1af8869
-/tool-schema-catalog/deepseek-ai-mmp-tool-subagent/subagent:
-  en: 140c965c2b04d02f
-  zh: 95495dad5c77046d
-/tool-schema-catalog/deepseek-ai-mmp-tool-subagent-control:
-  en: ab82e130c3413f04
-  zh: ab82e130c3413f04
-/tool-schema-catalog/deepseek-ai-mmp-tool-subagent-control/interrupt-agent:
+/tool-schema-catalog/mammoth-ai-mmp-tool-subagent/subagent:
+  en: c80025975ae5b526
+  zh: d3e2400cb44edce2
+/tool-schema-catalog/mammoth-ai-mmp-tool-subagent-control:
+  en: ce00d971fdf9613e
+  zh: ce00d971fdf9613e
+/tool-schema-catalog/mammoth-ai-mmp-tool-subagent-control/interrupt-agent:
   en: 9190a32df5e10ddd
   zh: 48e1b05956d63e26
-/tool-schema-catalog/deepseek-ai-mmp-tool-subagent-control/list-agents:
+/tool-schema-catalog/mammoth-ai-mmp-tool-subagent-control/list-agents:
   en: ae22e8543d123c39
   zh: 0991a73ef49bcdea
-/tool-schema-catalog/deepseek-ai-mmp-tool-subagent-control/send-message:
-  en: 9d180d8811903366
-  zh: d63f94cffcb952d1
-/tool-schema-catalog/deepseek-ai-mmp-tool-jobs:
-  en: 9be673b1604d0114
-  zh: 9be673b1604d0114
-/tool-schema-catalog/deepseek-ai-mmp-tool-jobs/job-kill:
+/tool-schema-catalog/mammoth-ai-mmp-tool-subagent-control/send-message:
+  en: 895c21f59cc085e3
+  zh: 7654db894e5d8963
+/tool-schema-catalog/mammoth-ai-mmp-tool-jobs:
+  en: 3d7a45340729fc3d
+  zh: 3d7a45340729fc3d
+/tool-schema-catalog/mammoth-ai-mmp-tool-jobs/job-kill:
   en: 14294cc1988ae768
   zh: 80a9152bdc02723f
-/tool-schema-catalog/deepseek-ai-mmp-tool-jobs/job-list:
+/tool-schema-catalog/mammoth-ai-mmp-tool-jobs/job-list:
   en: 0c37fb1fed979d72
   zh: 5ea9d07f5a4a8a6c
-/tool-schema-catalog/deepseek-ai-mmp-tool-jobs/job-output:
-  en: 1e084359a8cd42b3
-  zh: 3f6c245dbbb2b920
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-agent-team:
-  en: 6b1106f417b50db6
-  zh: 6b1106f417b50db6
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-agent-team/interrupt-agent:
+/tool-schema-catalog/mammoth-ai-mmp-tool-jobs/job-output:
+  en: 45d4651640f7aae1
+  zh: ee62c0b7586d72e7
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-agent-team:
+  en: f22a2906437bce43
+  zh: f22a2906437bce43
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-agent-team/interrupt-agent:
   en: c3c7af05ceb9f8c9
   zh: ec379e0b42110c6a
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-agent-team/list-agents:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-agent-team/list-agents:
   en: f9457f033f75f00a
   zh: a2d60ec44118c34c
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-agent-team/send-message:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-agent-team/send-message:
   en: ec50e6a0b86aecc6
   zh: 29c8728536a5adf1
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-agent-team/spawn-teammate:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-agent-team/spawn-teammate:
   en: 02d6cc746e234b99
   zh: 49bc60ac098bca48
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-agent-team/team-task-create:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-agent-team/team-task-create:
   en: 91e84febe063c3bd
   zh: 550555d0f44f603b
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-agent-team/team-task-get:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-agent-team/team-task-get:
   en: 1c6ae0aba0b8041d
   zh: f8d634387b74121d
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-agent-team/team-task-list:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-agent-team/team-task-list:
   en: 2084d494aae8798a
   zh: e4c136c91028a7b1
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-agent-team/team-task-update:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-agent-team/team-task-update:
   en: 2eac7360ba68b1bd
   zh: b5d676bf288c245e
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-agent-team/wait-agent:
-  en: e70c77a45832bb28
-  zh: 7d03bec294b65452
-/tool-schema-catalog/deepseek-ai-mmp-tool-todo:
-  en: dea62d26fb18ff68
-  zh: dea62d26fb18ff68
-/tool-schema-catalog/deepseek-ai-mmp-tool-todo/todo-write:
-  en: f252137b940b38d1
-  zh: 25bd9c6b1ce783d8
-/tool-schema-catalog/deepseek-ai-mmp-tool-working-directory:
-  en: 1bdc4627ca4fff29
-  zh: 1bdc4627ca4fff29
-/tool-schema-catalog/deepseek-ai-mmp-tool-working-directory/working-directory:
-  en: ac1944f6035b8b50
-  zh: f5fc005c13185211
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-worktree:
-  en: d5f5679abe86e316
-  zh: d5f5679abe86e316
-/tool-schema-catalog/deepseek-ai-mmp-experimental-tool-worktree/create-worktree:
-  en: d8fe3c566ba2147c
-  zh: baf372cb9242670c
-/tool-schema-catalog/deepseek-ai-mmp-tool-workflow:
-  en: bb38a9d29f46563c
-  zh: bb38a9d29f46563c
-/tool-schema-catalog/deepseek-ai-mmp-tool-workflow/workflow:
-  en: fdd667cfe21481e8
-  zh: 88864d3b958398a4
-/tool-schema-catalog/deepseek-ai-mmp-tool-workspace-dependencies:
-  en: 96bffc40b80df4b8
-  zh: 96bffc40b80df4b8
-/tool-schema-catalog/deepseek-ai-mmp-tool-workspace-dependencies/load-workspace-dependencies:
-  en: 77b88764ff3464e9
-  zh: a9ca7eeb15ada747
-/tool-schema-catalog/deepseek-ai-mmp-tool-web:
-  en: 4b9918342d3aa931
-  zh: 4b9918342d3aa931
-/tool-schema-catalog/deepseek-ai-mmp-tool-web/web-fetch:
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-agent-team/wait-agent:
+  en: df620d1c47397ecb
+  zh: 485ecf8d0e53e441
+/tool-schema-catalog/mammoth-ai-mmp-tool-todo:
+  en: af993dd07cc45f8e
+  zh: af993dd07cc45f8e
+/tool-schema-catalog/mammoth-ai-mmp-tool-todo/todo-write:
+  en: 75d196ec1b26027b
+  zh: 47a7a4081f57b739
+/tool-schema-catalog/mammoth-ai-mmp-tool-working-directory:
+  en: f5222c50ad1c4e2c
+  zh: f5222c50ad1c4e2c
+/tool-schema-catalog/mammoth-ai-mmp-tool-working-directory/working-directory:
+  en: 5dd8820d66e61a42
+  zh: 8bdbedc86c8fc091
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-worktree:
+  en: 34a872385371b69a
+  zh: 34a872385371b69a
+/tool-schema-catalog/mammoth-ai-mmp-experimental-tool-worktree/create-worktree:
+  en: 74ec9deff44aa521
+  zh: bbecb5d7c29ca2fd
+/tool-schema-catalog/mammoth-ai-mmp-tool-workflow:
+  en: 1645a98bf6f63a46
+  zh: 1645a98bf6f63a46
+/tool-schema-catalog/mammoth-ai-mmp-tool-workflow/workflow:
+  en: f11d9b3636e3114c
+  zh: a050e11b8f182a77
+/tool-schema-catalog/mammoth-ai-mmp-tool-workspace-dependencies:
+  en: 0fb1dd52874769bd
+  zh: 0fb1dd52874769bd
+/tool-schema-catalog/mammoth-ai-mmp-tool-workspace-dependencies/load-workspace-dependencies:
+  en: 2346442f1cfa1fa6
+  zh: d5c93ee0a60d8bce
+/tool-schema-catalog/mammoth-ai-mmp-tool-web:
+  en: 1d0465bb0936bc04
+  zh: 1d0465bb0936bc04
+/tool-schema-catalog/mammoth-ai-mmp-tool-web/web-fetch:
   en: 8673f203aea9bdf2
   zh: 4e17783ffdf34c83
-/tool-schema-catalog/deepseek-ai-mmp-tool-web/web-search:
+/tool-schema-catalog/mammoth-ai-mmp-tool-web/web-search:
   en: cc1ad38bf0006710
   zh: 324eacb827a09e93

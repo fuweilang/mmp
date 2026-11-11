@@ -885,7 +885,12 @@ export function render(catalog: ToolCatalog): string {
     '',
   ]
   for (const entry of catalog) {
-    lines.push(`<a id="${githubSlug(entry.pkg)}"></a>`, '', `## \`${entry.pkg}\``, '')
+    lines.push(`<a id="${githubSlug(entry.pkg)}"></a>`)
+    // Existing documentation links retain their published anchors after the package rescope.
+    if (entry.pkg.startsWith('@mammoth-ai/mmp-')) {
+      lines.push(`<a id="${githubSlug(entry.pkg.replace('@mammoth-ai/mmp-', '@deepseek-ai/dsh-'))}"></a>`)
+    }
+    lines.push('', `## \`${entry.pkg}\``, '')
     for (const schema of entry.schemas) {
       // Collection validated that every harvested schema has a source.
       const source = entry.sources[schema.name] as string

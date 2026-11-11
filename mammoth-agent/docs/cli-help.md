@@ -26,8 +26,8 @@ Invocations: `mmp --help`
 Usage: mmp [--profile] <name> [options] [app-args...]
        mmp plugin --profile <name> <pnpm-args...>
 
-mmp: boot a DeepSeek Harness profile — an ordered stack of plugin-bundle patch
-layers under your own overrides.
+mmp: boot a 猛犸智能体 profile — an ordered stack of plugin-bundle patch layers under
+your own overrides.
 
 Arguments:
   args                           arguments for the booted profile's app (see:
@@ -132,6 +132,7 @@ Examples:
   mmp --profile headless --permission-mode workspace-write --add-dir /repo/.git "commit the fix"
                                                         grant shared Git metadata for this task
 
+[llm-ground] registered provider=mammoth-ground origin=http://127.0.0.1:5201
 ```
 
 <a id="mmp-sdk"></a>
@@ -208,4 +209,5 @@ Examples:
   mmp --profile web --tls-cert ./server-chain.pem --tls-key ./server-key.pem
                                              serve HTTPS with an existing certificate and key
 
+[llm-ground] registered provider=mammoth-ground origin=http://127.0.0.1:5201
 ```

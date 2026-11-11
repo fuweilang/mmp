@@ -727,7 +727,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'official-agent/bound': OfficialAgentBinding
 ```
 
-来源：[`packages/preset/official-agent-gallery/src/index.ts:60`](../packages/preset/official-agent-gallery/src/index.ts)
+来源：[`packages/preset/official-agent-gallery/src/index.ts:62`](../packages/preset/official-agent-gallery/src/index.ts)
 
 <a id="official-agentknowledge--log-only"></a>
 
@@ -738,7 +738,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'official-agent/knowledge': KnowledgeRecord;
 ```
 
-来源：[`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:43`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
+来源：[`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:47`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
 
 ### `official-gallery/*`
 
@@ -809,7 +809,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'official-gallery/source': OfficialGallerySource
 ```
 
-来源：[`packages/preset/official-agent-gallery/src/index.ts:65`](../packages/preset/official-agent-gallery/src/index.ts)
+来源：[`packages/preset/official-agent-gallery/src/index.ts:67`](../packages/preset/official-agent-gallery/src/index.ts)
 
 ### `official-skill/*`
 
@@ -826,7 +826,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'official-skill/bound': OfficialSkillBinding
 ```
 
-来源：[`packages/preset/official-agent-gallery/src/index.ts:71`](../packages/preset/official-agent-gallery/src/index.ts)
+来源：[`packages/preset/official-agent-gallery/src/index.ts:73`](../packages/preset/official-agent-gallery/src/index.ts)
 
 ### `permission/*`
 
@@ -4017,7 +4017,7 @@ SHA-256: `e6063d0451dc02026fd9b54ad3f77c7b1b6392ad3e872a7737ac84e13ca72344`
 
 SHA-256: `a96e075aafe684cbdaa7f994f057d5419b03e14b992b074f8e0639a4d12375c2`
 
-来源：[`packages/preset/official-agent-gallery/src/knowledge-protocol.ts:15`](../packages/preset/official-agent-gallery/src/knowledge-protocol.ts)
+来源：[`packages/preset/official-agent-gallery/src/knowledge-protocol.ts:23`](../packages/preset/official-agent-gallery/src/knowledge-protocol.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
@@ -4041,7 +4041,7 @@ SHA-256: `a96e075aafe684cbdaa7f994f057d5419b03e14b992b074f8e0639a4d12375c2`
 
 SHA-256: `5f847b06e026da4f2483a2a7cae4d09bbdea38f2ef38c6ce7f7dcc5be62f7ab6`
 
-来源：[`packages/preset/official-agent-gallery/src/knowledge-protocol.ts:16`](../packages/preset/official-agent-gallery/src/knowledge-protocol.ts)
+来源：[`packages/preset/official-agent-gallery/src/knowledge-protocol.ts:25`](../packages/preset/official-agent-gallery/src/knowledge-protocol.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
@@ -4590,7 +4590,7 @@ SHA-256: `72ec79127a9c0d0241b1106a74cc2b24c81ce467170f1c3c93f7b71a9496d227`
 
 SHA-256: `dceb465940cae42f201201932de1dc0b9f16671c5d02b86f190175b19896c474`
 
-来源：[`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:15`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
+来源：[`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:16`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
@@ -8178,7 +8178,7 @@ SHA-256: `52c6113cb0e53f345324bf84f01928bea5d5df57ee80bc0dd65407b8bc5a3734`
 
 SHA-256: `9d84e1e249fab34acd1d9b5d57d4114cfbb0f7bb28accb9f627682c34d4f3d0d`
 
-来源：[`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:33`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
+来源：[`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:37`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|

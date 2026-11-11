@@ -725,7 +725,7 @@ Source: [`packages/core/agent/src/types.ts:121`](../packages/core/agent/src/type
 'official-agent/bound': OfficialAgentBinding
 ```
 
-Source: [`packages/preset/official-agent-gallery/src/index.ts:60`](../packages/preset/official-agent-gallery/src/index.ts)
+Source: [`packages/preset/official-agent-gallery/src/index.ts:62`](../packages/preset/official-agent-gallery/src/index.ts)
 
 <a id="official-agentknowledge--log-only"></a>
 
@@ -736,7 +736,7 @@ Source: [`packages/preset/official-agent-gallery/src/index.ts:60`](../packages/p
 'official-agent/knowledge': KnowledgeRecord;
 ```
 
-Source: [`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:43`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
+Source: [`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:47`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
 
 ### `official-gallery/*`
 
@@ -807,7 +807,7 @@ Source: [`packages/preset/official-agent-gallery/src/managed-runtime.ts:21`](../
 'official-gallery/source': OfficialGallerySource
 ```
 
-Source: [`packages/preset/official-agent-gallery/src/index.ts:65`](../packages/preset/official-agent-gallery/src/index.ts)
+Source: [`packages/preset/official-agent-gallery/src/index.ts:67`](../packages/preset/official-agent-gallery/src/index.ts)
 
 ### `official-skill/*`
 
@@ -824,7 +824,7 @@ Source: [`packages/preset/official-agent-gallery/src/index.ts:65`](../packages/p
 'official-skill/bound': OfficialSkillBinding
 ```
 
-Source: [`packages/preset/official-agent-gallery/src/index.ts:71`](../packages/preset/official-agent-gallery/src/index.ts)
+Source: [`packages/preset/official-agent-gallery/src/index.ts:73`](../packages/preset/official-agent-gallery/src/index.ts)
 
 ### `permission/*`
 
@@ -4015,7 +4015,7 @@ Sources: [`packages/schedule/schedule/src/types.ts:220`](../packages/schedule/sc
 
 SHA-256: `a96e075aafe684cbdaa7f994f057d5419b03e14b992b074f8e0639a4d12375c2`
 
-Sources: [`packages/preset/official-agent-gallery/src/knowledge-protocol.ts:15`](../packages/preset/official-agent-gallery/src/knowledge-protocol.ts)
+Sources: [`packages/preset/official-agent-gallery/src/knowledge-protocol.ts:23`](../packages/preset/official-agent-gallery/src/knowledge-protocol.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -4039,7 +4039,7 @@ Sources: [`packages/preset/official-agent-gallery/src/knowledge-protocol.ts:15`]
 
 SHA-256: `5f847b06e026da4f2483a2a7cae4d09bbdea38f2ef38c6ce7f7dcc5be62f7ab6`
 
-Sources: [`packages/preset/official-agent-gallery/src/knowledge-protocol.ts:16`](../packages/preset/official-agent-gallery/src/knowledge-protocol.ts)
+Sources: [`packages/preset/official-agent-gallery/src/knowledge-protocol.ts:25`](../packages/preset/official-agent-gallery/src/knowledge-protocol.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -4588,7 +4588,7 @@ Array of [`JsonValue`](#persistence-type-sha256-c592ce75aab73fcab19c1d7845684c72
 
 SHA-256: `dceb465940cae42f201201932de1dc0b9f16671c5d02b86f190175b19896c474`
 
-Sources: [`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:15`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
+Sources: [`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:16`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -8176,7 +8176,7 @@ SHA-256: `52c6113cb0e53f345324bf84f01928bea5d5df57ee80bc0dd65407b8bc5a3734`
 
 SHA-256: `9d84e1e249fab34acd1d9b5d57d4114cfbb0f7bb28accb9f627682c34d4f3d0d`
 
-Sources: [`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:33`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
+Sources: [`packages/preset/official-agent-gallery/src/knowledge-runtime.ts:37`](../packages/preset/official-agent-gallery/src/knowledge-runtime.ts)
 
 | Property | Presence | Type |
 |---|---|---|

@@ -147,11 +147,11 @@
   en: 0082b83a28e0d51b
   zh: 0082b83a28e0d51b
 /session-persistence-event-catalog/events/official-agent/official-agent-bound-log-only:
-  en: 3742e0e10c7994b1
-  zh: d18d0d858cf4246f
+  en: 1549ca1ab5c3bef7
+  zh: 3d960a2d228a9f29
 /session-persistence-event-catalog/events/official-agent/official-agent-knowledge-log-only:
-  en: 80366930684fd7eb
-  zh: 62630a282d214b59
+  en: 531b078dd1e9a2bb
+  zh: 01b4bde780314b38
 /session-persistence-event-catalog/events/official-gallery:
   en: 74db4c71de464449
   zh: 74db4c71de464449
@@ -171,14 +171,14 @@
   en: 7b6071771ba3524d
   zh: ecabdb80039fdb53
 /session-persistence-event-catalog/events/official-gallery/official-gallery-source-log-only:
-  en: a1f80d106a73fa4d
-  zh: 40cb25a758c8ac04
+  en: 4d1733d790796a4d
+  zh: 55a74897f719f481
 /session-persistence-event-catalog/events/official-skill:
   en: d93e05063514176f
   zh: d93e05063514176f
 /session-persistence-event-catalog/events/official-skill/official-skill-bound-log-only:
-  en: 5493c26ef681043f
-  zh: ac91fdb122022daa
+  en: 40e4951bf76790a7
+  zh: 632820e4200766ff
 /session-persistence-event-catalog/events/permission:
   en: 19917bc5438e60af
   zh: 19917bc5438e60af
@@ -1212,11 +1212,11 @@
   en: e3de75e41d602c27
   zh: 34bdc523608baede
 /session-persistence-event-catalog/resolved-persistence-types/expertexecutionconfig:
-  en: 96fe3f1bbc94b83e
-  zh: 14a14c463daebaca
+  en: e36c6b9c2e8929c9
+  zh: 53778f2e199ad75d
 /session-persistence-event-catalog/resolved-persistence-types/expertpreview:
-  en: d565749952e2de5e
-  zh: b1a85bc373861aaa
+  en: f5c3e2817266853a
+  zh: fccb8110ad511415
 /session-persistence-event-catalog/resolved-persistence-types/feedbackrecord:
   en: 3b6931556cfe6b9e
   zh: ce5a5b1d92ce9eac
@@ -1302,8 +1302,8 @@
   en: 8cd7c3db0f9a52ab
   zh: f54f7252b215a31d
 /session-persistence-event-catalog/resolved-persistence-types/knowledgerecord:
-  en: 5d47f306dc5fd067
-  zh: f31f99cb513832bb
+  en: 4918d6237ea8bf8e
+  zh: eab4148e2cf08c63
 /session-persistence-event-catalog/resolved-persistence-types/legacyafterschedulerecord:
   en: 8a1ee52ff092bd30
   zh: 10db0a03ecc0ddfd
@@ -1989,8 +1989,8 @@
   en: 70d7a4d2e2af6fe4
   zh: e4270dd820717988
 /session-persistence-event-catalog/resolved-persistence-types/kind-official-expert-evidence-retired-form-snapshot:
-  en: ad1f9313b73f4a41
-  zh: 143c4d0d10f4d792
+  en: f70cda028e14d89b
+  zh: eb3cf5bbf323ff7f
 /session-persistence-event-catalog/resolved-persistence-types/kind-owner:
   en: 686b6465397b96c2
   zh: c21c1cc3c9df4fd8
