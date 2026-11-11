@@ -369,6 +369,14 @@ fi
 sed -i "/tsconfig.ground-library.json/d" tsconfig.client.json
 rm -f packages/client/ui-enterprise-library/tests/draft-send.client.spec.ts
 rm -f packages/credentials/deepseek-account-platform/tests/ground-history.integration.spec.ts
+# Dependency layer input: manifests only, so a source-only change reuses the cached install.
+rm -rf __manifests__ && mkdir -p __manifests__
+find . -type d \( -name node_modules -o -name .git -o -name .desktop-build -o -name __manifests__ \) -prune \
+  -o -type f \( -name package.json -o -name pnpm-lock.yaml -o -name pnpm-workspace.yaml -o -name .npmrc \) -print \
+  | while read -r f; do mkdir -p "__manifests__/$(dirname "$f")"; cp "$f" "__manifests__/$f"; done
+test -s __manifests__/package.json
+test -s __manifests__/pnpm-lock.yaml
+echo "manifest-files=$(find __manifests__ -name package.json | wc -l)"
 test -s scripts/release/process.ts
 test -s packages/llm/llm-ground/lib/types/index.js
 test -s Dockerfile.server
