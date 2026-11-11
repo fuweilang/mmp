@@ -242,6 +242,20 @@ function bootFailure(message, code = 1) {
   return error;
 }
 
+/** Let pnpm reconcile installed dependencies after pulls/branch switches, without rewriting the lockfile. */
+export async function ensureDependencies({ timeoutMs = 180_000 } = {}) {
+  console.log('[boot] 同步开发依赖（按锁文件、优先本地缓存，最长等待 180 秒）...');
+  const result = await execCapture('pnpm', ['install', '--frozen-lockfile', '--prefer-offline'], timeoutMs);
+  if (!result.ok) {
+    throw bootFailure(
+      `依赖同步失败：${result.output}\n请检查网络及 pnpm-lock.yaml 是否与 package.json 同步；修复后重新运行 pnpm run dev。`,
+      result.code,
+    );
+  }
+  if (result.output) console.log(result.output);
+  console.log('[boot] dependencies ready');
+}
+
 /** Start only the runtime selected by the existing context; never install or switch contexts. */
 async function ensureDocker({ runCommand, dockerTimeoutMs, pollMs, platform, desktopInstalled, env }) {
   const infoArgs = ['info', '--format', '{{.ServerVersion}}'];
@@ -339,25 +353,28 @@ function shutdown() {
 
 
 async function main(args = process.argv.slice(2)) {
-  console.log('[boot] 0/3 checking database...');
+  console.log('[boot] 0/4 checking dependencies...');
+  await ensureDependencies();
+
+  console.log('[boot] 1/4 checking database...');
   if (!(await ensureDatabase())) {
     process.exit(1);
   }
 
-  if (args.includes('--prepare-only')) { console.log('[boot] Docker/数据库准备完成；未启动开发服务。'); return; }
+  if (args.includes('--prepare-only')) { console.log('[boot] 依赖/Docker/数据库准备完成；未启动开发服务。'); return; }
 
   console.log('[boot] reclaiming api/web/gateway ports if stale...');
   await ensureDevPortsFree();
 
-  console.log('[boot] 1/3 starting api...');
+  console.log('[boot] 2/4 starting api...');
   run('api', 'pnpm run dev:api');
   await waitPort(3100, 'api');
 
-  console.log('[boot] 2/3 starting web...');
+  console.log('[boot] 3/4 starting web...');
   run('web', 'pnpm run dev:web');
   await waitPort(5202, 'web');
 
-  console.log('[boot] 3/3 starting gateway...');
+  console.log('[boot] 4/4 starting gateway...');
   run('gw', 'pnpm run dev:gateway');
   await waitPort(5201, 'gateway');
 

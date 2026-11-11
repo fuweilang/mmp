@@ -50,3 +50,9 @@ Thumbs.db
 # Enterprise library originals belong in persistent storage, never Git.
 /ground/apps/backend/library-data/
 ground/apps/backend/.logs/
+
+# 本地数据库导出/备份，禁止入库
+_backups/
+
+# Root development launcher ownership and startup locks
+/.mmp-dev/
