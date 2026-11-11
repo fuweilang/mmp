@@ -747,6 +747,68 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 
 > 分支提醒：4I.3 的两个 P0 补丁（`release.sh` web 镜像剔除、`tsconfig.build` 排除 scripts）目前只在 3.1 的本地提交里；4.0 若要发版需先 cherry-pick 或重做。
 
+## 4J. 2026-11-11 3.2 中台单发复盘：26 分钟，web 镜像是唯一瓶颈
+
+> 范围：只发 Ground api + web + pg，**桌面 DMG 由协调方明确要求不发**。
+> 结果：从代码 push 完成到 smoke 通过 **26 分钟**（11-10 全栈为 52 分钟）。
+
+### 4J.1 实测拆解
+
+| 阶段 | 耗时 | 说明 |
+|---|---|---|
+| 稳定性确认 + 版本 bump（3.2.0） | ~3.5 min | 每隔 3 分钟 fetch，确认 `origin/5.0` 不再前进 |
+| 门禁（`ground verify` ∥ `build --profile local`） | ~2.5 min | 并行跑 |
+| 类型修复 + 门禁重跑 | ~3 min | 协调方代码 6 个类型错误（见 4J.2） |
+| PG 备份 + 隔离恢复演练 | ~1 min | |
+| **release.sh 全流程** | **18.3 min** | 下方拆解 |
+| 登录后验收 + state 收尾 | ~3 min | |
+
+| release.sh 内部 | 耗时 | 占比 |
+|---|---|---|
+| 预检 + 前端 dist | 13 s | 1% |
+| API 镜像 | 83 s | 8% |
+| rsync 源码 | 22 s | 2% |
+| **服务器 web 镜像** | **617 s** | **56%** |
+| 上传发布包 + 载入 API 镜像 | 142 s | 13% |
+| compose up + 49 迁移 + 健康 | 24 s | 2% |
+| nginx reload | 1 s | 0% |
+| smoke（含下载/资产路由） | 187 s | 17% |
+
+### 4J.2 本轮新坑 / 注意点
+
+| # | 现象 | 根因 | 处理 | 以后规避 |
+|---|---|---|---|---|
+| 1 | 协调方（Grok）要求"只发中台、不发桌面"，与业主先前"要发双 Mac 包"冲突 | 两个信源 | 按**更新的明确指令 + 少发**执行，并在报告里显式写差异 | 冲突时永远选"少发"，把差异写进报告等业主确认；不要自行扩大范围 |
+| 2 | 门禁 6 个类型错误（`Modal`/`Input` 的 `className`/`icon`、`LibraryTree.revealIds`、测试 mock 签名） | `exactOptionalPropertyTypes` 下可选属性不接收 `undefined`；mock 无参导致 `[]` 元组解构 | 只补 `| undefined` 与 mock 参数类型，不改逻辑 | 门禁必须前移到排期前；"这次应该没问题"是幻觉 |
+| 3 | 备份演练后 `DROP DATABASE drill_20261111-004812` 报语法错 | 库名含连字符 | 用 `DROP DATABASE "drill_..."` 加双引号 | 演练库名直接用下划线，或一律加引号 |
+| 4 | 平台超管验收资料库一直 `NO_TENANT` | cookie 里的租户上下文不被 library 采用 | `POST /api/library/context {tenantId}` 拿返回 `token`，再用 `Authorization: Bearer` 调 `items/search/config` | 平台账号验收资料库必须走 context token，不要用 cookie 反复试 |
+| 5 | `state.json` 的 `web-image` note 带上一版镜像 tag | state 复用了旧 note | 收尾重写 steps/note | 每次收尾核对 note 里的 tag 与本次 RELEASE_ID 一致 |
+
+### 4J.3 优化优先级（更新版）
+
+| 优先级 | 项 | 预计省 | 说明 |
+|---|---|---|---|
+| **P0** | **web 镜像依赖分层 + pnpm store cache mount** | **7 min**（617s → ~200s） | 现在占单次发布 56%，是唯一值得改代码的项：`COPY package.json/lockfile` 单独一层，`RUN --mount=type=cache,target=/pnpm-store` |
+| P0 | 门禁前移到排期前 | 3 min + 消除返工 | 本轮又是在窗口内修类型 |
+| P0 | 冲突范围以"少发"为准并立即报告 | 0 min，防误发 | 写进 4J.2 #1 |
+| P1 | smoke 拆 `--quick`（30s）+ 全量 hash 异步 | 2.5 min | 切流后 30s 先确认没白屏 |
+| P1 | 上传与 smoke 错层：先部署+quick smoke，再传大文件 | 2 min | 中台单发时收益有限（只有 325MB api 镜像） |
+| P2 | `release/last-release.json` 基线 + 变更集裁剪 | 视改动 | 本轮已手工按 `git diff 5d74eb6f` 判断只发中台 |
+| P2 | 备份演练脚本化（保留 dump、自动建/删演练库） | 0.5 min + 防手误 | 见 4J.2 #3 |
+
+> 结论：中台单发的理论下限 ≈ **11–12 min**（web 镜像 3 min + 其余 8 min）。不改 web 镜像分层，就永远卡在 26 分钟左右。
+
+### 4J.4 本轮基线（3.2.0-20261111-0048）
+
+| 项 | 值 |
+|---|---|
+| 源码 | base `5d74eb6f`（origin/5.0）+ 本地 `2b3c8513`（3.2.0）、`f3e0bfad`（类型修复，未 push） |
+| 镜像 | api `mmp-api:3.2.0-20261111-0048`、web `mmp-web:3.2.0-20261111-0048`；上一版 `3.1.0-20261110-0005` |
+| DB | 备份 `/www/mmp-prod/backups/20261111-004812/mammoth_core.dump`；演练 45 表/49 迁移/9 用户/46 专家/115 技能；发布后 49/49 |
+| 桌面 | **本轮未发**，下载 manifest 仍指 0.3.1（arm64/x64 可正常下载） |
+| 验收 | 登录 `13800000001` super_admin/22 权限；`/console/api/version` 200；`official-agents` 200；资料库 context/items/search/config 全 200 |
+| 磁盘 | 发布后 54G 可用；镜像只留当前+上一版 |
+
 ## 5. 网络与下载（最容易吃掉几小时）
 
 > 2026-11-04 这次发版，10h47m 里至少 3h 花在“拉文件”：GitHub 0 字节、Docker Hub 超时、
