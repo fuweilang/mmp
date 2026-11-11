@@ -37,6 +37,7 @@ SKIP_NGINX=0
 FORCE_LOCK=0
 RELEASE_ID="${RELEASE_ID:-}"
 RELEASE_DIR="${RELEASE_DIR:-}"
+REUSE_WEB="${REUSE_WEB:-}"
 LOCKED=0
 STEP_STATUS=0
 
@@ -56,6 +57,7 @@ usage() {
   ./release.sh --only deploy,smoke # 只跑指定步骤
   ./release.sh --release-id 2.0.0-20261105-1200   # 续跑已有版本
   ./release.sh --skip-nginx        # 不动 nginx（仅内部验证）
+  ./release.sh --reuse-web mmp-web:<tag>  # 复用现有 web 镜像（只改 ground/ 时用，跳过约 10 分钟构建）
 
 环境变量：MMP_HOST（默认 root@124.223.179.250）、MMP_PROD_DIR、MMP_ORIGIN
 详细规则：.opencode/skills/baota-release/SKILL.md
@@ -73,6 +75,7 @@ while [[ $# -gt 0 ]]; do
     --release-dir) RELEASE_DIR="${2:?}"; shift ;;
     --keep-lock) KEEP_LOCK=1 ;;
     --skip-nginx) SKIP_NGINX=1 ;;
+    --reuse-web) REUSE_WEB="${2:?}"; shift ;;
     --force-lock) FORCE_LOCK=1 ;;
     --no-lock) NO_LOCK=1 ;;
     -h|--help) usage ;;
@@ -237,6 +240,14 @@ step_preflight() {
 
   run_in "$GROUND_ROOT" pnpm run version:check
 
+  local last_rel
+  last_rel="$(node -e "try{process.stdout.write(String(require('$REPO_ROOT/release/last-release.json').commit||''))}catch{process.stdout.write('')}" 2>/dev/null || true)"
+  if [[ -n "$last_rel" ]] && git -C "$REPO_ROOT" cat-file -e "${last_rel}^{commit}" 2>/dev/null; then
+    if git -C "$REPO_ROOT" diff --quiet "$last_rel"..HEAD -- mammoth-agent/; then
+      log "上次发布 $last_rel 以来 mammoth-agent/ 无改动：可用 --reuse-web <tag> 跳过约 10 分钟 web 构建"
+    fi
+  fi
+
   if grep -Eq 'octop|mmPlatform|:8088|/www/mammoth' "$INFRA_DIR/compose.yml" "$INFRA_DIR/nginx-mmai.conf"; then
     die '部署配置里出现旧运行时/旧目录（octop / mmPlatform / :8088 / /www/mammoth）'
   fi
@@ -343,6 +354,12 @@ step_api() {
 
 # ---------- web 镜像（服务器原生 amd64） ----------
 step_web() {
+  if [[ -n "$REUSE_WEB" ]]; then
+    log "按 --reuse-web 复用 web 镜像：${REUSE_WEB}（跳过构建）"
+    rsh "docker image inspect '$REUSE_WEB' >/dev/null 2>&1" \
+      || die "服务器上没有镜像 ${REUSE_WEB}；确认 tag 后重试，或去掉 --reuse-web"
+    return 0
+  fi
   local build_dir="/tmp/mmp-web-build-$RELEASE_ID"
   local commit
   commit="$(git -C "$AGENT_ROOT" rev-parse HEAD 2>/dev/null || echo 0000000)"
@@ -421,7 +438,7 @@ echo started' "$build_dir" "$commit" "$RELEASE_ID"
 step_deploy() {
   local stage_dir="/tmp/mmp-release-$RELEASE_ID"
   if (( DRY_RUN )); then
-    log "[dry] 将上传发布包到 ${stage_dir}，部署 mmp-api:${RELEASE_ID} / mmp-web:${RELEASE_ID}，并更新 $PROD_DIR/.env"
+    log "[dry] 将上传发布包到 ${stage_dir}，部署 mmp-api:${RELEASE_ID} / ${REUSE_WEB:-mmp-web:$RELEASE_ID}，并更新 $PROD_DIR/.env"
     return 0
   fi
   [[ -s "$RELEASE_DIR/middle-web.tar.gz" ]] || die "缺少 $RELEASE_DIR/middle-web.tar.gz"
@@ -480,8 +497,9 @@ echo "$TS"' "$PROD_DIR" "$stage_dir")"
   fi
   rsh "docker image inspect 'mmp-api:$RELEASE_ID' >/dev/null 2>&1" \
     || die "服务器缺少 mmp-api:$RELEASE_ID"
-  rsh "docker image inspect 'mmp-web:$RELEASE_ID' >/dev/null 2>&1" \
-    || die "服务器缺少 mmp-web:${RELEASE_ID}（先跑 --from web）"
+  local web_image="${REUSE_WEB:-mmp-web:$RELEASE_ID}"
+  rsh "docker image inspect '$web_image' >/dev/null 2>&1" \
+    || die "服务器缺少 $web_image（先跑 --from web）"
 
   log '更新 .env 并启动'
   local prev_api prev_web
@@ -495,7 +513,7 @@ sed -e "s|^MMP_API_IMAGE=.*|MMP_API_IMAGE=$2|" \
     -e "s|^MMP_WEB_IMAGE=.*|MMP_WEB_IMAGE=$3|" \
     .env > .env.new && mv .env.new .env
 docker compose up -d
-echo started' "$PROD_DIR" "mmp-api:$RELEASE_ID" "mmp-web:$RELEASE_ID"
+echo started' "$PROD_DIR" "mmp-api:$RELEASE_ID" "$web_image"
 
   # 记录回滚信息（如果 state 存在）。
   if [[ -f "$STATE_FILE" ]] && (( ! DRY_RUN )); then
@@ -679,8 +697,15 @@ s.finished_at = new Date().toISOString();
 fs.writeFileSync(f, JSON.stringify(s, null, 2) + '\n');
 JS
     fi
+    # 为下一次发版留基线：变更集裁剪与 --reuse-web 判断都读它。
+    if step_selected deploy && step_selected smoke; then
+      node - "$REPO_ROOT/release/last-release.json" "$RELEASE_ID" "$VERSION" "$(git -C "$REPO_ROOT" rev-parse HEAD)" "$(git -C "$AGENT_ROOT" rev-parse HEAD)" "${REUSE_WEB:-mmp-web:$RELEASE_ID}" <<'JS'
+const fs = require('fs');
+const [file, releaseId, version, commit, agentCommit, webImage] = process.argv.slice(2);
+fs.writeFileSync(file, JSON.stringify({ release_id: releaseId, version, commit, mammoth_agent_commit: agentCommit, images: { api: `mmp-api:${releaseId}`, web: webImage }, finished_at: new Date().toISOString() }, null, 2) + '\n');
+JS
+    fi
   fi
-
   CURRENT_STEP=""
   lock_release
   if (( DRY_RUN )); then
