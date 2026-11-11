@@ -1,7 +1,12 @@
 /** Stable source addresses carry identifiers only; Ground authorizes the actual read. */
 export type LibraryCitationTarget = { nodeId: string; versionId: string; locator: string }
 
-/** Parse only complete, same-application source links without normalizing traversal into valid targets. */
+/**
+ * Parse complete source links without normalizing traversal into valid targets.
+ * @param href - Candidate source address.
+ * @param base - Current application URL used to enforce the same origin.
+ * @returns Exact version and locator identifiers, or undefined for an invalid address.
+ */
 export function parseLibraryCitationLink(href: string, base: string): LibraryCitationTarget | undefined {
   if (href.length > 16_384 || href.trim() !== href || /[\\\u0000-\u001f\u007f]/.test(href) || href.startsWith('//')) return undefined
   const path = href.split(/[?#]/u)[0] ?? ''
