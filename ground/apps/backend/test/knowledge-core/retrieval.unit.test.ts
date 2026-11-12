@@ -63,7 +63,7 @@ test('diagnostics reauthorize discarded candidate bodies after document/profile/
    update:async({where,data}:any)=>{Object.assign(traceRows.get(where.id),data);if(data.status==='READY')completionPersisted=true;return traceRows.get(where.id);},updateMany:async({where,data}:any)=>{const row=traceRows.get(where.id);if(row)Object.assign(row,data);return {count:row?1:0};}};
   const db={user:{findUnique:async()=>({status:'active'})},userRole:{findFirst:async()=>({roleId:'super'})},knowledgeRetrievalTrace:trace,
    $transaction:async(work:any)=>work({$queryRaw:async()=>[{locked:true}],knowledgeRetrievalTrace:trace})} as any;
-  const core={getReleaseInventory:async(id:string)=>inventory(id)} as any;
+  const core={getRetrievalInventory:async(id:string)=>inventory(id)} as any;
   const store={lexical:async()=>good,dense:async(scopes:any[])=>{
    const allowed=new Set(scopes.flatMap(scope=>scope.indexIds));const selected=rows.filter(row=>allowed.has(row.indexRevisionId));
    if(selected.includes(secret))revoked=true;
@@ -101,4 +101,47 @@ test('named acronym headings distinguish exact methods from similar acronyms wit
   assert.deepEqual(focusNamedHeadings(rows,query).map(x=>x.chunkId),['aida','aidma','other']);
  assert.deepEqual(focusNamedHeadings(rows,'根据知识库解释营销').map(x=>x.chunkId),['aidma','other','aida']);
  assert.deepEqual(focusNamedHeadings(rows,'按AIDMA方法解释').map(x=>x.chunkId),['aidma','other','aida']);
+});
+
+test('a batch exact-source reopen authorizes once, preserves tuple order and rejects mismatches',async()=>{
+ let authorizations=0;
+ const refs=Array.from({length:4},(_,i)=>({chunkId:`c${i}`,documentId:`d${i}`,revisionId:`r${i}`,indexRevisionId:`i${i}`,knowledgeReleaseId:'release'}));
+ const db={user:{findUnique:async()=>({status:'active'})}};
+ const core={getRetrievalInventory:async()=>refs.map(r=>({id:r.indexRevisionId,profileId:'p',status:'READY',profile:{enabled:true},revision:{document:{id:r.documentId,enabled:true}}}))};
+ let forged=false;
+ const candidates={exact:async(_s:any,id:string)=>{const ref=refs.find(r=>r.chunkId===id)!;return [{...ref,revisionId:forged?'forged':ref.revisionId,text:'exact',sourceStart:0,sourceEnd:5}];}};
+ const service=new KnowledgeRetrievalService(db as any,core as any,{} as any,candidates as any);
+ const access={actorUserId:'u',tenantId:null,conversationId:'c',turnId:'t',authorize:async()=>{authorizations++;return [{releaseId:'release',scope:{type:'PLATFORM' as const}}];}};
+ const result=await service.openSources(access,refs);
+ assert.equal(authorizations,1);assert.deepEqual(result.map(r=>r.chunkId),refs.map(r=>r.chunkId));
+ forged=true;await assert.rejects(service.openSources(access,refs),(e:any)=>e.code==='KNOWLEDGE_SOURCE_NOT_FOUND');
+});
+
+test('internal search uses one corpus snapshot and revalidates before disclosure without changing evidence',async t=>{
+ for(const revoke of [false,true])await t.test(revoke?'revoked during search':'unchanged corpus',async()=>{
+  let inventoryReads=0,revoked=false;
+  const row={chunkId:'c',documentId:'d',revisionId:'rev',indexRevisionId:'i',knowledgeReleaseId:'r',text:'完整证据，不缩减正文',locator:{paragraph:1},contentHash:'hash',ordinal:0,score:1,sourceStart:0,sourceEnd:11};
+  const trace={count:async()=>0,create:async()=>({}),update:async()=>({})};
+  const db={user:{findUnique:async()=>({status:'active'})},knowledgeRetrievalTrace:trace,$transaction:async(work:any)=>work({$queryRaw:async()=>[{locked:true}],knowledgeRetrievalTrace:trace})};
+  const core={getRetrievalInventory:async()=>{inventoryReads++;return [{id:'i',profileId:'p',status:'READY',profile:{enabled:true},revision:{id:'rev',document:{id:'d',enabled:!revoked}}}];}};
+  const store={lexical:async()=>[row],dense:async()=>{revoked=revoke;return [row];},exact:async()=>[row],neighbors:async()=>[]};
+  const service=new KnowledgeRetrievalService(db as any,core as any,{embed:async()=>({vectors:[[1,0]]})} as any,store as any);
+  const result=await service.retrieve({actorUserId:'u',tenantId:null,conversationId:'c',turnId:'t',authorize:async()=>[{releaseId:'r',scope:{type:'PLATFORM'}}]},{query:'原始问题',mode:'required'});
+  assert.equal(result.status,revoke?'FORBIDDEN':'READY');
+  assert.deepEqual(result.context.evidence.map(e=>({chunk:e.chunkId,text:e.text})),revoke?[]:[{chunk:'c',text:'完整证据，不缩减正文'}]);
+  assert.equal(inventoryReads,2,'internal database-only phases share the corpus snapshot; terminal validation must be fresh');
+ });
+});
+
+test('lexical database search does not block independent query embedding',async()=>{
+ let entered!:()=>void,release!:()=>void,embedded=false;
+ const lexicalStarted=new Promise<void>(r=>entered=r),lexicalWait=new Promise<void>(r=>release=r);
+ const trace={count:async()=>0,create:async()=>({}),update:async()=>({})};
+ const db={user:{findUnique:async()=>({status:'active'})},knowledgeRetrievalTrace:trace,$transaction:async(work:any)=>work({$queryRaw:async()=>[{locked:true}],knowledgeRetrievalTrace:trace})};
+ const inventory={getRetrievalInventory:async()=>[{id:'i',profileId:'p',status:'READY',profile:{enabled:true},revision:{id:'rev',document:{id:'d',enabled:true}}}]};
+ const service=new KnowledgeRetrievalService(db as any,inventory as any,{embed:async()=>{embedded=true;return{vectors:[[1,0]]};}} as any,{lexical:async()=>{entered();await lexicalWait;return[];},dense:async()=>[]} as any);
+ const result=service.retrieve({actorUserId:'u',tenantId:null,conversationId:'c',turnId:'t',authorize:async()=>[{releaseId:'r',scope:{type:'PLATFORM'}}]},{query:'原问题',mode:'required'});
+ await lexicalStarted;
+ try {await Promise.resolve();assert.equal(embedded,true,'embedding should start while the lexical database request is still pending');} finally {release();await result;}
+ assert.equal((await result).status,'NO_EVIDENCE');
 });

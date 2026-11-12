@@ -7,7 +7,7 @@
       <button v-if="!row.owned" type="button" class="expert-knowledge-icon-button" :disabled="disabled" :aria-label="`移除${row.name}`" @click="unlink(row.id)"><Trash2 :size="17" /></button>
     </div>
     <button type="button" class="expert-knowledge-add" :disabled="disabled" @click="openPicker"><Plus :size="15" />添加知识库</button>
-    <p v-if="catalogError" class="expert-knowledge-error" role="alert">{{ catalogError }} <button type="button" class="expert-knowledge-link" @click="refresh">重试</button></p>
+    <p v-if="catalogError" class="expert-knowledge-error" role="alert">{{ catalogError }} <button type="button" class="expert-knowledge-link" @click="refresh(true)">重试</button></p>
     <div v-for="op in operations" :key="op.baseId" class="expert-knowledge-notice" role="status">
       <span>{{ baseName(op.baseId) }}：{{ op.message }}</span>
       <button type="button" v-if="!op.busy" class="expert-knowledge-link" @click="resumeOperation(op)">{{ op.retryJob ? '重试处理' : op.jobId ? '继续检查' : '重试上传' }}</button>
@@ -45,7 +45,7 @@
     <div class="expert-knowledge-upload-options">
       <template v-if="usableProfiles.length > 1"><label for="expert-knowledge-profile">语义服务</label><select id="expert-knowledge-profile" ref="profileInput" v-model="profileId" :disabled="uploadBusy || disabled" @change="profileChanged"><option value="" disabled>请选择语义服务</option><option v-for="profile in usableProfiles" :key="profile.id" :value="profile.id">{{ profile.model }}</option></select></template>
       <span v-else-if="usableProfiles.length">支持 PDF、Word、PPT、Excel、文本，单文件不超过 20 MiB</span>
-      <span v-else>尚未配置可用语义服务。<a href="/admin/official-knowledge" target="_blank" rel="noopener">配置检索服务</a><button type="button" class="expert-knowledge-link" @click="refresh">配置后刷新</button></span>
+      <span v-else>尚未配置可用语义服务。<a href="/admin/official-knowledge" target="_blank" rel="noopener">配置检索服务</a><button type="button" class="expert-knowledge-link" @click="refresh(true)">配置后刷新</button></span>
     </div>
     <div v-if="viewReleaseId" class="expert-knowledge-bound-context"><span>当前专家使用的资料</span><button type="button" class="expert-knowledge-link" @click="viewReleaseId = ''">管理知识库</button></div>
     <p v-if="documentError" class="expert-knowledge-error" role="alert">{{ documentError }}</p>
@@ -69,15 +69,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { createExpertEditorResources, expertEditorResourcesKey } from './expert-editor-resources';
 import { BookOpen, Database, ExternalLink, Eye, FileText, Plus, Search, Trash2, Upload, X } from 'lucide-vue-next';
 import { adminKnowledgeCoreApi as api, type KnowledgeBase, type KnowledgeDocument, type KnowledgeJob, type KnowledgeProfile, type KnowledgeRelease, type KnowledgeRevision } from '../../api/admin';
 import { latestBindableRelease, newestIndex, newestReadyIndexes, newestRevision, replaceBaseBinding } from './expert-knowledge-panel-state';
 const props = withDefaults(defineProps<{ modelValue: string[]; disabled?: boolean; expertId?: string; expertName?: string }>(), { disabled: false, expertId: '', expertName: '' });
 const emit = defineEmits<{ 'update:modelValue': [ids: string[]]; changed: []; blockers: [issues: string[]] }>();
 type Entry = { base: KnowledgeBase; documents: KnowledgeDocument[]; releases: KnowledgeRelease[]; error?: string };
+const resources=inject(expertEditorResourcesKey,undefined) ?? createExpertEditorResources();
+const initialResources=resources.peek();
+const copyCatalog=(entries:Entry[])=>entries.map(entry=>({...entry,documents:[...entry.documents],releases:[...entry.releases]}));
 type Operation = { baseId: string; file: File; profileId: string; key: string; jobId?: string; retryJob?: boolean; recovery?: boolean; message: string; busy: boolean };
-const catalog = ref<Entry[]>([]), profiles = ref<KnowledgeProfile[]>([]), healthy = ref<Record<string, boolean>>({});
+const catalog = ref<Entry[]>(initialResources ? copyCatalog(initialResources.catalog) : []), profiles = ref<KnowledgeProfile[]>(initialResources?.profiles ?? []), healthy = ref<Record<string, boolean>>(initialResources?.health ?? {});
 const loading = ref(false), catalogError = ref(''), pickerOpen = ref(false), createOpen = ref(false), documentsOpen = ref(false), previewOpen = ref(false), search = ref('');
 const viewReleaseId = ref(''), boundEntryContext = ref(false);
 const newName = ref(''), creating = ref(false), createError = ref(''), activeBase = ref<KnowledgeBase>(), documentsLoading = ref(false), documentError = ref('');
@@ -128,14 +132,12 @@ function chooseUploadProfile() {
 function profileChanged() { if (profileId.value && documentError.value === '请选择语义服务，再上传文件') documentError.value = ''; }
 function unlink(id: string) { if (!props.disabled) emit('update:modelValue', props.modelValue.filter(value => value !== id)); }
 function addBase(entry: Entry) { const release = bindable(entry); if (props.disabled || !release || baseIsBound(entry.base.id) || hasOperation(entry.base.id)) return; emit('update:modelValue', replaceBaseBinding(props.modelValue, entry.releases, release.id)); emit('changed'); }
-async function refresh() {
+async function refresh(force=false) {
   const request = ++catalogRequest; loading.value = true; catalogError.value = '';
   try {
-    const [bases, allProfiles] = await Promise.all([api.bases(), api.profiles()]);
-    const health = await Promise.all(allProfiles.filter(p => p.enabled && p.task === 'EMBEDDING').map(async p => { try { return [p.id, (await api.health(p.id)).configured] as const; } catch { return [p.id, false] as const; } }));
-    const entries = await Promise.all(bases.map(async base => { const old = catalog.value.find(e => e.base.id === base.id); if (!base.enabled) return { base, documents: old?.documents ?? [], releases: old?.releases ?? [] }; try { const [documents, releases] = await Promise.all([api.documents(base.id), api.releases(base.id)]); return { base, documents, releases }; } catch { const old = catalog.value.find(e => e.base.id === base.id); return { base, documents: old?.documents ?? [], releases: old?.releases ?? [], error: '资料暂时无法读取，请重试' }; } }));
+    const {catalog:entries,profiles:allProfiles,health} = await resources.load(force);
     if (!alive || request !== catalogRequest) return;
-    profiles.value = allProfiles; healthy.value = Object.fromEntries(health); catalog.value = entries;
+    profiles.value = allProfiles; healthy.value = health; catalog.value = copyCatalog(entries);
     chooseUploadProfile();
   } catch (error) { if (alive && request === catalogRequest) catalogError.value = `知识库加载失败：${message(error)}`; }
   finally { if (alive && request === catalogRequest) loading.value = false; }
@@ -147,18 +149,18 @@ async function refreshBase(id: string) {
   if (entry) { entry.documents = documents; entry.releases = releases; entry.error = undefined; }
   return entry;
 }
-function openPicker() { pickerOpen.value = true; void refresh(); }
+function openPicker() { pickerOpen.value = true; void refresh(true); }
 function openCreate() { newName.value = ''; createError.value = ''; createOpen.value = true; }
 async function createBase() {
   if (props.disabled || creating.value || !newName.value.trim()) return;
   creating.value = true; createError.value = '';
-  try { const base = props.expertId && !ownedBase.value ? await api.createBase(newName.value.trim(),props.expertId) : await api.createBase(newName.value.trim()); if (!alive) return; catalog.value.push({ base, documents: [], releases: [] }); createOpen.value = false; await openDocuments(base); }
+  try { const base = props.expertId && !ownedBase.value ? await api.createBase(newName.value.trim(),props.expertId) : await api.createBase(newName.value.trim()); if (!alive) return; catalogRequest++; loading.value=false; resources.invalidate(); catalog.value.push({ base, documents: [], releases: [] }); createOpen.value = false; await openDocuments(base); }
   catch (error) { if (alive) createError.value = message(error); }
   finally { if (alive) creating.value = false; }
 }
 async function openDocuments(base: KnowledgeBase, releaseId = '') {
   stopPolling(); viewReleaseId.value = releaseId; boundEntryContext.value = !!releaseId; activeBase.value = base; documentsOpen.value = true; documentError.value = ''; documentsLoading.value = true; const request = ++documentRequest;
-  try { await refreshBase(base.id); if (alive && request === documentRequest) { chooseUploadProfile(); const op = operations.value.find(o => o.baseId === base.id); if (op?.jobId && !op.busy) void resumeOperation(op, false); } }
+  try { const data=await resources.load(); if(!alive || request!==documentRequest) return; profiles.value=data.profiles;healthy.value=data.health; await refreshBase(base.id); if (alive && request === documentRequest) { chooseUploadProfile(); const op = operations.value.find(o => o.baseId === base.id); if (op?.jobId && !op.busy) void resumeOperation(op, false); } }
   catch (error) { if (alive && request === documentRequest) documentError.value = message(error); }
   finally { if (alive && request === documentRequest) documentsLoading.value = false; }
 }
@@ -267,7 +269,7 @@ async function loadPreviewPage(kind: 'text' | 'chunks' | 'both') {
   } catch (error) { if (alive && request === previewRequest) previewError.value = message(error); }
   finally { if (alive && request === previewRequest) previewLoading.value = false; }
 }
-onMounted(refresh);
+onMounted(()=>refresh());
 onBeforeUnmount(() => { alive = false; catalogRequest++; documentRequest++; stopPolling(); invalidatePreview(); });
 defineExpose({ refresh });
 </script>

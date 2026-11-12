@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 The Host creates native standard sessions from published experts or immutable creator-only previews. Frozen roles, skills, retrieval policy and generation model do not grant capabilities; native filesystem, shell, skills and their existing authorization remain available. Cloud tool scope controls only additional cloud tools.
 
+Per-message expert selections freeze the complete execution configuration, including knowledge and model policy. The current expert owns the speaker identity; user facts and previous answers remain in the conversation as history, with up to 16 previous speakers attributed in the logged prompt. Previous experts' self-introductions and methods do not define the current role, and each turn retrieves only under its selected expert's current knowledge configuration.
+
 ## Remote API
 
 `create` accepts an expert and workspace. `createPreview` also accepts the immutable preview ID consumed by the gallery client's `expertPreview` URL entry. Both mount the standard preset. The Host negotiates execution protocol 2 while accepting exact legacy responses. Preview requests use the normal Ground adapter and preview attribution, with no fabricated published version or free provider path.

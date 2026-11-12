@@ -3,7 +3,20 @@ import { it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExpertPreviewEntry, isEmbeddedExpertPreview, parseExpertPreview } from '../src/client/ExpertPreviewEntry.tsx';
 import { KnowledgeSources } from '../src/client/KnowledgeSources.tsx';
+import { CompactExpertMessages } from '../src/client/CompactExpertPreview.tsx';
 const t = (key: string) => key;
+it('keeps retrieval-only sources hidden while waiting and reveals them with the first answer text', () => {
+    const chat:any={nodes:[{kind:'user',seq:1,content:[{type:'text',text:'用户问题'}]},{kind:'assistant',seq:2,turn:1,blocks:[]}],partial:null};
+    const props:any={sessionId:'preview',useChat:(select:any)=>select({legacy:chat}),useSession:(select:any)=>select({running:true,promptError:null}),usePreviewProfile:(select:any)=>select({name:'专家',avatarUrl:null}),useProjection:()=>[{recordId:'record',turn:1,messageId:'m',label:'T1L1S1',title:'资料',locator:'第1段'}],reportContent:vi.fn(),openSource:vi.fn(),chatText:t,t};
+    const view=render(<CompactExpertMessages {...props}/>);
+    expect(view.container.querySelector('details')).toBeNull();
+    expect(view.container.querySelector('[data-role="assistant-waiting"]')).not.toBeNull();
+    chat.partial={turn:1,blocks:[{kind:'text',text:'根据资料回答'}]};
+    view.rerender(<CompactExpertMessages {...props}/>);
+    expect(view.container.textContent).toContain('根据资料回答');
+    expect(view.container.querySelector('details')).not.toBeNull();
+    view.unmount();
+});
 it('opens only the immutable expertPreview URL identity through the supplied standard launch capability', async () => {
     const target = parseExpertPreview('?expertPreview=preview-one&expertId=expert-one')!;
     const launch = vi.fn(async () => undefined);
@@ -38,6 +51,19 @@ it('isolates compact presentation only for an explicit valid expert embed launch
     expect(isEmbeddedExpertPreview('?expertPreview=p&expertId=e&expertEmbed=0')).toBe(false);
     expect(isEmbeddedExpertPreview('?expertEmbed=1')).toBe(false);
     expect(isEmbeddedExpertPreview('?expertPreview=p&expertEmbed=1')).toBe(false);
+});
+
+it('embedded startup omits the standalone preview heading and expiry description', () => {
+    const target={agentId:'expert-one',previewId:'preview-one'};
+    const view=render(<ExpertPreviewEntry embedded target={target} launch={()=>new Promise(()=>{})} t={t as never}/>);
+    expect(view.container.querySelector('h2')).toBeNull();
+    expect(view.container.querySelector('p')).toBeNull();
+});
+
+it('embedded startup reports a launch failure so the parent can recreate the hidden frame', async () => {
+    const onUnavailable=vi.fn();
+    render(<ExpertPreviewEntry embedded target={{agentId:'expert-one',previewId:'preview-one'}} launch={async()=>'previewUnavailable'} onUnavailable={onUnavailable} t={t as never}/>);
+    await waitFor(()=>expect(onUnavailable).toHaveBeenCalledTimes(1));
 });
 
 it('shows document headings and paragraph locations instead of raw locator JSON', async () => {

@@ -54,6 +54,10 @@ it('opens an admin preview and hands its first question through the shipped clie
   await waitFor(() => expect(mock.remote.session.prompt).toHaveBeenCalledTimes(1), { container: document.createElement('div') })
   expect(mock.remote.session.prompt.mock.calls[0]?.[0]).toMatchObject({ sessionId, content: [{ type: 'text', text }], mode: 'queue' })
   expect(parent.postMessage).toHaveBeenLastCalledWith({ type: 'mmp.expert-preview.accepted', agentId: 'assembly-expert', previewId: 'assembly-preview', requestId: 'assembly-first' }, window.location.origin)
+  mock.remote.session.cancel.mockResolvedValue(ok({accepted:true}))
+  act(()=>{window.dispatchEvent(new MessageEvent('message',{origin:window.location.origin,source:parent as never,data:{type:'mmp.expert-preview.cancel',agentId:'assembly-expert',previewId:'assembly-preview',requestId:'assembly-stop'}}))})
+  await waitFor(()=>expect(mock.remote.session.cancel).toHaveBeenCalledWith({sessionId}))
+  await waitFor(()=>expect(parent.postMessage).toHaveBeenCalledWith({type:'mmp.expert-preview.accepted',agentId:'assembly-expert',previewId:'assembly-preview',requestId:'assembly-stop'},window.location.origin))
   await client.unload('@mammoth-ai/mmp-client-ui-official-agent-gallery')
   parent.postMessage.mockClear()
   act(() => { window.dispatchEvent(new MessageEvent('message', { origin: window.location.origin, source: parent as never, data: { ...request, requestId: 'after-unload' } })) })
@@ -85,13 +89,15 @@ it('renders embedded expert messages and citations while the ordinary session li
     stream.push({ type: 'baseline', value: { items: [{ workspaceId, path: '/tmp', title: 'Preview workspace', sessionIds: [sessionId], createdAt: '2026-11-10T00:00:00Z', updatedAt: '2026-11-10T00:00:00Z' }], archivedSessionIds: [], pinnedSessionIds: [] } })
   })
   mock.stream('session/follow', (_request, stream) => {
-    stream.push({ type: 'snapshot', header: { version: SESSION_FORMAT_VERSION, id: sessionId, createdAt: 1, isSeeded: false }, cursor: 4, records: [
+    stream.push({ type: 'snapshot', header: { version: SESSION_FORMAT_VERSION, id: sessionId, createdAt: 1, isSeeded: false }, cursor: 6, records: [
       { type: 'event', event: { type: 'turn/start', seq: 0, time: 1, data: { turn: 1 } } },
       { type: 'event', event: { type: 'step/start', seq: 1, time: 2, data: { turn: 1, step: 1 } } },
       { type: 'event', event: { type: 'user/message', seq: 2, time: 3, surfaceOp: 'append', data: { id: 'compact-user', role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: '仅此预览会话的问题' }] } } },
       { type: 'event', event: { type: 'assistant/message', seq: 3, time: 4, surfaceOp: 'append', data: { turn: 1, step: 1, message: { id: 'compact-assistant', role: 'assistant', source: { kind: 'model', provider: 'test', model: 'test' }, content: [{ type: 'text', text: '这是**标准会话**回答。 [T1L1S1]' }] }, stream: [] } } },
-      { type: 'event', event: { type: 'turn/end', seq: 4, time: 5, data: { turn: 1, reason: { kind: 'error', error: { code: 'EXPERT_KNOWLEDGE_NO_EVIDENCE', message: '已启用必需检索，但此次没有可用的知识证据。' } } } } },
-    ], hasMore: false, projections: { asOfSeq: 4, values: { officialExpertKnowledge: [{ recordId: 'old-record', turn: 1, messageId: 'm1', label: 'T1L1S1', title: '知识文档完整标题', locator: '第 2 页' }] } as SessionProjectionValues }, assistantStream: { revision: 0 } } satisfies SessionFollowFrame)
+      { type: 'event', event: { type: 'step/start', seq: 4, time: 5, data: { turn: 1, step: 2 } } },
+      { type: 'event', event: { type: 'assistant/message', seq: 5, time: 6, surfaceOp: 'append', data: { turn: 1, step: 2, message: { id: 'empty-tool-assistant', role: 'assistant', source: { kind: 'model', provider: 'test', model: 'test' }, content: [] }, stream: [] } } },
+      { type: 'event', event: { type: 'turn/end', seq: 6, time: 7, data: { turn: 1, reason: { kind: 'error', error: { code: 'EXPERT_KNOWLEDGE_NO_EVIDENCE', message: '已启用必需检索，但此次没有可用的知识证据。' } } } } },
+    ], hasMore: false, projections: { asOfSeq: 6, values: { officialExpertKnowledge: [{ recordId: 'old-record', turn: 1, messageId: 'm1', label: 'T1L1S1', title: '知识文档完整标题', locator: '第 2 页' }] } as SessionProjectionValues }, assistantStream: { revision: 0 } } satisfies SessionFollowFrame)
   })
   const client = await start()
   await waitFor(() => expect(mock.remote.officialAgentGallery.createPreview).toHaveBeenCalledTimes(1))
@@ -100,8 +106,10 @@ it('renders embedded expert messages and citations while the ordinary session li
   expect(mock.remote.officialAgentGallery.createPreview).toHaveBeenCalledTimes(1)
   const compact = document.querySelector('[data-expert-preview-compact]')!
   expect(compact).not.toBeNull()
+  // Plugin rebuilds must capture the same dedicated preview instead of mounting the homepage.
+  expect(window.location.search).toBe('?expertPreview=assembly-preview&expertId=assembly-expert&expertEmbed=1')
   await waitFor(() => expect(compact.querySelector('[data-role="user"]')?.textContent).toBe('仅此预览会话的问题'))
-  expect(compact.querySelector('[data-role="assistant"] strong')?.textContent).toBe('标准会话')
+  expect(compact.querySelector('[data-expert-preview-answer] strong')?.textContent).toBe('标准会话')
   expect(compact.querySelector('[data-role="assistant"] details')?.textContent).toContain('T1L1S1')
   expect(compact.textContent).toContain('EXPERT_KNOWLEDGE_NO_EVIDENCE')
   expect(compact.textContent).toContain('此次没有可用的知识证据')
@@ -112,7 +120,6 @@ it('renders embedded expert messages and citations while the ordinary session li
   expect(document.querySelector('[data-chat-flow]')).toBeNull()
   expect(document.querySelector('[data-composer-seat]')).toBeNull()
   expect(document.querySelector('textarea')).toBeNull()
-  expect(window.location.search).toBe('')
   await waitFor(() => expect(parent.postMessage).toHaveBeenCalledWith({ type: 'mmp.expert-preview.state', agentId: 'assembly-expert', previewId: 'assembly-preview', running: false }, window.location.origin))
   fireEvent.click(compact.querySelector('summary')!)
   fireEvent.click(compact.querySelector('button')!)
@@ -120,13 +127,25 @@ it('renders embedded expert messages and citations while the ordinary session li
   expect(mock.remote.officialAgentGallery.openKnowledgeSource).toHaveBeenCalledWith(sessionId, 'old-record', 'T1L1S1')
   expect(compact.querySelector('pre')?.textContent).toBe('原文第一段。\n原文第二段必须完整换行。')
   const text = '请通过标准会话处理此预览问题。'
-  const request = { type: 'mmp.expert-preview.submit', agentId: 'assembly-expert', previewId: 'assembly-preview', requestId: 'assembly-first', text }
+  const request = { type: 'mmp.expert-preview.submit', agentId: 'assembly-expert', previewId: 'assembly-preview', requestId: 'assembly-first', text, profile:{name:'草稿专家新名称',avatarUrl:'https://example.test/preview.png'} }
   act(() => {
     for (let i = 0; i < 2; i++) window.dispatchEvent(new MessageEvent('message', { origin: window.location.origin, source: parent as never, data: request }))
   })
   await waitFor(() => expect(mock.remote.session.prompt).toHaveBeenCalledTimes(1), { container: document.createElement('div') })
+  await waitFor(()=>expect(compact.querySelector('[data-expert-preview-byline]')?.textContent).toBe('草稿专家新名称'))
+  expect(compact.querySelector('[data-expert-preview-byline] img')?.getAttribute('src')).toBe('https://example.test/preview.png')
   expect(mock.remote.session.prompt.mock.calls[0]?.[0]).toMatchObject({ sessionId, content: [{ type: 'text', text }], mode: 'queue' })
   expect(parent.postMessage).toHaveBeenLastCalledWith({ type: 'mmp.expert-preview.accepted', agentId: 'assembly-expert', previewId: 'assembly-preview', requestId: 'assembly-first' }, window.location.origin)
+  parent.postMessage.mockClear()
+  await client.reload('@mammoth-ai/mmp-client-ui-official-agent-gallery')
+  await waitFor(() => expect(parent.postMessage).toHaveBeenCalledWith({ type: 'mmp.expert-preview.ready', agentId: 'assembly-expert', previewId: 'assembly-preview' }, window.location.origin))
+  expect(document.querySelector('[data-expert-preview-compact]')).not.toBeNull()
+  expect(document.querySelector('[data-composer-seat]')).toBeNull()
+  expect(mock.remote.officialAgentGallery.createPreview).toHaveBeenCalledTimes(1)
+  act(() => { window.dispatchEvent(new MessageEvent('message', { origin: window.location.origin, source: parent as never,
+    data: { ...request, requestId: 'assembly-second', text: '继续刚才的问题' } })) })
+  await waitFor(() => expect(mock.remote.session.prompt).toHaveBeenCalledTimes(2), { container: document.createElement('div') })
+  expect(mock.remote.session.prompt.mock.calls[1]?.[0]).toMatchObject({ sessionId, content: [{ type: 'text', text: '继续刚才的问题' }] })
   await client.unload('@mammoth-ai/mmp-client-ui-official-agent-gallery')
   parent.postMessage.mockClear()
   act(() => { window.dispatchEvent(new MessageEvent('message', { origin: window.location.origin, source: parent as never, data: { ...request, requestId: 'after-unload' } })) })

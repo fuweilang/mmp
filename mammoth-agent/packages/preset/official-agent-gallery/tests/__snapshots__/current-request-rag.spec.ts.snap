@@ -5,7 +5,7 @@ exports[`current-request evidence in actual Ground model wire > admits REQUIRED 
   {
     "messages": [
       {
-        "content": "You are an AI agent powered by DeepSeek Harness.
+        "content": "当前回答者：Expert。你的身份和专业职责以本轮当前专家设定为准，不沿用其他专家历史回答中的角色。
 
 STANDARD_NATIVE
 
@@ -58,7 +58,7 @@ Lookup 1: READY
   {
     "messages": [
       {
-        "content": "You are an AI agent powered by DeepSeek Harness.
+        "content": "当前回答者：Expert。你的身份和专业职责以本轮当前专家设定为准，不沿用其他专家历史回答中的角色。
 
 STANDARD_NATIVE
 

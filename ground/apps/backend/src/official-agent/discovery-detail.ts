@@ -33,7 +33,7 @@ function starterList(value: unknown): Array<{ text: string }> {
     const text = starterText(item);
     if (!text) continue;
     out.push({ text });
-    if (out.length >= 3) break;
+    if (out.length >= 4) break;
   }
   return out;
 }
@@ -76,7 +76,7 @@ export function expertDiscoveryDetail(
       .filter((v): v is string => typeof v === 'string')
       .map((v) => v.trim())
       .filter(Boolean)
-      .slice(0, 3)
+      .slice(0, 4)
       .map((text) => ({ text: text.slice(0, 500) }));
   }
   return detail;
@@ -125,13 +125,13 @@ export function normalizeDiscoveryDetail(
     }
   }
   if (raw.starters !== undefined) {
-    if (!Array.isArray(raw.starters) || raw.starters.length > 3) {
-      throw new BadRequestException('推荐提问最多3条，每条500字');
+    if (!Array.isArray(raw.starters) || raw.starters.length > 4) {
+      throw new BadRequestException('推荐提问最多4条，每条500字');
     }
     for (const item of raw.starters) {
       if (typeof item === 'string') {
         if (!item.trim() || item.length > 500) {
-          throw new BadRequestException('推荐提问最多3条，每条500字');
+          throw new BadRequestException('推荐提问最多4条，每条500字');
         }
         continue;
       }

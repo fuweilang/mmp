@@ -43,11 +43,13 @@ describe('expert discovery detail single source', () => {
         { label: 'ignored', text: '完整推荐提问正文' },
         { text: '第二条' },
         '纯字符串第三条',
-        { text: '第四条应被截断' },
+        { text: '第四条完整保留' },
+        { text: '第五条应被截断' },
       ],
       role: 'secret',
     });
-    assert.equal(detail.starters.length, 3);
+    assert.equal(detail.starters.length, 4);
+    assert.deepEqual(detail.starters[3], { text: '第四条完整保留' });
     assert.deepEqual(detail.starters[0], { text: '完整推荐提问正文' });
     assert.deepEqual(detail.starters[1], { text: '第二条' });
     assert.deepEqual(detail.starters[2], { text: '纯字符串第三条' });

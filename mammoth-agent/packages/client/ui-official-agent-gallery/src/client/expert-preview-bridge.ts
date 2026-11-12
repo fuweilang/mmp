@@ -12,6 +12,18 @@ interface Reply extends PreviewTarget {
   requestId: string
   message?: string
 }
+export interface PreviewProfile { name: string; avatarUrl: string | null }
+
+function previewProfile(value: unknown, origin: string): PreviewProfile | undefined {
+  if (!value || typeof value !== 'object' || !('name' in value) || typeof value.name !== 'string' || !value.name.trim() || value.name.length>200 || !('avatarUrl' in value)) return
+  if (value.avatarUrl===null) return {name:value.name,avatarUrl:null}
+  if (typeof value.avatarUrl!=='string' || value.avatarUrl.length>4096) return
+  try {
+    const url=new URL(value.avatarUrl,origin)
+    if (!['http:','https:'].includes(url.protocol) || url.username || url.password) return
+    return {name:value.name,avatarUrl:url.href}
+  } catch { return }
+}
 
 /**
  * Bind one captured preview identity to its parent frame and retained session input.
@@ -23,7 +35,8 @@ export function installExpertPreviewBridge(options: {
   target: PreviewTarget
   input: () => PreviewInput | undefined
   message: (key: Failure) => string
-}): { start(): void; state(running: boolean): void; dispose(): void } {
+  onProfile?: (profile: PreviewProfile) => void
+}): { start(): void; state(running: boolean): void; content(hasMessages: boolean, userCount: number): void; unavailable(): void; dispose(): void } {
   const { frame, target, input, message } = options
   const parent = frame.parent
   const origin = frame.location.origin
@@ -32,6 +45,7 @@ export function installExpertPreviewBridge(options: {
   let started = false
   let lastRunning: boolean | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
+  let submitting: Promise<void> | undefined
   const post = (reply: object) => { if (!disposed) parent.postMessage(reply, origin) }
   const onMessage = (event: MessageEvent) => {
     if (disposed || event.source !== parent || event.origin !== origin) return
@@ -56,7 +70,15 @@ export function installExpertPreviewBridge(options: {
       try {
         const current = started ? input() : undefined
         if (!current?.cancel) { settle(fail('previewInputNotReady')); return }
-        void current.cancel().then(
+        const admission=submitting;
+        const interrupt=async()=>{
+          let failed=false;
+          try {await current.cancel!();} catch {failed=true;}
+          // Admission may enqueue after an early cancel. Interrupt once more once that handoff settles.
+          if(admission) {await admission.catch(()=>{});await current.cancel!();}
+          else if(failed) throw new Error('preview cancellation failed');
+        };
+        void interrupt().then(
           () => settle({ type: 'mmp.expert-preview.accepted', ...target, requestId }),
           () => settle(fail('previewSubmitFailed')),
         )
@@ -72,12 +94,16 @@ export function installExpertPreviewBridge(options: {
         const current = started ? input() : undefined
         if (!current) reply = fail('previewInputNotReady')
         else {
+          const profile = 'profile' in data ? previewProfile(data.profile, origin) : undefined
+          if (profile) options.onProfile?.(profile)
           const initialized = current.initialize(text)
           if (initialized === 'preserved') reply = fail('previewDraftExists')
           else if (initialized === 'blocked') reply = fail('previewInputNotReady')
           else {
             const pending = current.submit()
             if (pending instanceof Promise) {
+              submitting=pending;
+              void pending.then(()=>{if(submitting===pending) submitting=undefined;},()=>{if(submitting===pending) submitting=undefined;});
               const settle = (result: Reply) => { if (!disposed) { replies.set(requestId, result); post(result) } }
               void pending.then(
                 () => settle({ type: 'mmp.expert-preview.accepted', ...target, requestId }),
@@ -98,6 +124,12 @@ export function installExpertPreviewBridge(options: {
   }
   if (parent !== frame) frame.addEventListener('message', onMessage)
   return {
+    unavailable() {
+      if (!disposed && parent !== frame) post({ type: 'mmp.expert-preview.unavailable', ...target })
+    },
+    content(hasMessages, userCount) {
+      if (!disposed && parent !== frame) post({ type: 'mmp.expert-preview.content', ...target, hasMessages, userCount })
+    },
     state(running) {
       if (!disposed && started && parent !== frame && running !== lastRunning) {
         lastRunning = running

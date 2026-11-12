@@ -5001,6 +5001,9 @@ importers:
       '@mammoth-ai/mmp-client-locale':
         specifier: workspace:*
         version: link:../locale
+      '@mammoth-ai/mmp-client-store':
+        specifier: workspace:*
+        version: link:../store
       '@mammoth-ai/mmp-client-test-runtime':
         specifier: workspace:*
         version: link:../../test-support/client-runtime

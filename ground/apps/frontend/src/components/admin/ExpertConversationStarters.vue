@@ -15,7 +15,7 @@ let sequence=0;
 const rows=ref<Array<{id:number;text:string}>>([]);
 const canonical=()=>rows.value.map(row=>row.text.trim()).filter(Boolean).join('\n');
 function appendEmpty() {
-  if (!rows.value.length || (rows.value.length<3 && rows.value.at(-1)!.text.trim())) rows.value.push({id:++sequence,text:''});
+  if (!rows.value.length || (rows.value.length<4 && rows.value.at(-1)!.text.trim())) rows.value.push({id:++sequence,text:''});
 }
 watch(()=>props.modelValue, value=>{
   if (rows.value.length && value===canonical()) return;

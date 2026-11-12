@@ -178,14 +178,14 @@ test('globally ranks same-profile releases before RRF and batches subquery embed
 
 test('caps heterogeneous embedding profiles before calls and preserves mixed-profile failure completeness',async t=>{
  const inventory=await core.getReleaseInventory(releaseId,{type:'PLATFORM'});
- const manyCore={getReleaseInventory:async()=>Array.from({length:5},(_,i)=>({...inventory[0],profileId:`p${i}`,profile:{...inventory[0].profile,id:`p${i}`}}))} as any;
+ const manyCore={getRetrievalInventory:async()=>Array.from({length:5},(_,i)=>({...inventory[0],profileId:`p${i}`,profile:{...inventory[0].profile,id:`p${i}`}}))} as any;
  embedCalls.length=0;
  await t.test('excess profile fanout rejects before embedding',async()=>{
  const excess=await new KnowledgeRetrievalService(db,manyCore,adapter,store).retrieve(access(),{query:'常规说明'});
  assert.equal(excess.status,'NOT_READY');assert.ok(excess.degradation.includes('PROFILE_FANOUT_LIMIT'));assert.equal(embedCalls.length,0);
  });
  await t.test('one successful empty profile cannot hide another failed profile',async()=>{
- const twoCore={getReleaseInventory:async()=>Array.from({length:2},(_,i)=>({...inventory[0],profileId:`p${i}`,profile:{...inventory[0].profile,id:`p${i}`}}))} as any;
+ const twoCore={getRetrievalInventory:async()=>Array.from({length:2},(_,i)=>({...inventory[0],profileId:`p${i}`,profile:{...inventory[0].profile,id:`p${i}`}}))} as any;
  const mixedAdapter={embed:async(id:string,texts:string[])=>{if(id==='p1')throw new KnowledgeCoreError('PROVIDER_HTTP_ERROR');return {vectors:texts.map(()=>[1,0])};}} as any;
  const emptyStore={lexical:async()=>[],dense:async()=>[]} as any;
  const mixed=await new KnowledgeRetrievalService(db,twoCore,mixedAdapter,emptyStore).retrieve(access(),{query:'empty',mode:'optional'});
@@ -194,7 +194,7 @@ test('caps heterogeneous embedding profiles before calls and preserves mixed-pro
  const missing=await new KnowledgeRetrievalService(db,twoCore,mixedAdapter,emptyStore).retrieve(access(),{query:'empty',mode:'optional'});assert.equal(missing.status,'NOT_CONFIGURED');assert.deepEqual(missing.evidence,[]);
  });
  await t.test('four dimensions stay isolated with bounded calls',async()=>{
- const fourCore={getReleaseInventory:async()=>Array.from({length:4},(_,i)=>({...inventory[0],profileId:`p${i}`,profile:{...inventory[0].profile,id:`p${i}`,dimension:i+1}}))} as any;
+ const fourCore={getRetrievalInventory:async()=>Array.from({length:4},(_,i)=>({...inventory[0],profileId:`p${i}`,profile:{...inventory[0].profile,id:`p${i}`,dimension:i+1}}))} as any;
  const counts={embedding:0,dense:0,lexical:0};
  const boundedAdapter={embed:async(id:string,texts:string[])=>{counts.embedding++;assert.equal(texts.length,3);return {vectors:texts.map(()=>Array(Number(id.slice(1))+1).fill(1))};}} as any;
  const boundedStore={lexical:async()=>{counts.lexical++;return [];},dense:async(scopes:any[],vector:number[])=>{counts.dense++;assert.equal(new Set(scopes.map(row=>row.profileId)).size,1);assert.equal(vector.length,Number(scopes[0].profileId.slice(1))+1);return [];}} as any;

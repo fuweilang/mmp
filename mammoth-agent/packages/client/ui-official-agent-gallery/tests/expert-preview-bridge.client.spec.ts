@@ -149,7 +149,7 @@ it('publishes only captured running state and cancels through the ordinary scope
   expect(s.cancel).toHaveBeenCalledTimes(1)
   expect(s.initialize).not.toHaveBeenCalled()
   expect(s.submit).not.toHaveBeenCalled()
-  expect(s.postMessage).toHaveBeenLastCalledWith({ type: 'mmp.expert-preview.accepted', ...target, requestId: 'stop-one' }, window.location.origin)
+  await vi.waitFor(()=>expect(s.postMessage).toHaveBeenLastCalledWith({ type: 'mmp.expert-preview.accepted', ...target, requestId: 'stop-one' }, window.location.origin))
   s.bridge.dispose()
   s.postMessage.mockClear()
   s.bridge.state(false)
@@ -165,8 +165,18 @@ it('contains cancellation failures without echoing upstream details', async () =
   s.cancel.mockRejectedValue(new Error('private cancellation details'))
   s.send({ type: 'mmp.expert-preview.cancel', ...target, requestId: 'failed-stop' })
   await Promise.resolve()
-  expect(s.postMessage).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'mmp.expert-preview.error', message: 'previewSubmitFailed' }), window.location.origin)
+  await vi.waitFor(()=>expect(s.postMessage).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'mmp.expert-preview.error', message: 'previewSubmitFailed' }), window.location.origin))
 })
+
+it('interrupts immediately and again after in-flight admission so the first stop cannot race a queued prompt', async () => {
+  const s=setup();s.ready();s.bridge.start();
+  let admit!:()=>void;s.submit.mockImplementation(()=>new Promise<void>(resolve=>{admit=resolve}));
+  s.send(s.request);
+  const stop={type:'mmp.expert-preview.cancel',...target,requestId:'stop-during-admission'};
+  s.send(stop);await Promise.resolve();expect(s.cancel).toHaveBeenCalledTimes(1);
+  admit();await vi.waitFor(()=>expect(s.cancel).toHaveBeenCalledTimes(2));
+  await vi.waitFor(()=>expect(s.postMessage).toHaveBeenCalledWith({type:'mmp.expert-preview.accepted',...target,requestId:stop.requestId},window.location.origin));
+});
 
 it('keeps a compact request pending until ordinary admission succeeds and reports asynchronous refusal', async () => {
   const s = setup()

@@ -60,7 +60,7 @@ async function fixture(policy: 'REQUIRED' | 'AUTO' | 'OFF' = 'REQUIRED', status 
     const wires: {
         body: Record<string, unknown>;
         headers: Headers;
-    }[] = [], retrieves: Record<string, unknown>[] = [], opens: Record<string, unknown>[] = [];
+    }[] = [], retrieves: Record<string, unknown>[] = [], opens: Record<string, unknown>[] = [], verifications: Record<string, any>[] = [];
     let revoked = false, scope = 'tenant:one', preview = false, large = false, expired = false, pressure = false, supplementalFailed = false, alternating = false, automaticTool = true, hiddenReasoning = false;
     let hold: undefined | {
         ready: () => void;
@@ -102,7 +102,17 @@ async function fixture(policy: 'REQUIRED' | 'AUTO' | 'OFF' = 'REQUIRED', status 
             const context = buildEvidenceContext(currentStatus === 'READY' ? [e] : [], 100_000);
             return json({ retrievalId: 'lookup' + retrieves.length, status: currentStatus, queries: [body.query], evidence: context.evidence, degradation: [], timings: {}, context, queryStrategy: 'ORIGINAL' });
         }
-        if (url.endsWith('/runtime/history/authorize')) return (revoked || alternating) ? json({message:'revoked'},403) : json({authorized:true});
+        if (url.endsWith('/runtime/history/authorize')) {
+            if(body.verifyContent) {
+                verifications.push(body);
+                const valid=body.entries.every((entry:any)=>entry.sources.every((source:any)=>{
+                    const original=pressure?'EVIDENCE_START '+'x'.repeat(6100)+' EVIDENCE_END':large?'中文证据'.repeat(200):source.chunkId==='chunk2'?'FROZEN_EVIDENCE_TWO':evidence.text;
+                    return source.documentId==='doc1' && source.revisionId==='rev1' && typeof source.text==='string' && original.startsWith(source.text);
+                }));
+                return revoked||alternating||expired||!valid?json({message:'revoked or changed'},403):json({authorized:true,contentVerified:true});
+            }
+            return (revoked || alternating) ? json({message:'revoked'},403) : json({authorized:true});
+        }
         if (url.endsWith('/runtime/sources/open')) {
             opens.push(body);
             return revoked ? json({ message: 'revoked' }, 403) : json({ ...evidence, chunkId: body.chunkId, text: pressure ? 'EVIDENCE_START ' + 'x'.repeat(6100) + ' EVIDENCE_END' : large ? '中文证据'.repeat(200) : body.chunkId === 'chunk2' ? 'FROZEN_EVIDENCE_TWO' : evidence.text, sourceStart: 0, sourceEnd: 19 });
@@ -113,7 +123,7 @@ async function fixture(policy: 'REQUIRED' | 'AUTO' | 'OFF' = 'REQUIRED', status 
     ctx.llm.registerAdapter(['mammoth-ground'], adapter);
     await ctx.plugin(Gallery, { groundOrigin: 'https://rag.test' });
     await mountAgentLoopTestHarness(ctx);
-    return { ctx, adapter, workspace, wires, retrieves, opens, execution, noAutomaticTool:()=>{automaticTool=false;}, hiddenReasoning:()=>{hiddenReasoning=true;}, alternate: () => { alternating = true; }, pressure: () => { pressure = true; }, failSupplement: () => { supplementalFailed = true; }, preview: () => { preview = true; }, expire: () => { expired = true; }, large: () => { large = true; execution.executionConfig.budgetTokens = 512; }, hold: () => { let ready!: () => void, release!: () => void; const started = new Promise<void>(r => ready = r), wait = new Promise<void>(r => release = r); hold = { ready, wait }; return { started, release }; }, revoke: () => { revoked = true; }, changeScope: () => { scope = 'tenant:two'; } };
+    return { ctx, adapter, workspace, wires, retrieves, opens, verifications, execution, noAutomaticTool:()=>{automaticTool=false;}, hiddenReasoning:()=>{hiddenReasoning=true;}, alternate: () => { alternating = true; }, pressure: () => { pressure = true; }, failSupplement: () => { supplementalFailed = true; }, preview: () => { preview = true; }, expire: () => { expired = true; }, large: () => { large = true; execution.executionConfig.budgetTokens = 512; }, hold: () => { let ready!: () => void, release!: () => void; const started = new Promise<void>(r => ready = r), wait = new Promise<void>(r => release = r); hold = { ready, wait }; return { started, release }; }, revoke: () => { revoked = true; }, changeScope: () => { scope = 'tenant:two'; } };
 }
 async function run(f: Awaited<ReturnType<typeof fixture>>) {
     const id = await f.ctx.officialAgentGallery.create({ agentId: 'expert', workspaceId: f.workspace.id });
@@ -149,8 +159,15 @@ describe('current-request evidence in actual Ground model wire', () => {
         agent.followup(createUserMessage({ content: [{ type: 'text', text: 'Continue' }], source: { kind: 'user' } }));
         await agent.whenIdle();
         expect(f.wires).toHaveLength(2);
-        expect(f.opens.some(o => o.chunkId === 'chunk1' && o.revisionId === 'rev1')).toBe(true);
+        expect(f.verifications.some(v => v.entries.some((e:any)=>e.sources.some((s:any)=>s.chunkId==='chunk1'&&s.revisionId==='rev1'&&s.text==='FROZEN_EVIDENCE_ONE')))).toBe(true);
     });
+});
+it('verifies the exact historical text in one whole-set decision without reopening every source',async()=>{
+ const f=await fixture();await run(f);
+ expect(f.wires).toHaveLength(2);
+ expect(f.opens).toHaveLength(0);
+ expect(f.verifications.length).toBeGreaterThan(0);
+ expect(f.verifications.at(-1)).toMatchObject({verifyContent:true,entries:[{sources:[{documentId:'doc1',revisionId:'rev1',indexRevisionId:'index1',chunkId:'chunk1',text:'FROZEN_EVIDENCE_ONE'},{chunkId:'chunk2',text:'FROZEN_EVIDENCE_TWO'}]}]});
 });
 async function supplemental(f: Awaited<ReturnType<typeof fixture>>, agent: Awaited<ReturnType<typeof run>>, query = 'extra') {
     const toolSet = await agent.ctx.tools.resolve({ agent, modelSelection: { provider: 'mammoth-ground', model: 'cloud/fixed' }, signal: new AbortController().signal });

@@ -6,8 +6,9 @@ import AdminOfficialAgents from '../src/views/admin/AdminOfficialAgents.vue';
 import ExpertDraftPreview from '../src/components/admin/ExpertDraftPreview.vue';
 import ExpertResourcePicker from '../src/components/admin/ExpertResourcePicker.vue';
 import ExpertKnowledgePanel from '../src/components/admin/ExpertKnowledgePanel.vue';
+import { createExpertEditorResources } from '../src/components/admin/expert-editor-resources';
 
-const fixture = vi.hoisted(() => ({ list: vi.fn(), update: vi.fn(), create: vi.fn(), preview: vi.fn(), publish: vi.fn(), removeAvatar: vi.fn(), uploadAvatar:vi.fn(), listSkills:vi.fn(), skillDetail:vi.fn(), bases:vi.fn(), releases:vi.fn(), documents:vi.fn(),chunks:vi.fn(),profiles:vi.fn(),health:vi.fn(),extracted:vi.fn(),createBase:vi.fn(),upload:vi.fn(),job:vi.fn(),jobAction:vi.fn(),release:vi.fn(),providers:vi.fn(),usage:vi.fn() }));
+const fixture = vi.hoisted(() => ({ list: vi.fn(), update: vi.fn(), create: vi.fn(), preview: vi.fn(), publish: vi.fn(), removeAvatar: vi.fn(), uploadAvatar:vi.fn(), listSkills:vi.fn(), skillDetail:vi.fn(), catalog:vi.fn(),bases:vi.fn(), releases:vi.fn(), documents:vi.fn(),chunks:vi.fn(),profiles:vi.fn(),health:vi.fn(),extracted:vi.fn(),createBase:vi.fn(),upload:vi.fn(),job:vi.fn(),jobAction:vi.fn(),release:vi.fn(),providers:vi.fn(),usage:vi.fn() }));
 vi.mock('../src/stores/auth', () => ({ useAuthStore: () => ({ session: { platformRoleKey: 'super_admin' } }) }));
 vi.mock('../src/utils/agent', () => ({ agentWebUrl: 'http://127.0.0.1:5201/agent/' }));
 vi.mock('../src/api/admin', async original => ({
@@ -15,7 +16,7 @@ vi.mock('../src/api/admin', async original => ({
   adminOfficialAgentApi: fixture,
   adminOfficialSkillApi: { enabledOptions: async () => [], list:fixture.listSkills,detail:fixture.skillDetail },
   adminLlmProviderApi: { list: fixture.providers },
-  adminKnowledgeCoreApi: { profiles:fixture.profiles,bases:fixture.bases,releases:fixture.releases,documents:fixture.documents,chunks:fixture.chunks,health:fixture.health,extracted:fixture.extracted,createBase:fixture.createBase,upload:fixture.upload,job:fixture.job,jobAction:fixture.jobAction,release:fixture.release,usage:fixture.usage,originalUrl:()=>'/test-original' },
+  adminKnowledgeCoreApi: { editorCatalog:fixture.catalog,profiles:fixture.profiles,bases:fixture.bases,releases:fixture.releases,documents:fixture.documents,chunks:fixture.chunks,health:fixture.health,extracted:fixture.extracted,createBase:fixture.createBase,upload:fixture.upload,job:fixture.job,jobAction:fixture.jobAction,release:fixture.release,usage:fixture.usage,originalUrl:()=>'/test-original' },
 }));
 let app: App | undefined, root: HTMLElement | undefined;
 let row: any;
@@ -28,6 +29,7 @@ beforeEach(() => {
   fixture.providers.mockResolvedValue([]);fixture.usage.mockResolvedValue([]);
   fixture.listSkills.mockResolvedValue([]);
   fixture.bases.mockResolvedValue([]);fixture.profiles.mockResolvedValue([]);
+  fixture.catalog.mockImplementation(async()=>Promise.all((await fixture.bases()).map(async(base:any)=>({base,documents:base.enabled ? await fixture.documents(base.id) : [],releases:base.enabled ? await fixture.releases(base.id) : []}))));
   fixture.extracted.mockResolvedValue({text:'资料正文原文',nextOffset:null,hasGaps:false});
   row = { id: 'expert-one', key: 'expert-one', kind: 'GENERAL', status: 'DRAFT', avatarUrl: null, category: null,
     capabilities: [], linkedSkillIds: [], linkedSkills: [], createdAt: null, updatedAt: null,
@@ -93,6 +95,29 @@ async function prompt(value: string) {
   expect(input).toBeTruthy(); input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); await nextTick();
 }
 
+it('a stale prefetch cannot overwrite resources refreshed after a knowledge mutation', async () => {
+  let finishOld!:(value:unknown)=>void;
+  fixture.catalog.mockImplementationOnce(()=>new Promise(resolve=>{finishOld=resolve;})).mockResolvedValueOnce([{base:{id:'new',name:'最新资料',enabled:true},documents:[],releases:[]}]);
+  const resources=createExpertEditorResources(),old=resources.load();
+  resources.invalidate();await resources.load();
+  finishOld([]);expect((await old).catalog[0].base.id).toBe('new');
+  expect(resources.peek()?.catalog[0].base.id).toBe('new');
+  await resources.load();expect(fixture.catalog).toHaveBeenCalledTimes(2);
+});
+
+it('preloads one shared metadata batch and reopens the editor without a column loading mask or per-base requests', async () => {
+  fixture.catalog.mockResolvedValue(Array.from({length:67},(_,i)=>({base:{id:`base-${i}`,name:`资料${i}`,enabled:true,ownerAgentId:i===0?'expert-one':null},documents:[],releases:[]})));
+  await mount();
+  expect(dialog().querySelector('.expert-capabilities-scroll .el-loading-mask')).toBeNull();
+  expect(dialog().textContent).toContain('资料0');
+  expect(fixture.catalog).toHaveBeenCalledTimes(1);expect(fixture.providers).toHaveBeenCalledTimes(1);
+  expect(fixture.bases).not.toHaveBeenCalled();expect(fixture.documents).not.toHaveBeenCalled();expect(fixture.releases).not.toHaveBeenCalled();
+  await click('返回专家列表',dialog());await click('编辑',root);await nextTick();
+  expect(dialog().textContent).toContain('资料0');
+  expect(dialog().querySelector('.expert-capabilities-scroll .el-loading-mask')).toBeNull();
+  expect(fixture.catalog).toHaveBeenCalledTimes(1);expect(fixture.providers).toHaveBeenCalledTimes(1);
+});
+
 it('edit opens three adjacent configuration panels and keeps saved draft open', async () => {
   await mount();
   for (const name of ['个性化', '能力', '预览']) expect([...dialog().querySelectorAll('h2')].map(x => x.textContent)).toContain(name);
@@ -142,10 +167,10 @@ it('preview saves current inputs before freezing and marks later edits as stale'
   await vi.waitFor(() => expect(dialog().querySelector('iframe')).toBeTruthy());
   expect(fixture.update.mock.invocationCallOrder[0]).toBeLessThan(fixture.preview.mock.invocationCallOrder[0]);
   expect(dialog().querySelector('iframe')?.src).toContain('expertPreview=preview-one');
-  await prompt('下一版指令'); expect(dialog().textContent).toContain('配置已修改');
+  await prompt('下一版指令'); expect(dialog().textContent).not.toContain('配置已修改');
   expect(dialog().querySelector('iframe')?.src).toContain('preview-one'); expect(fixture.preview).toHaveBeenCalledTimes(1);
   await click('保存草稿', dialog()); await vi.waitFor(() => expect(fixture.update).toHaveBeenCalledTimes(2));
-  expect(dialog().textContent).toContain('配置已修改');
+  expect(dialog().textContent).not.toContain('配置已修改');
 });
 it('save failure keeps the new input and does not start a stale preview', async () => {
   await mount(); await prompt('不能丢失的指令'); fixture.update.mockRejectedValueOnce(new Error('模拟保存失败'));
@@ -162,7 +187,9 @@ it('closing a dirty form asks before discarding and cancelling preserves input',
 });
 it('new experts use Core without silently migrating existing legacy experts', async () => {
   row.draft.executionConfig = undefined; await mount();
-  expect(dialog().textContent).toContain('当前保留旧知识配置');
+  expect(dialog().textContent).not.toContain('当前保留旧知识配置');
+  expect(dialog().querySelector('[aria-label="专家指令"]')).toBeTruthy();
+  expect(dialog().textContent).toContain('使用平台知识库');
   expect(fixture.update).not.toHaveBeenCalled();
 });
 it('preview API failure remains recoverable and never publishes', async () => {
@@ -181,16 +208,100 @@ it('new expert preview first creates a draft and uses the returned identity', as
   expect(fixture.create.mock.calls[0][0].executionConfig.route).toBe('KNOWLEDGE_CORE');
 });
 
-it('pending preview save locks editing and leaving until the frozen configuration exists', async () => {
+it('sending shows the question immediately without dimming the form and preserves edits made during preparation', async () => {
   await mount(); await prompt('请求中的指令');
   let finish!: (value: any) => void;
   fixture.update.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   await click('保存并试聊', dialog());
   await vi.waitFor(() => expect(fixture.update).toHaveBeenCalled());
-  expect(dialog().querySelector<HTMLTextAreaElement>('textarea[aria-label="专家指令"]')!.disabled).toBe(true);
+  expect(dialog().querySelector('.expert-preview-outgoing')?.textContent).toContain('测试试聊问题');
+  expect(dialog().querySelector<HTMLTextAreaElement>('textarea[aria-label="专家指令"]')!.disabled).toBe(false);
   expect([...dialog().querySelectorAll<HTMLButtonElement>('button')].find(b => b.getAttribute('aria-label') === '返回专家列表')!.disabled).toBe(true);
   expect(fixture.preview).not.toHaveBeenCalled();
-  finish(row); await vi.waitFor(() => expect(dialog().querySelector('iframe')).toBeTruthy());
+  await prompt('准备期间继续修改的指令');
+  finish(row); await vi.waitFor(() => expect(dialog().textContent).toContain('配置在准备试聊时发生了变化'));
+  expect(fixture.preview).not.toHaveBeenCalled();
+  expect(dialog().querySelector<HTMLTextAreaElement>('textarea[aria-label="专家指令"]')!.value).toBe('准备期间继续修改的指令');
+  expect(dialog().textContent).toContain('有未保存修改');
+});
+
+it('reset clears the conversation immediately without saving or preparing until the next send', async () => {
+  await mount();await click('保存并试聊',dialog());await vi.waitFor(()=>expect(dialog().querySelector('iframe')).toBeTruthy());
+  const frame=dialog().querySelector('iframe')!,post=vi.spyOn(frame.contentWindow!,'postMessage');
+  const deliver=(data:object)=>window.dispatchEvent(new MessageEvent('message',{origin:'http://127.0.0.1:5201',source:frame.contentWindow,data:{agentId:'expert-one',previewId:'preview-one',...data}}));
+  deliver({type:'mmp.expert-preview.ready'});await nextTick();deliver({...post.mock.calls[0][0],type:'mmp.expert-preview.accepted'});deliver({type:'mmp.expert-preview.content',hasMessages:true,userCount:1});await nextTick();
+  await click('重新试聊',dialog());await nextTick();
+  expect(dialog().querySelector('.expert-preview-profile')?.textContent).toContain('测试专家');
+  expect(dialog().querySelector('iframe')).toBeNull();expect(fixture.preview).toHaveBeenCalledTimes(1);
+  await click('保存并试聊',dialog());await vi.waitFor(()=>expect(fixture.preview).toHaveBeenCalledTimes(2));
+});
+
+it('the first question is immediately interruptible before a preview has finished preparing', async () => {
+  const preview=vi.fn();root=document.createElement('div');document.body.append(root);
+  app=createApp({render:()=>h(ExpertDraftPreview,{name:'等待中的专家',summary:'',starters:['直接发送'],avatarUrl:null,launchUrl:'',expiresAt:'',busy:false,disabled:false,stale:false,error:'',onPreview:preview})});app.use(ElementPlus);app.mount(root);
+  await click('直接发送',root);
+  const input=root.querySelector<HTMLTextAreaElement>('textarea')!;
+  expect(input.disabled).toBe(false);expect(input.readOnly).toBe(true);
+  const stop=root.querySelector<HTMLButtonElement>('[aria-label="停止生成"]');expect(stop).toBeTruthy();expect(stop!.disabled).toBe(false);
+  await click('停止生成',root);
+  expect(input.readOnly).toBe(false);expect(root.querySelector('[aria-label="正在回复"]')).toBeNull();
+  expect(root.querySelector('.expert-preview-user-bubble')?.textContent).toBe('直接发送');
+});
+
+it('an unacknowledged stop blocks another send and an actual failure restores the stop action for retry', async () => {
+  root=document.createElement('div');document.body.append(root);
+  app=createApp({render:()=>h(ExpertDraftPreview,{name:'测试专家',summary:'',avatarUrl:null,launchUrl:'http://127.0.0.1:5201/agent/?expertId=expert&expertPreview=frozen',expiresAt:'2099-01-01',busy:false,disabled:false,stale:false,error:''})});app.use(ElementPlus);app.mount(root);await nextTick();
+  const frame=root.querySelector('iframe')!,post=vi.spyOn(frame.contentWindow!,'postMessage');
+  const deliver=(data:object)=>window.dispatchEvent(new MessageEvent('message',{origin:'http://127.0.0.1:5201',source:frame.contentWindow,data:{agentId:'expert',previewId:'frozen',...data}}));
+  deliver({type:'mmp.expert-preview.ready'});deliver({type:'mmp.expert-preview.state',running:true});await nextTick();
+  vi.useFakeTimers();
+  try {
+    await click('停止生成',root);const request=post.mock.calls.at(-1)![0];
+    await vi.advanceTimersByTimeAsync(5000);await nextTick();
+    expect(root.querySelector<HTMLButtonElement>('[aria-label="停止生成"]')!.disabled).toBe(true);
+    expect(root.querySelector('[aria-label="保存并试聊"]')).toBeNull();
+    deliver({...request,type:'mmp.expert-preview.error'});await nextTick();
+    expect(root.querySelector<HTMLButtonElement>('[aria-label="停止生成"]')!.disabled).toBe(false);
+    expect(root.querySelector('[aria-label="保存并试聊"]')).toBeNull();
+    await click('停止生成',root);const retry=post.mock.calls.at(-1)![0];expect(retry.requestId).not.toBe(request.requestId);
+    deliver({...retry,type:'mmp.expert-preview.accepted'});await nextTick();
+    expect(root.querySelector('[aria-label="保存并试聊"]')).toBeTruthy();
+  } finally {vi.useRealTimers();}
+});
+
+it('reset while generating shows a new welcome even when stopping the old turn fails', async () => {
+  const preview=vi.fn();root=document.createElement('div');document.body.append(root);
+  app=createApp({render:()=>h(ExpertDraftPreview,{name:'测试专家',summary:'',avatarUrl:null,launchUrl:'http://127.0.0.1:5201/agent/?expertId=expert&expertPreview=frozen',expiresAt:'2099-01-01',busy:false,disabled:false,stale:true,error:'',onPreview:preview})});app.use(ElementPlus);app.mount(root);await nextTick();
+  const frame=root.querySelector('iframe')!,post=vi.spyOn(frame.contentWindow!,'postMessage');
+  const deliver=(data:object)=>window.dispatchEvent(new MessageEvent('message',{origin:'http://127.0.0.1:5201',source:frame.contentWindow,data:{agentId:'expert',previewId:'frozen',...data}}));
+  deliver({type:'mmp.expert-preview.ready'});deliver({type:'mmp.expert-preview.content',hasMessages:true,userCount:1});deliver({type:'mmp.expert-preview.state',running:true});await nextTick();
+  expect(root.textContent).not.toContain('配置已修改');
+  expect(root.querySelector<HTMLButtonElement>('[aria-label="重新试聊"]')!.disabled).toBe(false);
+  await click('重新试聊',root);expect(root.querySelector('.expert-preview-profile')).toBeTruthy();
+  const cancel=post.mock.calls.at(-1)![0];expect(cancel.type).toBe('mmp.expert-preview.cancel');
+  deliver({...cancel,type:'mmp.expert-preview.error',message:'停止失败'});await nextTick();
+  await vi.waitFor(()=>expect(preview).toHaveBeenCalledWith());
+  expect(root.textContent).not.toContain('停止生成失败');expect(root.querySelector('.expert-preview-profile')).toBeTruthy();
+});
+
+it('a hidden startup failure preserves the question and recreates a working preview on resend', async () => {
+  await mount();await click('保存并试聊',dialog());
+  await vi.waitFor(()=>expect(dialog().querySelector('iframe')).toBeTruthy());
+  let frame=dialog().querySelector('iframe')!;
+  const deliver=(data:object)=>window.dispatchEvent(new MessageEvent('message',{origin:'http://127.0.0.1:5201',source:frame.contentWindow,data:{agentId:'expert-one',previewId:'preview-one',...data}}));
+  deliver({type:'mmp.expert-preview.unavailable'});await nextTick();
+  expect(dialog().textContent).toContain('试聊暂时无法启动');
+  expect(dialog().querySelector('iframe')).toBeNull();
+  expect(dialog().querySelector<HTMLTextAreaElement>('textarea[aria-label="预览问题"]')!.value).toBe('测试试聊问题');
+  await click('保存并试聊',dialog());
+  await vi.waitFor(()=>expect(fixture.preview).toHaveBeenCalledTimes(2));
+  await vi.waitFor(()=>expect(dialog().querySelector('iframe')).toBeTruthy());frame=dialog().querySelector('iframe')!;
+  const post=vi.spyOn(frame.contentWindow!,'postMessage');deliver({type:'mmp.expert-preview.ready'});await nextTick();
+  expect(post).toHaveBeenCalledTimes(1);
+  deliver({...post.mock.calls[0][0],type:'mmp.expert-preview.accepted'});
+  deliver({type:'mmp.expert-preview.content',hasMessages:true,userCount:1});await nextTick();
+  expect(dialog().querySelector('.expert-preview-outgoing')).toBeNull();
+  expect(dialog().querySelector<HTMLElement>('.expert-preview-viewport')!.style.display).not.toBe('none');
 });
 
 it('publication failure retains saved draft and makes no claim that it went live', async () => {
@@ -292,6 +403,17 @@ it('focusing the real preview textarea sends no request and missing instructions
   await click('保存并试聊',dialog());await nextTick();
   expect(dialog().querySelector<HTMLTextAreaElement>('textarea[aria-label="预览问题"]')!.disabled).toBe(false);
   expect(fixture.preview).not.toHaveBeenCalled();
+});
+
+it('a conversation starter sends immediately and shows the expert identity while waiting for the first character', async () => {
+  row.avatarUrl='https://example.test/expert.png';row.draft.openingQuestions=['直接试聊这句话'];
+  await mount();await click('直接试聊这句话',dialog());
+  await vi.waitFor(()=>expect(fixture.preview).toHaveBeenCalledTimes(1));
+  expect(dialog().querySelector('.expert-preview-outgoing')?.textContent).toContain('直接试聊这句话');
+  expect(dialog().querySelector<HTMLTextAreaElement>('textarea[aria-label="预览问题"]')!.value).toBe('');
+  const waiting=dialog().querySelector('[aria-label="正在回复"]')!;
+  expect(waiting.textContent).toContain('测试专家');
+  expect(waiting.querySelector('img')?.src).toBe('https://example.test/expert.png');
 });
 
 it('opening rows add inline, remove individually and preserve canonical starters', async () => {
@@ -408,8 +530,16 @@ it('first preview question is handed only to the matching frame and failures ret
   expect(root.querySelector('[aria-label="停止生成"]')).toBeTruthy();
   await click('停止生成',root);
   expect(post).toHaveBeenLastCalledWith(expect.objectContaining({type:'mmp.expert-preview.cancel',agentId:'expert',previewId:'frozen'}),'http://127.0.0.1:5201');
+  deliver({...post.mock.calls.at(-1)![0],type:'mmp.expert-preview.accepted'});
   deliver({...ready,type:'mmp.expert-preview.state',running:false});await nextTick();
   expect(root.querySelector('[aria-label="保存并试聊"]')).toBeTruthy();
+  await click('保存并试聊',root);approved.value=preview.mock.calls.at(-1)![1];await nextTick();
+  const dispatched=post.mock.calls.length;
+  deliver(ready);await nextTick();
+  expect(input.disabled).toBe(false);
+  expect(input.value).toBe('  第一行问题\n第二行  ');
+  expect(root.textContent).toContain('试聊已重新连接');
+  expect(post).toHaveBeenCalledTimes(dispatched);
 });
 
 it('compact preview keeps one composer, reuses a current conversation and refreshes edited instructions and knowledge before sending', async () => {
@@ -445,6 +575,32 @@ it('compact preview keeps one composer, reuses a current conversation and refres
   expect(post).toHaveBeenCalledTimes(2);
   frame=dialog().querySelector('iframe')!;post=vi.spyOn(frame.contentWindow!,'postMessage');sendReady();await nextTick();
   expect(post).toHaveBeenCalledWith(expect.objectContaining({previewId:'frozen-2',text:'读取新的知识库'}),'http://127.0.0.1:5201');
+});
+
+it('uploading the first owned knowledge file renews an opened preview without editing the prompt', async () => {
+  const base={id:'owned-kb',name:'专家自有资料',enabled:true,ownerAgentId:'expert-one',autoUpdate:true};
+  const documentRow={id:'owned-doc',title:'最新资料.md',enabled:true,revisions:[{id:'revision',createdAt:'2026-11-10T10:00:00Z',originalName:'最新资料.md',sizeBytes:20,indexes:[{id:'index',profileId:'embedding',status:'READY',chunkCount:1}]}]};
+  const release={id:'release',version:1,items:[{indexRevisionId:'index'}]};
+  let ready=false,released=false;
+  fixture.profiles.mockResolvedValue([{id:'embedding',task:'EMBEDDING',enabled:true,model:'测试语义服务'}]);fixture.health.mockResolvedValue({configured:true});
+  fixture.bases.mockResolvedValue([base]);fixture.documents.mockImplementation(async()=>ready?[documentRow]:[]);fixture.releases.mockImplementation(async()=>released?[release]:[]);
+  fixture.upload.mockImplementation(async()=>{ready=true;return {id:'job'};});fixture.job.mockResolvedValue({status:'SUCCEEDED',index:{id:'index',status:'READY'}});
+  fixture.release.mockImplementation(async()=>{released=true;return release;});
+  fixture.preview.mockImplementation(async()=>{const id=`frozen-${fixture.preview.mock.calls.length}`;return {agentId:'expert-one',previewId:id,launch:{path:`/agent?expertPreview=${id}&expertId=expert-one`},expiresAt:'2099-01-01T00:00:00Z'};});
+  await mount();await click('保存并试聊',dialog());await vi.waitFor(()=>expect(dialog().querySelector('iframe')).toBeTruthy());
+  const frame=dialog().querySelector('iframe')!,post=vi.spyOn(frame.contentWindow!,'postMessage');
+  window.dispatchEvent(new MessageEvent('message',{origin:'http://127.0.0.1:5201',source:frame.contentWindow,data:{type:'mmp.expert-preview.ready',agentId:'expert-one',previewId:'frozen-1'}}));await nextTick();
+  window.dispatchEvent(new MessageEvent('message',{origin:'http://127.0.0.1:5201',source:frame.contentWindow,data:{...post.mock.calls[0]![0],type:'mmp.expert-preview.accepted'}}));await nextTick();
+  await click('查看专家自有资料',dialog());await vi.waitFor(()=>expect(document.querySelector('.expert-knowledge-documents input[type="file"]')).toBeTruthy());
+  const docs=document.querySelector('.expert-knowledge-documents')!,file=docs.querySelector<HTMLInputElement>('input[type="file"]')!;
+  Object.defineProperty(file,'files',{configurable:true,value:[new File(['仅存在知识库的新事实'],'最新资料.md',{type:'text/markdown'})]});file.dispatchEvent(new Event('change',{bubbles:true}));
+  await vi.waitFor(()=>expect(fixture.release).toHaveBeenCalledTimes(1));await vi.waitFor(()=>expect(docs.textContent).toContain('已就绪'));
+  await click('关闭知识库资料',docs);
+  const question=dialog().querySelector<HTMLTextAreaElement>('textarea[aria-label="预览问题"]')!;
+  question.value='读取新上传的资料';question.dispatchEvent(new Event('input',{bubbles:true}));await nextTick();
+  await vi.waitFor(()=>expect(dialog().querySelector<HTMLButtonElement>('[aria-label="保存并试聊"]')!.disabled).toBe(false));
+  await click('保存并试聊',dialog());await vi.waitFor(()=>expect(fixture.preview).toHaveBeenCalledTimes(2));
+  expect(fixture.update).not.toHaveBeenCalled();
 });
 
 it('multiple embedding services keep upload actionable and explain the required selection', async () => {
@@ -496,6 +652,7 @@ it('new knowledge uploads retry the same request and bind only after the latest 
   name.value=base.name;name.dispatchEvent(new Event('input',{bubbles:true}));await nextTick();await click('创建',create);
   await vi.waitFor(()=>expect(document.querySelector('.expert-knowledge-documents')?.textContent).toContain(base.name));
   const docs=document.querySelector('.expert-knowledge-documents')!, file=docs.querySelector<HTMLInputElement>('input[type="file"]')!;
+  await vi.waitFor(()=>expect([...docs.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.textContent?.trim()==='上传文件')!.disabled).toBe(false));
   Object.defineProperty(file,'files',{configurable:true,value:[new File(['上传原文内容'],'验收资料.md',{type:'text/markdown'})]});
   file.dispatchEvent(new Event('change',{bubbles:true}));
   await vi.waitFor(()=>expect(document.body.textContent).toContain('上传结果待确认'));

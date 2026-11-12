@@ -1,4 +1,4 @@
-const LOCAL_AGENT_WEB_URL = 'http://127.0.0.1:3080/';
+const LOCAL_AGENT_WEB_URL = new URL('/agent/', window.location.origin).href;
 
 function normalizeAgentWebUrl(value: string | undefined): string {
   const raw = value?.trim() || (import.meta.env.DEV ? LOCAL_AGENT_WEB_URL : '');

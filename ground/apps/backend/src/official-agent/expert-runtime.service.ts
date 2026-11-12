@@ -170,7 +170,7 @@ export class ExpertRuntimeService {
         if (!live.ownsKnowledge && (policy === 'OFF' || (!useCurrentSelection && config.route !== 'KNOWLEDGE_CORE'))) return { config: {...config,retrievalPolicy:'OFF',releaseIds:[],knowledge:[]}, releases: [] };
         const knowledge: FrozenExpertExecutionConfig['knowledge'] = [];
         for (const selected of live.releases) {
-            const inventory = await this.knowledgeCore.getReleaseInventory(selected.releaseId, selected.scope);
+            const inventory = await this.knowledgeCore.getRetrievalInventory(selected.releaseId, selected.scope);
             const allowed = inventory.filter(i => i.revision.document.enabled && i.profile.enabled && i.status === 'READY' && (selected.documentIds === undefined || selected.documentIds.includes(i.revision.document.id)));
             if (!allowed.length) continue;
             knowledge.push({ releaseId: selected.releaseId, baseId: allowed[0]!.revision.document.baseId, indexes: allowed.map(i => ({ indexRevisionId: i.id, revisionId: i.revision.id, documentId: i.revision.document.id, profileId: i.profileId, configHash: i.indexConfigHash })) });
@@ -212,33 +212,11 @@ export class ExpertRuntimeService {
         try {
             if (signal?.aborted)
                 throw new Error('cancelled');
-            // Core's last trace write is an awaited boundary: reopen every exact source afterwards.
-            for (const evidence of result.evidence) {
-                await this.retrieval.openSource(access, evidence);
-                if (signal?.aborted)
-                    throw new Error('cancelled');
-            }
-            const authorized = await access.authorize();
-            if (signal?.aborted)
-                throw new Error('cancelled');
-            // A later reopen may race revocation of an earlier source. Check the entire returned
-            // set against fresh inventories once all content I/O has finished.
-            for (const releaseId of new Set(result.evidence.map(e => e.knowledgeReleaseId))) {
-                const selected = authorized.find(r => r.releaseId === releaseId);
-                if (!selected)
-                    throw new ForbiddenException('KNOWLEDGE_FORBIDDEN');
-                const inventory = await this.knowledgeCore!.getReleaseInventory(releaseId, selected.scope);
-                if (signal?.aborted)
-                    throw new Error('cancelled');
-                for (const evidence of result.evidence.filter(e => e.knowledgeReleaseId === releaseId)) {
-                    const index = inventory.find(i => i.id === evidence.indexRevisionId);
-                    if (!index || index.status !== 'READY' || !index.profile.enabled || !index.revision.document.enabled || index.revision.id !== evidence.revisionId || index.revision.document.id !== evidence.documentId || (selected.documentIds !== undefined && !selected.documentIds.includes(evidence.documentId)))
-                        throw new ForbiddenException('KNOWLEDGE_FORBIDDEN');
-                }
-            }
-            // One final statement, not alternating actor/source rechecks: both authority halves
-            // share the same database snapshot. Nothing asynchronous follows a successful decision.
-            const allowed = await authorizeExpertDisclosure(this.db, user.id, tenantId, binding, result.evidence);
+            // After Core persists its trace, recheck current corpus membership, every
+            // exact text prefix and all principal/binding/material flags in one snapshot.
+            // No positive-path source I/O follows this terminal decision.
+            const allowed = await authorizeExpertHistoryDisclosure(this.db, user.id, tenantId,
+                [{binding, sources: result.evidence}], true, true);
             if (signal?.aborted) throw new Error('cancelled');
             if (!allowed) throw new ForbiddenException('KNOWLEDGE_FORBIDDEN');
         }
@@ -258,11 +236,12 @@ export class ExpertRuntimeService {
         }
         return result;
     }
-    async authorizeHistory(user: User, tenantId: string | null, expected: {userId:string;scope:string}, entries: Array<{binding:ExpertRuntimeBinding;sources:KnowledgeSourceReference[]}>) {
+    async authorizeHistory(user: User, tenantId: string | null, expected: {userId:string;scope:string;verifyContent?:boolean}, entries: Array<{binding:ExpertRuntimeBinding;sources:Array<KnowledgeSourceReference & {text?:string}>}>) {
         if (expected.userId !== user.id || expected.scope !== (tenantId ? `tenant:${tenantId}` : 'personal')) throw new ForbiddenException('EXPERT_SOURCE_ACCESS_CHANGED');
         if (!entries.length || entries.length > 1024 || entries.reduce((sum,entry)=>sum+entry.sources.length,0)>1024) fail('EXPERT_SOURCE_HISTORY_LIMIT');
-        if (!await authorizeExpertHistoryDisclosure(this.db,user.id,tenantId,entries)) throw new ForbiddenException('KNOWLEDGE_FORBIDDEN');
-        return {authorized:true as const};
+        if (expected.verifyContent && entries.some(entry=>entry.sources.some(source=>typeof source.text!=='string'||source.text.length>32000))) fail('EXPERT_SOURCE_CONTENT_REQUIRED');
+        if (!await authorizeExpertHistoryDisclosure(this.db,user.id,tenantId,entries,expected.verifyContent===true)) throw new ForbiddenException('KNOWLEDGE_FORBIDDEN');
+        return {authorized:true as const,...expected.verifyContent?{contentVerified:true as const}:{}};
     }
     async source(user: User, tenantId: string | null, binding: ExpertRuntimeBinding, ref: KnowledgeSourceReference) {
         const { access } = await this.access(user, tenantId, binding, { sessionId: 'source-open', turnId: 'source-open' }, ref);
