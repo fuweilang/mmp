@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { createHmac, randomInt, timingSafeEqual } from 'crypto';
+import { createHmac, randomInt, randomUUID, timingSafeEqual } from 'crypto';
 
 export type SmsScene = 'login' | 'register';
 
@@ -70,19 +70,23 @@ export interface SmsCodeStore {
   phoneRegistered(phone: string): Promise<boolean>;
 }
 
+export type SmsProvider = 'mock' | 'tencent' | 'aliyun';
+
+const REAL_SMS_PROVIDERS = ['tencent', 'aliyun'] as const;
+
 export function isProductionRuntime(): boolean {
   return (process.env.NODE_ENV || '').trim().toLowerCase() === 'production';
 }
 
-export function smsProvider(): 'mock' | 'tencent' {
+export function smsProvider(): SmsProvider {
   const value = (process.env.SMS_PROVIDER || '').trim().toLowerCase();
-  // 生产 fail-closed：没显式配 tencent 就不允许发码，绝不回落到 mock。
+  // 生产 fail-closed：没显式配 tencent/aliyun 就不允许发码，绝不回落到 mock。
   if (isProductionRuntime()) {
-    if (value === 'tencent') return 'tencent';
-    throw new Error('生产环境必须显式配置 SMS_PROVIDER=tencent；拒绝回落到 mock 短信通道');
+    if (value === 'tencent' || value === 'aliyun') return value;
+    throw new Error('生产环境必须显式配置 SMS_PROVIDER=tencent 或 aliyun；拒绝回落到 mock 短信通道');
   }
   if (value === '' || value === 'mock') return 'mock';
-  if (value === 'tencent') return 'tencent';
+  if (value === 'tencent' || value === 'aliyun') return value;
   throw smsError('SMS_UNAVAILABLE', '短信服务暂不可用');
 }
 
@@ -91,7 +95,7 @@ export function mockSmsCode(): string {
   return code.length === 6 ? code : '123456';
 }
 
-function mockCodeAllowed(provider: 'mock' | 'tencent'): boolean {
+function mockCodeAllowed(provider: SmsProvider): boolean {
   return provider === 'mock' && !isProductionRuntime();
 }
 
@@ -102,28 +106,60 @@ function templateId(scene: SmsScene): string {
   return String(specific || process.env.TENCENT_SMS_TEMPLATE_ID || '').trim();
 }
 
+function aliyunTemplateId(scene: SmsScene): string {
+  const specific = scene === 'login'
+    ? process.env.ALIYUN_SMS_TEMPLATE_ID_LOGIN
+    : process.env.ALIYUN_SMS_TEMPLATE_ID_REGISTER;
+  return String(specific || process.env.ALIYUN_SMS_TEMPLATE_ID || '').trim();
+}
+
+/** 只回键名，绝不回值；日志/异常都能安全外露。 */
+export function missingSmsConfig(provider: SmsProvider): string[] {
+  if (provider === 'aliyun') {
+    const required: Array<[string, string | undefined]> = [
+      ['ALIYUN_SMS_ACCESS_KEY_ID', process.env.ALIYUN_SMS_ACCESS_KEY_ID],
+      ['ALIYUN_SMS_ACCESS_KEY_SECRET', process.env.ALIYUN_SMS_ACCESS_KEY_SECRET],
+    ];
+    const missing = required
+      .filter(([, value]) => !String(value || '').trim())
+      .map(([key]) => key);
+    if (!aliyunTemplateId('login')) missing.push('ALIYUN_SMS_TEMPLATE_ID_LOGIN');
+    if (!aliyunTemplateId('register')) missing.push('ALIYUN_SMS_TEMPLATE_ID_REGISTER');
+    return missing;
+  }
+  if (provider === 'tencent') {
+    const required: Array<[string, string | undefined]> = [
+      ['TENCENT_SMS_SECRET_ID', process.env.TENCENT_SMS_SECRET_ID],
+      ['TENCENT_SMS_SECRET_KEY', process.env.TENCENT_SMS_SECRET_KEY],
+      ['TENCENT_SMS_SDK_APP_ID', process.env.TENCENT_SMS_SDK_APP_ID],
+    ];
+    const missing = required
+      .filter(([, value]) => !String(value || '').trim())
+      .map(([key]) => key);
+    if (!String(process.env.TENCENT_SMS_TEMPLATE_ID || '').trim()) {
+      for (const scene of ['login', 'register'] as const) {
+        if (!templateId(scene)) missing.push(`TENCENT_SMS_TEMPLATE_ID_${scene.toUpperCase()}`);
+      }
+    }
+    return missing;
+  }
+  return [];
+}
+
 /**
  * 启动前置校验：生产环境缺短信通道/凭据直接抛错，进程起不来（fail-closed）。
  * 部署方宁可启动失败，也不能带着 mock 通道对外服务。
  */
 export function assertSmsConfig(): void {
   if (!isProductionRuntime()) return;
-  if ((process.env.SMS_PROVIDER || '').trim().toLowerCase() !== 'tencent') {
-    throw new Error('生产环境必须设置 SMS_PROVIDER=tencent（fail-closed，禁止 mock 短信通道）');
+  // smsProvider() 已在生产 fail-closed：缺失/mock/未知 provider 都抛错。
+  const provider = smsProvider();
+  if (provider === 'mock') {
+    throw new Error('生产环境禁止 mock 短信通道');
   }
-  const required: Array<[string, string | undefined]> = [
-    ['TENCENT_SMS_SECRET_ID', process.env.TENCENT_SMS_SECRET_ID],
-    ['TENCENT_SMS_SECRET_KEY', process.env.TENCENT_SMS_SECRET_KEY],
-    ['TENCENT_SMS_SDK_APP_ID', process.env.TENCENT_SMS_SDK_APP_ID],
-  ];
-  const missing = required.filter(([, value]) => !String(value || '').trim()).map(([key]) => key);
-  if (!String(process.env.TENCENT_SMS_TEMPLATE_ID || '').trim()) {
-    for (const scene of ['login', 'register'] as const) {
-      if (!templateId(scene)) missing.push(`TENCENT_SMS_TEMPLATE_ID_${scene.toUpperCase()}`);
-    }
-  }
+  const missing = missingSmsConfig(provider);
   if (missing.length > 0) {
-    throw new Error(`生产环境短信配置缺失：${missing.join(', ')}`);
+    throw new Error(`生产环境短信配置缺失（${provider}）：${missing.join(', ')}`);
   }
 }
 
@@ -172,14 +208,135 @@ async function sendTencentSms(phone: string, scene: SmsScene, code: string): Pro
   }
 }
 
-/** 发送通道签名：生产实现走腾讯云，单测注入桩，绝不真发短信。 */
+const ALIYUN_DEFAULT_SIGN_NAME = '猛犸世纪';
+const ALIYUN_DEFAULT_REGION = 'cn-hangzhou';
+const ALIYUN_DEFAULT_ENDPOINT = 'https://dysmsapi.aliyuncs.com/';
+const ALIYUN_DEFAULT_TEMPLATE_PARAM_NAME = 'code';
+const ALIYUN_API_VERSION = '2017-05-25';
+
+/** 阿里云 RPC 签名要求的百分号编码（RFC3986，空格 %20、* 也要编码）。 */
+export function aliyunPercentEncode(value: string): string {
+  return encodeURIComponent(value)
+    .replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+/** 规范化查询串：键按字典序排序后用 & 连接，签名与请求体共用同一套编码。 */
+export function aliyunCanonicalQuery(params: Record<string, string>): string {
+  return Object.keys(params)
+    .sort()
+    .map((key) => `${aliyunPercentEncode(key)}=${aliyunPercentEncode(params[key] ?? '')}`)
+    .join('&');
+}
+
+/** StringToSign = POST & %2F & percentEncode(canonicalQuery)；密钥为 AccessKeySecret + '&'。 */
+export function aliyunSignature(params: Record<string, string>, accessKeySecret: string): string {
+  // 签名串永远不含 Signature 自身，重复调用也稳定。
+  const unsigned: Record<string, string> = { ...params };
+  delete unsigned.Signature;
+  const stringToSign = `POST&${aliyunPercentEncode('/')}&${aliyunPercentEncode(aliyunCanonicalQuery(unsigned))}`;
+  return createHmac('sha1', `${accessKeySecret}&`).update(stringToSign).digest('base64');
+}
+
+export type AliyunSmsParamsOptions = {
+  nonce?: string;
+  /** ISO8601 UTC，形如 2026-11-13T00:00:00Z。 */
+  timestamp?: string;
+};
+
+/**
+ * 构造 SendSms 的完整参数（含 Signature）。缺配置直接抛 SMS_UNAVAILABLE，
+ * 不把凭据/原始响应带进错误信息。
+ */
+export function buildAliyunSmsParams(
+  phone: string,
+  scene: SmsScene,
+  code: string,
+  options: AliyunSmsParamsOptions = {},
+): Record<string, string> {
+  const accessKeyId = String(process.env.ALIYUN_SMS_ACCESS_KEY_ID || '').trim();
+  const accessKeySecret = String(process.env.ALIYUN_SMS_ACCESS_KEY_SECRET || '').trim();
+  const template = aliyunTemplateId(scene);
+  if (!accessKeyId || !accessKeySecret || !template) {
+    throw smsError('SMS_UNAVAILABLE', '短信服务暂不可用');
+  }
+  const signName = String(process.env.ALIYUN_SMS_SIGN_NAME || '').trim() || ALIYUN_DEFAULT_SIGN_NAME;
+  const region = String(process.env.ALIYUN_SMS_REGION || '').trim() || ALIYUN_DEFAULT_REGION;
+  const paramName = String(process.env.ALIYUN_SMS_TEMPLATE_PARAM_NAME || '').trim()
+    || ALIYUN_DEFAULT_TEMPLATE_PARAM_NAME;
+  const params: Record<string, string> = {
+    AccessKeyId: accessKeyId,
+    Action: 'SendSms',
+    Format: 'JSON',
+    PhoneNumbers: phone,
+    RegionId: region,
+    SignName: signName,
+    SignatureMethod: 'HMAC-SHA1',
+    SignatureNonce: options.nonce || randomUUID(),
+    SignatureVersion: '1.0',
+    TemplateCode: template,
+    TemplateParam: JSON.stringify({ [paramName]: code }),
+    Timestamp: options.timestamp || new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+    Version: ALIYUN_API_VERSION,
+  };
+  params.Signature = aliyunSignature(params, accessKeySecret);
+  return params;
+}
+
+export type AliyunHttpResponse = { status: number; body: unknown };
+export type AliyunHttpPost = (url: string, body: string) => Promise<AliyunHttpResponse>;
+
+/** 默认传输：POST 表单，10 秒超时；解析失败按空响应处理，绝不打印响应体。 */
+export const defaultAliyunHttpPost: AliyunHttpPost = async (url, body) => {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body,
+    signal: AbortSignal.timeout(10_000),
+  });
+  let parsed: unknown = null;
+  try {
+    parsed = await res.json();
+  } catch {
+    parsed = null;
+  }
+  return { status: res.status, body: parsed };
+};
+
+/** 阿里云 SendSms：HTTP 2xx 且 Code=OK 才算成功，其余一律 SMS_UNAVAILABLE。 */
+export async function sendAliyunSms(
+  phone: string,
+  scene: SmsScene,
+  code: string,
+  deps: { httpPost?: AliyunHttpPost; params?: AliyunSmsParamsOptions } = {},
+): Promise<void> {
+  const params = buildAliyunSmsParams(phone, scene, code, deps.params);
+  const endpoint = String(process.env.ALIYUN_SMS_ENDPOINT || '').trim() || ALIYUN_DEFAULT_ENDPOINT;
+  const body = new URLSearchParams(params).toString();
+  const post = deps.httpPost ?? defaultAliyunHttpPost;
+  let result: AliyunHttpResponse;
+  try {
+    result = await post(endpoint, body);
+  } catch {
+    throw smsError('SMS_UNAVAILABLE', '验证码发送失败，请稍后重试');
+  }
+  const payload = (result.body && typeof result.body === 'object')
+    ? result.body as { Code?: unknown; Message?: unknown }
+    : {};
+  const ok = result.status >= 200 && result.status < 300 && String(payload.Code || '').toUpperCase() === 'OK';
+  if (!ok) {
+    // 只吐稳定码，不回显阿里云的 Code/Message/RequestId，避免泄露内部细节。
+    throw smsError('SMS_UNAVAILABLE', '验证码发送失败，请稍后重试');
+  }
+}
+
+/** 发送通道签名：生产实现走腾讯云/阿里云，单测注入桩，绝不真发短信。 */
 export type SmsDeliverer = (phone: string, scene: SmsScene, code: string) => Promise<void>;
 
 export class SmsCodes {
   constructor(
     private readonly store: SmsCodeStore,
     private readonly secret: string,
-    private readonly deliver: SmsDeliverer = sendTencentSms,
+    private readonly deliver?: SmsDeliverer,
   ) {}
 
   async send(phone: string, scene: SmsScene, sendIp: string): Promise<SmsSendResult> {
@@ -226,9 +383,10 @@ export class SmsCodes {
       return { ok: true, retryAfterSeconds: COOLDOWN_SECONDS };
     }
 
-    if (provider === 'tencent') {
+    if (provider !== 'mock') {
+      const deliver = this.deliver ?? (provider === 'aliyun' ? sendAliyunSms : sendTencentSms);
       try {
-        await this.deliver(phone, scene, code);
+        await deliver(phone, scene, code);
       } catch (error) {
         // 通道失败不能留着未核销行，否则用户 60 秒后也无法重发。
         await this.store.discard(id);
