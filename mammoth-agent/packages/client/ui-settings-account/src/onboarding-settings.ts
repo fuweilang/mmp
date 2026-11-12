@@ -4,7 +4,7 @@ import z from '@mammoth-ai/schemastery'
 /** Account feature's durable onboarding namespace. */
 export const DESKTOP_ONBOARDING_NAMESPACE = 'ui-settings-account'
 
-/** Persisted steps. */}
+/** Persisted steps. */
 export type OnboardingStep = 'welcome' | 'credit' | 'purpose' | 'process' | 'done'
 /** Work scenarios offered by the desktop introduction. */
 export type OnboardingPurpose = 'office' | 'development' | 'both'
