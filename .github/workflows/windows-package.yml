@@ -93,10 +93,12 @@ jobs:
           "INSTALLER=$($exe.FullName)"
           "BYTES=$($exe.Length)"
           "SHA256=$hash"
-          New-Item -ItemType Directory -Force -Path ../../windows-artifact | Out-Null
-          Copy-Item $exe.FullName "../../windows-artifact/$($exe.Name)"
-          Copy-Item "$dir/*.blockmap" ../../windows-artifact/ -ErrorAction SilentlyContinue
-          Copy-Item "$dir/latest.yml" ../../windows-artifact/ -ErrorAction SilentlyContinue
+          $out = Join-Path $env:GITHUB_WORKSPACE 'windows-artifact'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item $exe.FullName (Join-Path $out $exe.Name)
+          Copy-Item "$dir/*.blockmap" $out -ErrorAction SilentlyContinue
+          Copy-Item "$dir/latest.yml" $out -ErrorAction SilentlyContinue
+          Get-ChildItem $out | Select-Object Name,Length
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
