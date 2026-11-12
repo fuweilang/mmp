@@ -1,4 +1,24 @@
-import { Body, Controller, Get, HttpCode, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  HttpCode,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Req,
+  Res,
+  StreamableFile,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { createReadStream } from 'fs';
 import { Request, Response } from 'express';
 import { User } from '@prisma/client';
 import { AuthService } from './auth.service';
@@ -6,6 +26,7 @@ import { ConsumeBrowserSsoDto, LoginDto, RegisterDto, SwitchTenantDto } from './
 import { ChangePasswordDto, UpdateMeDto } from './dto/self-service.dto';
 import { JwtGuard } from './jwt.guard';
 import { CurrentTenantId, CurrentUser } from './current-user';
+import { userAvatarFile } from './user-avatar';
 
 @Controller('auth')
 export class AuthController {
@@ -88,6 +109,41 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.auth.changeOwnPassword(user, dto.oldPassword, dto.newPassword, res);
+  }
+
+  /** Replace the signed-in account picture. Console and Admin read it from /auth/me. */
+  @Post('avatar')
+  @HttpCode(200)
+  @UseGuards(JwtGuard)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  uploadAvatar(
+    @CurrentUser() user: User,
+    @CurrentTenantId() tenantId: string | null,
+    @UploadedFile() file?: { originalname?: string; buffer?: Buffer; mimetype?: string },
+  ) {
+    if (!file?.buffer?.length) throw new BadRequestException('请选择头像图片');
+    return this.auth.setAvatar(user, file, tenantId);
+  }
+
+  /** Remove the picture. Surfaces fall back to the name initial. */
+  @Delete('avatar')
+  @HttpCode(200)
+  @UseGuards(JwtGuard)
+  clearAvatar(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null) {
+    return this.auth.clearAvatar(user, tenantId);
+  }
+
+  /** Public file so <img> can load it without a Bearer token. Names are unguessable. */
+  @Get('avatars/:fileName')
+  @Header('Cache-Control', 'public, max-age=86400')
+  @Header('X-Content-Type-Options', 'nosniff')
+  serveAvatar(@Param('fileName') fileName: string) {
+    const file = userAvatarFile(fileName);
+    if (!file) throw new NotFoundException('头像不存在');
+    return new StreamableFile(createReadStream(file), {
+      type: 'image/png',
+      disposition: `inline; filename="${fileName}"`,
+    });
   }
 
   /** 自助改名（个人账号弹窗）。 */

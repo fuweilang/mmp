@@ -30,7 +30,6 @@ describe.skipIf(MODE === 'record')('web e2e: App-only desktop onboarding', () =>
   let page: Page
   let tripwire: ReturnType<typeof watchConsole>
   let balanceFailure = false
-  let balanceReads = 0
   let walletBalance = '0E-16'
   let bonusBalance = '0'
   let bonusOffered = false
@@ -43,7 +42,6 @@ describe.skipIf(MODE === 'record')('web e2e: App-only desktop onboarding', () =>
     bonusReads = 0
     bonusAcks = 0
     balanceFailure = false
-    balanceReads = 0
     walletBalance = '0E-16'
     bonusBalance = '0'
     screenshots = undefined
@@ -71,7 +69,6 @@ describe.skipIf(MODE === 'record')('web e2e: App-only desktop onboarding', () =>
         return
       }
       const balance = request.url === '/api/v0/users/get_user_summary'
-      if (balance) balanceReads++
       const value = balance
         ? { bonus_wallets: [{ currency: 'CNY', balance: bonusBalance }], normal_wallets: [{ currency: 'CNY', balance: walletBalance }] }
         : { id: 'onboarding-fixture-user', email: 'f***@example.invalid', id_profile: { name: 'Onboarding Fixture' } }
@@ -255,17 +252,11 @@ describe.skipIf(MODE === 'record')('web e2e: App-only desktop onboarding', () =>
     await page.evaluate(() => { delete document.documentElement.dataset.platform })
     await page.getByRole('button', { name: '开始设置', exact: true }).click()
     await page.getByRole('heading', { name: '准备可用额度', exact: true }).waitFor()
+    expect(await page.getByRole('button', { name: '去充值', exact: true }).count()).toBe(0)
     expect(await page.getByRole('button', { name: '下一步', exact: true })
-      .evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)')
+      .evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(74, 83, 163)')
     await snapshot('credit')
-    const laterButton = page.getByRole('button', { name: '下一步', exact: true })
-    await laterButton.hover()
-    const laterHover = await laterButton.evaluate(element => ({
-      fill: getComputedStyle(element).backgroundColor, overlay: getComputedStyle(element).backgroundImage,
-    }))
-    expect(laterHover.fill).toBe('rgb(255, 255, 255)')
-    expect(laterHover.overlay).toContain('rgba(38, 49, 72, 0.06)')
-    if (screenshots !== undefined) await page.screenshot({ path: join(screenshots, 'credit-later-hover.png') })
+    if (screenshots !== undefined) await page.screenshot({ path: join(screenshots, 'credit.png') })
     const warningsBefore = tripwire.warnings.length
     const [balanceResponse] = await Promise.all([
       page.waitForResponse('**/api/account/getBalance'),
@@ -279,16 +270,8 @@ describe.skipIf(MODE === 'record')('web e2e: App-only desktop onboarding', () =>
     await page.getByRole('heading', { name: '暂时跳过充值？', exact: true }).waitFor()
     expect(await page.locator('[data-desktop-onboarding]').evaluate(element => getComputedStyle(element).filter)).toBe('none')
     expect(await page.getByRole('dialog').evaluate(element => getComputedStyle(element.previousElementSibling!).backdropFilter)).toBe('none')
-    await page.getByRole('button', { name: '前往充值', exact: true }).click()
-    await page.getByRole('button', { name: '返回 DeepSeek Harness', exact: true }).waitFor()
-    expect((scaffold.ctx.settings.describe().find(row => row.ns === NS)?.value as { step: string }).step).toBe('credit')
-    balanceFailure = true
-    const readsBefore = balanceReads
-    await page.getByRole('button', { name: '返回 DeepSeek Harness', exact: true }).click()
-    await page.getByRole('heading', { name: '准备可用额度', exact: true }).waitFor()
-    await expect.poll(() => balanceReads).toBeGreaterThan(readsBefore)
-    await expect.poll(() => page.getByRole('button', { name: '下一步', exact: true }).isEnabled()).toBe(true)
-    await page.getByRole('button', { name: '下一步', exact: true }).click()
+    expect(await page.getByRole('button', { name: '前往充值', exact: true }).count()).toBe(0)
+    await page.getByRole('button', { name: '我知道了', exact: true }).click()
     await page.getByRole('checkbox', { name: '办公与创作', exact: true }).waitFor()
     await snapshot('purpose')
     await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -425,8 +408,9 @@ describe.skipIf(MODE === 'record')('web e2e: App-only desktop onboarding', () =>
     await (await recheck).finished()
     await page.getByRole('button', { name: 'Get started', exact: true }).click()
     await page.getByRole('heading', { name: 'Add credits', exact: true }).waitFor()
+    expect(await page.getByRole('button', { name: 'Add credits', exact: true }).count()).toBe(0)
     expect(await page.getByRole('button', { name: 'Next', exact: true })
-      .evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(72, 73, 76)')
+      .evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(119, 126, 186)')
     await snapshot('credit-en-dark')
     expect(await page.locator('[class*="backIcon"]').evaluate(element => getComputedStyle(element).maskImage))
       .toMatch(/^url\("[^"]*\/plugins\/@deepseek-ai\/mmp-client-ui-settings-account\/assets\/onboarding-back-[0-9a-f]{12}\.svg"\)$/)

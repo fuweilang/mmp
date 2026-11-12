@@ -446,6 +446,34 @@ it('shows the same shared picture outcome in settings and the sidebar', async ()
   expect(operations.avatarFailed).toHaveBeenCalledWith(avatar)
 })
 
+it('opens a picture picker from the account menu avatar', async () => {
+  const uploadAvatar = vi.fn(async () => undefined)
+  const operations = operationsOf({ status: 'credential-stored', attempt: null }, {
+    profile: { status: 'ready', value: { id: null, name: '小米管理员', contact: null, avatarUrl: null } },
+  })
+  const billing = {
+    enabled: true, balanceCoins: 1, canRecharge: false, hasConsoleAccess: true, isPlatformAdmin: false,
+    aiCoinsPerYuan: 1, open: false, identity: { phone: null, company: '小米', role: null, platformAdmin: false },
+  }
+  const { AccountMenu } = await import('../src/client/AccountMenu.tsx')
+  render(<AccountMenu {...({} as GlobalStandardProps)} {...operations} settingsOpen={false}
+    uploadAvatar={uploadAvatar}
+    billingState={{ getSnapshot: () => billing, subscribe: () => () => {} }}
+    useAccount={selector => selector(operations.hooks.account.getSnapshot())}
+    useTheme={selector => selector(operations.hooks.theme.getSnapshot())}
+    wide openSettings={() => {}} openOnboarding={() => {}} t={key => en[key as AccountKey]} />)
+  fireEvent.click(screen.getByRole('button', { name: en.menu }))
+  const picker = screen.getByRole('button', { name: en.changeAvatar })
+  const input = document.querySelector('input[type="file"]') as HTMLInputElement
+  const click = vi.spyOn(input, 'click')
+  fireEvent.click(picker)
+  expect(click).toHaveBeenCalledOnce()
+  const file = new File(['x'], 'face.png', { type: 'image/png' })
+  await act(async () => { fireEvent.change(input, { target: { files: [file] } }) })
+  expect(uploadAvatar).toHaveBeenCalledWith(file)
+  expect(operations.refreshAccount).toHaveBeenCalled()
+})
+
 it.each(['loading', 'failed'] as const)('shows fallback until the shared avatar is ready (%s)', async (status) => {
   const { AccountAvatar } = await import('../src/client/AccountAvatar.tsx')
   const avatarFailed = vi.fn()
@@ -810,6 +838,7 @@ it.each([
   expect(panel.textContent?.includes('807.26')).toBe(amount)
   if (amount) {
     expect(within(panel).getByText(en.sharedAllowance)).toBeDefined()
+    expect(panel.textContent).not.toContain('Shared by members of your enterprise')
     fireEvent.click(within(panel).getByRole('menuitem', { name: en.topUp }))
     expect(openRecharge).toHaveBeenCalledOnce()
   } else if (admin) {

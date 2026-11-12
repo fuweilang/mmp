@@ -43,29 +43,28 @@ it('preserves built-in order, groups, icons, command identities, and captured ac
   const views = menu.source.getSnapshot()
   expect(views.map(({ id, label, icon, commandId, separatorBefore, afterContent }) =>
     [id, label, icon !== undefined, commandId, separatorBefore, afterContent])).toEqual([
-    ['session.pin/pin', 'Pin session', true, undefined, undefined, undefined],
+    ['session.pin/pin', 'Pin task', true, undefined, undefined, undefined],
     ['session.rename/rename', 'Rename', true, 'session.rename', undefined, undefined],
-    ['session.fork/fork', 'Fork session', true, 'session.fork', undefined, undefined],
-    ['session.id/copy', 'Copy Session ID', true, undefined, true, undefined],
-    ['session.archive/archive', 'Archive session', true, 'session.archive', true, true],
+    ['session.id/copy', 'Copy Task ID', true, undefined, true, undefined],
+    ['session.archive/archive', 'Archive task', true, 'session.archive', true, true],
   ])
   menu.dispose()
   for (const id of views.map(item => item.id)) b.open().select(id)
   expect(b.actions.pinSession).toHaveBeenCalledWith('background')
   expect(b.actions.requestSessionRename).toHaveBeenCalledWith('background', 'Background')
-  expect(b.actions.forkSession).toHaveBeenCalledWith('background')
+  expect(b.actions.forkSession).not.toHaveBeenCalled()
   expect(b.actions.copySessionId).toHaveBeenCalledWith('background')
   expect(b.actions.archiveSession).toHaveBeenCalledWith('background')
   const unpin = b.open()
   b.list.set({ ...b.list.getSnapshot(), pinnedSessionIds: [b.target.value.sessionId] })
-  expect(unpin.source.getSnapshot()[0]).toMatchObject({ label: 'Unpin session' })
+  expect(unpin.source.getSnapshot()[0]).toMatchObject({ label: 'Unpin task' })
   unpin.select('session.pin/pin')
   expect(b.actions.unpinSession).toHaveBeenCalledWith('background')
   const restore = b.open()
   b.list.set({ ...b.list.getSnapshot(), archivedSessionIds: [b.target.value.sessionId] })
   expect(restore.source.getSnapshot().some(item => item.id === 'session.pin/pin')).toBe(false)
   const archive = restore.source.getSnapshot().at(-1)!
-  expect(archive).toMatchObject({ label: 'Unarchive session' })
+  expect(archive).toMatchObject({ label: 'Unarchive task' })
   expect(archive.commandId).toBeUndefined()
   restore.select(archive.id)
   expect(b.actions.unarchiveSession).toHaveBeenCalledWith('background')
@@ -83,7 +82,7 @@ it('reacts to permission and locale updates, prevents withdrawn actions, and dis
   menu.select('session.rename/rename')
   expect(b.actions.requestSessionRename).not.toHaveBeenCalled()
   b.locale.setLocale('zh')
-  expect(menu.source.getSnapshot()[0]?.label).toBe('复制 Session ID')
+  expect(menu.source.getSnapshot()[0]?.label).toBe('复制任务编号')
   b.access('session/rename').set(true)
   expect(menu.source.getSnapshot()[0]?.label).toBe('重命名')
   await b.fiber.dispose()

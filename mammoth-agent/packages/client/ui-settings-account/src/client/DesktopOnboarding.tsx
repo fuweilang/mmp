@@ -1,4 +1,4 @@
-/** Coordinates onboarding navigation, transitions and the shared native recharge page. */
+/** Coordinates onboarding navigation and transitions. */
 import type { ProductEventMap } from '@mammoth-ai/mmp-client-product-analytics/client'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@mammoth-ai/mmp-client-ui-primitives'
@@ -22,19 +22,15 @@ const onboardingPages = {
 } as const
 
 /**
- * @param props - durable choices, account state, localized copy and the shared recharge page channel.
+ * @param props - durable choices, account state and localized copy.
  * @returns the active first-run page.
  */
 export function DesktopOnboarding({
-  state, account, openPlatformPage, update, complete, retry, t, locale, track, exiting = false,
+  state, account, update, complete, retry, t, locale, track, exiting = false,
 }: DesktopOnboardingProps) {
   const [dialog, setDialog] = useState<OnboardingConfirmationKind | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const page = useRef<HTMLElement>(null)
-  // The one shared native host owns the recharge page; this flow holds only its
-  // own request, released when the flow unmounts.
-  const releaseRecharge = useRef<(() => void) | undefined>(undefined)
-  useEffect(() => () => { releaseRecharge.current?.(); releaseRecharge.current = undefined }, [])
   const progress = state.progress
   const targetStep = progress.step
   const [step, setStep] = useState(targetStep)
@@ -85,13 +81,6 @@ export function DesktopOnboarding({
     track?.('onboarding_page_click', { page_name: pageName, button_name, ...selected_content === undefined ? {} : { selected_content } })
   }
   const go = (next: 'welcome' | 'credit' | 'purpose' | 'process') => { void update({ step: next }) }
-  const canRecharge = openPlatformPage !== undefined
-  const recharge = () => {
-    setDialog(null)
-    releaseRecharge.current?.()
-    // Every control that reaches this is disabled without the callback.
-    releaseRecharge.current = openPlatformPage?.('top-up', () => { releaseRecharge.current = undefined })
-  }
   const later = () => {
     const balance = account.details?.balance
     if (balance?.status === 'ready' && !hasOnboardingCredit(balance)) setDialog('credit')
@@ -106,7 +95,7 @@ export function DesktopOnboarding({
       <section key={step} ref={page} className={`${css.page} ${dialog !== null ? css.blurred : ''}`} data-desktop-onboarding={step} lang={locale} aria-labelledby="desktop-onboarding-title" aria-busy={busy}>
         {step === 'welcome' && <OnboardingWelcomeStep t={t} locale={locale} heading={heading} busy={busy} onStart={() => { click('next'); go('credit') }} />}
         {step === 'credit' && <OnboardingCreditStep t={t} locale={locale} heading={heading} busy={busy}
-          funded={state.creditFunded} canRecharge={canRecharge} onContinue={() => { click('continue'); go('purpose') }} onRecharge={() => { click('charge'); recharge() }} onLater={() => { click('later'); later() }} />}
+          funded={state.creditFunded} onContinue={() => { click('continue'); go('purpose') }} onLater={() => { click('later'); later() }} />}
         {step === 'purpose' && <OnboardingPurposeStep t={t} heading={heading} busy={busy} purpose={progress.purpose}
           onSelect={(purpose) => { void update({ purpose }) }} onContinue={() => { click('next'); purposeNext() }} />}
         {step === 'process' && <OnboardingProcessStep t={t} heading={heading} busy={busy} process={progress.process}
@@ -118,8 +107,8 @@ export function DesktopOnboarding({
         </footer>}
       </section>
     </OnboardingSurface>
-    {dialog !== null && <OnboardingConfirmation kind={dialog} t={t} busy={busy} canRecharge={canRecharge}
-      onClose={() => { popupClick('close'); setDialog(null) }} onContinueSetup={() => { popupClick('setting'); setDialog(null) }} onContinue={() => { popupClick('know'); setDialog(null); go('purpose') }} onRecharge={() => { popupClick('charge'); recharge() }}
+    {dialog !== null && <OnboardingConfirmation kind={dialog} t={t} busy={busy}
+      onClose={() => { popupClick('close'); setDialog(null) }} onContinueSetup={() => { popupClick('setting'); setDialog(null) }} onContinue={() => { popupClick('know'); setDialog(null); go('purpose') }}
       onSkip={() => { popupClick(dialog === 'skip' ? 'enter' : 'know'); void complete('skipped').then(() => { setDialog(null) }) }} />}
   </>
 }

@@ -15,20 +15,16 @@ it('creates from a paused empty state, selects the task, and saves an inline edi
     await page.goto(scaffold.authenticatedUrl, { waitUntil: 'load' })
     await page.getByRole('button', { name: '自动化任务', exact: true }).click()
     const manager = page.getByTestId('task-manager-page')
-    const createStyles = await manager.getByRole('group', { name: '创建', exact: true }).getByRole('button').evaluateAll(buttons => buttons.map((button) => {
+    const createStyle = await manager.getByRole('button', { name: '新建', exact: true }).evaluate((button) => {
       const style = getComputedStyle(button)
       return { height: style.height, topLeft: style.borderTopLeftRadius, bottomLeft: style.borderBottomLeftRadius,
         topRight: style.borderTopRightRadius, bottomRight: style.borderBottomRightRadius }
-    }))
-    expect(createStyles).toEqual([
-      { height: '32px', topLeft: '16px', bottomLeft: '16px', topRight: '0px', bottomRight: '0px' },
-      { height: '32px', topLeft: '0px', bottomLeft: '0px', topRight: '16px', bottomRight: '16px' },
-    ])
+    })
+    expect(createStyle).toEqual(
+      { height: '32px', topLeft: '16px', bottomLeft: '16px', topRight: '16px', bottomRight: '16px' },
+    )
     await manager.getByRole('button', { name: '已暂停', exact: true }).click()
     await manager.getByRole('heading', { name: '没有已暂停的自动化任务', exact: true }).waitFor()
-    await manager.getByRole('button', { name: '选择创建方式', exact: true }).click()
-    await page.getByRole('menuitem', { name: '手动创建', exact: true }).waitFor()
-    await page.keyboard.press('Escape')
     await manager.getByRole('button', { name: '新建自动化任务', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: '手动创建', exact: true })
     await dialog.getByRole('textbox', { name: '自动化任务名称', exact: true }).fill('AI 新闻简报')
@@ -70,8 +66,7 @@ it('creates from a paused empty state, selects the task, and saves an inline edi
     const saved = await scaffold.ctx.schedule.view({ id: task.id })
     if ('code' in saved) throw new Error('edited task was not retained')
     expect(saved.prompt).toBe('整理过去 24 小时的 AI 新闻，附原文链接，按重要性排序。')
-    await manager.getByRole('button', { name: '选择创建方式', exact: true }).click()
-    await page.getByRole('menuitem', { name: '手动创建', exact: true }).click()
+    await manager.getByRole('button', { name: '新建', exact: true }).click()
     await dialog.getByRole('textbox', { name: '自动化任务名称', exact: true }).fill('检查最新进展')
     await dialog.getByRole('textbox', { name: '自动化任务内容', exact: true }).fill('汇总最近的更新')
     await dialog.getByRole('button', { name: /^重复 / }).click()
@@ -111,8 +106,7 @@ it('creates and edits Custom Cron through the built UI while retaining its expli
     await page.goto(scaffold.authenticatedUrl, { waitUntil: 'load' })
     await page.getByRole('button', { name: '自动化任务', exact: true }).click()
     const manager = page.getByTestId('task-manager-page')
-    await manager.getByRole('button', { name: '选择创建方式', exact: true }).click()
-    await page.getByRole('menuitem', { name: '手动创建', exact: true }).click()
+    await manager.getByRole('button', { name: '新建', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: '手动创建', exact: true })
     await dialog.getByRole('textbox', { name: '自动化任务名称', exact: true }).fill('Cron deployment check')
     await dialog.getByRole('textbox', { name: '自动化任务内容', exact: true }).fill('Check the deployment status.')

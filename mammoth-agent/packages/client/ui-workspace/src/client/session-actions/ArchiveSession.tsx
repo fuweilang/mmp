@@ -17,8 +17,9 @@ import css from '../rows/Rows.module.css'
 import browserCss from '../rows/WorkspaceBrowser.module.css'
 
 /**
- * Hover button (order 100): archive, or restore an archived row. Absent while the Session's access
- * snapshot excludes that toggle.
+ * Hover button (order 100): restore an archived row. Archiving stays in the row menu, so a
+ * visible task cannot be archived from the row. Absent while the Session's access snapshot
+ * excludes that toggle.
  * @param props - owner share, the access Hook, and the archive share.
  * @returns the button, or nothing when the caller may not toggle this Session's archival.
  */
@@ -27,7 +28,7 @@ export function ArchiveSessionRowButton({
 }: SessionRowActionProps<ArchiveSessionInjected>) {
   const archived = useArchived(set => set.has(sessionId))
   const allowed = useSessionAccess(sessionId, archived ? 'workspace/unarchiveSession' : 'workspace/archiveSession')
-  if (!allowed) return null
+  if (!archived || !allowed) return null
   return (
     <Tooltip label={t(archived ? 'actions.unarchive' : 'actions.archive')} side="bottom" align="end" delayMs={500} portal>
       <button

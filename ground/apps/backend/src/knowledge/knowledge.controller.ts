@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Header,
+  Headers,
   HttpCode,
   Param,
   Patch,
@@ -29,6 +30,13 @@ class RetrieveKnowledgeDto {
   query!: string;
 }
 
+/** Library selection when the admin login itself has no enterprise. */
+function selectedLibraryTenant(value: string | string[] | undefined): string | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(raw)) return null;
+  return raw;
+}
+
 @Controller('kb')
 @UseGuards(JwtGuard)
 export class KnowledgeController {
@@ -46,8 +54,13 @@ export class KnowledgeController {
   @Post('retrieve')
   @HttpCode(200)
   @Header('Cache-Control', 'private, no-store')
-  retrieve(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null, @Body() body: RetrieveKnowledgeDto) {
-    return this.knowledge.search(user, tenantId, body.query);
+  retrieve(
+    @CurrentUser() user: User,
+    @CurrentTenantId() tenantId: string | null,
+    @Headers('x-mmp-library-tenant') requested: string | string[] | undefined,
+    @Body() body: RetrieveKnowledgeDto,
+  ) {
+    return this.knowledge.search(user, tenantId ?? selectedLibraryTenant(requested), body.query);
   }
 
   @Get('folders')

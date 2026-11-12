@@ -120,16 +120,16 @@ describe('session rename through the assembled browser', () => {
     const row = (await view.findByText('Persisted title')).closest('[role="treeitem"]')!
     const trigger = within(row as HTMLElement).getByLabelText('会话“Persisted title”的操作')
     fireEvent.click(trigger)
-    await view.findByRole('menuitem', { name: '置顶会话' })
+    await view.findByRole('menuitem', { name: '置顶任务' })
     expect(view.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
-      '置顶会话', '重命名', '分叉会话', '复制 Session ID', 'Export action', 'Last action', '归档会话',
+      '置顶任务', '重命名', '复制任务编号', 'Export action', 'Last action', '归档任务',
     ])
     expect(view.getAllByRole('separator')).toHaveLength(3)
     const last = view.getByRole('menuitem', { name: 'Last action' })
     const exportRow = view.getByRole('menuitem', { name: 'Export action' })
     trigger.focus()
     fireEvent.keyDown(trigger, { key: 'End' })
-    const archive = view.getByRole('menuitem', { name: '归档会话' })
+    const archive = view.getByRole('menuitem', { name: '归档任务' })
     expect(document.activeElement).toBe(archive)
     fireEvent.keyDown(archive, { key: 'ArrowUp' })
     expect(document.activeElement).toBe(last)
@@ -150,7 +150,7 @@ describe('session rename through the assembled browser', () => {
       else Object.defineProperty(navigator, 'clipboard', clipboard)
     })
     fireEvent.click(trigger)
-    fireEvent.click(await view.findByRole('menuitem', { name: '复制 Session ID' }))
+    fireEvent.click(await view.findByRole('menuitem', { name: '复制任务编号' }))
     expect(view.queryByRole('menu')).toBeNull()
     expect(writeText).toHaveBeenCalledExactlyOnceWith(SID)
     await view.findByText('Session ID 已复制')

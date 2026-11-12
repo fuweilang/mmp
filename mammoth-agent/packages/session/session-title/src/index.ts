@@ -9,6 +9,7 @@ import { z as zod } from 'zod'
 import type { ZodType } from 'zod'
 import type { Branded } from '@mammoth-ai/mmp-brand'
 import { isAgentLoopRequest } from '@mammoth-ai/mmp-llm'
+import { userVisibleText } from '@mammoth-ai/mmp-llm/user-content'
 import type { GenerateOptions } from '@mammoth-ai/mmp-llm'
 import { assertNever, deepFreeze } from '@mammoth-ai/mmp-util-values'
 import type {
@@ -139,7 +140,7 @@ function sessionTitleUserMessageOf(event: SessionEvent): SessionTitleUserMessage
   const content = event.data.content
   const text = content
     .filter((block): block is Extract<(typeof content)[number], { type: 'text' }> => block.type === 'text')
-    .map(block => block.text)
+    .map(block => userVisibleText(block.text))
     .join('\n')
   if (normalizeSessionTitle(text, Number.MAX_SAFE_INTEGER).length === 0) return undefined
   return { seq: event.seq, text }

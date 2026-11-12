@@ -52,9 +52,19 @@ it('company materials retrieval failure retains both question and selection and 
  await vi.waitFor(()=>expect(f.shell.notices.getSnapshot()?.level).toBe('error'))
  expect(f.send).not.toHaveBeenCalled();expect(f.shell.snapshot.draft).toBe(query);expect(f.shell.snapshot.enterpriseKnowledge).toBe(true)
 })
-it('company materials empty results retain the existing no-evidence message behavior',async()=>{
+it('company materials empty results keep the no-evidence note for the model and the question for the user',async()=>{
  const f=await fixture();f.fetch.mockResolvedValue(new Response('{"hits":[]}',{status:200}));f.shell.setDraft(query);f.shell.setEnterpriseKnowledge(true);f.shell.submit()
- await vi.waitFor(()=>expect(f.send).toHaveBeenCalledTimes(1));expect(f.send.mock.calls[0]?.[1]).toContain('当前权限范围内没有检索到相关资料')
+ await vi.waitFor(()=>expect(f.send).toHaveBeenCalledTimes(1))
+ expect(f.send.mock.calls[0]?.[1]).toContain('当前权限范围内没有检索到相关资料')
+ expect(f.send.mock.calls[0]?.[7]).toMatchObject({ display: query, images: [] })
+})
+it('company materials attaches a retrieved picture and does not tell the model nothing was found',async()=>{
+ const f=await fixture()
+ f.fetch.mockResolvedValue(new Response(JSON.stringify({ hits: [], images: [{ mediaType: 'image/jpeg', data: 'aGVsbG8=', name: '小悟空.jpeg' }] }), { status: 200 }))
+ f.shell.setDraft(query);f.shell.setEnterpriseKnowledge(true);f.shell.submit()
+ await vi.waitFor(()=>expect(f.send).toHaveBeenCalledTimes(1))
+ expect(String(f.send.mock.calls[0]?.[1])).not.toContain('没有检索到相关资料')
+ expect(f.send.mock.calls[0]?.[7]).toMatchObject({ display: query, images: [{ name: '小悟空.jpeg', mediaType: 'image/jpeg' }] })
 })
 it('company materials selection stays with its Session draft, including text edits and persisted restoration',async()=>{
  const f=await fixture();f.shell.setDraft(query);f.shell.setEnterpriseKnowledge(true);f.shell.setDraft('修改后的问题')

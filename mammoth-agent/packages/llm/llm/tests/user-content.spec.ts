@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isLibrarySourceReference, librarySourceUrl, userContentText } from '../src/user-content.ts'
+import { isLibrarySourceReference, librarySourceUrl, userContentText, userVisibleText } from '../src/user-content.ts'
 
 const reference = { source: 'library', nodeId: 'node/a', versionId: 'version 1', name: 'Plan.md' } as const
 
@@ -31,6 +31,14 @@ describe('user-facing source content', () => {
       expect(isLibrarySourceReference(value)).toBe(false)
     }
     expect(isLibrarySourceReference({ ...reference, versionNo: 2, bytes: 0 })).toBe(true)
+  })
+
+  it('keeps the question and drops the enterprise-knowledge trailer', () => {
+    const question = '泡泡玛特的商业模式你了解多少？'
+    const stored = `${question}\n\n【企业知识库】当前权限范围内没有检索到相关资料。请告知用户未找到依据。`
+    expect(userVisibleText(stored)).toBe(question)
+    expect(userVisibleText('【企业知识库】 手写原文')).toBe('【企业知识库】 手写原文')
+    expect(userContentText([{ type: 'text', text: stored }])).toBe(question)
   })
 
   it('escapes source names without changing ordinary user text', () => {

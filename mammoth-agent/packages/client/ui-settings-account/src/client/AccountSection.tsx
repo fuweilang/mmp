@@ -43,6 +43,10 @@ export interface AccountSnapshot {
 export interface AccountSectionInjected {
   /** @param snapshot - picture attempt whose rendered image failed; superseded attempts are ignored. */
   avatarFailed: (snapshot: AccountAvatarSnapshot) => void
+  /** Replace the account picture. Absent outside the Ground session. */
+  uploadAvatar?: (file: File) => Promise<void>
+  /** Remove the account picture. Absent outside the Ground session. */
+  resetAvatar?: () => Promise<void>
   /** Subscribe to live credential-expiry notifications.
    * @param listener - callback after the current credential is removed.
    * @returns listener cleanup.
@@ -107,8 +111,8 @@ export interface AccountSectionInjected {
 export type AccountSectionProps =
   PropsRuntime<'settings.section'> & PropsLocale<'settings.account'> & InjectFace<AccountSectionInjected>
 /** @param props - localized actions, account subscription, and the shared Platform page channel. @returns account settings UI. */
-export function AccountSection({ t, useAccount, useTheme, billingState, openRecharge, refreshBilling, start, cancel, openPlatformPage, avatarFailed }: AccountSectionProps) {
-  const { enabled: billingEnabled, balanceCoins: billingCoins, canRecharge: billingCanRecharge, isPlatformAdmin } = useBillingState(billingState)
+export function AccountSection({ t, useAccount, useTheme, billingState, openRecharge, refreshBilling, refreshAccount, start, cancel, openPlatformPage, avatarFailed, uploadAvatar, resetAvatar }: AccountSectionProps) {
+  const { enabled: billingEnabled, balanceCoins: billingCoins, canRecharge: billingCanRecharge, isPlatformAdmin, identity } = useBillingState(billingState)
   useEffect(() => { refreshBilling?.() }, [refreshBilling])
   const { view: state, details, avatar, failed: streamFailed } = useAccount(value => value)
   const colorScheme = useTheme(snapshot => snapshot.active.colorScheme)
@@ -117,6 +121,8 @@ export function AccountSection({ t, useAccount, useTheme, billingState, openRech
   const releasePage = useRef<(() => void) | undefined>(undefined)
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const [avatarMessage, setAvatarMessage] = useState('')
   const profile = details?.profile?.status === 'ready' ? details.profile.value : undefined
   const wallets = details?.balance?.status === 'ready' ? details.balance.value : undefined
   const bonusWallets = details?.balance?.status === 'ready'
@@ -126,6 +132,29 @@ export function AccountSection({ t, useAccount, useTheme, billingState, openRech
   const active = attempt !== null && attempt !== undefined
     && ['initializing', 'waiting-browser', 'exchanging', 'committing'].includes(attempt.phase)
   const signedIn = state?.status === 'credential-stored'
+  const canEditAvatar = signedIn && uploadAvatar !== undefined && (billingEnabled || identity !== undefined)
+  const changePicture = async (file: File) => {
+    if (!uploadAvatar) return
+    setAvatarBusy(true)
+    setAvatarMessage('')
+    try {
+      await uploadAvatar(file)
+      await refreshAccount()
+    } catch (error) {
+      setAvatarMessage(error instanceof Error && error.message ? error.message : t('avatarError'))
+    } finally { setAvatarBusy(false) }
+  }
+  const clearPicture = async () => {
+    if (!resetAvatar) return
+    setAvatarBusy(true)
+    setAvatarMessage('')
+    try {
+      await resetAvatar()
+      await refreshAccount()
+    } catch (error) {
+      setAvatarMessage(error instanceof Error && error.message ? error.message : t('avatarError'))
+    } finally { setAvatarBusy(false) }
+  }
   useEffect(() => () => { releasePage.current?.(); releasePage.current = undefined }, [])
   useEffect(() => {
     if (signedIn) return
@@ -184,16 +213,33 @@ export function AccountSection({ t, useAccount, useTheme, billingState, openRech
       <div className={css.card}>
         <div className={css.identity}>
           <span className={css.avatar} data-avatar-status={signedIn ? avatar?.status : undefined}>
-            <AccountAvatar avatar={signedIn ? avatar : undefined} avatarFailed={avatarFailed} />
+            <AccountAvatar avatar={signedIn ? avatar : undefined} avatarFailed={avatarFailed} name={profile?.name ?? null} />
           </span>
           <div className={css.identityCopy}>
             <span className={css.name}>{signedIn ? profile?.name ?? t('signedIn') : t('signedOut')}</span>
             <span className={css.status} role="status">{status}</span>
           </div>
         </div>
-        {signedIn && <a className={css.accountInfo} href={new URL('/', state.links.usageUrl).href} target="_blank" rel="noopener noreferrer">
-          {t('accountInfo')}<IconRightUpOutlineRegular size={12} />
-        </a>}
+        {signedIn && <div className={css.avatarActions}>
+          {canEditAvatar && <>
+            <label className={css.avatarButton}>
+              {avatarBusy ? t('avatarBusy') : t('changeAvatar')}
+              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,.png,.jpg,.jpeg,.webp,.gif,.svg"
+                hidden disabled={avatarBusy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  if (file) void changePicture(file)
+                }} />
+            </label>
+            {avatar?.status === 'ready' && resetAvatar && <button type="button" className={css.avatarButton} disabled={avatarBusy}
+              onClick={() => { void clearPicture() }}>{t('resetAvatar')}</button>}
+            {avatarMessage && <span className={css.avatarError} role="alert">{avatarMessage}</span>}
+          </>}
+          <a className={css.accountInfo} href={new URL('/', state.links.usageUrl).href} target="_blank" rel="noopener noreferrer">
+            {t('accountInfo')}<IconRightUpOutlineRegular size={12} />
+          </a>
+        </div>}
       </div>
       {active && <div className={css.actions}>
         {attempt.authorizeUrl && <a className={css.linkButton} href={authorizeUrlWithTheme(attempt.authorizeUrl, colorScheme)}

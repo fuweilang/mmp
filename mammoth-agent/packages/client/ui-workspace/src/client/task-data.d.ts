@@ -3,5 +3,6 @@ import type { Context } from '@mammoth-ai/cordis';
 /** Register once per actual connection context. Never persist task identity in global browser storage. */
 export declare function installTaskDataSurfaces(ctx: Context, actions: {
     deleted(): void;
+    restored(): void;
 }): void;
 //# sourceMappingURL=task-data.d.ts.map

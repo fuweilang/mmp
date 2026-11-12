@@ -27,12 +27,12 @@ function runtime(): DraftEditorRuntime {
   return runtime
 }
 
-it('inserts one skill chip before the example and leaves the example as the draft text', () => {
+it('inserts one skill chip at the caret and leaves the example as the draft text', () => {
   const editor = runtime()
   editor.setDraft('帮我润色这段产品介绍')
   editor.syncSkillChip(skill)
   expect(editor.projection.clipboardText).toBe('帮我润色这段产品介绍')
-  expect(editor.projection.detectText).toBe(`${ATOMIC_CHAR}帮我润色这段产品介绍`)
+  expect(editor.projection.detectText).toBe(`帮我润色这段产品介绍${ATOMIC_CHAR}`)
   expect(editor.skillChip()).toEqual(skill)
   editor.syncSkillChip(skill)
   expect(editor.editor.getEditorState().read(() => $skillChips())).toHaveLength(1)
@@ -49,15 +49,17 @@ it('adds another skill at the caret and keeps the typed question', () => {
   const other = { id: 'skill-2', revision: 4, key: 'market', name: '行情技能', icon: null }
   editor.setDraft('小米有什么汽车推荐？')
   editor.syncSkillChip(skill)
+  expect(editor.projection.detectText).toBe(`小米有什么汽车推荐？${ATOMIC_CHAR}`)
   editor.editor.update(() => {
     const text = $getRoot().getAllTextNodes()[0]
-    text?.select(text.getTextContentSize(), text.getTextContentSize())
+    text?.select(0, 0)
   }, { discrete: true })
   editor.syncSkillChips([skill, other])
   expect(editor.projection.clipboardText).toBe('小米有什么汽车推荐？')
-  expect(editor.skillChips().map(item => item.id)).toEqual([skill.id, other.id])
-  editor.syncSkillChips([other, skill])
-  expect(editor.skillChips().map(item => item.id)).toEqual([skill.id, other.id])
+  expect(editor.projection.detectText).toBe(`${ATOMIC_CHAR}小米有什么汽车推荐？${ATOMIC_CHAR}`)
+  expect(editor.skillChips().map(item => item.id)).toEqual([other.id, skill.id])
+  editor.syncSkillChips([skill, other])
+  expect(editor.skillChips().map(item => item.id)).toEqual([other.id, skill.id])
 })
 
 it('puts the skill chip after a leading command chip', () => {
@@ -81,10 +83,7 @@ it('removes the skill chip with one Backspace and keeps the example text', async
   const editor = runtime()
   editor.setDraft('原始问题')
   editor.syncSkillChip(skill)
-  editor.editor.update(() => {
-    const text = $getRoot().getAllTextNodes()[0]
-    text?.select(0, 0)
-  }, { discrete: true })
+  editor.editor.update(() => { $getRoot().selectEnd() }, { discrete: true })
   expect(editor.editor.dispatchCommand(KEY_BACKSPACE_COMMAND, new KeyboardEvent('keydown', { key: 'Backspace' }))).toBe(true)
   await Promise.resolve()
   expect(editor.skillChip()).toBeNull()

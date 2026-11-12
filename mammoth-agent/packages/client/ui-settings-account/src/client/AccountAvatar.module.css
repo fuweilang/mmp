@@ -1,1 +1,2 @@
 .image { display: block; width: 100%; height: 100%; border-radius: 50%; corner-shape: round; object-fit: cover; }
+.letter { font-size: 14px; font-weight: 600; line-height: 1; }

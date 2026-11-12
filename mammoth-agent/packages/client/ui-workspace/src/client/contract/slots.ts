@@ -325,6 +325,7 @@ export type RowToast =
   | { kind: 'archived'; sessionId: SessionId }
   | { kind: 'stoppedAndArchived'; sessionId: SessionId }
   | { kind: 'taskDeleted' }
+  | { kind: 'taskRestored' }
   | { kind: 'sessionIdCopied' }
   | { kind: 'sessionIdCopyFailed' }
   | { kind: 'pinFailed' }

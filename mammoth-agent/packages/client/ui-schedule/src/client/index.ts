@@ -219,7 +219,6 @@ export function apply(ctx: ClientContext): void {
       locale: MANAGER_NS,
       inject: (): TaskManagerInjected => ({
         ...detail,
-        onNewTask: () => { ctx.uiWorkspace.startSession() },
         onClearEnded: async () => {
           const outcome = await clearEnded()
           deleteToast.reportClear(outcome)

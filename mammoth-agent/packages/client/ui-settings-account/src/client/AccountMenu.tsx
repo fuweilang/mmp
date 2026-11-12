@@ -13,6 +13,13 @@ import { AccountNoticeStack } from './AccountNotice.tsx'
 import { formatCoins, useBillingState } from './ground-billing.ts'
 import css from './AccountMenu.module.css'
 
+function CameraMark() {
+  return <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+    <path d="M3.2 2.2h.5l.5-.8h1.6l.5.8h.5A1.2 1.2 0 0 1 8 3.4v3.4A1.2 1.2 0 0 1 6.8 8H3.2A1.2 1.2 0 0 1 2 6.8V3.4a1.2 1.2 0 0 1 1.2-1.2Z" stroke="currentColor" strokeWidth="1" />
+    <circle cx="5" cy="5.2" r="1.3" stroke="currentColor" strokeWidth="1" />
+  </svg>
+}
+
 /** Display the account phone number in full, normalized of spaces and dashes. */
 export function displayAccountPhone(value: string | null | undefined): string | null {
   if (!value) return null
@@ -32,7 +39,7 @@ export type AccountMenuProps = PropsRuntime<'settings.launcher'> & PropsLocale<'
 export function AccountMenu({
   subscribeSessionExpired, subscribeModelSignInRequired, wide, settingsShortcut, openSettings, openOnboarding, settingsOpen,
   useAccount, useTheme, signOut, hasRunningAccountTasks, refreshAccount, bonusNoticeShown, bonusNoticeDismissed,
-  showLogin, start, cancel, submitPassword, avatarFailed, t, billingState, openRecharge, refreshBilling, openEnterpriseConsole,
+  showLogin, start, cancel, submitPassword, avatarFailed, uploadAvatar, t, billingState, openRecharge, refreshBilling, openEnterpriseConsole,
 }: AccountMenuProps) {
   const {
     enabled: billingEnabled, balanceCoins: billingCoins, canRecharge: billingCanRecharge,
@@ -58,7 +65,10 @@ export function AccountMenu({
     ? (displayAccountPhone(profile.value.name) ?? profile.value.name) ?? displayAccountPhone(profile.value.contact) ?? t('signedIn') : t('signedIn')
   const [open, setOpen] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
+  const pictureInput = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const [avatarMessage, setAvatarMessage] = useState('')
   const [signOutImpact, setSignOutImpact] = useState<boolean | 'unknown'>()
   const requestSignOut = async () => {
     setBusy(true)
@@ -78,6 +88,19 @@ export function AccountMenu({
   const phoneBesideName = phone && phone !== label ? phone : null
   const allowanceStatus = !billingEnabled || billingCoins === null ? t('allowanceUnknown')
     : billingCoins > 0 ? t('allowanceNormal') : t('allowanceEmpty')
+  const canChangePicture = uploadAvatar !== undefined && (billingEnabled || identity !== undefined)
+  const changePicture = async (file: File) => {
+    if (!uploadAvatar) return
+    setAvatarBusy(true)
+    setAvatarMessage('')
+    try {
+      await uploadAvatar(file)
+      await refreshAccount()
+    } catch (error) {
+      setAvatarMessage(error instanceof Error && error.message ? error.message : t('avatarError'))
+    } finally { setAvatarBusy(false) }
+  }
+  const pictureName = profile?.status === 'ready' ? profile.value.name ?? null : null
   return <div ref={anchor} className={css.root} data-inset={signedIn && wide}>
     {signInNotice > 0 && <Toast key={signInNotice} text={t('modelSignInRequired')} onDone={() => { setSignInNotice(0) }} />}
     {expiryNotice && <Toast text={t('sessionExpired')} onDone={() => { setExpiryNotice(false) }} />}
@@ -90,7 +113,7 @@ export function AccountMenu({
         aria-haspopup="menu" aria-expanded={open} onClick={() => { if (!open && signedIn) refreshBilling?.(); setOpen(value => !value) }}>
         {signedIn
           ? <span className={css.avatar} data-avatar-status={account.avatar?.status}>
-            <AccountAvatar avatar={account.avatar} avatarFailed={avatarFailed} />
+            <AccountAvatar avatar={account.avatar} avatarFailed={avatarFailed} name={pictureName} />
           </span>
           : <IconEllipsisOutlineMedium size={14} />}
         {wide && (signedIn ? <>
@@ -116,7 +139,13 @@ export function AccountMenu({
       }}>
       {signedIn && <>
         <div className={css.panelHeader} role="presentation">
-          <span className={css.panelAvatar}><AccountAvatar avatar={account.avatar} avatarFailed={avatarFailed} /></span>
+          {canChangePicture
+            ? <button type="button" className={css.panelAvatarButton} aria-label={t('changeAvatar')} disabled={avatarBusy}
+              onClick={() => { pictureInput.current?.click() }}>
+              <span className={css.panelAvatar}><AccountAvatar avatar={account.avatar} avatarFailed={avatarFailed} name={pictureName} /></span>
+              <span className={css.camera} aria-hidden="true"><CameraMark /></span>
+            </button>
+            : <span className={css.panelAvatar}><AccountAvatar avatar={account.avatar} avatarFailed={avatarFailed} name={pictureName} /></span>}
           <div className={css.panelIdentity}>
             <div className={css.panelNameRow}>
               <strong className={css.label}>{label}</strong>
@@ -125,11 +154,20 @@ export function AccountMenu({
             {companyLabel && <span className={css.company} title={companyLabel}>{companyLabel}</span>}
           </div>
         </div>
-        {!platformAdmin && <div className={css.allowance} role="presentation">
+        {canChangePicture && <input ref={pictureInput} className={css.pictureFile} type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,.png,.jpg,.jpeg,.webp,.gif,.svg"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            if (file) void changePicture(file)
+          }} />}
+        {avatarMessage && <span className={css.avatarError} role="alert">{avatarMessage}</span>}
+        {!platformAdmin && <div className={css.allowance}
+          data-tight={billingEnabled && billingCoins !== null && billingCoins <= 0 && !(showBilling && billingCanRecharge) ? true : undefined}
+          role="presentation">
           {showBilling && billingCanRecharge ? <>
             <span className={css.allowanceLabel}>{t('sharedAllowance')}</span>
             <strong className={css.allowanceAmount}>{formatCoins(billingCoins)} <small>{t('aiCoinUnit')}</small></strong>
-            <span className={css.allowanceHint}>{t('allowanceNote')}</span>
           </> : <>
             <strong className={css.allowanceState} data-empty={billingEnabled && billingCoins !== null && billingCoins <= 0}>{allowanceStatus}</strong>
             {billingEnabled && billingCoins !== null && billingCoins <= 0 && <span className={css.allowanceHint}>{t('contactAdmin')}</span>}

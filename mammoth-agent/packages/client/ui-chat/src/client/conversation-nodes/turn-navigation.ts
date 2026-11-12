@@ -1,4 +1,4 @@
-import { isLibrarySourceReference } from '@mammoth-ai/mmp-llm/user-content'
+import { isLibrarySourceReference, userVisibleText } from '@mammoth-ai/mmp-llm/user-content'
 import { isVisibleChatNode } from '../contract/chat-visibility.ts'
 import type { ChatNode } from '../contract/chat-nodes.ts'
 import type { ChatLocationNodeIndex, ChatNodeStore, TurnNavigationItem } from '../contract/snapshot.ts'
@@ -49,7 +49,8 @@ function promptText(node: ChatNode): string {
   return preview(node.data.content.flatMap((block) => {
     if (block.type !== 'text') return []
     if (isLibrarySourceReference(block.reference)) return hasOriginalText ? [] : [block.reference.name]
-    return [block.text]
+    const visible = userVisibleText(block.text)
+    return visible === '' ? [] : [visible]
   }), PROMPT_PREVIEW_LIMIT)
 }
 

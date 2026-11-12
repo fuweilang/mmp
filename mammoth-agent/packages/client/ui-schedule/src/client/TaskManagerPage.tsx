@@ -3,8 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
   Button, IconClockOutlineRegular, IconCloseOutlineRegular, IconEllipsisOutlineRegular, IconPlusOutlineRegular,
-  IconSearchOutlineRegular, IconTrashOutlineRegular, IconChevronDownOutlineRegular, IconEditOutlineRegular,
-  Input, Menu, MenuItemButton, Modal, ReferenceIconRegular, Tooltip,
+  IconSearchOutlineRegular, IconTrashOutlineRegular,
+  Input, Menu, Modal, Tooltip,
 } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { HostObservable, InjectFace, PropsLocale, PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import type {} from '@mammoth-ai/mmp-client-ui-layout/client'
@@ -25,11 +25,6 @@ import css from './TaskManagerPage.module.css'
 export interface TaskManagerInjected extends TaskDetailInjected {
   /** Host task catalog with its query and deletion state. */
   readonly hooks: { readonly catalog: HostObservable<CatalogSnapshot<ScheduleCatalogEntry>> }
-  /**
-   * Start a new Session, where a reminder is created by asking the model to
-   * schedule it, using the existing new-conversation action.
-   */
-  readonly onNewTask: () => void
   /**
    * Remove every ended Host task, after this page has confirmed the action.
    *
@@ -57,9 +52,8 @@ type StatusFilter = 'all' | ScheduleCatalogEntry['status']
  * @returns the searchable task list beside the selected task's detail.
  */
 export function TaskManagerPage(props: TaskManagerPageProps) {
-  const { useCatalog, onNewTask, onClearEnded, onRetry, onCreateTask, useWorkspaces, t } = props
+  const { useCatalog, onClearEnded, onRetry, onCreateTask, useWorkspaces, t } = props
   const workspaces = useWorkspaces(snapshot => snapshot)
-  const [createMenuOpen, setCreateMenuOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const catalog = useCatalog(snapshot => snapshot)
   const { records, status } = catalog
@@ -202,23 +196,8 @@ export function TaskManagerPage(props: TaskManagerPageProps) {
             <div className={css.pageHeading}>
               <h1 ref={headingRef} tabIndex={-1}>{t('title')}</h1>
               <div className={css.creationActions}>
-                <span className={css.createGroup} role="group" aria-label={t('host.create')}>
-                  <Button variant="primary" size="sm" className={clsx(css.headerAction, css.createPrimary)} icon={<IconPlusOutlineRegular size={13} />}
-                    onClick={onNewTask}>{t('new.action')}</Button>
-                  <Menu open={createMenuOpen} onClose={() => { setCreateMenuOpen(false) }} align="end" portal autoFocus
-                    listClassName={css.createMenu}
-                    anchor={<Button variant="primary" size="sm" className={css.createMore} aria-label={t('host.createMethod')}
-                      aria-haspopup="menu" aria-expanded={createMenuOpen} onClick={() => { setCreateMenuOpen(value => !value) }}>
-                      <IconChevronDownOutlineRegular size={12} />
-                    </Button>}>
-                    <MenuItemButton icon={<ReferenceIconRegular kind="session" size={14} />}
-                      onSelect={() => { setCreateMenuOpen(false); onNewTask() }}>{t('host.chatCreate')}</MenuItemButton>
-                    <MenuItemButton icon={<IconEditOutlineRegular size={14} />}
-                      onSelect={() => { setCreateMenuOpen(false); setManualOpen(true) }}>
-                      {t('host.manualCreate')}
-                    </MenuItemButton>
-                  </Menu>
-                </span>
+                <Button variant="primary" size="sm" className={css.headerAction} icon={<IconPlusOutlineRegular size={13} />}
+                  onClick={() => { setManualOpen(true) }}>{t('new.action')}</Button>
               </div>
             </div>
             <div className={css.filters}>
@@ -286,7 +265,7 @@ export function TaskManagerPage(props: TaskManagerPageProps) {
               {status === 'ready' && rows.length === 0 && <div className={css.empty} role="status">
                 <ScheduleEmptyIllustration className={css.emptyIllustration} />
                 <h2>{t(emptyTitle)}</h2>
-                <Button variant="outline" className={css.emptyAction} onClick={() => { setManualOpen(true) }}>
+                <Button variant="primary" className={css.emptyAction} onClick={() => { setManualOpen(true) }}>
                   {t('empty.action')}
                 </Button>
               </div>}

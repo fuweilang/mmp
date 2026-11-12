@@ -8,6 +8,7 @@ import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { computeEffectivePermissions } from '../permissions/effective';
 import { assertEnterpriseSession } from '../auth/tenant-status';
+import { userAvatarPublicUrl } from '../auth/user-avatar';
 import { loadOidcKeys, OIDC_KID } from './oidc.keys';
 import { saveCode, takeCode } from './oidc.store';
 
@@ -248,6 +249,7 @@ export class OidcService implements OnModuleInit {
       preferred_username: user.phone,
       phone_number: user.phone,
       email: user.email ?? undefined,
+      picture: userAvatarPublicUrl(user.avatarPath),
       is_platform_admin: isPlatformAdmin,
       platform_role: eff.platformRoleKey,
       tenant_id: tenantId,

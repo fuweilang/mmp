@@ -153,15 +153,14 @@ describe('archive action', () => {
     expect(archived.getByRole('button')).toBeTruthy()
   })
 
-  it('row button archives and restores', () => {
+  it('row button restores an archived task and does not offer archive on a visible one', () => {
     const archive = archiveShare()
     const view = render(<ArchiveSessionRowButton {...actionRow} {...archive} />)
-    fireEvent.click(screen.getByRole('button', { name: '归档会话' }))
-    expect(archive.archiveSession).toHaveBeenCalledWith(sid('one'))
+    expect(view.container.innerHTML).toBe('')
     view.rerender(<ArchiveSessionRowButton {...actionRow} {...archive} useArchived={hook(idSet('one'))} />)
     fireEvent.click(screen.getByRole('button', { name: '取消归档' }))
     expect(archive.unarchiveSession).toHaveBeenCalledWith(sid('one'))
-    expect(archive.archiveSession).toHaveBeenCalledOnce()
+    expect(archive.archiveSession).not.toHaveBeenCalled()
   })
 })
 

@@ -491,8 +491,11 @@ body,
   font-weight: 700;
   height: 32px;
   justify-content: center;
+  overflow: hidden;
   width: 32px;
 }
+
+
 
 .username {
   font-size: 13px;
@@ -569,11 +572,20 @@ body,
   margin: 2px 2px 4px;
 }
 
+.user-avatar.user-avatar-photo,
+.user-menu-card-avatar.user-menu-card-avatar-photo {
+  background: none;
+  display: block;
+  object-fit: cover;
+  padding: 0;
+}
+
 .user-menu-card-avatar {
   flex: none;
   width: 44px;
   height: 44px;
   border-radius: 50%;
+  overflow: hidden;
   background: var(--app-primary-color);
   border: 2px solid #fff;
   box-shadow: 0 0 0 1px #DBDCEC;

@@ -52,6 +52,8 @@ describe('SidebarRoot.module.css', () => {
     expect(declarations('.logoRow')?.get('padding')).toBe('8px 0 8px 8px')
     expect(declarations('.logoRow')?.get('margin-bottom')).toBe('0')
     expect(declarations('.newSession')?.get('margin')).toBe('0 calc(var(--mmp-sidebar-paint-inset) + 1px) 10px')
+    expect(declarations('.newSession')?.get('background')).toBe('var(--dsw-alias-button-primary-fill)')
+    expect(declarations('.newSession')?.get('color')).toBe('var(--dsw-alias-label-primary-foreground)')
     expect(declarations('.newSessionContent')?.get('justify-content')).toBe('center')
     expect(declarations(":global(html[data-platform='darwin']:not([data-fullscreen])) .root:not(.collapsed) > .topStrip > .toggle")?.get('transform')).toBe('translateX(4px)')
     expect(css).not.toContain(':not(.fading)')

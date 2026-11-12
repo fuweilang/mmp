@@ -795,6 +795,15 @@ describe('Modal', () => {
     expect(onClose).toHaveBeenCalledTimes(2)
   })
 
+  it('ignores a mask click when closeOnMaskClick is false', () => {
+    const onClose = vi.fn()
+    render(<Modal open closeOnMaskClick={false} onClose={onClose} title="Form" closeLabel="Close">body</Modal>)
+    fireEvent.click(document.querySelector('[aria-hidden="true"]') as HTMLElement)
+    expect(onClose).not.toHaveBeenCalled()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('renders headless content without the default close chrome', () => {
     render(
       <Modal open onClose={() => {}} title="Custom surface" headless backdropBlur={false}>

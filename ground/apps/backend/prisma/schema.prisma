@@ -49,6 +49,8 @@ model User {
   email            String?     @unique
   passwordHash     String      @map("password_hash")
   name             String
+  /// Raster stored under uploads/user-avatars/. Null shows the name initial.
+  avatarPath       String?     @map("avatar_path")
   isPlatformAdmin  Boolean     @default(false) @map("is_platform_admin")
   status           String      @default("active")
   peecaiUserId     String?     @unique @map("peecai_user_id")
