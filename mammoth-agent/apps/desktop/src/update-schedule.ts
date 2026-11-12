@@ -42,7 +42,7 @@ export class DesktopUpdateSchedule {
    * @param now - Monotonic milliseconds, independent of wall-clock corrections.
    */
   constructor(
-    private readonly updates: Pick<DesktopUpdateCoordinator, 'check' | 'state'>,
+    private readonly updates: Pick<DesktopUpdateCoordinator, 'check' | 'state' | 'lastCheckFailed'>,
     private readonly config: DesktopUpdateScheduleConfig,
     private readonly random: () => number = Math.random,
     private readonly now: () => number = () => performance.now(),
@@ -68,7 +68,7 @@ export class DesktopUpdateSchedule {
       return this.updates.check(manual)
     }).then(
       (state) => {
-        this.complete(state.phase === 'error' && state.failedOperation === 'check')
+        this.complete(this.updates.lastCheckFailed)
         return state
       },
       (error: unknown) => { this.complete(true); throw error },

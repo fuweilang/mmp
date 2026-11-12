@@ -9,7 +9,7 @@ import { createDesktopUploadPlan } from '../scripts/desktop-upload-plan.ts'
 import { desktopUpdateMetadataFilename } from '../scripts/desktop-auto-update-environment.mjs'
 import type { DesktopPackageTargetName } from '../scripts/package-target.ts'
 import { createDesktopCos } from '../scripts/desktop-cos.ts'
-import { uploadDesktopRelease } from '../scripts/desktop-upload-run.ts'
+import { desktopUploadObjectHeaders, uploadDesktopRelease } from '../scripts/desktop-upload-run.ts'
 import { startCosLoopback } from './cos-loopback.ts'
 
 const temporaryDirectories: string[] = []
@@ -39,6 +39,7 @@ async function fixture(
   version = '1.2.3',
   environment: 'test' | 'production' = 'test',
   channel: 'nightly' | 'latest' = 'nightly',
+  brand: 'legacy' | 'current' = 'legacy',
 ): Promise<Fixture> {
   const root = await mkdtemp(join(tmpdir(), 'mmp-desktop-upload-'))
   temporaryDirectories.push(root)
@@ -50,7 +51,7 @@ async function fixture(
   await writeFile(join(appRoot, 'package.json'), `${JSON.stringify({ version })}\n`)
 
   const [os, arch] = target.split('-') as ['mac' | 'win', 'arm64' | 'x64']
-  const base = `deepseek-harness-${version}-${os}-${arch}`
+  const base = `${brand === 'current' ? 'mammoth-ai' : 'deepseek-harness'}-${version}-${os}-${arch}`
   const origin = environment === 'test'
     ? TEST_ORIGIN
     : 'https://www.mmai.vip'
@@ -334,4 +335,25 @@ describe('desktop upload plan', () => {
     })}\n`)
     await expect(createDesktopUploadPlan('mac-arm64', paths)).rejects.toThrow(/mac-arm64\.zip/u)
   })
+})
+
+
+it.each(['mac-arm64', 'mac-x64', 'win-x64'] as const)('plans current branded %s artifacts and traceable feed with metadata last', async target => {
+  const paths = await fixture(target, '1.2.3', 'test', 'nightly', 'current')
+  const recordPath = join(paths.artifactsRoot, `${target}-release.json`)
+  const record = JSON.parse(await readFile(recordPath, 'utf8'))
+  const provenance = { branch: '5.0', commit: 'a'.repeat(40), builtAt: '2026-11-12T12:00:00.000Z' }
+  await writeFile(recordPath, JSON.stringify({ ...record, ...provenance }))
+  const plan = await createDesktopUploadPlan(target, paths)
+  expect(plan).toMatchObject(provenance)
+  expect(plan.artifacts[0]!.filename).toMatch(/^mammoth-ai-1\.2\.3-/u)
+  const feed = plan.artifacts.at(-1)!
+  expect(feed.channelMetadata).toBe(true)
+  expect(load(feed.contents!)).toMatchObject({ version: '1.2.3', mmpRelease: {
+    ...provenance, target, version: '1.2.3',
+  } })
+  expect(desktopUploadObjectHeaders(feed)).toEqual({ 'Cache-Control': 'no-store' })
+  expect(desktopUploadObjectHeaders(plan.artifacts[0]!)).toMatchObject({ 'x-cos-forbid-overwrite': 'true' })
+  expect(desktopUploadObjectHeaders({ key: 'desktop/mammoth-agent-mac-arm64.dmg', channelMetadata: false }))
+    .toEqual({ 'Cache-Control': 'no-store' })
 })

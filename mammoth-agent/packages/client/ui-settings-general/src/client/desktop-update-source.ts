@@ -12,6 +12,7 @@ export class DesktopUpdateSource {
 
   /** @param bridge - Optional isolated Electron API, absent in ordinary browsers. */
   constructor(private readonly bridge: DesktopUpdateBridge | undefined) {
+    if (typeof bridge?.command === 'function') this.store.set({ failed: false, opening: false, managed: true })
     this.unsubscribe = bridge?.subscribe((presentation) => {
       if (!this.live) return
       this.received = true
@@ -32,6 +33,26 @@ export class DesktopUpdateSource {
       && ['checking', 'downloading', 'verifying', 'installing'].includes(state.presentation.phase))) return
     this.store.set({ ...state, opening: true })
     void this.bridge.open().catch(() => {
+      if (this.live) this.store.set({ ...this.store.getSnapshot(), failed: true })
+    }).finally(() => {
+      if (this.live) this.store.set({ ...this.store.getSnapshot(), opening: false })
+    })
+  }
+
+  /**
+   * Run one explicit stage, shared across all settings entry points.
+   * @param action Check, download, or install; none implies the next stage.
+   */
+  command(action: 'check' | 'download' | 'install'): void {
+    if (!this.live || this.bridge?.command === undefined) return
+    const state = this.store.getSnapshot()
+    if (state.opening || (state.presentation !== undefined
+      && ['checking', 'downloading', 'verifying', 'installing'].includes(state.presentation.phase))) return
+    this.received = true // an initial status response cannot overwrite a newer gesture
+    this.store.set({ ...state, failed: false, opening: true, operation: action })
+    void this.bridge.command(action).then((presentation) => {
+      if (this.live) this.store.set({ ...this.store.getSnapshot(), presentation, failed: false })
+    }, () => {
       if (this.live) this.store.set({ ...this.store.getSnapshot(), failed: true })
     }).finally(() => {
       if (this.live) this.store.set({ ...this.store.getSnapshot(), opening: false })

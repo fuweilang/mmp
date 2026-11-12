@@ -260,8 +260,8 @@ describe('shared Platform page ownership', () => {
         progress: { version: 1, step: 'credit', purpose: null, process: null, completion: null, usage: 'compact', developerTools: false },
       })
     })
-    expect(screen.queryByRole('button', { name: en.onboardingTopUp })).toBeNull()
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: en.onboardingLater })) })
+    expect(screen.queryByRole('button', { name: zh.onboardingTopUp })).toBeNull()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: zh.onboardingLater })) })
     expect(b.platform.open).not.toHaveBeenCalled()
     expect(b.pages.getSnapshot()).toBeNull()
   })

@@ -213,3 +213,48 @@ it('does not reuse network advice for a subsequent start failure', async () => {
   expect(screen.getByText(en.failed)).toBeTruthy()
   expect(screen.queryByText(en.noResponse)).toBeNull()
 })
+
+/** @param failure - value the injected password action rejects with. @param copy - dictionary under test. @returns the mounted dialog props. */
+function passwordForm(failure: unknown, copy: typeof en | typeof zh = en) {
+  const submitPassword = vi.fn(async () => { throw failure })
+  const props = { ...dialogProps(null, copy), submitPassword }
+  const view = render(<SignInDialog {...props} />)
+  fireEvent.change(document.querySelector('#account-phone')!, { target: { value: '13800138000' } })
+  fireEvent.change(document.querySelector('#account-password')!, { target: { value: 'secret' } })
+  return { props, view }
+}
+
+it.each([en, zh])('shows the localized out-of-date copy when the server rejects an old client', async (copy) => {
+  passwordForm(new Error('clientTooOld'), copy)
+  await act(async () => { fireEvent.submit(document.querySelector('form')!) })
+  expect(screen.getByRole('alert').textContent).toBe(copy.clientTooOld)
+})
+
+it.each([
+  ['credentialsFailed', en.credentialsFailed],
+  ['loginUnavailable', en.loginUnavailable],
+  ['unexpected-key', en.loginUnavailable],
+] as const)('shows localized copy for a password rejection keyed %s', async (key, expected) => {
+  passwordForm(new Error(key))
+  await act(async () => { fireEvent.submit(document.querySelector('form')!) })
+  expect(screen.getByRole('alert').textContent).toBe(expected)
+})
+
+it('shows generic sign-in copy when the password action rejects without an error', async () => {
+  passwordForm('offline')
+  await act(async () => { fireEvent.submit(document.querySelector('form')!) })
+  expect(screen.getByRole('alert').textContent).toBe(en.loginUnavailable)
+})
+
+it('accepts an injected password action and clears the password after it resolves', async () => {
+  const submitPassword = vi.fn(async () => {})
+  const props = { ...dialogProps(null), submitPassword }
+  render(<SignInDialog {...props} />)
+  fireEvent.change(document.querySelector('#account-phone')!, { target: { value: '13800138000' } })
+  fireEvent.change(document.querySelector('#account-password')!, { target: { value: 'secret' } })
+  await act(async () => { fireEvent.submit(document.querySelector('form')!) })
+  expect(submitPassword).toHaveBeenCalledExactlyOnceWith('13800138000', 'secret')
+  expect(document.querySelector<HTMLInputElement>('#account-password')!.value).toBe('')
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+

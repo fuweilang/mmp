@@ -23,7 +23,9 @@ export function Welcome({ api }: { api: WelcomeApi }) {
   const [phone, setPhone] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginError, setLoginError] = useState('')
-  const [authMode, setAuthMode] = useState<'password' | 'register'>('password')
+  const [authMode, setAuthMode] = useState<'password' | 'sms' | 'register'>('password')
+  const [smsCode, setSmsCode] = useState('')
+  const [smsWait, setSmsWait] = useState(0)
   const [name, setName] = useState('')
   const [enterpriseName, setEnterpriseName] = useState('')
   const [slug, setSlug] = useState('')
@@ -89,6 +91,12 @@ export function Welcome({ api }: { api: WelcomeApi }) {
   }, [page, api])
 
   useEffect(() => {
+    if (smsWait <= 0) return
+    const timer = setTimeout(() => { setSmsWait(seconds => Math.max(0, seconds - 1)) }, 1000)
+    return () => { clearTimeout(timer) }
+  }, [smsWait])
+
+  useEffect(() => {
     if (copyState !== 'copied' && copyState !== 'failed') return
     const timer = setTimeout(() => { setCopyFeedback({ status: 'idle' }) }, 2000)
     return () => { clearTimeout(timer) }
@@ -137,6 +145,30 @@ export function Welcome({ api }: { api: WelcomeApi }) {
   function cleanText(value: string, max: number) {
     return value.replace(/[\u0000-\u001f]/g, '').slice(0, max)
   }
+  async function sendCode() {
+    if (busyRef.current || smsWait > 0) return
+    if (!/^1\d{10}$/.test(phone)) { setLoginError(m.welcomePhoneInvalid); phoneInput.current?.focus(); return }
+    busyRef.current = true
+    setBusy(true)
+    setLoginError('')
+    try {
+      const result = await api.sendSmsCode(phone, authMode === 'register' ? 'register' : 'login')
+      if (!mounted.current) return
+      if (!result.ok) setLoginError(result.code === 'SMS_RATE_LIMITED' ? m.welcomeSmsRateLimited
+        : result.code === 'SMS_INVALID' || result.reason === 'invalid' ? m.welcomePhoneInvalid
+          : result.code === 'SMS_UNAVAILABLE' || result.reason === 'unavailable' ? m.welcomeSmsUnavailable
+            : m.welcomeSmsFailed)
+      else {
+        if (result.mockCode) setSmsCode(result.mockCode)
+        setSmsWait(result.retryAfterSeconds)
+      }
+    } catch {
+      if (mounted.current) setLoginError(m.welcomeSmsFailed)
+    } finally {
+      busyRef.current = false
+      if (mounted.current) setBusy(false)
+    }
+  }
   async function submitPassword(event: FormEvent) {
     event.preventDefault()
     if (busyRef.current) return
@@ -147,19 +179,41 @@ export function Welcome({ api }: { api: WelcomeApi }) {
       if (enterpriseName.trim() === '') { setLoginError(m.welcomeEnterpriseRequired); return }
       if (slug.trim() === '') { setLoginError(m.welcomeSlugRequired); return }
       if (loginPassword === '') { setLoginError(m.welcomeLoginFailed); return }
+      if (!/^\d{6}$/.test(smsCode)) { setLoginError(m.welcomeSmsInvalid); return }
       if (!agree) return
       busyRef.current = true
       setBusy(true)
       setLoginError('')
       try {
         const result = await api.registerWithPassword({
-          name: name.trim(), phone, password: loginPassword, enterpriseName: enterpriseName.trim(), slug: slug.trim(),
+          name: name.trim(), phone, password: loginPassword, enterpriseName: enterpriseName.trim(), slug: slug.trim(), smsCode,
         })
         if (!mounted.current) return
-        if (!result.ok) setLoginError(result.message || m.welcomeRegisterFailed)
+        if (!result.ok) setLoginError(result.code === 'CLIENT_TOO_OLD' ? m.welcomeClientTooOld : m.welcomeRegisterFailed)
         else setLoginPassword('')
       } catch {
         if (mounted.current) setLoginError(m.welcomeRegisterFailed)
+      } finally {
+        busyRef.current = false
+        if (mounted.current) setBusy(false)
+      }
+      return
+    }
+    if (authMode === 'sms') {
+      if (!/^1\d{10}$/.test(phone)) { setLoginError(m.welcomePhoneInvalid); phoneInput.current?.focus(); return }
+      if (!/^\d{6}$/.test(smsCode)) { setLoginError(m.welcomeSmsInvalid); return }
+      busyRef.current = true
+      setBusy(true)
+      setLoginError('')
+      try {
+        const result = await api.signInWithSms(phone, smsCode)
+        if (!mounted.current) return
+        if (!result.ok) setLoginError(result.code === 'CLIENT_TOO_OLD' ? m.welcomeClientTooOld
+          : result.code === 'SMS_CODE_EXPIRED' || result.code === 'SMS_INVALID' || result.reason === 'credentials'
+            ? m.welcomeSmsLoginFailed : m.welcomeLoginUnavailable)
+        else setSmsCode('')
+      } catch {
+        if (mounted.current) setLoginError(m.welcomeLoginUnavailable)
       } finally {
         busyRef.current = false
         if (mounted.current) setBusy(false)
@@ -174,7 +228,8 @@ export function Welcome({ api }: { api: WelcomeApi }) {
     try {
       const result = await api.signInWithPassword(phone, loginPassword)
       if (!mounted.current) return
-      if (!result.ok) setLoginError(result.reason === 'credentials' ? m.welcomeLoginFailed : result.message || m.welcomeLoginUnavailable)
+      if (!result.ok) setLoginError(result.code === 'CLIENT_TOO_OLD' ? m.welcomeClientTooOld
+        : result.reason === 'credentials' ? m.welcomeLoginFailed : m.welcomeLoginUnavailable)
       else setLoginPassword('')
     } catch {
       if (mounted.current) setLoginError(m.welcomeLoginUnavailable)
@@ -242,11 +297,12 @@ export function Welcome({ api }: { api: WelcomeApi }) {
         <header className="login-head">
           <img className="login-logo" src="assets/mengma-logo.png" alt="" width="64" height="64" />
           <h1 id="login-title">{m.welcomeLoginTitle}</h1>
-          <p id="login-subtitle">{authMode === 'register' ? m.welcomeRegisterSubtitle : m.welcomeLoginSubtitle}</p>
+          <p id="login-subtitle">{authMode === 'register' ? m.welcomeRegisterSubtitle : authMode === 'sms' ? m.welcomeSmsSubtitle : m.welcomeLoginSubtitle}</p>
         </header>
         <div className="mode-switch" role="tablist">
-          <button type="button" role="tab" aria-selected={authMode === 'password'} onClick={() => { setAuthMode('password'); setLoginError('') }}>{m.welcomeLoginTab}</button>
-          <button type="button" role="tab" aria-selected={authMode === 'register'} onClick={() => { setAuthMode('register'); setLoginError('') }}>{m.welcomeRegisterTab}</button>
+          <button id="tab-password" type="button" role="tab" aria-selected={authMode === 'password'} onClick={() => { setAuthMode('password'); setLoginError('') }}>{m.welcomeLoginTab}</button>
+          <button id="tab-sms" type="button" role="tab" aria-selected={authMode === 'sms'} onClick={() => { setAuthMode('sms'); setLoginError('') }}>{m.welcomeSmsTab}</button>
+          <button id="tab-register" type="button" role="tab" aria-selected={authMode === 'register'} onClick={() => { setAuthMode('register'); setLoginError('') }}>{m.welcomeRegisterTab}</button>
         </div>
         <label className="login-field" hidden={authMode !== 'register'}>
           <span>{m.welcomeName}</span>
@@ -272,11 +328,22 @@ export function Welcome({ api }: { api: WelcomeApi }) {
             placeholder={m.welcomeSlugPlaceholder}
             onChange={(event) => { setSlug(cleanText(event.target.value, 40)); setLoginError('') }} />
         </label>
-        <label className="login-field">
+        <label className="login-field" hidden={authMode === 'sms'}>
           <span>{authMode === 'register' ? m.welcomeSetPassword : m.welcomePassword}</span>
-          <input id="login-password" name="password" type="password" autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} required
+          <input id="login-password" name="password" type="password" autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} required={authMode !== 'sms'}
             placeholder={authMode === 'register' ? m.welcomeSetPasswordPlaceholder : m.welcomePasswordPlaceholder} value={loginPassword} disabled={busy}
             onChange={(event) => { setLoginPassword(event.target.value); setLoginError('') }} />
+        </label>
+        <label className="login-field" hidden={authMode === 'password'}>
+          <span>{m.welcomeSmsCode}</span>
+          <div className="sms-row">
+            <input id="sms-code" name="sms-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+              placeholder={m.welcomeSmsPlaceholder} value={smsCode} disabled={busy}
+              onChange={(event) => { setSmsCode(event.target.value.replace(/\D/g, '').slice(0, 6)); setLoginError('') }} />
+            <button id="sms-send" type="button" disabled={busy || smsWait > 0} onClick={() => { void sendCode() }}>
+              {smsWait > 0 ? `${smsWait}s` : m.welcomeSmsSend}
+            </button>
+          </div>
         </label>
         <label className="login-agreement" hidden={authMode !== 'register'}>
           <input id="register-agree" type="checkbox" checked={agree} disabled={busy} onChange={(event) => { setAgree(event.target.checked) }} />
@@ -285,7 +352,7 @@ export function Welcome({ api }: { api: WelcomeApi }) {
             : m.welcomeAgreement}</span>
         </label>
         <p id="login-error" className="login-error" role="alert" hidden={loginError === ''}>{loginError}</p>
-        <button id="sign-in" className="primary" type="submit" hidden={authMode !== 'password'} disabled={busy}>{m.welcomeSignIn}</button>
+        <button id="sign-in" className="primary" type="submit" hidden={authMode === 'register'} disabled={busy}>{m.welcomeSignIn}</button>
         <button id="register" className="primary" type="submit" hidden={authMode !== 'register'} disabled={busy || !agree}>{m.welcomeRegisterSubmit}</button>
       </form>
       <form id="key-form" className="key-form" hidden={page !== 'key'} noValidate onSubmit={(event) => { void saveKey(event) }} aria-busy={busy}>

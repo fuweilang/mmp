@@ -65,3 +65,7 @@
 .allowanceState { font-size: 12px; line-height: 16px; color: var(--dsw-alias-label-secondary); font-weight: 500; }
 .allowanceState[data-empty='true'] { color: var(--dsw-alias-label-primary); }
 @media (prefers-reduced-motion: reduce) { .chevron { transition: none; } }
+
+.updateLabel { display: flex; flex-direction: column; gap: 2px; }
+.updateLabel small { font-size: 11px; line-height: 16px; color: var(--mmp-static-brand-500, #4A53A3); }
+.installedVersion { padding: 8px 12px 4px; font-size: 11px; line-height: 16px; color: var(--dsw-alias-label-tertiary); font-variant-numeric: tabular-nums; }

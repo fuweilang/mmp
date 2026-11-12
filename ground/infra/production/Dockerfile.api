@@ -23,5 +23,7 @@ RUN pnpm --filter @mammoth/shared build \
   && pnpm --filter @mammoth/backend build
 WORKDIR /app/apps/backend
 ENV PORT=3100
+# 生产镜像就是生产运行时：mock 短信/支付通道在这里一律关闭（compose 也显式设置）。
+ENV NODE_ENV=production
 EXPOSE 3100
 CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node dist/main.js"]

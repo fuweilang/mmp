@@ -1,7 +1,9 @@
+import { updateDe, updateEn, updateEs, updateFr, updateJa, updatePt, updateRu, updateZh } from './update-locales.ts'
 /** Shell chrome and General-nav dictionaries; feature rows own their copy. */
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
+  ...updateZh,
   'trigger': '设置',
   'shortcut.open': '打开设置',
   'desktop.update.available': '新版本',
@@ -51,6 +53,7 @@ export type SettingsKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
+  ...updateEn,
   'trigger': 'Settings',
   'shortcut.open': 'Open settings',
   'desktop.update.available': 'Update',
@@ -97,6 +100,7 @@ export const en = {
 
 /** Japanese copy, checked against the English keys. */
 export const ja = {
+  ...updateJa,
   'trigger': '設定',
   'shortcut.open': '設定を開く',
   'desktop.update.available': '更新',
@@ -143,6 +147,7 @@ export const ja = {
 
 /** Spanish dictionary, checked against the English keys. */
 export const es = {
+  ...updateEs,
   'trigger': 'Configuración',
   'shortcut.open': 'Abrir configuración',
   'desktop.update.available': 'Actualizar',
@@ -189,6 +194,7 @@ export const es = {
 
 /** French dictionary, checked against the English keys. */
 export const fr = {
+  ...updateFr,
   'trigger': 'Paramètres',
   'shortcut.open': 'Ouvrir les paramètres',
   'desktop.update.available': 'Mise à jour',
@@ -235,6 +241,7 @@ export const fr = {
 
 /** German dictionary, checked against the English keys. */
 export const de = {
+  ...updateDe,
   'trigger': 'Einstellungen',
   'shortcut.open': 'Einstellungen öffnen',
   'desktop.update.available': 'Aktualisieren',
@@ -281,6 +288,7 @@ export const de = {
 
 /** Russian dictionary, checked against the English keys. */
 export const ru = {
+  ...updateRu,
   'trigger': 'Настройки',
   'shortcut.open': 'Открыть настройки',
   'desktop.update.available': 'Обновить',
@@ -327,6 +335,7 @@ export const ru = {
 
 /** Portuguese dictionary, checked against the English keys. */
 export const pt = {
+  ...updatePt,
   'trigger': 'Configurações',
   'shortcut.open': 'Abrir configurações',
   'desktop.update.available': 'Atualizar',

@@ -10,7 +10,13 @@ import { DESKTOP_COS_REGION } from './desktop-cos.ts'
 import { recordPackagingEvent } from './packaging-run.mjs'
 
 const FAILURE_CODES = new Set(['AccessDenied', 'InternalError', 'NoSuchBucket', 'BadDigest', 'SignatureDoesNotMatch',
-  'RequestTimeout', 'TimeoutError', 'AbortError', 'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ENOSPC', 'EACCES', 'EPERM', 'ENOENT'])
+  'RequestTimeout', 'TimeoutError', 'AbortError', 'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ENOSPC', 'EACCES', 'EPERM', 'ENOENT', 'FileAlreadyExists',
+  'ObjectConflict'])
+
+/** An immutable destination already holds different bytes; overwriting it would invalidate a published feed. */
+class DesktopUploadConflict extends Error {
+  readonly code = 'ObjectConflict'
+}
 
 /** Object keys fingerprinted into every upload record to bind evidence to this uploader. */
 const UPLOADER_SOURCES = ['desktop-upload-run.ts', 'upload-target.ts', 'desktop-upload-plan.ts', 'desktop-cos.ts']
@@ -51,13 +57,71 @@ function streamedBody(artifact: DesktopUploadArtifact): Readable {
     : Readable.from([Buffer.from(artifact.contents)])
 }
 
+/** COS reports a single-part object's MD5 as a quoted lowercase hexadecimal ETag. */
+function md5Hex(etag: unknown): string | undefined {
+  if (typeof etag !== 'string') return undefined
+  const hex = etag.replace(/^"|"$/gu, '').toLowerCase()
+  return /^[0-9a-f]{32}$/u.test(hex) ? hex : undefined
+}
+
+function alreadyExists(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false
+  return ('code' in error && error.code === 'FileAlreadyExists') || ('statusCode' in error && error.statusCode === 409)
+}
+
+function missingObject(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false
+  return ('code' in error && error.code === 'NoSuchKey') || ('statusCode' in error && error.statusCode === 404)
+}
+
+/**
+ * Compare a stored immutable object with the planned bytes so a retried upload can finish without a second write.
+ * @param cos Caller-owned client from the Desktop COS factory.
+ * @param bucket Destination bucket from the validated plan.
+ * @param artifact Planned object with its recorded size and MD5.
+ * @returns Whether the stored object carries exactly the planned bytes.
+ */
+async function storedObjectMatches(
+  cos: COS,
+  bucket: string,
+  artifact: DesktopUploadArtifact & { readonly size: number; readonly md5: string },
+): Promise<boolean> {
+  let response: {
+    ContentLength?: string | number
+    ETag?: string
+    /** The SDK projects HEAD headers here instead of top-level fields. */
+    headers?: Record<string, string | string[] | undefined>
+  }
+  try {
+    response = await cos.headObject({ Bucket: bucket, Region: DESKTOP_COS_REGION, Key: artifact.key })
+  } catch (error) {
+    if (missingObject(error)) return false
+    throw error
+  }
+  const expected = Buffer.from(artifact.md5, 'base64').toString('hex')
+  const length = response.ContentLength ?? response.headers?.['content-length']
+  return Number(length) === artifact.size && md5Hex(response.ETag) === expected
+}
+
+/**
+ * Separate mutable feed/pointer caching from versioned binary caching.
+ * COS overwrite protection requires bucket versioning to be disabled (release prerequisite).
+ * @param artifact Validated final destination, not caller-supplied HTTP headers.
+ * @returns Headers stored on the object; never authorization or credentials.
+ */
+export function desktopUploadObjectHeaders(artifact: Pick<DesktopUploadArtifact, 'key' | 'channelMetadata'>): Record<string, string> {
+  if (artifact.channelMetadata || artifact.key.startsWith('desktop/')) return { 'Cache-Control': 'no-store' }
+  return { 'Cache-Control': 'public, max-age=86400', 'x-cos-forbid-overwrite': 'true' }
+}
+
 /**
  * Upload an already validated installer or update plan, flushing intent and response evidence around every PUT.
  *
  * Each object is sent as one streamed PUT with an explicit length and Content-MD5, which is also
  * what keeps the COS SDK's internal retry path unreachable: it repeats a request only when the
  * body is not a stream. This function never retries either, so every confirmed PUT is the only
- * write for its key.
+ * write for its key. Overwrite-protected keys accept an existing object only when HEAD shows the
+ * planned bytes, so an upload rerun after a lost response is idempotent instead of a 409.
  * @param plan Validated release metadata; credential values must not be included.
  * @param cos Caller-owned client from the Desktop COS factory in `desktop-cos.ts`.
  * @param recordsRoot Local retained evidence parent, outside disposable artifact directories.
@@ -88,27 +152,40 @@ export async function uploadDesktopRelease(plan: DesktopUploadPlan, cos: COS, re
     }
     await writeFile(join(directory, 'plan.json'), `${JSON.stringify({ schemaVersion: 1,
       environment: plan.environment, target: plan.target, version: plan.version, bucket: plan.bucket,
-      publicUrl: plan.publicUrl, maxAttempts: 1, sourceSha256, artifacts }, null, 2)}\n`, { flag: 'wx', mode: 0o600, flush: true })
+      publicUrl: plan.publicUrl, maxAttempts: 1,
+      ...(plan.commit ? { commit: plan.commit } : {}), ...(plan.branch ? { branch: plan.branch } : {}),
+      ...(plan.builtAt ? { builtAt: plan.builtAt } : {}), sourceSha256, artifacts }, null, 2)}\n`, { flag: 'wx', mode: 0o600, flush: true })
     for (const artifact of artifacts) {
       key = artifact.key
       stage = 'verify-input'
       const current = await fingerprint(artifact)
       if (current.sha512 !== artifact.sha512 || current.size !== artifact.size) throw new Error('desktop upload: input changed')
       stage = 'put'
+      let skipped = false
       recordPackagingEvent(directory, { type: 'put-intent', key, size: artifact.size, sha512: artifact.sha512,
         channelMetadata: artifact.channelMetadata })
       const body = streamedBody(artifact)
       try {
         const response = await cos.putObject({ Bucket: plan.bucket, Region: DESKTOP_COS_REGION, Key: key,
           Body: body, ContentLength: artifact.size, ContentType: artifact.contentType,
-          Headers: { 'Content-MD5': artifact.md5 } })
+          Headers: { 'Content-MD5': artifact.md5, ...desktopUploadObjectHeaders(artifact) } })
         confirmedPuts++
         stage = 'record-response'
         recordPackagingEvent(directory, { type: 'put-confirmed', key, attempts: 1, ...receipt(response) })
+      } catch (error) {
+        // An immutable key that already holds these exact bytes is this upload's own earlier write; a missing
+        // response must not leave the release stuck on an object nobody may delete.
+        if (!alreadyExists(error)) throw error
+        stage = 'verify-existing'
+        if (!await storedObjectMatches(cos, plan.bucket, artifact)) {
+          throw new DesktopUploadConflict(`desktop upload: immutable object already holds different bytes at ${key}`)
+        }
+        recordPackagingEvent(directory, { type: 'put-skipped', key, reason: 'identical-object' })
+        skipped = true
       } finally {
         body.destroy()
       }
-      process.stdout.write(`desktop upload: uploaded ${key}\n`)
+      process.stdout.write(`desktop upload: ${skipped ? 'skipped(exists)' : 'uploaded'} ${key}\n`)
     }
     stage = 'complete'
     recordPackagingEvent(directory, { type: 'upload-complete', confirmedPuts })

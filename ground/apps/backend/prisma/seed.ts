@@ -46,6 +46,12 @@ async function purgeUnknownRolePermissions() {
     await prisma.rolePermission.deleteMany({ where: { id: { in: staleIds } } });
     console.log('purged unknown role permissions:', staleIds.length);
   }
+  const overrides = await prisma.orgPresetOverridePermission.findMany({ select: { id: true, permKey: true } });
+  const staleOverrideIds = overrides.filter((r) => !ALL_PERMISSION_KEYS.has(r.permKey)).map((r) => r.id);
+  if (staleOverrideIds.length) {
+    await prisma.orgPresetOverridePermission.deleteMany({ where: { id: { in: staleOverrideIds } } });
+    console.log('purged unknown org preset override permissions:', staleOverrideIds.length);
+  }
 }
 
 

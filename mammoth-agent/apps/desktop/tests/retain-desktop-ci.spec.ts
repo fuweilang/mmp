@@ -22,10 +22,10 @@ it.each([
   await mkdir(join(config, 'presets'), { recursive: true })
   await writeFile(join(appRoot, 'package.json'), '{"version":"1.0.0"}')
   await writeFile(join(config, 'presets/test.env'), `MMP_DESKTOP_AUTO_UPDATE_ENV=test\nDOWNLOAD_TEST_RELEASE_ID=${'a'.repeat(32)}\n`)
-  const names = debug ? (target === 'win-x64' ? [`deepseek-harness-1.0.0-win-x64-${qualification}.exe`]
-    : [`deepseek-harness-1.0.0-${target}-${qualification}.dmg`, `deepseek-harness-1.0.0-${target}-${qualification}.zip`]) : target === 'win-x64'
-    ? ['deepseek-harness-1.0.0-win-x64.exe', 'deepseek-harness-1.0.0-win-x64.exe.blockmap', 'win-x64-release.json', 'nightly.yml']
-    : [`deepseek-harness-1.0.0-${target}.dmg`, `deepseek-harness-1.0.0-${target}.zip`, `deepseek-harness-1.0.0-${target}.zip.blockmap`, `${target}-release.json`, 'nightly-mac.yml']
+  const names = debug ? (target === 'win-x64' ? [`mammoth-ai-1.0.0-win-x64-${qualification}.exe`]
+    : [`mammoth-ai-1.0.0-${target}-${qualification}.dmg`, `mammoth-ai-1.0.0-${target}-${qualification}.zip`]) : target === 'win-x64'
+    ? ['mammoth-ai-1.0.0-win-x64.exe', 'mammoth-ai-1.0.0-win-x64.exe.blockmap', 'win-x64-release.json', 'nightly.yml']
+    : [`mammoth-ai-1.0.0-${target}.dmg`, `mammoth-ai-1.0.0-${target}.zip`, `mammoth-ai-1.0.0-${target}.zip.blockmap`, `${target}-release.json`, 'nightly-mac.yml']
   await Promise.all(names.map(name => writeFile(join(artifacts, name), 'fixture')))
   const env = {
     MMP_PACKAGING_CONFIG_DIR: config, MMP_PACKAGING_PRESET: 'test', MMP_DESKTOP_TARGET_PLATFORM: target === 'win-x64' ? 'win32' : 'darwin',

@@ -2,5 +2,6 @@
 猛犸AI
 猛犸专家
 Password
+SMS code
 Register
 Sign in

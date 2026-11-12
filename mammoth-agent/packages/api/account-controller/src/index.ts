@@ -3,7 +3,7 @@ import { Context } from '@mammoth-ai/cordis'
 import { Remote, TypertRemoteService } from '@mammoth-ai/mmp-typert-protocol'
 import { isRunningAccountTask } from '@mammoth-ai/mmp-deepseek-account'
 import type {} from '@mammoth-ai/mmp-agent'
-import type { AccountBonusBatch, AccountBonusOrderId, AccountClientMetadata, AccountDetails, AccountUserId, PasswordSignInResult } from '@mammoth-ai/mmp-deepseek-account/types'
+import type { AccountBonusBatch, AccountBonusOrderId, AccountClientMetadata, AccountDetails, AccountUserId, EnterpriseRegisterInput, PasswordSignInResult, SmsSendResult } from '@mammoth-ai/mmp-deepseek-account/types'
 import type { AccountView, SignInAttemptId } from './types.ts'
 
 /** Account commands and reconnect-safe state stream. */
@@ -78,6 +78,27 @@ export class AccountController extends TypertRemoteService {
     return this.ctx.deepseekAccount.signInWithPassword(client, phone, password)
   }
   /**
+   * Ask Ground to send a login or registration code.
+   * @param phone - enterprise phone number.
+   * @param scene - login or register.
+   * @returns the cooldown. A local mock may include the code.
+   */
+  @Remote
+  sendSmsCode(phone: string, scene: 'login' | 'register'): Promise<SmsSendResult> {
+    return this.ctx.deepseekAccount.sendSmsCode(phone, scene)
+  }
+  /**
+   * Sign the desktop client in with a phone and SMS code. Does not open a browser.
+   * @param client - identity of the requesting UI.
+   * @param phone - enterprise phone number.
+   * @param smsCode - six-digit code, forwarded to Ground and not stored.
+   * @returns whether the local session was stored.
+   */
+  @Remote
+  signInWithSms(client: AccountClientMetadata, phone: string, smsCode: string): Promise<PasswordSignInResult> {
+    return this.ctx.deepseekAccount.signInWithSms(client, phone, smsCode)
+  }
+  /**
    * Register on the desktop client without opening a browser or setting its cookie.
    * @param client - identity of the requesting UI.
    * @param input - enterprise registration fields. The password is not returned.
@@ -86,7 +107,7 @@ export class AccountController extends TypertRemoteService {
   @Remote
   registerWithPassword(
     client: AccountClientMetadata,
-    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string },
+    input: EnterpriseRegisterInput,
   ): Promise<PasswordSignInResult> {
     return this.ctx.deepseekAccount.registerWithPassword(client, input)
   }

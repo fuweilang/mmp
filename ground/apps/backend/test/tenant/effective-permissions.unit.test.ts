@@ -39,7 +39,7 @@ const orgMemberPreset: FakeRole = {
   key: 'org_member',
   scope: RoleScope.ORG_PRESET,
   tenantId: null,
-  permissions: [{ permKey: 'skills' }],
+  permissions: [{ permKey: 'portal.console.kb' }],
 };
 const platformAdminRole: FakeRole = {
   key: 'platform_admin',
@@ -59,13 +59,14 @@ it('管理员身份只在本企业生效：A 企业管理员在 B 企业只是�
 
   const inA = await computeEffectivePermissions(db, 'dual', 'ta');
   assert.ok(inA.effectivePermissions.includes('portal.console.members'));
-  assert.ok(inA.effectivePermissions.includes('skills'));
+  assert.ok(inA.effectivePermissions.includes('portal.console.kb'));
+  assert.equal(inA.effectivePermissions.includes('terminal'), false);
   assert.equal(inA.isPlatformAdmin, false);
 
   const inB = await computeEffectivePermissions(db, 'dual', 'tb');
   assert.equal(inB.effectivePermissions.includes('portal.console.members'), false);
   assert.equal(inB.effectivePermissions.includes('terminal'), false);
-  assert.ok(inB.effectivePermissions.includes('skills'));
+  assert.ok(inB.effectivePermissions.includes('portal.console.kb'));
   assert.equal(inB.isPlatformAdmin, false);
 });
 

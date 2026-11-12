@@ -1,7 +1,8 @@
 /** Sidebar account launcher and locally authoritative sign-out action. */
 import { useEffect, useRef, useState } from 'react'
 import {
-  Toast, Menu, MenuItemButton, IconChevronDownOutlineMedium, IconEllipsisOutlineMedium, IconPaperPlaneOutlineMedium, IconSettingsOutlineMedium, IconUserOutlineMedium,
+  Toast, Menu, MenuItemButton, IconChevronDownOutlineMedium, IconDownloadOutlineMedium, IconEllipsisOutlineMedium,
+  IconGaugeOutlineMedium, IconPaperPlaneOutlineMedium, IconSettingsOutlineMedium, IconUserOutlineMedium,
 } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import type { AccountSectionInjected } from './AccountSection.tsx'
@@ -37,7 +38,7 @@ export type AccountMenuProps = PropsRuntime<'settings.launcher'> & PropsLocale<'
  * @returns account menu launcher.
  */
 export function AccountMenu({
-  subscribeSessionExpired, subscribeModelSignInRequired, wide, settingsShortcut, openSettings, openOnboarding, settingsOpen,
+  subscribeSessionExpired, subscribeModelSignInRequired, wide, settingsShortcut, openSettings, openOnboarding, settingsOpen, versionUpdate,
   useAccount, useTheme, signOut, hasRunningAccountTasks, refreshAccount, bonusNoticeShown, bonusNoticeDismissed,
   showLogin, start, cancel, submitPassword, avatarFailed, uploadAvatar, t, billingState, openRecharge, refreshBilling, openEnterpriseConsole,
 }: AccountMenuProps) {
@@ -127,11 +128,13 @@ export function AccountMenu({
       items={signedIn ? [] : [
         { id: 'settings', label: t('settings'), icon: <IconSettingsOutlineMedium size={16} />,
           ...(settingsShortcut === undefined ? {} : { shortcut: settingsShortcut }) },
+        ...(versionUpdate ? [{ id: 'updates', label: t('versionUpdate'), icon: <IconDownloadOutlineMedium size={16} /> }] : []),
         { id: 'signin', label: t('signIn'), icon: <IconUserOutlineMedium size={16} /> },
       ]}
       onClose={() => { setOpen(false) }}
       onSelect={(id) => {
         if (id === 'settings') { setOpen(false); trigger.current?.focus(); openSettings() }
+        else if (id === 'updates') { setOpen(false); trigger.current?.focus(); versionUpdate?.open() }
         else if (id === 'recharge') { setOpen(false); openRecharge?.() }
         else if (id === 'console') { setOpen(false); openEnterpriseConsole?.() }
         else if (id === 'signin') beginSignIn()
@@ -176,13 +179,21 @@ export function AccountMenu({
         <MenuItemButton icon={<IconSettingsOutlineMedium size={16} />}
           {...(settingsShortcut === undefined ? {} : { shortcut: settingsShortcut })}
           onSelect={() => { setOpen(false); trigger.current?.focus(); openSettings() }}>{t('settings')}</MenuItemButton>
+        {versionUpdate && <MenuItemButton icon={<IconDownloadOutlineMedium size={16} />}
+          onSelect={() => { setOpen(false); trigger.current?.focus(); versionUpdate.open() }}>
+          <span className={css.updateLabel}>{t('versionUpdate')}
+            {versionUpdate.targetVersion && <small>{t('updateTarget', { version: versionUpdate.targetVersion })}</small>}
+          </span>
+        </MenuItemButton>}
         {showBilling && billingCanRecharge && <MenuItemButton icon={<IconPaperPlaneOutlineMedium size={16} />}
           onSelect={() => { setOpen(false); openRecharge?.() }}>{t('topUp')}</MenuItemButton>}
         {showBilling && openEnterpriseConsole !== undefined && (hasConsoleAccess || platformAdmin) && <MenuItemButton
-          icon={<IconSettingsOutlineMedium size={16} />} onSelect={() => { setOpen(false); openEnterpriseConsole() }}>
+          icon={<IconGaugeOutlineMedium size={16} />} onSelect={() => { setOpen(false); openEnterpriseConsole() }}>
           {platformAdmin ? t('adminConsole') : t('enterpriseConsole')}</MenuItemButton>}
         <MenuItemButton separatorBefore icon={<LogoutIcon />} disabled={busy}
           onSelect={() => { void requestSignOut() }}>{t('signOut')}</MenuItemButton>
+        {versionUpdate?.currentVersion && <div className={css.installedVersion} role="presentation">
+          {t('installedVersion', { version: versionUpdate.currentVersion })}</div>}
       </>}
     </Menu>
     {account.loginVisible && !account.onboarding && <SignInDialog account={account} colorScheme={colorScheme}

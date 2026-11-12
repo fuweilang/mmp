@@ -77,9 +77,8 @@ export function SignInDialog({ account, colorScheme, start, cancel, submitPasswo
         setPassword('')
         setFormError('')
       } catch (caught) {
-        const message = caught instanceof Error ? caught.message : ''
-        setFormError(message === 'credentials' ? t('credentialsFailed')
-          : message === 'unavailable' || message === 'forbidden' || message === '' ? t('loginUnavailable') : message)
+        const key = caught instanceof Error ? caught.message : ''
+        setFormError(t(key === 'clientTooOld' || key === 'credentialsFailed' ? key : 'loginUnavailable'))
       }
     })
   }

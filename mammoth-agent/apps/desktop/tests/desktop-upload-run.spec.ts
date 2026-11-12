@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:f
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import COS from 'cos-nodejs-sdk-v5'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createDesktopCos, DESKTOP_COS_REGION } from '../scripts/desktop-cos.ts'
 import { uploadDesktopRelease } from '../scripts/desktop-upload-run.ts'
 import type { DesktopUploadPlan } from '../scripts/desktop-upload-plan.ts'
@@ -190,5 +190,64 @@ describe('release upload audit with the real COS SDK and an isolated loopback or
     const second = await uploadDesktopRelease(f.plan, cos, f.records)
     expect(second).not.toBe(first)
     expect(await readFile(join(first, 'result.json'), 'utf8')).toBe(before)
+  })
+
+  it('finishes a rerun when the immutable object already holds the planned bytes', async () => {
+    const f = await fixture()
+    const stored = createHash('md5').update(BINARY_BYTES).digest('hex')
+    const { cos, loopback } = await transport((request, response) => {
+      const headers = { connection: 'close', 'x-cos-request-id': 'fixture-request' }
+      if (request.method === 'PUT' && request.path === '/bin/package.exe') {
+        response.writeHead(409, { ...headers, 'content-type': 'application/xml' })
+        response.end(cosError('FileAlreadyExists'))
+        return
+      }
+      if (request.method === 'HEAD' && request.path === '/bin/package.exe') {
+        response.writeHead(200, { ...headers, etag: `"${stored}"`, 'content-length': String(Buffer.byteLength(BINARY_BYTES)) })
+        response.end()
+        return
+      }
+      answer(response, 200, '', { 'x-cos-request-id': 'fixture-request' })
+    })
+    const output: string[] = []
+    const write = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
+      output.push(String(chunk))
+      return true
+    })
+    let directory: string
+    try { directory = await uploadDesktopRelease(f.plan, cos, f.records) } finally { write.mockRestore() }
+    // A skipped immutable object must not be reported as a fresh upload.
+    expect(output.join('')).toContain('desktop upload: skipped(exists) bin/package.exe')
+    expect(output.join('')).toContain('desktop upload: uploaded feeds/nightly.yml')
+    expect(loopback.requests.map(request => request.method)).toEqual(['PUT', 'HEAD', 'PUT'])
+    expect(loopback.requests[0]!.headers['x-cos-forbid-overwrite']).toBe('true')
+    const events = await journal(join(directory, 'events.jsonl'))
+    expect(events.map(event => event.type)).toEqual([
+      'upload-start', 'put-intent', 'put-skipped', 'put-intent', 'put-confirmed', 'upload-complete',
+    ])
+    expect(events[2]).toMatchObject({ type: 'put-skipped', key: 'bin/package.exe', reason: 'identical-object' })
+    expect(await json(join(directory, 'result.json'))).toMatchObject({ success: true, confirmedPuts: 1 })
+  })
+
+  it('stops when the immutable object already holds different bytes', async () => {
+    const f = await fixture()
+    const { cos, loopback } = await transport((request, response) => {
+      const headers = { connection: 'close', 'x-cos-request-id': 'fixture-request' }
+      if (request.method === 'PUT' && request.path === '/bin/package.exe') {
+        response.writeHead(409, { ...headers, 'content-type': 'application/xml' })
+        response.end(cosError('FileAlreadyExists'))
+        return
+      }
+      if (request.method === 'HEAD' && request.path === '/bin/package.exe') {
+        response.writeHead(200, { ...headers, etag: `"${'0'.repeat(32)}"`, 'content-length': '1' })
+        response.end()
+        return
+      }
+      answer(response, 200, '', { 'x-cos-request-id': 'fixture-request' })
+    })
+    await expect(uploadDesktopRelease(f.plan, cos, f.records)).rejects.toThrow('stopped at verify-existing')
+    expect(loopback.requests).toHaveLength(2)
+    expect(await json(join(await f.directory(), 'result.json')))
+      .toMatchObject({ success: false, stage: 'verify-existing', failure: { errorCode: 'ObjectConflict' } })
   })
 })

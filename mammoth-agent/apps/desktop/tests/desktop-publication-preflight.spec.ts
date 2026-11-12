@@ -6,6 +6,7 @@ import { expect, it } from 'vitest'
 import { retainDesktopCi } from '../scripts/retain-desktop-ci.ts'
 import { desktopPublicationSummary } from '../scripts/desktop-publication-summary.ts'
 import { prepareDesktopPublication } from '../scripts/publish-desktop-ci.ts'
+import { desktopArtifactBaseForTarget } from '../scripts/desktop-artifact-name.mjs'
 
 it.each(['mac-arm64', 'win-x64'] as const)('preflights a complete retained %s build without credentials or source checkout manifests', async (target) => {
   const root = await mkdtemp(join(tmpdir(), 'desktop-preflight-'))
@@ -23,7 +24,7 @@ it.each(['mac-arm64', 'win-x64'] as const)('preflights a complete retained %s bu
       bucket: 'fixture-1250000000', origin: 'https://EXAMPLE.com:443/', credentialsFile: join(root, 'absent-credentials.json'),
     }))
     const commit = 'b'.repeat(40)
-    const base = `deepseek-harness-1.0.0-${target}`
+    const base = desktopArtifactBaseForTarget('1.0.0', target)
     const extension = target === 'win-x64' ? 'exe' : 'zip'
     const bytes = 'fixture installer bytes'
     await writeFile(join(artifacts, `${base}.${extension}`), bytes)

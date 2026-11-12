@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { Welcome } from '../src/client/WelcomePage.tsx'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resolveDesktopLocale } from '../src/locale.ts'
-import type { AccountView, PasswordSignInResult } from '@mammoth-ai/mmp-deepseek-account/types'
+import type { AccountView, PasswordSignInResult, SmsSendResult } from '@mammoth-ai/mmp-deepseek-account/types'
 import type { WelcomeSaveResult, WelcomeNotice } from '../src/welcome-api.ts'
 
 const html = readFileSync(join(import.meta.dirname, '../renderer/welcome.html'), 'utf8')
@@ -21,7 +21,9 @@ function mount(language = 'zh-CN', takeNotice = vi.fn<() => Promise<WelcomeNotic
     onAccountState: vi.fn((_listener: (state: AccountView) => void) => stopAccount),
     startSignIn: vi.fn(async (): Promise<AccountView> => ({ links: { usageUrl: 'http://localhost/usage', topUpUrl: 'http://localhost/top_up' }, status: 'signed-out', attempt: null })),
     signInWithPassword: vi.fn<(phone: string, password: string) => Promise<PasswordSignInResult>>(async () => ({ ok: true })),
-    registerWithPassword: vi.fn<(input: { name: string; phone: string; password: string; enterpriseName: string; slug: string }) => Promise<PasswordSignInResult>>(async () => ({ ok: true })),
+    sendSmsCode: vi.fn<(phone: string, scene: 'login' | 'register') => Promise<SmsSendResult>>(async () => ({ ok: true, retryAfterSeconds: 60, mockCode: '123456' })),
+    signInWithSms: vi.fn<(phone: string, smsCode: string) => Promise<PasswordSignInResult>>(async () => ({ ok: true })),
+    registerWithPassword: vi.fn<(input: { name: string; phone: string; password: string; enterpriseName: string; slug: string; smsCode: string }) => Promise<PasswordSignInResult>>(async () => ({ ok: true })),
     cancelSignIn: vi.fn(async (): Promise<AccountView> => ({ links: { usageUrl: 'http://localhost/usage', topUpUrl: 'http://localhost/top_up' }, status: 'signed-out', attempt: null })),
     copySignInLink: vi.fn(async () => undefined),
     ...resolveDesktopLocale(language),
@@ -206,18 +208,58 @@ it('submits the phone and password once and stays on the login page when the pas
   expect(view.document.querySelector<HTMLElement>('#login-form')!.hidden).toBe(false)
 })
 
+it('localizes every SMS send failure without server copy', async () => {
+  const view = mount('en')
+  fireEvent.click(view.document.querySelector('#tab-sms')!)
+  fireEvent.change(view.document.querySelector('#login-phone')!, { target: { value: '13800138000' } })
+  const error = () => view.document.querySelector('#login-error')!.textContent
+  view.api.sendSmsCode.mockResolvedValueOnce({ ok: false, reason: 'unavailable', code: 'SMS_UNAVAILABLE' })
+  fireEvent.click(view.button('#sms-send'))
+  await vi.waitFor(() => { expect(error()).toBe(view.api.messages.welcomeSmsUnavailable) })
+  view.api.sendSmsCode.mockResolvedValueOnce({ ok: false, reason: 'rejected', code: 'SMS_RATE_LIMITED' })
+  fireEvent.click(view.button('#sms-send'))
+  await vi.waitFor(() => { expect(error()).toBe(view.api.messages.welcomeSmsRateLimited) })
+  // An absent or unrecognized code falls back to generic localized copy, never a server message.
+  view.api.sendSmsCode.mockResolvedValueOnce({ ok: false, reason: 'rejected' })
+  fireEvent.click(view.button('#sms-send'))
+  await vi.waitFor(() => { expect(error()).toBe(view.api.messages.welcomeSmsFailed) })
+  view.api.sendSmsCode.mockResolvedValueOnce({ ok: false, reason: 'invalid', code: 'SMS_INVALID' })
+  fireEvent.click(view.button('#sms-send'))
+  await vi.waitFor(() => { expect(error()).toBe(view.api.messages.welcomePhoneInvalid) })
+})
+
+it('localizes the old-client registration code without retrying', async () => {
+  const view = mount('ja')
+  fireEvent.click(view.document.querySelector('#tab-register')!)
+  fireEvent.change(view.document.querySelector('#register-name')!, { target: { value: '山田' } })
+  fireEvent.change(view.document.querySelector('#login-phone')!, { target: { value: '13800138000' } })
+  fireEvent.change(view.document.querySelector('#register-enterprise')!, { target: { value: 'Acme' } })
+  fireEvent.change(view.document.querySelector('#register-slug')!, { target: { value: 'acme' } })
+  fireEvent.change(view.document.querySelector('#login-password')!, { target: { value: 'secret' } })
+  fireEvent.change(view.document.querySelector('#sms-code')!, { target: { value: '123456' } })
+  view.api.registerWithPassword.mockResolvedValueOnce({ ok: false, reason: 'forbidden', code: 'CLIENT_TOO_OLD' })
+  fireEvent.submit(view.document.querySelector('#login-form')!)
+  const error = () => view.document.querySelector('#login-error')!.textContent
+  await vi.waitFor(() => { expect(error()).toBe(view.api.messages.welcomeClientTooOld) })
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+  expect(error()).toBe(view.api.messages.welcomeClientTooOld)
+  expect(view.api.registerWithPassword).toHaveBeenCalledOnce()
+  expect(view.api.signInWithPassword).not.toHaveBeenCalled()
+})
+
 it('registers an enterprise in the client without opening a browser', async () => {
   const view = mount()
-  fireEvent.click(view.document.querySelector('[role="tab"][aria-selected="false"]')!)
+  fireEvent.click(view.document.querySelector('#tab-register')!)
   fireEvent.change(view.document.querySelector('#register-name')!, { target: { value: '张三' } })
   fireEvent.change(view.document.querySelector('#login-phone')!, { target: { value: '13800138000' } })
   fireEvent.change(view.document.querySelector('#register-enterprise')!, { target: { value: '小米' } })
   fireEvent.change(view.document.querySelector('#register-slug')!, { target: { value: 'xiaomi' } })
   fireEvent.change(view.document.querySelector('#login-password')!, { target: { value: 'secret' } })
+  fireEvent.change(view.document.querySelector('#sms-code')!, { target: { value: '123456' } })
   fireEvent.submit(view.document.querySelector('#login-form')!)
   await vi.waitFor(() => { expect(view.api.registerWithPassword).toHaveBeenCalledOnce() })
   expect(view.api.registerWithPassword).toHaveBeenCalledWith({
-    name: '张三', phone: '13800138000', password: 'secret', enterpriseName: '小米', slug: 'xiaomi',
+    name: '张三', phone: '13800138000', password: 'secret', enterpriseName: '小米', slug: 'xiaomi', smsCode: '123456',
   })
   expect(view.api.signInWithPassword).not.toHaveBeenCalled()
   expect(view.api.startSignIn).not.toHaveBeenCalled()

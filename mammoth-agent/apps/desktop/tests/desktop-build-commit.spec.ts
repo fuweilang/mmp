@@ -81,3 +81,13 @@ describe('desktop toolchain preflight', () => {
     expect(await import('node:fs/promises').then(async fs => fs.readdir(directory))).toEqual(['sentinel'])
   })
 })
+
+
+it('carries optional source branch and ISO build time without confusing them with product version', async () => {
+  const { desktopBuildCommitEnvironment, resolveDesktopBuildCommit } = await import('../scripts/desktop-build-commit.mjs')
+  const identity = { commit: 'a'.repeat(40), dirty: false, branch: '5.0', builtAt: '2026-11-12T12:00:00.000Z' }
+  const environment = desktopBuildCommitEnvironment(identity)
+  expect(resolveDesktopBuildCommit(environment)).toEqual(identity)
+  expect(() => resolveDesktopBuildCommit({ ...environment, MMP_DESKTOP_BUILD_TIME: 'yesterday' })).toThrow('timestamp')
+  expect(() => resolveDesktopBuildCommit({ ...environment, MMP_DESKTOP_BUILD_BRANCH: '5.0\nforged' })).toThrow('branch')
+})

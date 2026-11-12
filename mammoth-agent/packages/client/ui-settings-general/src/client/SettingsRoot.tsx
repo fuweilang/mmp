@@ -19,12 +19,11 @@ import clsx from 'clsx'
 import {
   ConnectionIndicator, Tooltip, useModalLayer,
   IconAgentPresetOutlineMedium, IconArchiveOutlineMedium, IconCloseOutlineRegular, IconDataOutlineMedium,
-  IconPersonalizationOutlineMedium, IconSettingsOutlineMedium, IconUserOutlineMedium,
+  IconDownloadOutlineMedium, IconPersonalizationOutlineMedium, IconSettingsOutlineMedium, IconUserOutlineMedium,
 } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { ConnectionIndicatorState } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { SettingsRootComponentProps, SettingsSectionRow } from './shell-contract.ts'
 import css from './SettingsRoot.module.css'
-import { DesktopUpdateIndicator } from './DesktopUpdateIndicator.tsx'
 
 const RECOVERY_CONFIRMATION_MS = 2_000
 
@@ -38,6 +37,7 @@ function navIcon(id: string) {
   if (id === 'agent-presets') return <IconAgentPresetOutlineMedium className={css.navIcon} size={16} />
   if (id === 'plugins') return <IconPersonalizationOutlineMedium className={css.navIcon} size={16} />
   if (id === 'archived-sessions') return <IconArchiveOutlineMedium className={css.navIcon} size={16} />
+  if (id === 'updates') return <IconDownloadOutlineMedium className={css.navIcon} size={16} />
   return <IconSettingsOutlineMedium className={css.navIcon} size={16} />
 }
 
@@ -117,7 +117,7 @@ function SettingsPanel({ rows, renderSlot, activeId, onSelect, onClose }: PanelP
 export function SettingsRoot(props: SettingsRootComponentProps) {
   const {
     wide, reconnect, useConnectionState, useSections, useOnboardingSteps, useSessions, renderSlot, t,
-    useDesktopUpdate, openDesktopUpdate, useStore, actions, useShortcuts,
+    useDesktopUpdate, useStore, actions, useShortcuts,
   } = props
   const { open, activeId } = useStore(state => state)
   const shortcut = useShortcuts(rows => rows.find(row => row.id === 'settings.open'))
@@ -221,6 +221,11 @@ export function SettingsRoot(props: SettingsRootComponentProps) {
       <div className={clsx(css.triggerRow, !wide && css.railRow)}>
         {renderSlot('settings.launcher', {
           wide, settingsOpen: open, openSettings: actions.open,
+          ...(desktopUpdate.managed ? { versionUpdate: {
+            ...(desktopUpdate.presentation?.currentVersion === undefined ? {} : { currentVersion: desktopUpdate.presentation.currentVersion }),
+            ...(desktopUpdate.presentation?.version === undefined ? {} : { targetVersion: desktopUpdate.presentation.version }),
+            open: () => { actions.openSection('updates') },
+          } } : {}),
           ...(shortcut?.keys.length ? { settingsShortcut: { keys: shortcut.keys, aria: shortcut.aria } } : {}),
           openOnboarding: (id) => { close(); setRequestedOnboarding(id) },
         }, { fallback: <Tooltip disabled={open} label={t('trigger')} shortcutKeys={shortcut?.keys}>
@@ -245,8 +250,6 @@ export function SettingsRoot(props: SettingsRootComponentProps) {
           restartActionLabel={t('connection.restart')}
           onReconnect={reconnect}
         />
-        <DesktopUpdateIndicator wide={wide} hidden={connectionIndicator !== undefined && desktopUpdate.presentation?.phase !== 'installing'}
-          t={t} view={desktopUpdate} onOpen={openDesktopUpdate} />
       </div>
       {open && (
         <SettingsPanel

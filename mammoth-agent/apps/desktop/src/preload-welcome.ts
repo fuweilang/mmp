@@ -1,4 +1,4 @@
-import type { AccountView, PasswordSignInResult, SignInAttemptId } from '@mammoth-ai/mmp-deepseek-account/types'
+import type { AccountView, PasswordSignInResult, SignInAttemptId, SmsSendResult } from '@mammoth-ai/mmp-deepseek-account/types'
 /** Localized welcome copy and write-only credential actions. */
 
 import { contextBridge, ipcRenderer } from 'electron'
@@ -19,6 +19,8 @@ const api: WelcomeApi = {
   cancelSignIn: (id: SignInAttemptId) => ipcRenderer.invoke(WELCOME_IPC.cancel, id) as Promise<AccountView>,
   copySignInLink: (id: SignInAttemptId) => ipcRenderer.invoke(WELCOME_IPC.copyLink, id) as Promise<void>,
   signInWithPassword: (phone: string, password: string) => ipcRenderer.invoke(WELCOME_IPC.password, phone, password) as Promise<PasswordSignInResult>,
+  sendSmsCode: (phone: string, scene: 'login' | 'register') => ipcRenderer.invoke(WELCOME_IPC.sms, phone, scene) as Promise<SmsSendResult>,
+  signInWithSms: (phone: string, smsCode: string) => ipcRenderer.invoke(WELCOME_IPC.smsLogin, phone, smsCode) as Promise<PasswordSignInResult>,
   registerWithPassword: (input) => ipcRenderer.invoke(WELCOME_IPC.register, input) as Promise<PasswordSignInResult>,
   onAccountState: (listener) => {
     const receive = (_event: Electron.IpcRendererEvent, state: AccountView): void =>{  listener(state) }

@@ -4,6 +4,7 @@ import { execFile } from 'node:child_process'
 import { mkdtemp, rename, rm, stat } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { promisify } from 'node:util'
+import { desktopArtifactBase } from './desktop-artifact-name.mjs'
 import { notarizeMacOS } from './notarize-macos.mjs'
 import { packagingStep } from './packaging-step.mjs'
 import {
@@ -110,7 +111,7 @@ export async function packageMacOSArtifacts(
     await verifyMacOSAppUpdateConfig(dmgApp, update)
     apple.verifySignature(zipApp, expected)
     apple.verifySignature(dmgApp, expected)
-    const base = `deepseek-harness-${version}-mac-${arch}`
+    const base = desktopArtifactBase(version, 'mac', arch)
     const artifacts = [
       [dmgOutput, `${base}.dmg`],
       [zipOutput, `${base}.zip`],

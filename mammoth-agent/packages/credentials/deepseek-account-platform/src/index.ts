@@ -8,7 +8,7 @@ import { promises as streamPromises } from 'node:stream'
 import { Context, Service } from '@mammoth-ai/cordis'
 import Schema from '@mammoth-ai/schemastery'
 import { z } from 'zod'
-import { DeepSeekAccount, installAccountTaskCancellation, mergePlatformCookies, platformClientHeaders, platformWireLocale, type AccountBonusBatch, type AccountBonusOrderId, type AccountClientMetadata, type AccountDetails, type AccountProfile, type AccountUserId, type AccountView, type PasswordSignInResult, type PlatformSession, type SignInAttemptId, type SignInAttemptView } from '@mammoth-ai/mmp-deepseek-account'
+import { DeepSeekAccount, installAccountTaskCancellation, mergePlatformCookies, platformClientHeaders, platformWireLocale, type AccountBonusBatch, type AccountBonusOrderId, type AccountClientMetadata, type AccountDetails, type AccountFailureCode, type AccountProfile, type AccountUserId, type AccountView, type EnterpriseRegisterInput, type PasswordSignInResult, type PlatformSession, type SignInAttemptId, type SignInAttemptView, type SmsSendResult } from '@mammoth-ai/mmp-deepseek-account'
 import { credentialKey } from '@mammoth-ai/mmp-credentials'
 import type { AuthorizationSession } from '@mammoth-ai/mmp-authorization'
 import { profile, readAccountDetail, readUnnotifiedBonuses, sendBonusNotified } from './details.ts'
@@ -28,16 +28,25 @@ const WEB_OWNER = credentialKey('ground-web-owner', 'default')
 const webOwner = z.object({ userId: z.string().min(1), tenantId: z.string().nullable() })
 const DEVICE = credentialKey('deepseek-account-platform', 'device')
 
-async function readErrorMessage(response: Response): Promise<string> {
+const ACCOUNT_FAILURE_CODES = ['SMS_RATE_LIMITED', 'SMS_INVALID', 'SMS_CODE_EXPIRED', 'SMS_UNAVAILABLE', 'CLIENT_TOO_OLD'] as const
+
+/**
+ * Read the stable failure code Ground returns for SMS and desktop registration.
+ * Unknown, absent, or unparsable bodies yield undefined so the renderer shows generic localized copy
+ * instead of echoing a server-authored message.
+ * @param response - failed platform response; its body is consumed.
+ * @returns the recognized failure code, if any.
+ */
+async function readFailureCode(response: Response): Promise<AccountFailureCode | undefined> {
   try {
     const body: unknown = await response.json()
-    const text = body && typeof body === 'object' && 'message' in body ? body.message : undefined
-    const raw = Array.isArray(text) ? text.filter((item): item is string => typeof item === 'string').join(' ')
-      : typeof text === 'string' ? text : ''
-    return raw.slice(0, 80)
+    const raw = body && typeof body === 'object' && 'code' in body ? body.code : undefined
+    return typeof raw === 'string' && (ACCOUNT_FAILURE_CODES as readonly string[]).includes(raw)
+      ? raw as AccountFailureCode : undefined
   } catch {
-    await response.body?.cancel()
-    return ''
+    // response.json() may already have locked the body; a failed cancel must not mask the fallback.
+    await response.body?.cancel().catch(() => undefined)
+    return undefined
   }
 }
 
@@ -672,9 +681,57 @@ export class PlatformAccount extends DeepSeekAccount {
     return this.commitClientSession(client, verified)
   }
 
+  override async sendSmsCode(phone: string, scene: 'login' | 'register'): Promise<SmsSendResult> {
+    if (this.authMode !== 'oidc' || this.webSso) return { ok: false, reason: 'unavailable' }
+    let response: Response
+    try {
+      response = await loggedFetch(new URL('/api/auth/sms/send', this.origin).href, {
+        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(this.requestTimeout),
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ phone, scene }),
+      })
+    } catch {
+      return { ok: false, reason: 'unavailable' }
+    }
+    if (!response.ok) {
+      const code = await readFailureCode(response)
+      const reason = code === 'SMS_INVALID' ? 'invalid' : code === 'SMS_UNAVAILABLE' ? 'unavailable' : 'rejected'
+      return { ok: false, reason, ...(code === undefined ? {} : { code }) }
+    }
+    try {
+      const body: unknown = await response.json()
+      const retryAfterSeconds = body && typeof body === 'object' && 'retryAfterSeconds' in body && typeof body.retryAfterSeconds === 'number'
+        ? body.retryAfterSeconds : 60
+      const mockCode = body && typeof body === 'object' && 'mockCode' in body && typeof body.mockCode === 'string'
+        ? body.mockCode : undefined
+      return { ok: true, retryAfterSeconds, ...(mockCode ? { mockCode } : {}) }
+    } catch {
+      return { ok: false, reason: 'unavailable' }
+    }
+  }
+
+  override async signInWithSms(client: AccountClientMetadata, phone: string, smsCode: string): Promise<PasswordSignInResult> {
+    if (this.authMode !== 'oidc' || this.webSso) throw new PlatformAuthError('protocol')
+    if (this.removing !== undefined) await this.removing
+    if (this.closed) throw new PlatformAuthError('protocol')
+    if (this.attempt !== undefined && ['initializing', 'waiting-browser', 'exchanging', 'committing'].includes(this.attempt.view.phase)) {
+      return { ok: false, reason: 'unavailable' }
+    }
+    const previous = this.attempt
+    if (previous !== undefined) {
+      await previous.done
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (this.closed) throw new PlatformAuthError('protocol')
+      if (this.attempt !== previous) return { ok: false, reason: 'unavailable' }
+    }
+    const verified = await this.requestClientSmsLogin(phone, smsCode)
+    if (!verified.ok) return verified
+    return this.commitClientSession(client, verified)
+  }
+
   override async registerWithPassword(
     client: AccountClientMetadata,
-    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string },
+    input: EnterpriseRegisterInput,
   ): Promise<PasswordSignInResult> {
     if (this.authMode !== 'oidc' || this.webSso) throw new PlatformAuthError('protocol')
     if (this.removing !== undefined) await this.removing
@@ -724,15 +781,34 @@ export class PlatformAccount extends DeepSeekAccount {
     return state.status === 'credential-stored' ? { ok: true } : { ok: false, reason: 'unavailable' }
   }
 
-  private async requestClientRegister(input: {
-    name: string
-    phone: string
-    password: string
-    enterpriseName: string
-    slug: string
-  }): Promise<
+  private async requestClientSmsLogin(phone: string, smsCode: string): Promise<
     | { ok: true; token: string; profile: AccountProfile }
-    | { ok: false; reason: 'credentials' | 'forbidden' | 'unavailable'; message?: string }
+    | { ok: false; reason: 'credentials' | 'forbidden' | 'unavailable'; code?: AccountFailureCode }
+  > {
+    let response: Response
+    try {
+      response = await loggedFetch(new URL('/api/auth/client-sms-login', this.origin).href, {
+        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(this.requestTimeout),
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ phone, smsCode }),
+      })
+    } catch {
+      return { ok: false, reason: 'unavailable' }
+    }
+    if (response.status === 400 || response.status === 401) {
+      const code = await readFailureCode(response)
+      return { ok: false, reason: 'credentials', ...(code === undefined ? {} : { code }) }
+    }
+    if (response.status === 403) {
+      const code = await readFailureCode(response)
+      return { ok: false, reason: 'forbidden', ...(code === undefined ? {} : { code }) }
+    }
+    return readClientSession(response, this.origin)
+  }
+
+  private async requestClientRegister(input: EnterpriseRegisterInput): Promise<
+    | { ok: true; token: string; profile: AccountProfile }
+    | { ok: false; reason: 'credentials' | 'forbidden' | 'unavailable'; code?: AccountFailureCode }
   > {
     let response: Response
     try {
@@ -745,15 +821,15 @@ export class PlatformAccount extends DeepSeekAccount {
       return { ok: false, reason: 'unavailable' }
     }
     if (response.status === 409 || response.status === 400) {
-      const message = await readErrorMessage(response)
-      return { ok: false, reason: 'forbidden', ...(message ? { message } : {}) }
+      const code = await readFailureCode(response)
+      return { ok: false, reason: 'forbidden', ...(code === undefined ? {} : { code }) }
     }
     return readClientSession(response, this.origin)
   }
 
   private async requestClientLogin(phone: string, password: string): Promise<
     | { ok: true; token: string; profile: AccountProfile }
-    | { ok: false; reason: 'credentials' | 'forbidden' | 'unavailable'; message?: string }
+    | { ok: false; reason: 'credentials' | 'forbidden' | 'unavailable'; code?: AccountFailureCode }
   > {
     let response: Response
     try {
@@ -770,8 +846,8 @@ export class PlatformAccount extends DeepSeekAccount {
       return { ok: false, reason: 'credentials' }
     }
     if (response.status === 403) {
-      const message = await readErrorMessage(response)
-      return { ok: false, reason: 'forbidden', ...(message ? { message } : {}) }
+      const code = await readFailureCode(response)
+      return { ok: false, reason: 'forbidden', ...(code === undefined ? {} : { code }) }
     }
     return readClientSession(response, this.origin)
   }

@@ -11,7 +11,7 @@
           <div class="login-card-head">
             <img class="login-logo" src="/mengma-logo.png" alt="" width="72" height="72" />
             <h2>猛犸专家</h2>
-            <p>{{ mode === 'register' ? '注册后立即开通企业空间' : '企业用户使用手机号和密码进入系统' }}</p>
+            <p>{{ mode === 'register' ? '注册后立即开通企业空间' : mode === 'sms' ? '使用手机号和短信验证码进入系统' : '企业用户使用手机号和密码进入系统' }}</p>
           </div>
 
           <el-segmented v-model="mode" class="mode-switch" :options="modeOptions" />
@@ -57,7 +57,7 @@
             />
           </label>
 
-          <label class="field">
+          <label v-if="mode !== 'sms'" class="field">
             <span>{{ mode === 'register' ? '设置密码' : '密码' }}</span>
             <el-input
               v-model="form.password"
@@ -66,6 +66,21 @@
               show-password
               :autocomplete="mode === 'register' ? 'new-password' : 'current-password'"
             />
+          </label>
+
+          <label v-if="mode !== 'password'" class="field">
+            <span>短信验证码</span>
+            <div class="sms-row">
+              <el-input
+                v-model="form.smsCode"
+                placeholder="请输入验证码"
+                maxlength="6"
+                @input="form.smsCode = form.smsCode.replace(/[^\d]/g, '').slice(0, 6)"
+              />
+              <el-button class="sms-button" :disabled="smsWait > 0 || sendingSms" @click="sendCode">
+                {{ smsWait > 0 ? `${smsWait}s` : '获取验证码' }}
+              </el-button>
+            </div>
           </label>
 
           <div class="agreement">
@@ -91,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, onUnmounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { canAccessConsole } from '@mammoth/shared';
 import { useAuthStore } from '../stores/auth';
@@ -108,9 +123,10 @@ function nextParam() {
 const loading = ref(false);
 /** 免登/已登录时先不渲染表单，避免登录页一闪而过。 */
 const booting = ref(true);
-const mode = ref<'password' | 'register'>('password');
+const mode = ref<'password' | 'sms' | 'register'>('password');
 const modeOptions = [
   { label: '密码登录', value: 'password' },
+  { label: '验证码登录', value: 'sms' },
   { label: '注册', value: 'register' },
 ];
 const form = reactive({
@@ -119,8 +135,45 @@ const form = reactive({
   enterpriseName: '',
   slug: '',
   password: '',
+  smsCode: '',
   agree: true,
 });
+const sendingSms = ref(false);
+const smsWait = ref(0);
+let smsTimer: ReturnType<typeof setInterval> | undefined;
+
+function startSmsWait(seconds: number) {
+  smsWait.value = seconds;
+  if (smsTimer) clearInterval(smsTimer);
+  smsTimer = setInterval(() => {
+    smsWait.value -= 1;
+    if (smsWait.value <= 0 && smsTimer) {
+      clearInterval(smsTimer);
+      smsTimer = undefined;
+    }
+  }, 1000);
+}
+
+onUnmounted(() => { if (smsTimer) clearInterval(smsTimer); });
+
+async function sendCode() {
+  if (sendingSms.value) return;
+  if (!/^1\d{10}$/.test(form.phone)) {
+    ElMessage.warning('请输入正确的手机号');
+    return;
+  }
+  sendingSms.value = true;
+  try {
+    const result = await auth.sendSms(form.phone, mode.value === 'register' ? 'register' : 'login');
+    if (result.mockCode) form.smsCode = result.mockCode;
+    startSmsWait(result.retryAfterSeconds);
+    ElMessage.success(result.mockCode ? '本地验证码已填入' : '验证码已发送');
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '验证码发送失败');
+  } finally {
+    sendingSms.value = false;
+  }
+}
 
 onMounted(async () => {
   const sso = new URLSearchParams(location.search).get('sso');
@@ -200,6 +253,8 @@ function goAfterLogin() {
 }
 
 async function onSubmit() {
+  // 连点/回车同源：提交中直接忽略，避免第二次请求报「验证码已过期」。
+  if (loading.value) return;
   if (!form.agree) {
     ElMessage.warning('请先勾选服务协议和隐私协议');
     return;
@@ -220,6 +275,14 @@ async function onSubmit() {
     ElMessage.warning('请输入品牌');
     return;
   }
+  if (mode.value !== 'sms' && !form.password) {
+    ElMessage.warning(mode.value === 'register' ? '请设置密码' : '请输入密码');
+    return;
+  }
+  if (mode.value !== 'password' && !/^\d{6}$/.test(form.smsCode)) {
+    ElMessage.warning('请输入6位短信验证码');
+    return;
+  }
 
   loading.value = true;
   try {
@@ -230,8 +293,12 @@ async function onSubmit() {
         password: form.password,
         enterpriseName: form.enterpriseName.trim(),
         slug: form.slug,
+        smsCode: form.smsCode,
       });
       ElMessage.success('注册成功');
+    } else if (mode.value === 'sms') {
+      await auth.smsLogin(form.phone, form.smsCode);
+      ElMessage.success('登录成功');
     } else {
       await auth.login(form.phone, form.password);
       ElMessage.success('登录成功');
@@ -350,6 +417,22 @@ async function onSubmit() {
   color: #98a2b3;
   font-size: 12px;
   line-height: 1.5;
+}
+.sms-row {
+  display: flex;
+  gap: 8px;
+}
+.sms-row :deep(.el-input) {
+  flex: 1;
+  min-width: 0;
+}
+.sms-button {
+  flex: none;
+  height: 44px;
+  font-weight: 500;
+}
+.login-card--register .sms-button {
+  height: 36px;
 }
 .agreement {
   color: #666;

@@ -28,12 +28,21 @@ export const useAuthStore = defineStore('auth', () => {
     apply(await authApi.login(phone, password));
   }
 
+  async function smsLogin(phone: string, smsCode: string) {
+    apply(await authApi.smsLogin(phone, smsCode));
+  }
+
+  async function sendSms(phone: string, scene: 'login' | 'register') {
+    return authApi.sendSms(phone, scene);
+  }
+
   async function register(body: {
     name: string;
     phone: string;
     password: string;
     enterpriseName: string;
     slug: string;
+    smsCode: string;
   }) {
     apply(await authApi.register(body));
   }
@@ -58,5 +67,5 @@ export const useAuthStore = defineStore('auth', () => {
     apply(await authApi.consumeBrowserSso(ticket));
   }
 
-  return { session, load, login, register, logout, switchTenant, exitWorkbench, consumeBrowserSso };
+  return { session, load, login, smsLogin, sendSms, register, logout, switchTenant, exitWorkbench, consumeBrowserSso };
 });

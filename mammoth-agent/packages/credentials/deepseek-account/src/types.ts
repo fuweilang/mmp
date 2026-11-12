@@ -40,10 +40,35 @@ export interface AccountLinks {
    */
   readonly logoutUrl?: string
 }
+/** Enterprise registration collected by the desktop welcome window. The password and code are not stored locally. */
+export interface EnterpriseRegisterInput {
+  readonly name: string
+  readonly phone: string
+  readonly password: string
+  readonly enterpriseName: string
+  readonly slug: string
+  readonly smsCode: string
+}
+/** Why an SMS code could not be sent. Renderer copy is locale-owned. */
+export type SmsFailureReason = 'invalid' | 'unavailable' | 'rejected'
+/**
+ * Stable server failure code for SMS and desktop registration. Consumers map each known code to
+ * locale-owned copy; an unknown or absent code falls back to generic copy and is never displayed raw.
+ */
+export type AccountFailureCode =
+  | 'SMS_RATE_LIMITED'
+  | 'SMS_INVALID'
+  | 'SMS_CODE_EXPIRED'
+  | 'SMS_UNAVAILABLE'
+  | 'CLIENT_TOO_OLD'
+/** SMS send outcome. mockCode is present only for the local mock provider. */
+export type SmsSendResult =
+  | { readonly ok: true; readonly retryAfterSeconds: number; readonly mockCode?: string }
+  | { readonly ok: false; readonly reason: SmsFailureReason; readonly code?: AccountFailureCode }
 /** Result of a desktop password login. The session JWT never crosses this projection. */
 export type PasswordSignInResult =
   | { readonly ok: true }
-  | { readonly ok: false; readonly reason: 'credentials' | 'forbidden' | 'unavailable'; readonly message?: string }
+  | { readonly ok: false; readonly reason: 'credentials' | 'forbidden' | 'unavailable'; readonly code?: AccountFailureCode }
 /** Stored-account presence is not a claim that the server has validated its token. */
 export interface AccountView {
   readonly status: 'signed-out' | 'credential-stored'

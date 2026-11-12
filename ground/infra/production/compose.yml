@@ -21,6 +21,8 @@ services:
     restart: unless-stopped
     env_file: production.env
     environment:
+      # 生产运行时：mock 短信/支付通道一律关闭，短信缺配置则启动失败（fail-closed）。
+      NODE_ENV: production
       DATABASE_URL: postgresql://mammoth:${POSTGRES_PASSWORD}@pg:5432/mammoth_core
       PORT: '3100'
       LIBRARY_DIR: /app/library-data

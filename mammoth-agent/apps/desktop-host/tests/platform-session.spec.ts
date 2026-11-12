@@ -23,6 +23,8 @@ class Account extends DeepSeekAccount {
   override async ackBonusNotified() { return false }
   override async startSignIn() { return state }
   override async signInWithPassword() { return { ok: true } as const }
+  override async sendSmsCode() { return { ok: true as const, retryAfterSeconds: 60 } }
+  override async signInWithSms() { return { ok: true } as const }
   override async registerWithPassword() { return { ok: true } as const }
   override async acknowledgeWelcome() { return false }
   override async cancelSignIn() { return state }

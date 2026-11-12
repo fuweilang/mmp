@@ -11,7 +11,8 @@ const BUSY_PHASES: ReadonlySet<DesktopUpdatePresentation['phase']> = new Set([
   'checking', 'downloading', 'verifying', 'installing',
 ])
 
-function updateCopy(state: DesktopUpdatePresentation, t: SettingsTranslate): { label: string; detail: string } {
+/** Localized status details shared with the version page. */
+export function updateCopy(state: DesktopUpdatePresentation, t: SettingsTranslate): { label: string; detail: string } {
   const labels: Readonly<Record<DesktopUpdatePresentation['phase'], string>> = {
     idle: '',
     checking: t('desktop.update.checking'),

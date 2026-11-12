@@ -6,13 +6,14 @@ import { parseDesktopRelease } from '../src/release.ts'
 import type { DesktopUpdateState } from '../src/ipc.ts'
 import { DesktopUpdatePreparationError } from '../src/update-error.ts'
 import { zh } from '../src/locale.ts'
+import { runDesktopUpdateCommand } from '../src/update-commands.ts'
 
 vi.mock('electron', () => ({ app: { isPackaged: false } }))
 vi.mock('electron-updater', () => ({
   default: { autoUpdater: { autoDownload: true, autoInstallOnAppQuit: true } },
 }))
 
-const { DesktopUpdateCoordinator } = await import('../src/update-coordinator.ts')
+const { DesktopUpdateCoordinator, supportsDesktopUpdates } = await import('../src/update-coordinator.ts')
 
 describe('desktop release metadata', () => {
   it('accepts one exact release identity for Electron and mmp', () => {
@@ -47,7 +48,7 @@ describe('desktop release metadata', () => {
 const coordinators: InstanceType<typeof DesktopUpdateCoordinator>[] = []
 afterEach(() => { for (const item of coordinators.splice(0)) item.dispose() })
 
-function fixture(channel: 'nightly' | 'latest' = 'nightly', version = '1.1.0-alpha.1') {
+function fixture(channel: 'nightly' | 'latest' = 'nightly', version = '1.1.0-alpha.1', enabled = true) {
   const events = new EventEmitter()
   const checkForUpdates = vi.fn(async () => ({
     isUpdateAvailable: true,
@@ -66,7 +67,7 @@ function fixture(channel: 'nightly' | 'latest' = 'nightly', version = '1.1.0-alp
   const updater = Object.assign(events, { checkForUpdates, downloadUpdate, quitAndInstall }) as unknown as AppUpdater
   const coordinator = new DesktopUpdateCoordinator(
     (state) => { states.push(state); return state },
-    beforeRestart, updater, () => true, () => version, downloadResult, channel,
+    beforeRestart, updater, () => enabled, () => version, downloadResult, channel,
   )
   coordinators.push(coordinator)
   return { coordinator, updater, events, states, checkForUpdates, downloadUpdate, quitAndInstall, beforeRestart, downloadResult }
@@ -167,14 +168,29 @@ describe('desktop update coordinator', () => {
     await expect(f.coordinator.install('1.2.0')).rejects.toThrow(/not ready/u)
   })
 
-  it('keeps automatic failures silent and exposes a manual caller joining the same check', async () => {
+  it('keeps automatic failures quiet and shares a manual caller without downloading', async () => {
     const f = fixture()
     f.checkForUpdates.mockRejectedValue(new Error('offline'))
-    expect(await f.coordinator.check()).toMatchObject({ phase: 'error', failedOperation: 'check' })
+    await f.coordinator.check()
     expect(f.states).toEqual([])
+    expect(f.coordinator.lastCheckFailed).toBe(true)
+    expect(await f.coordinator.check(true)).toMatchObject({ phase: 'error', failedOperation: 'check' })
+    expect(f.states.map(state => state.phase)).toEqual(['checking', 'error'])
     await Promise.all([f.coordinator.check(), f.coordinator.check(true)])
-    expect(f.states).toEqual([expect.objectContaining({ phase: 'error', failedOperation: 'check' })])
+    expect(f.states.map(state => state.phase)).toEqual(['checking', 'error', 'checking', 'error'])
     expect(f.downloadUpdate).not.toHaveBeenCalled()
+  })
+
+  it('withdraws a stale offer on a quiet failure without publishing an error', async () => {
+    const f = fixture()
+    await f.coordinator.check()
+    expect(f.states.map(state => state.phase)).toEqual(['available'])
+    f.checkForUpdates.mockRejectedValueOnce(new Error('offline'))
+    await f.coordinator.check()
+    expect(f.coordinator.state).toEqual({ phase: 'idle' })
+    expect(f.states.map(state => state.phase)).toEqual(['available', 'idle'])
+    expect(f.coordinator.info.releaseNotes).toBeUndefined()
+    await expect(f.coordinator.download('1.1.0-rc.2')).rejects.toThrow(/no checked update/u)
   })
 
   it.each(['1.0.0', '1.1.0-alpha.1', 'invalid'])('does not download or install inapplicable version %s', async (version) => {
@@ -254,6 +270,53 @@ it('keeps a stable-version nightly installation on nightly and rejects prereleas
   expect(latest.updater.channel).toBe('latest')
   expect(latest.updater.allowPrerelease).toBe(false)
   expect(latest.updater.allowDowngrade).toBe(false)
-  expect((await latest.coordinator.check()).phase).toBe('error')
+  expect((await latest.coordinator.check(true)).phase).toBe('error')
   expect(latest.downloadUpdate).not.toHaveBeenCalled()
+})
+
+
+it('separates explicit settings gestures, main-owned target, and native install approval', async () => {
+  const f = fixture()
+  expect(f.coordinator.info).toMatchObject({ currentVersion: '1.1.0-alpha.1', supported: true, checked: false })
+  await runDesktopUpdateCommand(f.coordinator, 'check')
+  expect(f.downloadUpdate).not.toHaveBeenCalled()
+  expect(f.quitAndInstall).not.toHaveBeenCalled()
+  await runDesktopUpdateCommand(f.coordinator, 'download')
+  expect(f.beforeRestart).not.toHaveBeenCalled()
+  expect(f.quitAndInstall).not.toHaveBeenCalled()
+  f.beforeRestart.mockResolvedValueOnce(false)
+  expect((await runDesktopUpdateCommand(f.coordinator, 'install')).phase).toBe('ready')
+  expect(f.quitAndInstall).not.toHaveBeenCalled()
+  await expect(runDesktopUpdateCommand(f.coordinator, { url: 'https://invalid.test/update' })).rejects.toThrow('invalid action')
+})
+
+it('reports unsupported builds and never checks or downloads without a packaged feed', async () => {
+  const f = fixture('latest', '0.3.2', false)
+  expect(f.coordinator.info).toMatchObject({ currentVersion: '0.3.2', supported: false, checked: false })
+  await expect(runDesktopUpdateCommand(f.coordinator, 'check')).rejects.toThrow('no update source')
+  expect((await f.coordinator.check(true)).phase).toBe('error')
+  expect(f.checkForUpdates).not.toHaveBeenCalled()
+  expect(f.downloadUpdate).not.toHaveBeenCalled()
+})
+
+it('keeps feed notes as bounded text and clears the failed offer', async () => {
+  const f = fixture()
+  f.checkForUpdates.mockResolvedValueOnce({ isUpdateAvailable: true,
+    updateInfo: Object.assign({ version: '1.1.0-rc.2' }, { releaseNotes: '<script>not executable</script>' }) })
+  await f.coordinator.check()
+  expect(f.coordinator.info).toMatchObject({ checked: true, releaseNotes: '<script>not executable</script>' })
+  f.checkForUpdates.mockRejectedValueOnce(new Error('offline'))
+  await f.coordinator.check(true)
+  expect(f.coordinator.info.checked).toBe(false)
+  expect(f.coordinator.info.releaseNotes).toBeUndefined()
+  expect(f.coordinator.state).toMatchObject({ phase: 'error', failedOperation: 'check' })
+  expect(f.coordinator.state).not.toHaveProperty('version')
+})
+
+
+it.each([
+  ['darwin', 'arm64', true], ['darwin', 'x64', true], ['win32', 'x64', true],
+  ['linux', 'x64', false], ['win32', 'arm64', false], ['darwin', 'ia32', false],
+] as const)('qualifies only the product update target %s/%s', (platform, arch, supported) => {
+  expect(supportsDesktopUpdates(platform, arch)).toBe(supported)
 })

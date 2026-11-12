@@ -7,7 +7,17 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ phone, password }),
     }),
-  register: (body: { name: string; phone: string; password: string; enterpriseName: string; slug: string }) =>
+  smsLogin: (phone: string, smsCode: string) =>
+    http<SessionMe>('/api/auth/sms-login', {
+      method: 'POST',
+      body: JSON.stringify({ phone, smsCode }),
+    }),
+  sendSms: (phone: string, scene: 'login' | 'register') =>
+    http<{ ok: true; retryAfterSeconds: number; mockCode?: string }>('/api/auth/sms/send', {
+      method: 'POST',
+      body: JSON.stringify({ phone, scene }),
+    }),
+  register: (body: { name: string; phone: string; password: string; enterpriseName: string; slug: string; smsCode: string }) =>
     http<SessionMe>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(body),

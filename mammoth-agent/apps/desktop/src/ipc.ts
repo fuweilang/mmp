@@ -34,6 +34,7 @@ export const DESKTOP_IPC = {
   localeChanged: 'mmp-desktop:locale-changed',
   updatesStatus: 'mmp-desktop:updates-status',
   updatesOpen: 'mmp-desktop:updates-open',
+  updatesCommand: 'mmp-desktop:updates-command',
   updatesPresentation: 'mmp-desktop:updates-presentation',
   nativeThemeSet: 'mmp-desktop:native-theme-set',
   windowFullscreen: 'mmp-desktop:window-fullscreen',
@@ -73,6 +74,10 @@ export type DesktopUpdateFailureKind =
 export interface DesktopUpdatePresentation {
   readonly phase: DesktopUpdateState['phase']
   readonly version?: string
+  readonly currentVersion?: string
+  readonly supported?: boolean
+  readonly checked?: boolean
+  readonly releaseNotes?: string
   readonly percent?: number
   readonly failure?: DesktopUpdateFailureKind
 }
@@ -93,6 +98,7 @@ export interface MmpDesktopProductApi {
   readonly updates: {
     status(): Promise<DesktopUpdatePresentation>
     open(): Promise<void>
+    command?(action: 'check' | 'download' | 'install'): Promise<DesktopUpdatePresentation>
     subscribe(listener: (state: DesktopUpdatePresentation) => void): () => void
   }
 }

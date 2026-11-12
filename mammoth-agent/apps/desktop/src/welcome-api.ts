@@ -1,6 +1,6 @@
 /** Operations available to the isolated native welcome renderer. */
 
-import type { AccountView, PasswordSignInResult, SignInAttemptId } from '@mammoth-ai/mmp-deepseek-account/types'
+import type { AccountView, EnterpriseRegisterInput, PasswordSignInResult, SignInAttemptId, SmsSendResult } from '@mammoth-ai/mmp-deepseek-account/types'
 import type { ProductEventMap } from '@mammoth-ai/mmp-client-product-analytics/types'
 import type { DesktopLocale } from './locale.ts'
 
@@ -14,6 +14,8 @@ export const WELCOME_IPC = {
   cancel: 'mmp-welcome:cancel',
   copyLink: 'mmp-welcome:copy-link',
   password: 'mmp-welcome:password',
+  sms: 'mmp-welcome:sms',
+  smsLogin: 'mmp-welcome:sms-login',
   register: 'mmp-welcome:register',
   state: 'mmp-welcome:state',
   takeNotice: 'mmp-welcome:take-notice',
@@ -49,17 +51,25 @@ export interface WelcomeOperations {
    */
   signInWithPassword(phone: string, password: string): Promise<PasswordSignInResult>
   /**
+   * Ask Ground to send a code. The code stays out of the renderer except for the local mock fill.
+   * @param phone - enterprise phone number.
+   * @param scene - login or register.
+   * @returns the cooldown.
+   */
+  sendSmsCode(phone: string, scene: 'login' | 'register'): Promise<SmsSendResult>
+  /**
+   * Sign in on this computer with an SMS code. The system browser is not opened.
+   * @param phone - enterprise phone number.
+   * @param smsCode - six-digit code. It stays in the main process.
+   * @returns whether the local session was stored, without the session token.
+   */
+  signInWithSms(phone: string, smsCode: string): Promise<PasswordSignInResult>
+  /**
    * Register on this computer. The system browser is not opened and its cookie is not set.
    * @param input - enterprise registration fields. The password stays in the main process.
    * @returns whether the local session was stored, without the session token.
    */
-  registerWithPassword(input: {
-    name: string
-    phone: string
-    password: string
-    enterpriseName: string
-    slug: string
-  }): Promise<PasswordSignInResult>
+  registerWithPassword(input: EnterpriseRegisterInput): Promise<PasswordSignInResult>
 
   /**
    * Store the official provider's key before entering the workspace.

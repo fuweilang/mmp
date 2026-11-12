@@ -39,14 +39,14 @@ const CHILD_NAMES = Object.keys(CHILD_SPECS) as Array<keyof typeof CHILD_SPECS>
 
 /**
  * Section ids the web-app roster registers, in nav order: this package, then
- * ui-settings-models, ui-settings-plugins, and ui-agent-preset. A plugin
+ * ui-settings-plugins and the existing data-management contribution. A plugin
  * adding a section changes this list.
  */
-const PRODUCT_SECTIONS: readonly string[] = ['general', 'models', 'plugins', 'agent-presets']
-/** Onboarding steps the web-app roster registers, in coordinator order; both come from ui-settings-models. */
+// Mammoth's existing cloud-only web roster does not expose upstream BYOK/model preset settings.
+const PRODUCT_SECTIONS: readonly string[] = ['general', 'plugins', 'data-management']
+/** Current cloud-only Web onboarding; no provider-key onboarding is offered. */
 const PRODUCT_ONBOARDING: readonly { id: string; order: number }[] = [
   { id: 'welcome-notice', order: -100 },
-  { id: 'deepseek-official', order: 0 },
 ]
 
 describe('ui-settings-general shell', () => {
@@ -56,7 +56,8 @@ describe('ui-settings-general shell', () => {
     const off = vi.fn()
     const subscribe = vi.fn((listener: typeof publish) => { publish = listener; return off })
     const open = vi.fn(async () => {})
-    vi.stubGlobal('mmpDesktop', { protocolVersion: 1, updates: { status: () => initial.promise, subscribe, open } })
+    const command = vi.fn(async () => ({ phase: 'idle' as const }))
+    vi.stubGlobal('mmpDesktop', { protocolVersion: 1, updates: { status: () => initial.promise, subscribe, open, command } })
     onTestFinished(() => { vi.unstubAllGlobals(); initial.resolve({ phase: 'idle' }) })
     const c = await start()
     const row = injectedOf(c)
@@ -66,9 +67,14 @@ describe('ui-settings-general shell', () => {
     const status = { phase: 'available' as const, version: '1.0.1' }
     publish!(status)
     expect(row.hooks.desktopUpdate.getSnapshot().presentation).toEqual(status)
+    const opened = vi.fn()
+    c.ctx.on('settings/open-section', opened)
     row.openDesktopUpdate()
     await c.flush()
-    expect(open).toHaveBeenCalledOnce()
+    expect(opened).toHaveBeenCalledWith('updates')
+    expect(open).not.toHaveBeenCalled()
+    expect(command).not.toHaveBeenCalled()
+    expect(c.ctx.slots.entries('settings.section').some(entry => entry.options.id === 'updates')).toBe(true)
     await c.unload(SELF)
     await c.flush()
     expect(off).toHaveBeenCalledOnce()
@@ -181,3 +187,16 @@ describe('ui-settings-general shell', () => {
     for (const name of CHILD_NAMES) expect(c.ctx.slots.spec(name)).toBeUndefined()
   })
 })
+
+
+it('does not connect legacy implicit-open update bridges or register a version page for them', async ({ start }) => {
+  const subscribe = vi.fn(() => () => {})
+  const open = vi.fn(async () => {})
+  vi.stubGlobal('mmpDesktop', { protocolVersion: 1, updates: { status: async () => ({ phase: 'idle' }), subscribe, open } })
+  onTestFinished(() => { vi.unstubAllGlobals() })
+  const c = await start()
+  expect(c.ctx.slots.entries('settings.section').some(entry => entry.options.id === 'updates')).toBe(false)
+  injectedOf(c).openDesktopUpdate()
+  expect(subscribe).not.toHaveBeenCalled()
+  expect(open).not.toHaveBeenCalled()
+}, COLD_BOOT_TIMEOUT_MS)

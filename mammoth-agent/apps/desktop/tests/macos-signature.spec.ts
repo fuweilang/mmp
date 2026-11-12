@@ -1,4 +1,5 @@
 import { SHIPPED_LOCALE_IDS } from '../../../scripts/shipped-locales.ts'
+import { desktopArtifactBase } from '../scripts/desktop-artifact-name.mjs'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -162,7 +163,7 @@ describe('desktop macOS release signature', () => {
       MMP_DESKTOP_UNSIGNED: '1',
     }, 'darwin', arch)
     expect(portablePath(config.directories.output)).toContain(`/targets/mac-${arch}/unsigned-artifacts`)
-    expect(config.artifactName).toBe('deepseek-harness-${version}-${os}-${arch}-unsigned.${ext}')
+    expect(config.artifactName).toBe(desktopArtifactBase('${version}', '${os}', '${arch}') + '-unsigned.${ext}')
     expect(config.mac).toMatchObject({ identity: '-', forceCodeSigning: false, notarize: false, target: ['dmg'] })
     expect(config.dmg).toMatchObject({ sign: false, writeUpdateInfo: false })
     expect(config.publish).toBeNull()

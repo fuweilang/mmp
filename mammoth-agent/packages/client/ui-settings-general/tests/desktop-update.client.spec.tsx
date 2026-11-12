@@ -198,3 +198,22 @@ it('localizes fullscreen timeout guidance and preserves the retry action', async
     expect(f.open).toHaveBeenCalledOnce()
   } finally { f.view.unmount(); f.status.resolve(available) }
 })
+
+
+it('coalesces explicit commands without using the legacy open/download action', async () => {
+  const pending = Promise.withResolvers<DesktopUpdatePresentation>()
+  const open = vi.fn(async () => {})
+  const command = vi.fn(() => pending.promise)
+  const source = new DesktopUpdateSource({ status: async () => ({ phase: 'idle', supported: true, currentVersion: '0.3.2' }),
+    open, command, subscribe: () => () => {} })
+  source.command('check')
+  source.command('check')
+  expect(source.store.getSnapshot().managed).toBe(true)
+  expect(command).toHaveBeenCalledExactlyOnceWith('check')
+  expect(open).not.toHaveBeenCalled()
+  pending.resolve({ phase: 'available', version: '0.3.3', currentVersion: '0.3.2', supported: true })
+  await pending.promise
+  await Promise.resolve()
+  expect(source.store.getSnapshot().presentation?.version).toBe('0.3.3')
+  source.dispose()
+})

@@ -22,7 +22,7 @@ import { createReadStream } from 'fs';
 import { Request, Response } from 'express';
 import { User } from '@prisma/client';
 import { AuthService } from './auth.service';
-import { ConsumeBrowserSsoDto, LoginDto, RegisterDto, SwitchTenantDto } from './dto/login.dto';
+import { ClientRegisterDto, ConsumeBrowserSsoDto, LoginDto, PublicRegisterDto, RegisterDto, SendSmsDto, SmsLoginDto, SwitchTenantDto } from './dto/login.dto';
 import { ChangePasswordDto, UpdateMeDto } from './dto/self-service.dto';
 import { JwtGuard } from './jwt.guard';
 import { CurrentTenantId, CurrentUser } from './current-user';
@@ -48,14 +48,33 @@ export class AuthController {
   /** Desktop registration. The session JWT is in the body; no browser cookie is set. */
   @Post('client-register')
   @HttpCode(200)
-  clientRegister(@Body() dto: RegisterDto, @Req() req: Request) {
+  clientRegister(@Body() dto: ClientRegisterDto, @Req() req: Request) {
     return this.auth.clientRegister(dto, req.ip);
   }
 
   @Post('register')
   @HttpCode(200)
-  register(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  register(@Body() dto: PublicRegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     return this.auth.register(dto, res, req.ip);
+  }
+
+  @Post('sms/send')
+  @HttpCode(200)
+  sendSms(@Body() dto: SendSmsDto, @Req() req: Request) {
+    return this.auth.sendSms(dto.phone, dto.scene, req.ip);
+  }
+
+  @Post('sms-login')
+  @HttpCode(200)
+  smsLogin(@Body() dto: SmsLoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.auth.smsLogin(dto.phone, dto.smsCode, res, req.ip);
+  }
+
+  /** Desktop SMS login. The session JWT is in the body; no browser cookie is set. */
+  @Post('client-sms-login')
+  @HttpCode(200)
+  clientSmsLogin(@Body() dto: SmsLoginDto, @Req() req: Request) {
+    return this.auth.clientSmsLogin(dto.phone, dto.smsCode, req.ip);
   }
 
   /** Cookie or Bearer. Marks the one-time welcome seen for this account. */

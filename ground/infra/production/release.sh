@@ -252,6 +252,15 @@ step_preflight() {
     die '部署配置里出现旧运行时/旧目录（octop / mmPlatform / :8088 / /www/mammoth）'
   fi
 
+  # 生产短信 fail-closed：模板缺键或实际 env 不是真实腾讯通道，直接拒绝发版。
+  node "$INFRA_DIR/check-sms-env.mjs" "$INFRA_DIR/production.env.example" --template \
+    || die 'production.env.example 短信必填项不完整'
+  if [[ -s "${RELEASE_DIR:-}/production.env" ]]; then
+    log '校验发布目录里的 production.env 短信配置'
+    node "$INFRA_DIR/check-sms-env.mjs" "$RELEASE_DIR/production.env" --runtime \
+      || die "production.env 短信配置不完整：$RELEASE_DIR/production.env"
+  fi
+
   local dirty
   dirty="$(git -C "$REPO_ROOT" status --short 2>/dev/null | head -20 || true)"
   [[ -n "$dirty" ]] && warn "工作区有未提交改动（不阻塞发版，但请确认是你要发的代码）："$'\n'"$dirty"
@@ -457,6 +466,9 @@ step_deploy() {
   if grep -q 'REPLACE_WITH' "$RELEASE_DIR/production.env"; then
     die "production.env 仍是模板占位符：$RELEASE_DIR/production.env"
   fi
+  # 短信通道是国内生产强依赖：缺通道/缺凭据不发版。
+  node "$INFRA_DIR/check-sms-env.mjs" "$RELEASE_DIR/production.env" --runtime \
+    || die "production.env 短信配置不完整：$RELEASE_DIR/production.env"
 
   cp "$INFRA_DIR"/{compose.yml,nginx-mmai.conf,proxy-common.conf,proxy-common-long.conf,init-db.sh} "$RELEASE_DIR/"
   log "上传发布包到 $stage_dir"

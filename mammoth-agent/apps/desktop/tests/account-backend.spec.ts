@@ -44,6 +44,29 @@ it('does not replay an expiry reason from an account snapshot', () => {
   expect(accountView({ ...state, signOutReason: 'expired' })).toEqual(state)
 })
 
+it('keeps only stable failure codes and never forwards server messages', async () => {
+  const client = { version: '1.2.3', locale: 'en', timezoneOffsetSeconds: 28_800 }
+  const replies = [
+    { ok: false, reason: 'forbidden', code: 'CLIENT_TOO_OLD', message: '当前客户端版本过旧' },
+    { ok: false, reason: 'forbidden', code: 'UNRECOGNIZED', message: '未知服务端文案' },
+  ]
+  let index = 0
+  const backend = desktopAccountBackend('http://127.0.0.1:1234', () => Promise.resolve(replies[index++]), () => Promise.resolve(''))
+  const input = { name: 'Zhang', phone: '13800138000', password: 'secret', enterpriseName: 'Acme', slug: 'acme', smsCode: '123456' }
+  expect(await backend.registerWithPassword(client, input)).toEqual({ ok: false, reason: 'forbidden', code: 'CLIENT_TOO_OLD' })
+  expect(await backend.registerWithPassword(client, input)).toEqual({ ok: false, reason: 'forbidden' })
+
+  const smsReplies = [
+    { ok: false, reason: 'rejected', code: 'SMS_RATE_LIMITED', message: '验证码发送过于频繁，请稍后再试' },
+    { ok: false, reason: 'rejected', code: 'SMS_OTHER', message: '服务端文案' },
+  ]
+  let smsIndex = 0
+  const smsBackend = desktopAccountBackend('http://127.0.0.1:1234', () => Promise.resolve(smsReplies[smsIndex++]), () => Promise.resolve(''))
+  expect(await smsBackend.sendSmsCode('13800138000', 'login')).toEqual({ ok: false, reason: 'rejected', code: 'SMS_RATE_LIMITED' })
+  expect(await smsBackend.sendSmsCode('13800138000', 'login')).toEqual({ ok: false, reason: 'rejected' })
+})
+
+
 it('receives live expiry separately from account snapshots', async () => {
   const server = new WebSocketServer({ host: '127.0.0.1', port: 0 })
   await once(server, 'listening')

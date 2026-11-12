@@ -17,6 +17,10 @@ export type DesktopUpdateFailureKind =
 export interface DesktopUpdatePresentation {
   readonly phase: 'idle' | 'checking' | 'available' | 'downloading' | 'verifying' | 'installing' | 'ready' | 'error'
   readonly version?: string
+  readonly currentVersion?: string
+  readonly supported?: boolean
+  readonly checked?: boolean
+  readonly releaseNotes?: string
   readonly percent?: number
   readonly failure?: DesktopUpdateFailureKind
 }
@@ -25,6 +29,7 @@ export interface DesktopUpdatePresentation {
 export interface DesktopUpdateBridge {
   status(): Promise<DesktopUpdatePresentation>
   open(): Promise<void>
+  command?(action: 'check' | 'download' | 'install'): Promise<DesktopUpdatePresentation>
   subscribe(listener: (state: DesktopUpdatePresentation) => void): () => void
 }
 
@@ -33,4 +38,6 @@ export interface DesktopUpdateView {
   readonly presentation?: DesktopUpdatePresentation
   readonly failed: boolean
   readonly opening: boolean
+  readonly managed?: boolean
+  readonly operation?: 'check' | 'download' | 'install'
 }

@@ -2,6 +2,8 @@
 export interface DesktopBuildCommit {
   readonly commit: string
   readonly dirty: boolean
+  readonly branch?: string
+  readonly builtAt?: string
 }
 
 /** Environment variable that carries the packaged commit. */
@@ -30,3 +32,6 @@ export function resolveDesktopBuildCommit(env: NodeJS.ProcessEnv): DesktopBuildC
  * @returns Variables to merge into a child environment.
  */
 export function desktopBuildCommitEnvironment(packaged: DesktopBuildCommit): Record<string, string>
+
+/** Capture source branch and ISO build timestamp once per packaging invocation. */
+export function readDesktopBuildProvenance(repositoryRoot: string): { branch: string; builtAt: string }

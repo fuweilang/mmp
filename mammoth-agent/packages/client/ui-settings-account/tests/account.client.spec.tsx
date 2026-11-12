@@ -851,3 +851,30 @@ it.each([
     expect(within(panel).queryByRole('menuitem', { name: en.enterpriseConsole })).toBeNull()
   }
 })
+
+
+it('keeps desktop update navigation in the expanded account panel, with real version and no rail clutter', async () => {
+  const { AccountMenu } = await import('../src/client/AccountMenu.tsx')
+  const operations = operationsOf({ status: 'credential-stored', attempt: null })
+  const openUpdate = vi.fn()
+  const t: AccountMenuProps['t'] = (key, params) => Object.entries(params ?? {})
+    .reduce((copy, [name, value]) => copy.replaceAll(`{${name}}`, String(value)), (zh as Readonly<Record<string, string>>)[key] ?? key)
+  const base: AccountMenuProps = { ...({} as GlobalStandardProps), ...operations,
+    settingsOpen: false, wide: false,
+    useAccount: selector => selector(operations.hooks.account.getSnapshot()),
+    useTheme: selector => selector(operations.hooks.theme.getSnapshot()),
+    openSettings: vi.fn(), openOnboarding: vi.fn(), t }
+  const view = render(<AccountMenu {...base} />)
+  fireEvent.click(screen.getByRole('button', { name: zh.menu }))
+  expect(screen.queryByRole('menuitem', { name: /版本更新/u })).toBeNull()
+  view.unmount()
+  render(<AccountMenu {...base} versionUpdate={{ currentVersion: '0.3.2', targetVersion: '0.3.3', open: openUpdate }} />)
+  const trigger = screen.getByRole('button', { name: zh.menu })
+  expect(trigger.textContent).not.toContain('0.3.2')
+  fireEvent.click(trigger)
+  expect(screen.getByText('当前版本 v0.3.2')).toBeTruthy()
+  expect(screen.getByText('可更新至 v0.3.3')).toBeTruthy()
+  fireEvent.click(screen.getByRole('menuitem', { name: /版本更新/u }))
+  expect(openUpdate).toHaveBeenCalledOnce()
+  expect(screen.queryByRole('menu')).toBeNull()
+})

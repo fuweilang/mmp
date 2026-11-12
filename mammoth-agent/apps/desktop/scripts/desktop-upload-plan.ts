@@ -1,3 +1,4 @@
+import { desktopArtifactBase } from './desktop-artifact-name.mjs'
 /** Validate packaged Desktop update artifacts before any network upload begins. */
 
 import { createHash } from 'node:crypto'
@@ -50,6 +51,8 @@ export interface DesktopUploadPlan {
   readonly secretKeyEnvName: string
   readonly artifacts: readonly DesktopUploadArtifact[]
   /** Commit the artifacts were packaged from, absent for a package built before builds recorded it. */
+  readonly branch?: string
+  readonly builtAt?: string
   readonly commit?: string
   /** Whether that checkout carried uncommitted changes. */
   readonly dirty?: boolean
@@ -238,8 +241,12 @@ export async function createDesktopUploadPlan(
     throw new Error(`desktop upload: ${metadataFilename}.files must contain exactly one target update file`)
   }
 
-  const base = `deepseek-harness-${buildVersion}-${target.os}-${target.arch}`
+  const currentBase = desktopArtifactBase(buildVersion, target.os, target.arch)
+  const legacyBase = `deepseek-harness-${buildVersion}-${target.os}-${target.arch}`
   const updaterExtension = target.platform === 'darwin' ? 'zip' : 'exe'
+  const offered = object(metadata.files[0], `${metadataFilename}.files[0]`)
+  // Retained old packages remain publishable, but cross-version/architecture names are still rejected.
+  const base = (offered.url ?? offered.path) === `${legacyBase}.${updaterExtension}` ? legacyBase : currentBase
   const updaterInfo = updateFileInfo(metadata.files[0], `${metadataFilename}.files[0]`, `${base}.${updaterExtension}`)
   const updaterPath = await verifyChecksummedArtifact(artifactsRoot, updaterInfo)
   const artifacts: DesktopUploadArtifact[] = []
@@ -270,6 +277,10 @@ export async function createDesktopUploadPlan(
   const payloadUrl = `${update.origin}/${binaryPrefix}/${updaterInfo.filename}`
   const published = {
     ...metadata,
+    ...(typeof buildRecord.branch === 'string' && typeof buildRecord.builtAt === 'string' ? {
+      mmpRelease: { version: buildVersion, target: targetName, branch: buildRecord.branch,
+        commit: buildRecord.commit, builtAt: buildRecord.builtAt, sha512: updaterInfo.sha512 },
+    } : {}),
     files: [{ ...object(metadata.files[0], `${metadataFilename}.files[0]`), url: payloadUrl }],
     ...(metadata.path === undefined ? {} : { path: payloadUrl }),
   }
@@ -290,6 +301,8 @@ export async function createDesktopUploadPlan(
     secretKeyEnvName: update.secretKeyEnvName,
     artifacts: options.latest ? [{ ...installerArtifact, filename: latestFilename, key: latestKey }] : artifacts,
     ...typeof buildRecord.commit === 'string' ? { commit: buildRecord.commit } : {},
+    ...typeof buildRecord.branch === 'string' ? { branch: buildRecord.branch } : {},
+    ...typeof buildRecord.builtAt === 'string' ? { builtAt: buildRecord.builtAt } : {},
     ...typeof buildRecord.dirty === 'boolean' ? { dirty: buildRecord.dirty } : {},
   }
 }

@@ -25,6 +25,7 @@ const accountPanelEn = {
 
 /** English account dictionary. */
 export const en = {
+  versionUpdate: 'Version update', updateTarget: 'Update to v{version}', installedVersion: 'Installed v{version}',
   ...accountPanelEn,
   unlimitedCoins: 'Unlimited',
   modelSignInRequired: 'Model unavailable. Please sign in and try again.',
@@ -47,6 +48,7 @@ export const en = {
   phoneInvalid: 'Enter a valid phone number',
   credentialsFailed: 'Incorrect phone number or password',
   loginUnavailable: 'Sign-in is unavailable. Try again later.',
+  clientTooOld: 'This version is out of date. Update to the latest version to continue.',
   signOutUnknownDescription: 'Could not check running tasks. Signing out may interrupt tasks using this account. Sign out now?',
   signOutDescription: 'Signing out will not delete any data. You can sign in to this account again.',
   signOutRunningDescription: 'Tasks are currently running. Signing out will interrupt them. Sign out now?', cancel: 'Cancel', open: 'Open browser',
@@ -70,6 +72,7 @@ export const en = {
 export type AccountKey = keyof typeof en
 /** Chinese account settings copy. */
 export const zh: Record<AccountKey, string> = {
+  versionUpdate: '版本更新', updateTarget: '可更新至 v{version}', installedVersion: '当前版本 v{version}',
   cloudHistory: '跨端历史', historyReadOnly: '只读查看任务历史与任务结果，继续执行请回到来源设备。',
   historySearch: '搜索任务或项目', historyRefresh: '刷新', historyRetry: '同步本机记录',
   historyError: '暂时无法读取历史，请检查网络后刷新。', historyPending: '部分任务尚未同步，联网后会自动重试，也可手动同步。',
@@ -107,6 +110,7 @@ export const zh: Record<AccountKey, string> = {
   phoneInvalid: '请输入正确的手机号',
   credentialsFailed: '账号或密码错误',
   loginUnavailable: '暂时无法登录，请稍后重试',
+  clientTooOld: '当前版本过旧，请更新到最新版本后继续使用',
   signOutUnknownDescription: '暂时无法确认任务状态。退出登录可能会中断使用此账号的任务，是否继续？',
   signOutDescription: '退出登录不会丢失任何数据，你仍可以登录此账号。',
   signOutRunningDescription: '当前有进程正在执行中，点击“退出登录”，将会打断进程，是否即刻退出登录？', cancel: '取消', open: '打开浏览器',
@@ -129,6 +133,7 @@ export const zh: Record<AccountKey, string> = {
 
 /** Japanese copy, checked against the English keys. */
 export const ja = {
+  versionUpdate: 'バージョン更新', updateTarget: 'v{version} に更新', installedVersion: 'v{version} をインストール済み',
   ...accountPanelEn,
   unlimitedCoins: '無制限',
   ...onboardingJa,
@@ -166,6 +171,7 @@ export const ja = {
   phoneInvalid: '正しい電話番号を入力してください',
   credentialsFailed: '電話番号またはパスワードが違います',
   loginUnavailable: 'ログインできません。しばらくしてから再試行してください。',
+  clientTooOld: 'このバージョンは古くなっています。最新バージョンに更新してから続行してください。',
   'signOutUnknownDescription': '実行中のタスクを確認できませんでした。ログアウトすると、このアカウントを使用しているタスクが中断される可能性があります。今すぐログアウトしますか？',
   'signOutDescription': 'ログアウトしてもデータは削除されません。このアカウントに再度ログインできます。',
   'signOutRunningDescription': '現在実行中のタスクがあります。ログアウトすると中断されます。今すぐログアウトしますか？',
@@ -198,6 +204,7 @@ export const ja = {
 
 /** Spanish dictionary, checked against the English keys. */
 export const es = {
+  versionUpdate: 'Actualización de versión', updateTarget: 'Actualizar a v{version}', installedVersion: 'v{version} instalada',
   ...accountPanelEn,
   unlimitedCoins: 'Sin límite',
   modelSignInRequired: 'Modelo no disponible. Por favor inicia sesión y vuelve a intentarlo.',
@@ -220,6 +227,7 @@ export const es = {
   phoneInvalid: 'Introduce un teléfono válido',
   credentialsFailed: 'Teléfono o contraseña incorrectos',
   loginUnavailable: 'No se puede iniciar sesión. Inténtalo más tarde.',
+  clientTooOld: 'Esta versión está desactualizada. Actualiza a la última versión para continuar.',
   signOutUnknownDescription: 'No se pudieron verificar las tareas en ejecución. Cerrar sesión puede interrumpir las tareas que utilizan esta cuenta. ¿Cerrar sesión ahora?',
   signOutDescription: 'Cerrar sesión no eliminará ningún dato. Puede iniciar sesión en esta cuenta nuevamente.',
   signOutRunningDescription: 'Las tareas se están ejecutando actualmente. Cerrar sesión los interrumpirá. ¿Cerrar sesión ahora?', cancel: 'Cancelar', open: 'Abrir navegador',
@@ -242,6 +250,7 @@ export const es = {
 
 /** French dictionary, checked against the English keys. */
 export const fr = {
+  versionUpdate: 'Mise à jour de version', updateTarget: 'Mettre à jour vers v{version}', installedVersion: 'v{version} installée',
   ...accountPanelEn,
   unlimitedCoins: 'Illimité',
   modelSignInRequired: 'Modèle indisponible. Veuillez vous connecter et réessayer.',
@@ -264,6 +273,7 @@ export const fr = {
   phoneInvalid: 'Saisissez un téléphone valide',
   credentialsFailed: 'Téléphone ou mot de passe incorrect',
   loginUnavailable: 'Connexion impossible. Réessayez plus tard.',
+  clientTooOld: 'Cette version est obsolète. Mettez à jour vers la dernière version pour continuer.',
   signOutUnknownDescription: "Impossible de vérifier les tâches en cours d'exécution. La déconnexion peut interrompre les tâches utilisant ce compte. Se déconnecter maintenant ?",
   signOutDescription: 'La déconnexion ne supprimera aucune donnée. Vous pouvez vous reconnecter à ce compte.',
   signOutRunningDescription: "Les tâches sont actuellement en cours d'exécution. La déconnexion les interrompra. Se déconnecter maintenant ?", cancel: 'Annuler', open: 'Ouvrir le navigateur',
@@ -286,6 +296,7 @@ export const fr = {
 
 /** German dictionary, checked against the English keys. */
 export const de = {
+  versionUpdate: 'Versionsupdate', updateTarget: 'Auf v{version} aktualisieren', installedVersion: 'v{version} installiert',
   ...accountPanelEn,
   unlimitedCoins: 'Unbegrenzt',
   modelSignInRequired: 'Modell nicht verfügbar. Bitte melden Sie sich an und versuchen Sie es erneut.',
@@ -308,6 +319,7 @@ export const de = {
   phoneInvalid: 'Geben Sie eine gültige Telefonnummer ein',
   credentialsFailed: 'Telefonnummer oder Passwort ist falsch',
   loginUnavailable: 'Anmeldung nicht möglich. Versuchen Sie es später erneut.',
+  clientTooOld: 'Diese Version ist veraltet. Aktualisieren Sie auf die neueste Version, um fortzufahren.',
   signOutUnknownDescription: 'Laufende Aufgaben konnten nicht überprüft werden. Durch das Abmelden werden möglicherweise Aufgaben mit diesem Konto unterbrochen. Jetzt abmelden?',
   signOutDescription: 'Durch das Abmelden werden keine Daten gelöscht. Sie können sich erneut bei diesem Konto anmelden.',
   signOutRunningDescription: 'Derzeit werden Aufgaben ausgeführt. Durch das Abmelden werden sie unterbrochen. Jetzt abmelden?', cancel: 'Abbrechen', open: 'Browser öffnen',
@@ -330,6 +342,7 @@ export const de = {
 
 /** Russian dictionary, checked against the English keys. */
 export const ru = {
+  versionUpdate: 'Обновление версии', updateTarget: 'Обновить до v{version}', installedVersion: 'Установлена v{version}',
   ...accountPanelEn,
   unlimitedCoins: 'Без ограничений',
   modelSignInRequired: 'Модель недоступна. Пожалуйста, войдите в систему и повторите попытку.',
@@ -352,6 +365,7 @@ export const ru = {
   phoneInvalid: 'Введите правильный телефон',
   credentialsFailed: 'Неверный телефон или пароль',
   loginUnavailable: 'Не удалось войти. Повторите позже.',
+  clientTooOld: 'Эта версия устарела. Обновитесь до последней версии, чтобы продолжить.',
   signOutUnknownDescription: 'Не удалось проверить запущенные задачи. Выход из системы может прервать выполнение задач с использованием этой учетной записи. Выйти сейчас?',
   signOutDescription: 'Выход из системы не приведет к удалению данных. Вы можете снова войти в эту учетную запись.',
   signOutRunningDescription: 'Задачи в настоящее время выполняются. Выход из системы прервет их. Выйти сейчас?', cancel: 'Отмена', open: 'Открыть браузер',
@@ -374,6 +388,7 @@ export const ru = {
 
 /** Portuguese dictionary, checked against the English keys. */
 export const pt = {
+  versionUpdate: 'Atualização de versão', updateTarget: 'Atualizar para v{version}', installedVersion: 'v{version} instalada',
   ...accountPanelEn,
   unlimitedCoins: 'Ilimitado',
   modelSignInRequired: 'Modelo indisponível. Faça login e tente novamente.',
@@ -396,6 +411,7 @@ export const pt = {
   phoneInvalid: 'Digite um telefone válido',
   credentialsFailed: 'Telefone ou senha incorretos',
   loginUnavailable: 'Não foi possível entrar. Tente mais tarde.',
+  clientTooOld: 'Esta versão está desatualizada. Atualize para a versão mais recente para continuar.',
   signOutUnknownDescription: 'Não foi possível verificar as tarefas em execução. Sair pode interromper tarefas usando esta conta. Sair agora?',
   signOutDescription: 'Sair não excluirá nenhum dado. Você pode fazer login nesta conta novamente.',
   signOutRunningDescription: 'As tarefas estão em execução no momento. Sair irá interrompê-los. Sair agora?', cancel: 'Cancelar', open: 'Abra o navegador',

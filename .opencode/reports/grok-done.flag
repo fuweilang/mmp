@@ -1,0 +1,9 @@
+done 2026-11-12T21:25
+改了: 桌面账号菜单的版本更新入口
+说明: 去掉侧栏外面的「重试更新」胶囊。账号菜单「版本更新」和设置导航用下载图标，「企业控制台」用仪表图标，「可更新至 v…」用品牌蓝。没改更新器、版本号、短信、权限、Nginx。pending-fix 1–16 都没动，李庚继续修那些。
+涉及文件:
+- mammoth-agent/packages/client/ui-settings-general/src/client/SettingsRoot.tsx
+- mammoth-agent/packages/client/ui-settings-account/src/client/AccountMenu.tsx
+- mammoth-agent/packages/client/ui-settings-account/src/client/AccountMenu.module.css
+- mammoth-agent/packages/client/ui-settings-general/tests/settings-root.client.spec.tsx
+验证: mammoth-agent 内 vitest 上述 3 个 spec，115 passed

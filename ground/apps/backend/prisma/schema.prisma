@@ -1240,3 +1240,24 @@ model OfficialExpertPreview {
   @@index([actorUserId, expiresAt])
   @@map("official_expert_preview")
 }
+
+/// 登录、注册短信验证码。只存哈希。
+model SmsVerificationCode {
+  id         String    @id @default(cuid())
+  phone      String    @db.VarChar(20)
+  scene      String    @db.VarChar(32)
+  codeHash   String    @map("code_hash") @db.VarChar(64)
+  provider   String    @default("mock") @db.VarChar(16)
+  sendIp     String    @default("") @map("send_ip") @db.VarChar(80)
+  attempts   Int       @default(0)
+  consumedAt DateTime? @map("consumed_at")
+  expiresAt  DateTime  @map("expires_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([phone, scene, createdAt])
+  @@index([sendIp, createdAt])
+  @@index([expiresAt])
+  // 部分唯一索引 (phone, scene) WHERE consumed_at IS NULL 由迁移手工维护
+  // （Prisma schema 不支持部分索引）；发码前会先 retireExpired 释放槽位。
+  @@map("sms_verification_code")
+}

@@ -1,5 +1,6 @@
+import { copyImmutableDesktopArtifact, replaceDesktopInstallerAlias, writeDesktopMetadataAtomic } from './baota-desktop-publication.ts'
 /** Collect validated local Desktop artifacts for Baota without COS, GitHub or network writes. */
-import { copyFile, mkdir, readFile, stat, writeFile, readdir } from 'node:fs/promises'
+import { mkdir, readFile, stat, readdir } from 'node:fs/promises'
 import { createReadStream, existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -52,7 +53,7 @@ if (process.argv[5] === '--unsigned-test') {
   const downloads = join(resolve(destination), 'downloads')
   await mkdir(downloads, { recursive: true })
   const name = names[selected]
-  await copyFile(dmg, join(downloads, name))
+  await replaceDesktopInstallerAlias(dmg, join(downloads, name))
   const sha256 = await checksum(dmg)
   // Merge into the existing manifest so other architectures (and any Windows entries) survive.
   const manifestPath = join(downloads, 'mammoth-latest.json')
@@ -63,7 +64,7 @@ if (process.argv[5] === '--unsigned-test') {
   manifest.schema_version = 2
   manifest.updated_at = new Date().toISOString()
   manifest.platforms[platformKeys[selected]] = { shell: { version }, file: name, sha256, bytes: (await stat(dmg)).size, signed: false, automatic_updates: false }
-  await writeFile(manifestPath, JSON.stringify(manifest, null, 2))
+  await writeDesktopMetadataAtomic(manifestPath, JSON.stringify(manifest, null, 2))
   console.log(`Collected ${selected} unsigned test installer ${version}; manifest merged, other platforms preserved; no update feed or network upload.`)
   process.exit(0)
 }
@@ -75,26 +76,30 @@ for (const artifact of plan.artifacts) {
   if (!artifact.key.startsWith('downloads/') || artifact.key.includes('..')) throw new Error('Unexpected publication path')
   const output = join(root, artifact.key)
   await mkdir(dirname(output), { recursive: true })
-  if (artifact.contents !== undefined) await writeFile(output, artifact.contents)
-  else await copyFile(artifact.path, output)
+  if (artifact.contents !== undefined) await writeDesktopMetadataAtomic(output, artifact.contents)
+  else await copyImmutableDesktopArtifact(artifact.path, output)
 }
 const installer = plan.artifacts.find(item => item.path.endsWith(selected === 'win-x64' ? '.exe' : '.dmg'))
 if (!installer) throw new Error('Missing verified installer')
 const alias = join(root, 'downloads', names[selected])
-await copyFile(installer.path, alias)
+const versionedName = installer.filename
+await copyImmutableDesktopArtifact(installer.path, join(root, 'downloads', versionedName))
+await replaceDesktopInstallerAlias(installer.path, alias)
 const sha256 = await checksum(alias)
-await writeFile(join(root, 'downloads', `${selected}.json`), JSON.stringify({ platform: platformKeys[selected], version: plan.version, file: names[selected], sha256 }, null, 2))
+await writeDesktopMetadataAtomic(join(root, 'downloads', `${selected}.json`), JSON.stringify({ platform: platformKeys[selected], version: plan.version, file: versionedName, sha256, bytes: (await stat(alias)).size, branch: plan.branch, commit: plan.commit, builtAt: plan.builtAt }, null, 2))
 // Merge the collected platform into the existing user-facing manifest; never rebuild it from scratch,
 // so architectures built in earlier rounds and pre-existing Windows entries are preserved.
 const manifestPath = join(root, 'downloads', 'mammoth-latest.json')
-const platforms: Record<string, { shell: { version: string }; file: string; sha256: string }> = existsSync(manifestPath)
-  ? (JSON.parse(await readFile(manifestPath, 'utf8')) as { platforms?: Record<string, { shell: { version: string }; file: string; sha256: string }> }).platforms ?? {}
+const platforms: Record<string, { shell: { version: string }; file: string; sha256: string; bytes?: number; branch?: string; commit?: string; builtAt?: string }> = existsSync(manifestPath)
+  ? (JSON.parse(await readFile(manifestPath, 'utf8')) as { platforms?: Record<string, { shell: { version: string }; file: string; sha256: string; bytes?: number; branch?: string; commit?: string; builtAt?: string }> }).platforms ?? {}
   : {}
 for (const name of Object.keys(names)) {
   try {
-    const item = JSON.parse(await readFile(join(root, 'downloads', `${name}.json`), 'utf8')) as { platform: string; version: string; file: string; sha256: string }
-    platforms[item.platform] = { shell: { version: item.version }, file: item.file, sha256: item.sha256 }
+    const item = JSON.parse(await readFile(join(root, 'downloads', `${name}.json`), 'utf8')) as { platform: string; version: string; file: string; sha256: string; bytes?: number; branch?: string; commit?: string; builtAt?: string }
+    platforms[item.platform] = { shell: { version: item.version }, file: item.file, sha256: item.sha256,
+      ...(item.bytes === undefined ? {} : { bytes: item.bytes }), ...(item.branch ? { branch: item.branch } : {}),
+      ...(item.commit ? { commit: item.commit } : {}), ...(item.builtAt ? { builtAt: item.builtAt } : {}) }
   } catch (error) { if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error }
 }
-await writeFile(manifestPath, JSON.stringify({ product: 'mammoth-agent', schema_version: 2, updated_at: new Date().toISOString(), platforms }, null, 2))
+await writeDesktopMetadataAtomic(manifestPath, JSON.stringify({ product: 'mammoth-agent', schema_version: 2, updated_at: new Date().toISOString(), platforms }, null, 2))
 console.log(`Collected ${selected} ${plan.version}; only local files were written.`)

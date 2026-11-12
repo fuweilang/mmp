@@ -11,12 +11,28 @@ import { DesktopUpdatePreparationError } from './update-error.ts'
 
 const { autoUpdater } = electronUpdater
 
+/**
+ * Product-qualified update targets; Linux is not an advertised update channel.
+ * @param platform Installed operating system.
+ * @param architecture Installed binary architecture (not browser CPU detection).
+ * @returns Whether the product publishes a matching update feed.
+ */
+export function supportsDesktopUpdates(platform: NodeJS.Platform, architecture: string): boolean {
+  return (platform === 'darwin' && (architecture === 'arm64' || architecture === 'x64'))
+    || (platform === 'win32' && architecture === 'x64')
+}
+
+
 /** Owns one updater target until its download and installation settle. */
 export class DesktopUpdateCoordinator {
   private current: DesktopUpdateState = { phase: 'idle' }
   private candidate: string | undefined
+  private checked = false
+  private releaseNotes: string | undefined
   private downloaded = false
   private disposed = false
+  private checkVisible = false
+  private checkFailed = false
   private checkOperation: Promise<DesktopUpdateState> | undefined
   private downloadOperation: Promise<DesktopUpdateState> | undefined
   private installOperation: Promise<DesktopUpdateState> | undefined
@@ -52,7 +68,7 @@ export class DesktopUpdateCoordinator {
     private readonly publish: (state: DesktopUpdateState) => DesktopUpdateState,
     private readonly beforeRestart: () => Promise<boolean>,
     private readonly updater: AppUpdater = autoUpdater,
-    private readonly enabled: () => boolean = () => app.isPackaged && existsSync(join(process.resourcesPath, 'app-update.yml')),
+    private readonly enabled: () => boolean = () => app.isPackaged && supportsDesktopUpdates(process.platform, process.arch) && existsSync(join(process.resourcesPath, 'app-update.yml')),
     private readonly currentVersion: () => string = () => app.getVersion(),
     private readonly downloadResult?: (success: boolean, reason?: string) => void,
     private readonly channel: 'nightly' | 'latest' = 'nightly',
@@ -80,19 +96,29 @@ export class DesktopUpdateCoordinator {
   /** Latest observable state; complete download identity remains main-process-owned. */
   get state(): DesktopUpdateState { return this.current }
 
+  /** Whether the last check attempt failed; automatic checks stay silent yet still back off. */
+  get lastCheckFailed(): boolean { return this.checkFailed }
+
+  /** Real installed identity and bounded plain-text feed content. */
+  get info(): { currentVersion: string; supported: boolean; checked: boolean; releaseNotes?: string } {
+    return { currentVersion: this.currentVersion(), supported: this.enabled(), checked: this.checked,
+      ...(this.releaseNotes === undefined ? {} : { releaseNotes: this.releaseNotes }) }
+  }
+
   /**
    * Check metadata without downloading, joining any current check.
-   * @param manual - Whether a failed check must remain visible in the status indicator.
-   * @returns The check result, including a silent automatic failure when applicable.
+   * @param manual - Whether to show checking and a failed result; automatic polling stays quiet.
+   * @returns The shared check result; errors stay inline, without a dialog or download.
    */
   async check(manual = false): Promise<DesktopUpdateState> {
     this.assertLive()
     if (this.downloadOperation !== undefined || this.installOperation !== undefined || this.downloaded) return this.current
     if (!manual && this.current.phase === 'error' && this.current.failedOperation === 'download') return this.current
+    // A manual caller joins an in-flight automatic check and makes its outcome visible.
+    if (manual) this.checkVisible = true
     this.checkOperation ??= Promise.resolve().then(() => this.doCheck())
-      .finally(() => { this.checkOperation = undefined })
+      .finally(() => { this.checkOperation = undefined; this.checkVisible = false })
     const result = await this.checkOperation
-    if (manual && result.phase === 'error') this.setState(result)
     return result
   }
 
@@ -184,16 +210,34 @@ export class DesktopUpdateCoordinator {
   private async doCheck(): Promise<DesktopUpdateState> {
     try {
       this.assertLive()
+      this.checked = false
+      // An automatic poll must not flash progress in the sidebar; only an explicit request shows checking.
+      if (this.checkVisible) this.setState({ phase: 'checking' })
       if (!this.enabled()) throw new Error('desktop update: this application has no packaged update source')
       const result = await this.updater.checkForUpdates()
       if (result === null) throw new Error('desktop update: no check result was returned')
       const version = result.updateInfo.version
       if (valid(version) === null) throw new Error('desktop update: feed version is invalid')
       if (this.channel === 'latest' && version.includes('-')) throw new Error('desktop update: latest feed contains a prerelease')
+      this.checkFailed = false
+      this.checked = true
+      const notes = result.updateInfo.releaseNotes
+      this.releaseNotes = (typeof notes === 'string' ? notes
+        : Array.isArray(notes) ? notes.map(item => item.note ?? '').join('\n\n') : '').slice(0, 20_000)
       this.candidate = result.isUpdateAvailable && gt(version, this.currentVersion()) ? version : undefined
-      return this.setState(this.candidate === undefined ? { phase: 'idle' } : { phase: 'available', version })
+      // A quiet poll publishes only a change: a new offer, or clearing a previously visible state.
+      if (this.checkVisible || this.current.phase !== 'idle' || this.candidate !== undefined) {
+        return this.setState(this.candidate === undefined ? { phase: 'idle' } : { phase: 'available', version })
+      }
+      return this.current
     } catch (error) {
-      return this.failure(error, 'check')
+      this.checkFailed = true
+      // A failed check cannot vouch for the offer it made last time.
+      this.candidate = undefined
+      this.releaseNotes = undefined
+      if (this.checkVisible) return this.setState(this.failure(error, 'check'))
+      // Automatic failures stay quiet; they withdraw a stale offer but never raise a resident error badge.
+      return this.current.phase === 'available' ? this.setState({ phase: 'idle' }) : this.current
     }
   }
 }

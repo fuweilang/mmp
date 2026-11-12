@@ -1,14 +1,11 @@
 /**
- * Permission catalog (ground) — portal.* + harness 业务键。
+ * Permission catalog (ground) — portal.* only.
  * Source of truth for chip UI / RolePermission validation。
- * 旧 Octop 安装级 / 垃圾 key（experts/mbti/memory/channels/.../users/sso/...）已移出 Catalog；
- * 角色库里残留的未知键在读出时由 sanitizePermissionKeys / isKnownPermissionKey 丢弃，不做 DB 迁移。
+ * 已移出的键（含旧 Octop：tasks/token_usage/skills/subagents/tools/agent_plugins/terminal/browser）
+ * 在读出时由 sanitizePermissionKeys / isKnownPermissionKey 丢弃。seed 会删掉 RolePermission 与企业覆盖里的残留行。
  */
 
 export type PermissionCategory =
-  | 'nav'
-  | 'settings'
-  | 'control'
   | 'admin'
   | 'portal_admin'
   | 'portal_console';
@@ -33,50 +30,7 @@ function p(
   return { key, category, labelZh, labelEn, ...extra };
 }
 
-/**
- * Harness / 业务模块键（对齐 mammoth-agent 可分配能力）。
- * 已剔除：experts/mbti/memory/channels/connectors/skill_packages/knowledge_bases
- * 以及 Octop 安装级 admin（users/sso/ollama_models/...）与 remote desktop/mobile。
- * 知识库只走 portal.console.kb，不再推 Octop knowledge_* 给企业分配。
- */
-export const OCTOP_PERMISSIONS: PermissionDef[] = [
-  p('tasks', 'nav', '定时任务', 'Scheduled Tasks'),
-  p('token_usage', 'nav', 'Token 统计', 'Token usage'),
-
-  p('skills', 'settings', '技能', 'Skills', {
-    page: 'personalization',
-    pageZh: '个性化',
-    pageEn: 'Personalization',
-  }),
-  p('subagents', 'settings', '子智能体', 'Subagents', {
-    page: 'personalization',
-    pageZh: '个性化',
-    pageEn: 'Personalization',
-  }),
-  p('tools', 'settings', '工具', 'Tools', {
-    page: 'personalization',
-    pageZh: '个性化',
-    pageEn: 'Personalization',
-  }),
-  p('agent_plugins', 'settings', '插件', 'Plugins', {
-    page: 'personalization',
-    pageZh: '个性化',
-    pageEn: 'Personalization',
-  }),
-
-  p('terminal', 'control', '工作台/终端', 'Workbench / Terminal', {
-    page: 'workbench',
-    pageZh: '工作台',
-    pageEn: 'Workbench',
-  }),
-  p('browser', 'control', '工作台/浏览器', 'Workbench / Browser', {
-    page: 'workbench',
-    pageZh: '工作台',
-    pageEn: 'Workbench',
-  }),
-];
-
-/** Portal keys（ground /admin + /console）。 */
+/** Portal keys（ground /admin + /console）。页面级，不拆到按钮。 */
 export const PORTAL_PERMISSIONS: PermissionDef[] = [
   p('portal.admin.access', 'portal_admin', '进入总后台', 'Access admin'),
   p('portal.admin.users', 'portal_admin', '用户管理', 'Manage users'),
@@ -94,38 +48,11 @@ export const PORTAL_PERMISSIONS: PermissionDef[] = [
   p('portal.console.billing', 'portal_console', '充值', 'Billing / Recharge'),
 ];
 
-export const PERMISSION_CATALOG: PermissionDef[] = [
-  ...OCTOP_PERMISSIONS,
-  ...PORTAL_PERMISSIONS,
-];
+export const PERMISSION_CATALOG: PermissionDef[] = [...PORTAL_PERMISSIONS];
 
 export const ALL_PERMISSION_KEYS: ReadonlySet<string> = new Set(
   PERMISSION_CATALOG.map((d) => d.key),
 );
-
-/** BASELINE = settings + nav（chat ungated，不是 key） */
-export const BASELINE_PERMISSION_KEYS: string[] = OCTOP_PERMISSIONS.filter(
-  (d) => d.category === 'settings' || d.category === 'nav',
-).map((d) => d.key);
-
-const byCat = (cat: PermissionCategory) =>
-  OCTOP_PERMISSIONS.filter((d) => d.category === cat).map((d) => d.key);
-
-/** 企业可分配的 harness 业务键（nav + 个性化设置） */
-export const BUSINESS_MODULE_KEYS: string[] = [
-  ...byCat('nav'),
-  'skills',
-  'subagents',
-  'tools',
-  'agent_plugins',
-];
-
-/** OWNER / org_admin：nav+settings+control（无安装级 admin） */
-export const OWNER_OCTOP_KEYS: string[] = [
-  ...byCat('nav'),
-  ...byCat('settings'),
-  ...byCat('control'),
-];
 
 export const PORTAL_ADMIN_KEYS = PORTAL_PERMISSIONS.filter((d) =>
   d.key.startsWith('portal.admin.'),
@@ -135,12 +62,8 @@ export const PORTAL_CONSOLE_KEYS = PORTAL_PERMISSIONS.filter((d) =>
   d.key.startsWith('portal.console.'),
 ).map((d) => d.key);
 
-/** 企业角色可勾选硬顶：console 模块包 + harness 业务/控制包；不含总后台与安装级 admin。 */
-export const ASSIGNABLE_TENANT_KEYS: ReadonlySet<string> = new Set([
-  ...PORTAL_CONSOLE_KEYS,
-  ...BUSINESS_MODULE_KEYS,
-  ...byCat('control'),
-]);
+/** 企业角色可勾选硬顶：企业控制台 8 个页面。不含总后台。 */
+export const ASSIGNABLE_TENANT_KEYS: ReadonlySet<string> = new Set(PORTAL_CONSOLE_KEYS);
 
 /** 按允许键过滤分组目录（与 getCatalogGrouped 同结构）。 */
 export function filterCatalogGroupedByKeys(allowed: ReadonlySet<string>): CatalogGroup[] {
@@ -177,33 +100,17 @@ function uniqSorted(keys: string[]): string[] {
 }
 
 /**
- * 三档默认包（任务2）：
- * - org_member：业务 skills/subagents/tools/agent_plugins/tasks；无 console/billing/terminal/browser；对话 ungated
- * - org_admin：成员业务包 + terminal/browser + 全部 portal.console.*（含 billing）
- * - platform_admin：全部 portal.admin.* + 业务模块；超管代运营另有全部 portal.console.*（super_admin=全量）
+ * 内置默认包：
+ * - org_member：空。对话不设权限键。
+ * - org_admin：全部 portal.console.*
+ * - platform_admin：全部 portal.admin.*
+ * - super_admin：当前目录全量
  */
-/** 企业成员默认业务键（不含 token_usage / control / portal）。 */
-export const ORG_MEMBER_DEFAULT_KEYS: string[] = [
-  'skills',
-  'subagents',
-  'tools',
-  'agent_plugins',
-  'tasks',
-];
-
 export const ROLE_PERMISSION_PACKS: Record<BuiltinRoleKey, string[]> = {
   super_admin: uniqSorted([...ALL_PERMISSION_KEYS]),
-  platform_admin: uniqSorted([
-    ...PORTAL_ADMIN_KEYS,
-    ...BUSINESS_MODULE_KEYS,
-  ]),
-  org_admin: uniqSorted([
-    ...ORG_MEMBER_DEFAULT_KEYS,
-    'terminal',
-    'browser',
-    ...PORTAL_CONSOLE_KEYS,
-  ]),
-  org_member: uniqSorted([...ORG_MEMBER_DEFAULT_KEYS]),
+  platform_admin: uniqSorted([...PORTAL_ADMIN_KEYS]),
+  org_admin: uniqSorted([...PORTAL_CONSOLE_KEYS]),
+  org_member: [],
 };
 
 /** 代码默认包并集（DB 预置角色缺失时的回退）。 */
@@ -231,19 +138,19 @@ export const ROLE_META: Record<
   },
   platform_admin: {
     name: '平台管理员',
-    description: '平台运营：可管理企业、用户与角色权限包，也能使用业务功能；不能进入企业后台。',
+    description: '平台运营：可管理企业、用户与角色。不能进入企业控制台。',
     scope: 'PLATFORM',
     editable: true,
   },
   org_admin: {
     name: '企业管理员',
-    description: '企业管理员：成员业务包 + 终端/浏览器 + 全部企业控制台模块（含充值）。',
+    description: '企业管理员：全部企业控制台页面。',
     scope: 'ORG_PRESET',
     editable: true,
   },
   org_member: {
     name: '企业成员',
-    description: '普通员工：默认可用技能/子智能体/工具/插件与定时任务；对话不门禁；默认不进控制台、无充值/终端/浏览器。',
+    description: '普通员工：默认不进入企业控制台。对话不设权限。',
     scope: 'ORG_PRESET',
     editable: true,
   },
@@ -261,10 +168,7 @@ export const CATEGORY_LABELS: Record<
   PermissionCategory,
   { labelZh: string; labelEn: string }
 > = {
-  nav: { labelZh: '导航', labelEn: 'Nav' },
-  settings: { labelZh: '设置', labelEn: 'Settings' },
-  control: { labelZh: '控制', labelEn: 'Control' },
-  admin: { labelZh: 'Agent 管理', labelEn: 'Agent admin' },
+  admin: { labelZh: '其他', labelEn: 'Other' },
   portal_admin: { labelZh: '总后台', labelEn: 'Portal admin' },
   portal_console: { labelZh: '企业控制台', labelEn: 'Portal console' },
 };
@@ -330,39 +234,12 @@ export interface CatalogGroup {
 }
 
 /**
- * Chip picker 布局：category → optional page → chips。
- * 按钮式权限包 UI 不变；已去掉 Octop 垃圾/安装级分组。
+ * Chip picker 布局：category → chips。只保留总后台与企业控制台。
  */
 const PICKER_LAYOUT: readonly {
   category: PermissionCategory;
   pages: readonly { page: string | null; pageZh: string; pageEn: string; keys: readonly string[] }[];
 }[] = [
-  {
-    category: 'nav',
-    pages: [{ page: null, pageZh: '', pageEn: '', keys: ['tasks', 'token_usage'] }],
-  },
-  {
-    category: 'settings',
-    pages: [
-      {
-        page: 'personalization',
-        pageZh: '个性化',
-        pageEn: 'Personalization',
-        keys: ['skills', 'subagents', 'tools', 'agent_plugins'],
-      },
-    ],
-  },
-  {
-    category: 'control',
-    pages: [
-      {
-        page: 'workbench',
-        pageZh: '工作台',
-        pageEn: 'Workbench',
-        keys: ['terminal', 'browser'],
-      },
-    ],
-  },
   {
     category: 'portal_admin',
     pages: [

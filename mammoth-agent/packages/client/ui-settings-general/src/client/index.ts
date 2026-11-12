@@ -38,6 +38,7 @@ import type { DesktopUpdateBridge } from '../types.ts'
 import { DesktopUpdateSource } from './desktop-update-source.ts'
 import { CloseLabel, HeaderContent, TriggerContent } from './chrome.tsx'
 import { GeneralSection } from './GeneralSection.tsx'
+import { DesktopUpdateSection, type DesktopUpdateSectionInjected } from './DesktopUpdateSection.tsx'
 import { CurrentVersionRow } from './CurrentVersionRow.tsx'
 import { DeveloperToolsRow, type DeveloperToolsRowInjected } from './DeveloperToolsRow.tsx'
 import { SettingsDocumentAction } from './SettingsDocumentAction.tsx'
@@ -109,13 +110,19 @@ export function apply(ctx: ClientContext): void {
     }),
   }, DeveloperToolsRow))
   // Version information follows the core preferences.
-  ctx.slots.inject('settings.general.item', () => ctx.slots.register({
-    name: 'settings.general.item', id: 'current-version', order: 100, locale: NS,
-  }, CurrentVersionRow))
   ctx.effect(() => ctx.locale.register(NS, { zh, en, ja, es, fr, de, ru, pt }), 'ui-settings-general: dictionaries')
   const connection = ctx.get('connection') as ConnectionHandle
   const carrier = (globalThis as typeof globalThis & { mmpDesktop?: { protocolVersion: number; updates?: DesktopUpdateBridge } }).mmpDesktop
-  const desktopUpdate = new DesktopUpdateSource(carrier?.protocolVersion === 1 ? carrier.updates : undefined)
+  const updateBridge = carrier?.protocolVersion === 1
+    && typeof carrier.updates?.command === 'function'
+    && typeof carrier.updates.status === 'function' && typeof carrier.updates.subscribe === 'function'
+    ? carrier.updates : undefined
+  const desktopUpdate = new DesktopUpdateSource(updateBridge)
+  if (!desktopUpdate.store.getSnapshot().managed) {
+    ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+      name: 'settings.general.item', id: 'current-version', order: 100, locale: NS,
+    }, CurrentVersionRow))
+  }
   ctx.effect(() => () => { desktopUpdate.dispose() }, 'ui-settings-general: desktop update carrier')
   ctx.slots.inject('sidebar.toggle.badge', () => ctx.slots.register({
     name: 'sidebar.toggle.badge', locale: NS,
@@ -126,6 +133,16 @@ export function apply(ctx: ClientContext): void {
   // seat, and the nav label is a thunk the owner resolves per render — no
   // locale/change re-registration wiring.
   const t = ctx.locale.bind(NS)
+  if (updateBridge !== undefined) {
+    ctx.slots.inject('settings.section', () => ctx.slots.register({
+      name: 'settings.section', id: 'updates', order: 90, locale: NS,
+      label: () => t('desktop.update.nav'),
+      inject: (): DesktopUpdateSectionInjected => ({
+        hooks: { desktopUpdate: desktopUpdate.store },
+        runUpdate: action => { desktopUpdate.command(action) },
+      }),
+    }, DesktopUpdateSection))
+  }
   // The shared ConfigForm mirror updates after document commits and reconnects.
   const documentController = ctx.remote.$host.isLoopback
     ? new SettingsDocumentStore(ctx, ctx.configForms.describe())
@@ -148,7 +165,9 @@ export function apply(ctx: ClientContext): void {
   let onboardingVersion = -1
   let onboardingSteps: readonly SettingsOnboardingStep[] = []
   const shellInjected = (): SettingsRootInjected => ({
-    openDesktopUpdate: () => { desktopUpdate.open() },
+    openDesktopUpdate: () => {
+      if (desktopUpdate.store.getSnapshot().managed) ctx.emit('settings/open-section', 'updates')
+    },
     reconnect: () => { connection.reconnect() },
     hooks: {
       shortcuts: ctx.shortcuts.catalog,

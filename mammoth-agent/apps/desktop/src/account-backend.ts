@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import WebSocket from 'ws'
 import { parseRemoteStreamServerMessage, REMOTE_STREAM_MUX_PATH } from '@mammoth-ai/mmp-api-gateway/stream-protocol'
-import type { AccountClientMetadata, AccountView, PasswordSignInResult, SignInAttemptId } from '@mammoth-ai/mmp-deepseek-account/types'
+import type { AccountClientMetadata, AccountFailureCode, AccountView, EnterpriseRegisterInput, PasswordSignInResult, SignInAttemptId, SmsSendResult } from '@mammoth-ai/mmp-deepseek-account/types'
 
 /** Authenticated unary caller shared with native onboarding. */
 export type AccountInvoke = (request: { namespace: string; method: string; args: Record<string, unknown> }) => Promise<unknown>
@@ -71,13 +71,26 @@ export interface DesktopAccountBackend {
    */
   signInWithPassword(client: AccountClientMetadata, phone: string, password: string): Promise<PasswordSignInResult>
   /**
+   * @param phone - enterprise phone number.
+   * @param scene - login or register.
+   * @returns the cooldown. A local mock may include the code.
+   */
+  sendSmsCode(phone: string, scene: 'login' | 'register'): Promise<SmsSendResult>
+  /**
+   * @param client - this window's identity.
+   * @param phone - enterprise phone number.
+   * @param smsCode - six-digit code.
+   * @returns whether the local session was stored.
+   */
+  signInWithSms(client: AccountClientMetadata, phone: string, smsCode: string): Promise<PasswordSignInResult>
+  /**
    * @param client - this window's identity.
    * @param input - enterprise registration fields.
    * @returns whether the local session was stored. The browser cookie is not set.
    */
   registerWithPassword(
     client: AccountClientMetadata,
-    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string },
+    input: EnterpriseRegisterInput,
   ): Promise<PasswordSignInResult>
   /**
    * @param listener - state recipient.
@@ -99,6 +112,10 @@ export interface DesktopAccountBackend {
  * @param cookies - Electron session cookie reader.
  * @returns account operations; watch callers own their subscriptions.
  */
+/**
+ * @param value - wire password result.
+ * @returns the validated result, carrying only a recognized failure code.
+ */
 function passwordResult(value: unknown): PasswordSignInResult {
   if (typeof value !== 'object' || value === null || !('ok' in value) || typeof value.ok !== 'boolean') {
     throw new Error('desktop account: invalid password result')
@@ -108,8 +125,20 @@ function passwordResult(value: unknown): PasswordSignInResult {
   if (reason !== 'credentials' && reason !== 'forbidden' && reason !== 'unavailable') {
     throw new Error('desktop account: invalid password result')
   }
-  const message = 'message' in value && typeof value.message === 'string' ? value.message : undefined
-  return { ok: false, reason, ...(message ? { message } : {}) }
+  const code = accountFailureCode(value)
+  return { ok: false, reason, ...(code === undefined ? {} : { code }) }
+}
+
+const ACCOUNT_FAILURE_CODES: readonly string[] = ['SMS_RATE_LIMITED', 'SMS_INVALID', 'SMS_CODE_EXPIRED', 'SMS_UNAVAILABLE', 'CLIENT_TOO_OLD']
+
+/**
+ * Keep only a stable failure code so no server-authored message reaches the renderer.
+ * @param value - wire result object.
+ * @returns the recognized code, if any.
+ */
+function accountFailureCode(value: object): AccountFailureCode | undefined {
+  const code = 'code' in value ? value.code : undefined
+  return typeof code === 'string' && ACCOUNT_FAILURE_CODES.includes(code) ? code as AccountFailureCode : undefined
 }
 
 export function desktopAccountBackend(origin: string, invoke: AccountInvoke, cookies: () => Promise<string>): DesktopAccountBackend {
@@ -121,6 +150,26 @@ export function desktopAccountBackend(origin: string, invoke: AccountInvoke, coo
     cancel: attemptId => call('cancelSignIn', { attemptId }), signOut: client => call('signOut', { client }),
     signInWithPassword: async (client, phone, password) => passwordResult(await invoke({
       namespace: 'account', method: 'signInWithPassword', args: { client, phone, password },
+    })),
+    sendSmsCode: async (phone, scene) => {
+      const value = await invoke({ namespace: 'account', method: 'sendSmsCode', args: { phone, scene } })
+      if (typeof value !== 'object' || value === null || !('ok' in value) || typeof value.ok !== 'boolean') {
+        throw new Error('desktop account: invalid sms result')
+      }
+      if (value.ok === true) {
+        const retryAfterSeconds = 'retryAfterSeconds' in value && typeof value.retryAfterSeconds === 'number' ? value.retryAfterSeconds : 60
+        const mockCode = 'mockCode' in value && typeof value.mockCode === 'string' ? value.mockCode : undefined
+        return { ok: true, retryAfterSeconds, ...(mockCode ? { mockCode } : {}) }
+      }
+      const reason = 'reason' in value ? value.reason : undefined
+      if (reason !== 'invalid' && reason !== 'unavailable' && reason !== 'rejected') {
+        throw new Error('desktop account: invalid sms failure reason')
+      }
+      const code = accountFailureCode(value)
+      return { ok: false, reason, ...(code === undefined ? {} : { code }) }
+    },
+    signInWithSms: async (client, phone, smsCode) => passwordResult(await invoke({
+      namespace: 'account', method: 'signInWithSms', args: { client, phone, smsCode },
     })),
     registerWithPassword: async (client, input) => passwordResult(await invoke({
       namespace: 'account', method: 'registerWithPassword', args: { client, input },

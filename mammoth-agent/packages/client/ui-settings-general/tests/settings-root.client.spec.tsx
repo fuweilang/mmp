@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { contextMenuHook } from '@mammoth-ai/mmp-client-test-runtime'
 import type { ShortcutCatalogEntry, ShortcutCommandId } from '@mammoth-ai/mmp-client-shortcuts/client'
-import type { GlobalStandardProps } from '@mammoth-ai/mmp-client-ui-slots'
+import type { GlobalStandardProps, PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEffect, useState } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
@@ -183,11 +183,12 @@ function openPanel() {
 }
 
 describe('SettingsRoot trigger', () => {
-  it('shows installation instead of expected backend reconnection and restores connection feedback after failure', () => {
+  it('hides reconnection while an update installs and restores it after failure', () => {
     const presentation = { phase: 'installing' as const, version: '1.0.1' }
     const f = mount({ dictionary: zh, connectionState: 'connecting',
       desktopUpdate: { failed: false, opening: false, presentation } })
-    expect(screen.getByRole('button', { name: '正在准备重启…' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: '正在准备重启…' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '重试更新' })).toBeNull()
     expect(screen.queryByText('重新连接中')).toBeNull()
     f.setDesktopUpdate({ failed: false, opening: false,
       presentation: { phase: 'error', version: presentation.version, failure: 'install' } })
@@ -543,4 +544,24 @@ it('passes current Settings key labels to the launcher and removes them when unb
 
   setShortcuts([{ ...row, keys: [], aria: undefined, binding: null, modified: true }])
   expect(launcher()).not.toHaveProperty('settingsShortcut')
+})
+
+
+it('passes real desktop version navigation to the launcher and opens the same registered settings section', () => {
+  const f = mount({ onboardingActive: false, rows: [
+    { id: 'general', order: 0, label: 'General' }, { id: 'updates', order: 90, label: 'Version and updates' },
+  ], desktopUpdate: { managed: true, failed: false, opening: false,
+    presentation: { phase: 'available', currentVersion: '0.3.2', version: '0.3.3', supported: true } } })
+  const call = f.renderSlot.mock.calls.find(args => args[0] === 'settings.launcher')!
+  const owner = call[1] as PropsRuntime<'settings.launcher'>
+  expect(owner.versionUpdate).toMatchObject({ currentVersion: '0.3.2', targetVersion: '0.3.3' })
+  act(() => { owner.versionUpdate!.open() })
+  expect(screen.getByTestId('section-updates')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Version and updates' }).getAttribute('aria-current')).toBe('true')
+})
+
+it('omits version-page navigation from an ordinary Web launcher', () => {
+  const f = mount({ onboardingActive: false })
+  const call = f.renderSlot.mock.calls.find(args => args[0] === 'settings.launcher')!
+  expect((call[1] as PropsRuntime<'settings.launcher'>).versionUpdate).toBeUndefined()
 })

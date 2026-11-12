@@ -31,7 +31,7 @@ export function readDesktopBuildCommit(repositoryRoot) {
 /**
  * Resolve the commit a parent packaging process recorded.
  * @param {NodeJS.ProcessEnv} env - Packaging environment.
- * @returns {{ commit: string, dirty: boolean } | undefined} The packaged commit, or undefined outside a packaging run.
+ * @returns {{ commit: string, dirty: boolean, branch?: string, builtAt?: string } | undefined} The packaged commit, or undefined outside a packaging run.
  */
 export function resolveDesktopBuildCommit(env) {
   const commit = env[DESKTOP_BUILD_COMMIT_ENV]?.trim()
@@ -41,17 +41,35 @@ export function resolveDesktopBuildCommit(env) {
   if (dirty !== undefined && dirty !== '' && dirty !== '0' && dirty !== '1') {
     throw new Error(`desktop build commit: ${DESKTOP_BUILD_DIRTY_ENV} must be 0 or 1`)
   }
-  return { commit, dirty: dirty === '1' }
+  const branch = env.MMP_DESKTOP_BUILD_BRANCH?.trim()
+  const builtAt = env.MMP_DESKTOP_BUILD_TIME?.trim()
+  if (branch && (branch.length > 255 || /[\r\n\0]/u.test(branch))) throw new Error('desktop build commit: invalid branch')
+  if (builtAt && (!Number.isFinite(Date.parse(builtAt)) || new Date(builtAt).toISOString() !== builtAt)) {
+    throw new Error('desktop build commit: invalid build timestamp')
+  }
+  return { commit, dirty: dirty === '1', ...(branch ? { branch } : {}), ...(builtAt ? { builtAt } : {}) }
 }
 
 /**
  * Describe the packaged commit as the environment variables child processes read.
- * @param {{ commit: string, dirty: boolean }} packaged - Commit and tree state to pass down.
+ * @param {{ commit: string, dirty: boolean, branch?: string, builtAt?: string }} packaged - Commit and tree state to pass down.
  * @returns {Record<string, string>} Variables to merge into a child environment.
  */
 export function desktopBuildCommitEnvironment(packaged) {
   return {
     [DESKTOP_BUILD_COMMIT_ENV]: packaged.commit,
     [DESKTOP_BUILD_DIRTY_ENV]: packaged.dirty ? '1' : '0',
+    ...(packaged.branch ? { MMP_DESKTOP_BUILD_BRANCH: packaged.branch } : {}),
+    ...(packaged.builtAt ? { MMP_DESKTOP_BUILD_TIME: packaged.builtAt } : {}),
   }
+}
+
+/**
+ * Capture source branch and build time once, separately from product version.
+ * @param {string} repositoryRoot Checkout being packaged.
+ * @returns {{ branch: string, builtAt: string }} Trace fields; timestamp is ISO UTC on disk.
+ */
+export function readDesktopBuildProvenance(repositoryRoot) {
+  const branch = execFileSync('git', ['branch', '--show-current'], { cwd: repositoryRoot, encoding: 'utf8' }).trim()
+  return { branch: branch || 'detached', builtAt: new Date().toISOString() }
 }

@@ -379,7 +379,14 @@ vi.mock('../src/update-coordinator.ts', () => ({ DesktopUpdateCoordinator: class
     harness.publishUpdate = publish
   }
   get state() { return harness.updateState }
-  readonly check = harness.updateCheck
+  get lastCheckFailed() { return harness.updateState.phase === 'error' && harness.updateState.failedOperation === 'check' }
+  // The real coordinator publishes the check result before scheduling; mirror that so a resolved
+  // failure state feeds the backoff policy instead of the stale pre-check state.
+  readonly check = async (manual?: boolean): Promise<DesktopUpdateState> => {
+    const state = await harness.updateCheck(manual)
+    harness.updateState = state
+    return state
+  }
   readonly download = harness.updateDownload
   readonly install = harness.updateInstall
   readonly dispose = vi.fn()

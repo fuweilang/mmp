@@ -1,5 +1,6 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { json, urlencoded, type Request, type Response } from 'express';
 import { networkInterfaces } from 'os';
@@ -7,6 +8,7 @@ import { ApplicationLog, redactLog } from './logging/application-log.service';
 import { ApplicationExceptionFilter } from './logging/application-exception.filter';
 import { RequestLoggingMiddleware } from './request-logging.middleware';
 import { AppModule } from './app.module';
+import { runStartupChecks } from './startup-check';
 
 function lanIPv4(): string[] {
   const ips: string[] = [];
@@ -38,14 +40,32 @@ function corsOrigins(): string[] {
   return list.length > 0 ? list : DEFAULT_CORS_ORIGINS;
 }
 
+/**
+ * 反代跳数：生产是宝塔 nginx → 127.0.0.1:33100 一跳，dev 网关同为一跳。
+ * 显式配跳数（而不是 true），nginx 已用 $proxy_add_x_forwarded_for 追加真实 IP，
+ * 客户端伪造的 X-Forwarded-For 左侧条目不会被当成 req.ip。
+ */
+function trustProxySetting(): number | boolean | string {
+  const raw = (process.env.TRUST_PROXY ?? '').trim();
+  if (raw === '') return 1;
+  if (raw === 'false') return false;
+  if (raw === 'true') return true;
+  const hops = Number(raw);
+  return Number.isInteger(hops) && hops >= 0 ? hops : raw;
+}
+
 async function bootstrap() {
+  // 生产 fail-closed：短信通道没配好就不要启动，避免带 mock 通道对外服务。
+  runStartupChecks();
   // bodyParser:false 后自挂 json/urlencoded，才能把 limit 提到与 nginx 同级。
   // Nest/Express 默认 ~100kb，长会话 chat+tool 会在进 LLM 网关前被拒 → HTTP 413。
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
     rawBody: true,
     bodyParser: false,
   });
+  // req.ip 必须来自反代追加的真实客户端 IP，否则短信限流/审计日志全退化为 127.0.0.1。
+  app.set('trust proxy', trustProxySetting());
   const applicationLog=app.get(ApplicationLog);
   app.useLogger(applicationLog);
   app.use((req: Request,res: Response,next: () => void)=>app.get(RequestLoggingMiddleware).use(req,res,next));

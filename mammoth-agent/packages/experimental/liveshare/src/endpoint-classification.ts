@@ -92,7 +92,9 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'account/getUnnotifiedBonuses': 'owner-only', // owner account and sign-in; the served page never reads it
   'account/hasRunningAccountTasks': 'owner-only', // owner account and sign-in; the served page never reads it
   'account/registerWithPassword': 'owner-only', // owner account and sign-in; the served page never reads it
+  'account/sendSmsCode': 'owner-only', // owner account and sign-in; the served page never reads it
   'account/signInWithPassword': 'owner-only', // owner account and sign-in; the served page never reads it
+  'account/signInWithSms': 'owner-only', // owner account and sign-in; the served page never reads it
   'account/signOut': 'owner-only', // owner account and sign-in; the served page never reads it
   'account/startSignIn': 'owner-only', // owner account and sign-in; the served page never reads it
   'account/watch': 'owner-only', // owner account and sign-in; the served page never reads it

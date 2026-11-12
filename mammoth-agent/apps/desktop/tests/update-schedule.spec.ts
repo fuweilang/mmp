@@ -48,6 +48,7 @@ describe('ordinary update polling', () => {
     expect(f.states).toEqual([])
     f.checkForUpdates.mockResolvedValue({ isUpdateAvailable: false, updateInfo: { version: '1.0.0' } })
     await f.schedule.check(true)
+    expect(f.states.map(state => state.phase)).toEqual(['checking', 'idle'])
     await vi.advanceTimersByTimeAsync(9_999)
     expect(f.checkForUpdates).toHaveBeenCalledTimes(5)
     await vi.advanceTimersByTimeAsync(1)
@@ -87,7 +88,7 @@ describe('ordinary update polling', () => {
       pending.reject(new Error('offline'))
       await Promise.all([automatic, manual])
     }
-    expect(f.states).toEqual([expect.objectContaining({ phase: 'error', failedOperation: 'check' })])
+    expect(f.states).toEqual([{ phase: 'checking' }, expect.objectContaining({ phase: 'error', failedOperation: 'check' })])
     await vi.advanceTimersByTimeAsync(19_999)
     expect(f.checkForUpdates).toHaveBeenCalledOnce()
     await vi.advanceTimersByTimeAsync(1)
@@ -102,7 +103,7 @@ describe('ordinary update polling', () => {
     expect(f.checkForUpdates).toHaveBeenCalledOnce()
     f.checkForUpdates.mockRejectedValue(new Error('offline'))
     await f.schedule.check(false, true)
-    expect(f.states).toEqual([{ phase: 'idle' }])
+    expect(f.states).toEqual([])
     vi.setSystemTime(Date.now() - 172_800_000)
     await vi.advanceTimersByTimeAsync(20_000)
     expect(f.checkForUpdates).toHaveBeenCalledTimes(3)
@@ -152,7 +153,7 @@ describe('ordinary update polling', () => {
       await checking
     }
     expect(vi.getTimerCount()).toBe(0)
-    expect(f.states).toEqual([{ phase: 'idle' }])
+    expect(f.states.map(state => state.phase)).toEqual(['checking'])
     await vi.advanceTimersByTimeAsync(100_000)
     expect(f.checkForUpdates).toHaveBeenCalledTimes(2)
   })

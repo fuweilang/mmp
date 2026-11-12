@@ -46,6 +46,8 @@ const operations = {
   cancelSignIn: async () => ({ links: { usageUrl: 'http://localhost/usage', topUpUrl: 'http://localhost/top_up' }, status: 'signed-out' as const, attempt: null }),
   copySignInLink: async () => undefined,
   signInWithPassword: async () => ({ ok: true as const }),
+  sendSmsCode: async () => ({ ok: true as const, retryAfterSeconds: 60 }),
+  signInWithSms: async () => ({ ok: true as const }),
   registerWithPassword: async () => ({ ok: true as const }),
   saveApiKey: () => Promise.resolve({ ok: true as const }),
   skip: () => Promise.resolve(),
@@ -140,6 +142,32 @@ describe('desktop welcome window', () => {
     await expect(copy(own, 42)).rejects.toThrow('invalid attempt')
     await copy(own, 'attempt')
     expect(copySignInLink).toHaveBeenCalledExactlyOnceWith('attempt')
+    window.once.mock.calls[0]![1]()
+    expect(electron.handlers.size).toBe(0)
+  })
+
+  it('requires the SMS code for registration and forwards the verified request', async () => {
+    const window = createWindow()
+    electron.create.mockReturnValue(window)
+    const sendSmsCode = vi.fn(operations.sendSmsCode)
+    const registerWithPassword = vi.fn(operations.registerWithPassword)
+    await openWelcomeWindow(resolveDesktopLocale('en'), { ...operations, sendSmsCode, registerWithPassword })
+    const own = { sender: window.webContents, senderFrame: window.webContents.mainFrame }
+    const sms = electron.handlers.get(WELCOME_IPC.sms)!
+    // Malformed requests answer with a reason code; renderer copy belongs to the locale dictionary.
+    expect(await sms(own, '12345', 'login')).toEqual({ ok: false, reason: 'invalid' })
+    expect(await sms(own, '13800138000', 'other')).toEqual({ ok: false, reason: 'invalid' })
+    await sms(own, '13800138000', 'register')
+    expect(sendSmsCode).toHaveBeenCalledExactlyOnceWith('13800138000', 'register')
+    const smsLogin = electron.handlers.get(WELCOME_IPC.smsLogin)!
+    expect(await smsLogin(own, '13800138000', '12345')).toEqual({ ok: false, reason: 'credentials' })
+    const register = electron.handlers.get(WELCOME_IPC.register)!
+    const input = { name: '张三', phone: '13800138000', password: 'secret', enterpriseName: '小米', slug: 'xiaomi', smsCode: '123456' }
+    expect(await register(own, { ...input, smsCode: '' })).toEqual({ ok: false, reason: 'credentials' })
+    expect(await register(own, { ...input, smsCode: '12345' })).toEqual({ ok: false, reason: 'credentials' })
+    expect(registerWithPassword).not.toHaveBeenCalled()
+    await register(own, input)
+    expect(registerWithPassword).toHaveBeenCalledExactlyOnceWith(input)
     window.once.mock.calls[0]![1]()
     expect(electron.handlers.size).toBe(0)
   })

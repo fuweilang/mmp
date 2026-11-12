@@ -19,6 +19,7 @@ import { AccountOnboarding } from './AccountOnboarding.tsx'
 import { AccountPlatformHost, type AccountPlatformHostInjected } from './AccountPlatformHost.tsx'
 import { AccountMenu } from './AccountMenu.tsx'
 import { createPlatformPages, type PlatformPages } from './platform-pages.ts'
+import { passwordFailureKey } from './password-failure.ts'
 import { AccountSection, type AccountSnapshot, type AccountSectionInjected } from './AccountSection.tsx'
 import { createBonusNoticeController } from './bonus-notices.ts'
 import { accountClientMetadata } from './client-metadata.ts'
@@ -325,8 +326,8 @@ export function apply(ctx: Context): void {
     },
     ...(desktop ? { submitPassword: async (phone: string, password: string) => {
       const result = await ctx.remote.account.signInWithPassword(client(), phone, password)
-      if (!result.ok) throw new Error('unavailable')
-      if (!result.value.ok) throw new Error(result.value.message || result.value.reason)
+      if (!result.ok) throw new Error('loginUnavailable')
+      if (!result.value.ok) throw new Error(passwordFailureKey(result.value))
     } } : {}),
     async start() {
       if (desktop) {

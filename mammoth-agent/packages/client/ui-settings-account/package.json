@@ -42,7 +42,8 @@
   },
   "scripts": {
     "bundle": "tsdown",
-    "watch": "tsdown --watch"
+    "watch": "tsdown --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "license": "MIT",
   "peerDependencies": {

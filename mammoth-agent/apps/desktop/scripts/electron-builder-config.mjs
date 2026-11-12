@@ -1,3 +1,4 @@
+import { desktopArtifactBase } from './desktop-artifact-name.mjs'
 import { readInstallerLocales, renderInstallerStrings } from './installer-locales.mjs'
 import { officePackageDirectories } from '../../../scripts/libreoffice-packages.mjs'
 import { X509Certificate } from 'node:crypto'
@@ -112,13 +113,13 @@ export function createElectronBuilderConfig(
       mmpDesktopUpdateChannel: update?.channel ?? 'nightly',
       ...(policy === undefined ? {} : { mmpMandatoryUpdatePolicy: policy }),
       ...buildVersion === productVersion ? {} : { version: buildVersion },
-      ...packaged === undefined ? {} : { mmpBuildCommit: packaged.commit, mmpBuildDirty: packaged.dirty },
+      ...packaged === undefined ? {} : { mmpBuildCommit: packaged.commit, mmpBuildDirty: packaged.dirty, mmpBuildBranch: packaged.branch, mmpBuildTime: packaged.builtAt },
     },
     productName: '猛犸智能体',
     // The default copyright uses author.name; this line names the product instead.
     copyright: `Copyright © ${new Date().getFullYear()} \${productName}`,
     // Unsigned builds carry their own suffix so a shared file can never pass for a release artifact.
-    artifactName: `mammoth-ai-\${version}-\${os}-\${arch}${output.suffix}.\${ext}`,
+    artifactName: `${desktopArtifactBase('${version}', '${os}', '${arch}')}${output.suffix}.\${ext}`,
     directories: { output: output.directory },
     asar: true,
     electronDist: buildPaths.electron,

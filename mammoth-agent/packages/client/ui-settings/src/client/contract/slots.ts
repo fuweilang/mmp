@@ -148,6 +148,12 @@ export interface SettingsLauncherOwnerProps {
   settingsOpen: boolean
   /** Effective Settings key labels and accessible combination; omitted when unbound. */
   settingsShortcut?: { readonly keys: readonly string[]; readonly aria?: string | undefined }
+  /** Native version-page navigation and identity, omitted in ordinary Web pages. */
+  versionUpdate?: {
+    readonly currentVersion?: string
+    readonly targetVersion?: string
+    open(): void
+  }
   /** Open the settings panel. */
   openSettings: () => void
   /** @param id - registered onboarding editor to open explicitly. */

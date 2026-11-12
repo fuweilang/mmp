@@ -18,6 +18,7 @@ import { JwtPayload } from './jwt.guard';
 import { creditSignupGiftInTx } from '../billing/welcome-gift';
 import { removeStoredFile } from '../knowledge/storage';
 import { saveUserAvatar, userAvatarPublicUrl } from './user-avatar';
+import { SmsCodes, smsError, type SmsCodeStore, type SmsScene } from './sms';
 
 @Injectable()
 export class AuthService {
@@ -30,11 +31,13 @@ export class AuthService {
   private usedBrowserSsoJti = new Set<string>();
 
   async register(
-    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string },
+    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string; smsCode: string },
     res: Response,
     ip?: string,
   ) {
-    const { user, tenant } = await this.createEnterpriseAccount(input);
+    // 先校验不核销；建号与核销同一事务，建号失败不会烧掉验证码。
+    const claim = await this.smsCodes().verify(input.phone.trim(), 'register', input.smsCode);
+    const { user, tenant } = await this.createEnterpriseAccount(input, claim);
 
     this.setCookie(res, { sub: user.id, tenantId: tenant.id });
     await this.prisma.auditLog.create({
@@ -43,12 +46,21 @@ export class AuthService {
     return this.me(user, tenant.id);
   }
 
-  /** Desktop registration. The session JWT is returned; the browser cookie is not set. */
+  /**
+   * Desktop registration. The session JWT is returned; the browser cookie is not set.
+   * 短信验证是硬门槛：旧客户端不带 smsCode 一律拒绝（CLIENT_TOO_OLD），
+   * 不建号、不发会话，也不做宽限期/降权兼容。
+   */
   async clientRegister(
-    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string },
+    input: { name: string; phone: string; password: string; enterpriseName: string; slug: string; smsCode?: string },
     ip?: string,
   ) {
-    const { user, tenant } = await this.createEnterpriseAccount(input);
+    const smsCode = (input.smsCode || '').trim();
+    if (!smsCode) {
+      throw smsError('CLIENT_TOO_OLD', '当前客户端版本过旧，注册需要短信验证，请升级到最新版本后重试');
+    }
+    const claim = await this.smsCodes().verify(input.phone.trim(), 'register', smsCode);
+    const { user, tenant } = await this.createEnterpriseAccount(input, claim);
     await this.prisma.auditLog.create({
       data: { userId: user.id, tenantId: tenant.id, action: 'client_register', ip },
     });
@@ -98,7 +110,7 @@ export class AuthService {
     password: string;
     enterpriseName: string;
     slug: string;
-  }) {
+  }, smsClaim?: { id: string }) {
     const phone = input.phone.trim();
     const enterpriseName = input.enterpriseName.trim();
     if (!enterpriseName) throw new BadRequestException('注册必须填写企业名称');
@@ -145,6 +157,14 @@ export class AuthService {
         walletId: wallet.id,
         actorUserId: user.id,
       });
+      if (smsClaim) {
+        // 与建号同事务：并发下只有一个请求能把码立为已核销，另一个整体回滚。
+        const claimed = await tx.smsVerificationCode.updateMany({
+          where: { id: smsClaim.id, consumedAt: null },
+          data: { consumedAt: new Date() },
+        });
+        if (claimed.count !== 1) throw smsError('SMS_CODE_EXPIRED', '验证码已使用，请重新获取');
+      }
       return { user, tenant };
     });
   }
@@ -167,12 +187,108 @@ export class AuthService {
     };
   }
 
+  async sendSms(phone: string, scene: SmsScene, ip?: string) {
+    return this.smsCodes().send(phone.trim(), scene, (ip || '').trim());
+  }
+
+  async smsLogin(phone: string, smsCode: string, res: Response, ip?: string) {
+    const session = await this.openSmsSession(phone, smsCode, ip, 'sms_login');
+    this.setCookie(res, { sub: session.user.id, tenantId: session.tenantId });
+    return session.me;
+  }
+
+  async clientSmsLogin(phone: string, smsCode: string, ip?: string) {
+    const session = await this.openSmsSession(phone, smsCode, ip, 'client_sms_login');
+    return {
+      token: this.jwt.sign({ sub: session.user.id, tenantId: session.tenantId }),
+      session: session.me,
+    };
+  }
+
+  private smsCodes(): SmsCodes {
+    const store: SmsCodeStore = {
+      findLatest: async (phone, scene, now) => this.prisma.smsVerificationCode.findFirst({
+        where: { phone, scene, consumedAt: null, expiresAt: { gt: now } },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, codeHash: true, attempts: true, createdAt: true },
+      }),
+      findCooldown: async (phone, scene, since) => this.prisma.smsVerificationCode.findFirst({
+        where: { phone, scene, consumedAt: null, createdAt: { gt: since } },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
+      countSince: (sendIp, since) => this.prisma.smsVerificationCode.count({
+        where: { sendIp, createdAt: { gt: since } },
+      }),
+      countPhoneSince: (phone, since) => this.prisma.smsVerificationCode.count({
+        where: { phone, createdAt: { gt: since } },
+      }),
+      retireExpired: async (phone, scene, now) => {
+        await this.prisma.smsVerificationCode.updateMany({
+          where: { phone, scene, consumedAt: null, expiresAt: { lte: now } },
+          data: { consumedAt: now },
+        });
+      },
+      purgeExpired: async (before) => {
+        await this.prisma.smsVerificationCode.deleteMany({ where: { expiresAt: { lt: before } } });
+      },
+      insert: async (row) => {
+        try {
+          const created = await this.prisma.smsVerificationCode.create({ data: row, select: { id: true } });
+          return created.id;
+        } catch (error) {
+          // phone+scene 部分唯一索引：已有未核销行时视为冷却，不重复下发。
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') return null;
+          throw error;
+        }
+      },
+      discard: async (id) => {
+        await this.prisma.smsVerificationCode.deleteMany({ where: { id, consumedAt: null } });
+      },
+      bumpAttempts: (id) => this.prisma.smsVerificationCode.update({
+        where: { id },
+        data: { attempts: { increment: 1 } },
+      }).then(() => undefined),
+      consume: async (id, at) => {
+        const result = await this.prisma.smsVerificationCode.updateMany({
+          where: { id, consumedAt: null },
+          data: { consumedAt: at },
+        });
+        return result.count === 1;
+      },
+      phoneRegistered: async (phone) => {
+        const user = await this.prisma.user.findUnique({ where: { phone }, select: { id: true } });
+        return user !== null;
+      },
+    };
+    return new SmsCodes(store, this.config.getOrThrow<string>('JWT_SECRET'));
+  }
+
+  private async openSmsSession(phone: string, smsCode: string, ip: string | undefined, action: string) {
+    const normalized = phone.trim();
+    const user = await this.prisma.user.findUnique({ where: { phone: normalized } });
+    // 统一错误码+文案：不区分手机号是否存在/停用，也不暴露是否有活码/是否错码，
+    // 避免登录接口被用来枚举号码（三种失败态必须完全一致）。
+    const invalid = () => smsError('SMS_INVALID', '手机号或验证码错误');
+    if (!user || user.status !== 'active') throw invalid();
+    try {
+      await this.smsCodes().consume(normalized, 'login', smsCode);
+    } catch (error) {
+      if (error instanceof BadRequestException) throw invalid();
+      throw error;
+    }
+    return this.establishSession(user, ip, action);
+  }
+
   private async openSession(phone: string, password: string, ip: string | undefined, action: string) {
     const user = await this.prisma.user.findUnique({ where: { phone } });
     if (!user || user.status !== 'active') throw new UnauthorizedException('账号或密码错误');
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('账号或密码错误');
+    return this.establishSession(user, ip, action);
+  }
 
+  private async establishSession(user: User, ip: string | undefined, action: string) {
     const tenants = await this.listTenants(user);
     // 业务账号必须有企业归属；无任何企业成员关系的禁止登录（平台账号不受影响）。
     if (!user.isPlatformAdmin && tenants.length === 0) {

@@ -161,9 +161,25 @@ body {
 .login-field input:focus { outline: none; border-color: #4A53A3; box-shadow: 0 0 0 3px rgba(74, 83, 163, 0.16); }
 .mode-switch {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   background: #eef0f6;
 }
+.sms-row { display: flex; gap: 8px; }
+.sms-row input { flex: 1; min-width: 0; width: auto; }
+.sms-row button {
+  flex: none;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d8dee9;
+  background: #fff;
+  color: #4A53A3;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.login-card--register .sms-row button { height: 32px; font-size: 12px; }
+.sms-row button:disabled { color: #98a2b3; cursor: default; }
 .mode-switch button {
   height: 36px;
   border: 0;

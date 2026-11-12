@@ -1,3 +1,4 @@
+import { desktopArtifactBase } from './desktop-artifact-name.mjs'
 /** Build one release target with matching Electron and mmp architecture. */
 
 import { spawn } from 'node:child_process'
@@ -23,7 +24,7 @@ import { resolveMacOSNotarizationEnvironment, resolveNpmRegistry } from './deskt
 import { packRegistryPackage } from './pack-registry-package.mjs'
 import { DESKTOP_BUILD_VERSION_ENV, resolveDesktopBuildVersion, validateDesktopBuildVersion } from './desktop-build-version.mjs'
 import { suggestDesktopBuildVersion } from './desktop-build-version-discovery.ts'
-import { desktopBuildCommitEnvironment, readDesktopBuildCommit, resolveDesktopBuildCommit } from './desktop-build-commit.mjs'
+import { desktopBuildCommitEnvironment, readDesktopBuildCommit, readDesktopBuildProvenance, resolveDesktopBuildCommit } from './desktop-build-commit.mjs'
 import { requireDesktopToolchain } from './desktop-toolchain-preflight.ts'
 import { withMacOSNotarizationProxy } from './macos-notarization-proxy.ts'
 
@@ -158,7 +159,7 @@ function writeReleaseRecord(
     channel: update.channel,
     publicUrl: update.publicUrl,
     // Upload reads this to tag the commit a production release was packaged from.
-    ...packaged === undefined ? {} : { commit: packaged.commit, dirty: packaged.dirty },
+    ...packaged === undefined ? {} : { commit: packaged.commit, dirty: packaged.dirty, branch: packaged.branch, builtAt: packaged.builtAt },
   }, null, 2)}\n`)
   renameSync(temporaryPath, recordPath)
 }
@@ -362,7 +363,7 @@ async function main(): Promise<void> {
     return
   }
   process.stdout.write(`desktop package: ${target.name} publishes ${buildVersion}${buildVersion === productVersion ? '' : ` for product version ${productVersion}`}\n`)
-  const packaged = readDesktopBuildCommit(REPOSITORY_ROOT)
+  const packaged = { ...readDesktopBuildCommit(REPOSITORY_ROOT), ...readDesktopBuildProvenance(REPOSITORY_ROOT) }
   Object.assign(environment, desktopBuildCommitEnvironment(packaged))
   const secrets = Object.entries(environment).filter(([name]) => /KEY|SECRET|TOKEN|PASSWORD|APPLE_ID/iu.test(name)).map(([, value]) => value ?? '')
   const run = createPackagingRun(join(APP_ROOT, '.desktop-build', 'packaging-runs'), {
@@ -403,7 +404,7 @@ async function main(): Promise<void> {
   if (success && target.platform === 'darwin' && !invocation.directory && !invocation.prepareOnly) {
     const paths = desktopTargetBuildPaths(target.name, environment)
     const output = desktopArtifactOutput(paths, invocation)
-    const filename = `deepseek-harness-${buildVersion}-mac-${target.arch}${output.suffix}.dmg`
+    const filename = `${desktopArtifactBase(buildVersion, 'mac', target.arch)}${output.suffix}.dmg`
     console.log(`DMG: ${join(output.directory, filename)}`)
   }
 }

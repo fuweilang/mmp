@@ -38,6 +38,7 @@ import { desktopUpdateReadyConfirmation, formatDesktopMessage, resolveDesktopLoc
 import { claimDesktopSingleInstance } from './single-instance.ts'
 import { desktopUpdateChannel } from './update-channel.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
+import { runDesktopUpdateCommand } from './update-commands.ts'
 import { prepareDesktopUpdateWindow } from './update-window.ts'
 import { DesktopCommandManager } from './command-management.ts'
 import { serveWebDocument, authenticateWebHost, forwardWebRequest } from './web-document.ts'
@@ -51,8 +52,7 @@ import { connectDesktopWelcome, type DesktopWelcomeBackend } from './welcome-bac
 import { DesktopUpdateJournal } from './update-journal.ts'
 import { DesktopUpdatePreparationError } from './update-error.ts'
 import { DesktopUpdateSchedule, resolveDesktopUpdateScheduleConfig } from './update-schedule.ts'
-import { desktopUpdateErrorSummary, presentDesktopUpdate } from './update-presentation.ts'
-import { desktopErrorState } from './startup-error.ts'
+import { presentDesktopUpdate } from './update-presentation.ts'
 import { readDesktopLoginShellEnvironment, resolveDesktopLoginShellConfig } from './login-shell-environment.ts'
 import { DesktopMandatoryUpdatePolicy, resolveDesktopPolicyConfig, type DesktopPolicyState } from './mandatory-update-policy.ts'
 import { desktopClientMetadata, desktopClientVersion } from './client-metadata.ts'
@@ -658,25 +658,12 @@ async function main(): Promise<void> {
     else if (!shuttingDown) backendReady = state.phase === 'ready'
   })
 
-  const updateErrors = new WeakMap<DesktopUpdateState, Promise<void>>()
-  const showUpdateFailure = (state: DesktopUpdateState): Promise<void> => {
-    if (state.phase !== 'error') return Promise.resolve()
-    if (isMandatory()) { mandatoryUI?.sync(); return Promise.resolve() }
-    let shown = updateErrors.get(state)
-    if (shown === undefined) {
-      shown = ordinaryMessageBox({ type: 'error', title: locale.messages.updateFailedTitle,
-        message: desktopUpdateErrorSummary(state, locale.messages),
-        technicalDetails: state.technicalDetails ?? state.message ?? '' }).then(() => {})
-      updateErrors.set(state, shown)
-    }
-    return shown
-  }
   const publishUpdate = (state: DesktopUpdateState): DesktopUpdateState => {
     updateJournal?.state(state)
     updateState = state
     mandatoryUI?.sync()
     for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.send(DESKTOP_IPC.updatesPresentation, presentDesktopUpdate(state))
+      window.webContents.send(DESKTOP_IPC.updatesPresentation, { ...presentDesktopUpdate(state), ...updates.info })
     }
     if (state.phase === 'error' && state.failedOperation !== 'check') {
       if (state.failedOperation === 'install' && fileDragStopped && !quitting) {
@@ -707,7 +694,7 @@ async function main(): Promise<void> {
           if (workspaceRecovery === recovery) workspaceRecovery = undefined
         })
       }
-      void showUpdateFailure(state).catch((error: unknown) => { console.error(error) })
+      // Product settings render failures inline; no unsolicited error dialog.
     }
     return state
   }
@@ -802,26 +789,18 @@ async function main(): Promise<void> {
   )
 
   const updateSchedule = new DesktopUpdateSchedule(updates, resolveDesktopUpdateScheduleConfig(process.env))
-
-  const downloadUpdate = async (version: string): Promise<DesktopUpdateState> => {
+  const downloadUpdate = (version: string): Promise<DesktopUpdateState> => {
     void track('desktop_upgrade_click', {})
     updateJournal?.action('download-requested')
-    const state = await updates.download(version)
-    if (state.phase !== 'ready' || quitting) return state
-    // Only a completed user-driven download opens this prompt; cancelling installation does not reopen it.
-    // A confirmation on a hidden window would go unseen, so it waits for the next show; the mandatory
-    // flow keeps its own taskbar and Dock attention instead.
-    if (!isMandatory()) await windowShown()
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- A quit can begin while the show is awaited.
-    if (quitting) return state
-    return updates.install(version)
+    return updates.download(version) // Download never authorizes installation, including the policy view.
   }
-  const windowShown = (): Promise<void> => new Promise((resolve) => {
-    const window = currentDialogWindow()
-    if (window === undefined || window.isDestroyed() || window.isVisible()) { resolve(); return }
-    window.once('show', () => { resolve() })
-    window.once('closed', () => { resolve() })
-  })
+  const checkProductUpdates = async (): Promise<DesktopUpdateState> => {
+    updateJournal?.action('check-requested')
+    void checkPolicyManually('deferred').catch((error: unknown) => { console.error(error) })
+    const state = await updateSchedule.check(true)
+    if (isMandatory()) mandatoryUI?.focus()
+    return state
+  }
 
   protocol.handle(SCHEME, (request) => {
     const url = new URL(request.url)
@@ -937,7 +916,7 @@ async function main(): Promise<void> {
   })
   ipcMain.handle(DESKTOP_IPC.updatesStatus, (event) => {
     assertProductSender(event)
-    return presentDesktopUpdate(updates.state)
+    return { ...presentDesktopUpdate(updates.state), ...updates.info }
   })
   ipcMain.handle(DESKTOP_IPC.deviceInfo, (event) => {
     assertProductSender(event)
@@ -960,78 +939,21 @@ async function main(): Promise<void> {
   })
   ipcMain.handle(DESKTOP_IPC.updatesOpen, async (event) => {
     assertProductSender(event)
-    await openUpdatePrompt()
+    // Compatibility action is check-only; never an implicit download.
+    await checkProductUpdates()
+  })
+  ipcMain.handle(DESKTOP_IPC.updatesCommand, async (event, action: unknown) => {
+    assertProductSender(event)
+    if (action === 'download') {
+      updateJournal?.action('download-requested')
+      void track('desktop_upgrade_click', {})
+    }
+    const state = action === 'check' ? await checkProductUpdates()
+      : await runDesktopUpdateCommand(updates, action)
+    return { ...presentDesktopUpdate(state), ...updates.info }
   })
 
-  let promptOperation: Promise<void> | undefined
   let policyAuthenticationQueued = false
-  const openUpdatePrompt = (manual = false): Promise<void> => {
-    if (authenticationOperation !== undefined) {
-      policyAuth?.focus(); updateDialog.focus()
-    }
-    let failedOperation: 'check' | 'download' | 'install' = 'check'
-    promptOperation ??= Promise.resolve().then(async () => {
-      if (manual) updateJournal?.action('check-requested')
-      const joinedPolicyAuthentication = authenticationOperation !== undefined
-      if (joinedPolicyAuthentication) await authenticatePolicy()
-      if (isMandatory()) {
-        mandatoryUI?.focus()
-        if (manual) await Promise.all([checkPolicyManually(), updateSchedule.check(true)])
-        return
-      }
-      let controller: AbortController | undefined
-      let progress: Promise<unknown> | undefined
-      try {
-        let state = updates.state
-        if (manual || state.phase === 'idle' || (state.phase === 'error' && state.failedOperation === 'check')) {
-          controller = new AbortController()
-          ordinaryDialogs.add(controller)
-          const parent = currentDialogWindow()
-          progress = parent === undefined ? Promise.resolve() : updateDialog.show(parent, { type: 'info', title: locale.messages.updateCheckTitle,
-            message: locale.messages.updateChecking, buttons: [locale.messages.later], cancelId: 0, signal: controller.signal })
-          if (!joinedPolicyAuthentication) {
-            void checkPolicyManually('deferred').catch((error: unknown) => { console.error(error) })
-          }
-          state = await updateSchedule.check(true)
-        }
-        if (isMandatory()) { mandatoryUI?.focus(); return }
-        if (state.phase === 'error' && state.failedOperation === 'check') { await showUpdateFailure(state); return }
-        if (state.phase === 'idle') {
-          await ordinaryMessageBox({ type: 'info', title: locale.messages.updateCheckTitle,
-            message: locale.messages.updateCurrent,
-            detail: formatDesktopMessage(locale.messages.updateCurrentDetail, { version: app.getVersion() }) })
-          return
-        }
-        if (state.phase === 'ready' || (state.phase === 'error' && state.failedOperation === 'install')) {
-          if (state.version !== undefined) {
-            failedOperation = 'install'
-            await showUpdateFailure(await updates.install(state.version))
-          }
-          return
-        }
-        if (state.phase !== 'available' && !(state.phase === 'error' && state.failedOperation === 'download')) return
-        if (manual) {
-          const result = await ordinaryMessageBox({ title: locale.messages.updateCheckTitle,
-            message: formatDesktopMessage(locale.messages.updateAvailable, { version: state.version ?? '' }),
-            detail: locale.messages.updateDetail,
-            buttons: [locale.messages.updateDownload], cancelId: 1 })
-          if (result.response !== 0) return
-        }
-        if (!isMandatory() && state.version !== undefined) {
-          controller?.abort()
-          failedOperation = 'download'
-          await showUpdateFailure(await downloadUpdate(state.version))
-        }
-      } finally {
-        controller?.abort()
-        if (controller !== undefined) ordinaryDialogs.delete(controller)
-        await progress
-      }
-    }).catch((error: unknown) => showUpdateFailure({ phase: 'error', failedOperation,
-      message: desktopErrorState(error).message }))
-      .finally(() => { promptOperation = undefined; flushQueuedPolicyAuthentication() })
-    return promptOperation
-  }
 
   let authenticationOperation: Promise<DesktopPolicyState | undefined> | undefined
   const authenticatePolicy = () => {
@@ -1040,7 +962,7 @@ async function main(): Promise<void> {
     return authenticationOperation
   }
   const flushQueuedPolicyAuthentication = (): void => {
-    if (!policyAuthenticationQueued || promptOperation !== undefined || authenticationOperation !== undefined
+    if (!policyAuthenticationQueued || authenticationOperation !== undefined
       || isMandatory() || quitting) return
     policyAuthenticationQueued = false
     void authenticatePolicy().catch((error: unknown) => { console.error(error) })
@@ -1129,7 +1051,7 @@ async function main(): Promise<void> {
         click: () => { void showAbout().catch((error: unknown) => { console.error(error) }) } }
       : { label: currentDesktopLocale().messages.aboutMenu, role: 'about' },
     { type: 'separator' },
-    { label: currentDesktopLocale().messages.checkUpdatesMenu, click: () => { void openUpdatePrompt(true) } },
+    { label: currentDesktopLocale().messages.checkUpdatesMenu, click: () => { void checkProductUpdates() } },
     ...process.platform === 'darwin' || process.platform === 'win32'
       ? [{ label: currentDesktopLocale().messages.cliCommandMenu, click: () => { void commandManager.show() } }] : [],
     { type: 'separator' },
@@ -1341,6 +1263,14 @@ async function main(): Promise<void> {
         signInWithPassword: async (phone, password) => {
           if (welcomeBackend === undefined) return { ok: false, reason: 'unavailable' }
           return welcomeBackend.account.signInWithPassword(desktopClientMetadata(locale.id), phone, password)
+        },
+        sendSmsCode: async (phone, scene) => {
+          if (welcomeBackend === undefined) return { ok: false, reason: 'unavailable' }
+          return welcomeBackend.account.sendSmsCode(phone, scene)
+        },
+        signInWithSms: async (phone, smsCode) => {
+          if (welcomeBackend === undefined) return { ok: false, reason: 'unavailable' }
+          return welcomeBackend.account.signInWithSms(desktopClientMetadata(locale.id), phone, smsCode)
         },
         registerWithPassword: async (input) => {
           if (welcomeBackend === undefined) return { ok: false, reason: 'unavailable' }

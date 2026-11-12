@@ -66,7 +66,7 @@ export async function openWelcomeWindow(locale: DesktopLocale, operations: Welco
     active = false
     for (const channel of [
       WELCOME_IPC.analyticsEnabled, WELCOME_IPC.analytics, WELCOME_IPC.takeNotice, WELCOME_IPC.saveApiKey,
-      WELCOME_IPC.skip, WELCOME_IPC.start, WELCOME_IPC.cancel, WELCOME_IPC.copyLink, WELCOME_IPC.password, WELCOME_IPC.register,
+      WELCOME_IPC.skip, WELCOME_IPC.start, WELCOME_IPC.cancel, WELCOME_IPC.copyLink, WELCOME_IPC.password, WELCOME_IPC.sms, WELCOME_IPC.smsLogin, WELCOME_IPC.register,
     ]) {
       ipcMain.removeHandler(channel)
     }
@@ -120,6 +120,20 @@ export async function openWelcomeWindow(locale: DesktopLocale, operations: Welco
     }
     return operations.signInWithPassword(phone, password)
   })
+  ipcMain.handle(WELCOME_IPC.sms, async (event, phone: unknown, scene: unknown) => {
+    assertSender(event)
+    if (typeof phone !== 'string' || !/^1\d{10}$/.test(phone) || (scene !== 'login' && scene !== 'register')) {
+      return { ok: false, reason: 'invalid' }
+    }
+    return operations.sendSmsCode(phone, scene)
+  })
+  ipcMain.handle(WELCOME_IPC.smsLogin, async (event, phone: unknown, smsCode: unknown) => {
+    assertSender(event)
+    if (typeof phone !== 'string' || !/^1\d{10}$/.test(phone) || typeof smsCode !== 'string' || !/^\d{6}$/.test(smsCode)) {
+      return { ok: false, reason: 'credentials' }
+    }
+    return operations.signInWithSms(phone, smsCode)
+  })
   ipcMain.handle(WELCOME_IPC.register, async (event, input: unknown) => {
     assertSender(event)
     if (typeof input !== 'object' || input === null) return { ok: false, reason: 'credentials' }
@@ -129,11 +143,13 @@ export async function openWelcomeWindow(locale: DesktopLocale, operations: Welco
     const password = typeof row.password === 'string' ? row.password : ''
     const enterpriseName = typeof row.enterpriseName === 'string' ? row.enterpriseName.trim() : ''
     const slug = typeof row.slug === 'string' ? row.slug.trim() : ''
+    const smsCode = typeof row.smsCode === 'string' ? row.smsCode : ''
     if (name.length < 1 || name.length > 40 || !/^1\d{10}$/.test(phone) || password.length < 1 || password.length > 200
-      || enterpriseName.length < 1 || enterpriseName.length > 80 || slug.length < 1 || slug.length > 40) {
+      || enterpriseName.length < 1 || enterpriseName.length > 80 || slug.length < 1 || slug.length > 40
+      || !/^\d{6}$/.test(smsCode)) {
       return { ok: false, reason: 'credentials' }
     }
-    return operations.registerWithPassword({ name, phone, password, enterpriseName, slug })
+    return operations.registerWithPassword({ name, phone, password, enterpriseName, slug, smsCode })
   })
   window.once('closed', disposeHandlers)
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
