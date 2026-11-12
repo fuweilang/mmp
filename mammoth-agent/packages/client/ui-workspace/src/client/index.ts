@@ -262,7 +262,10 @@ export function apply(ctx: Context): void {
   }
   viewInstance.actions.setArchivedFilter('default')
   registerToasts(ctx, viewStore, toastActions)
-  installTaskDataSurfaces(ctx, { deleted: () => { notify({ kind: 'taskDeleted' }) } })
+  installTaskDataSurfaces(ctx, {
+    deleted: () => { notify({ kind: 'taskDeleted' }) },
+    restored: () => { notify({ kind: 'taskRestored' }) },
+  })
   const rowToastInjected = (): Pick<RowToastInjected, 'hooks' | 'dismissToast'> => ({
     hooks: { toast: rowToast },
     dismissToast: () => { rowToast.set(null) },

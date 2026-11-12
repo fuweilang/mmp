@@ -461,10 +461,10 @@ function PinnedIndicator({ t }: { t: RowTranslate }) {
  * section, and every relevant live status. The task section sits above the
  * status lines so they stay the card's trailing status line.
  */
-function SessionHoverContent({ node, cwd, now, renderSlot, t }: {
+function SessionHoverContent({ node, place, now, renderSlot, t }: {
   node: SessionNode
-  /** Display working directory; absent omits the line. */
-  cwd: string | undefined
+  /** Workspace name; absent omits the line. Never a filesystem path. */
+  place: string | undefined
   now: number
   renderSlot: RowRenderSlots
   t: RowTranslate
@@ -476,7 +476,7 @@ function SessionHoverContent({ node, cwd, now, renderSlot, t }: {
   return (
     <div className={css.hoverContent}>
       <div className={css.hoverTitle}>{displayTitle(node, t)}</div>
-      {cwd !== undefined && <div className={css.hoverPath}>{cwd}</div>}
+      {place !== undefined && place !== '' && <div className={css.hoverPath}>{place}</div>}
       {/* Same placeholder rule as the row's trailing cell: no timestamp
           before the first prompt. */}
       {!node.blank && <div className={css.hoverTime}>{hoverTimeLabel(node.updatedAt, now, t)}</div>}
@@ -626,7 +626,7 @@ export function SearchResultItem({
  * @param props.onReveal - scroll this row into view after search navigation, then acknowledge it.
  * @param props.drag - optional row-drag target wiring; blank rows, and rows whose access excludes
  * `workspace/insertSessionBefore`, cannot start a drag.
- * @param props.home - host account home for POSIX hover-path abbreviation.
+ * @param props.place - workspace name on the hover card. A filesystem path is never shown.
  * @param props.useSessionAccess - the browser root's Session access Hook; the title double-click
  * renames only while it allows `session/rename`.
  * @param props.t - the browser root's locale seat.
@@ -634,7 +634,7 @@ export function SearchResultItem({
  */
 export function SessionNodeItem({
   node, currentId, now, onOpen, onRenameRequest, renderSlot, openSessionMenu, useContextMenuTarget,
-  useContextMenu, onReveal, drag, home, useSessionAccess, t,
+  useContextMenu, onReveal, drag, place, useSessionAccess, t,
 }: {
   useContextMenu: WorkspaceBrowserProps['useContextMenu']
   openSessionMenu: WorkspaceBrowserProps['openSessionMenu']
@@ -649,8 +649,10 @@ export function SessionNodeItem({
   onReveal?: (() => void) | undefined
   /** Present on reorderable-list rows so every row can remain a drop target. */
   drag?: RowDragProps | undefined
-  /** Host account home; POSIX home-rooted hover paths display as `~`. */
+  /** Host account home. Callers may still pass it; the card does not print a path. */
   home?: string | undefined
+  /** Workspace name shown on the hover card. Absent omits the line. */
+  place?: string | undefined
   t: RowTranslate
 } & Pick<WorkspaceBrowserProps, 'useSessionAccess'> & PropsRenderSlots<
   | 'sidebar.workspaces.session.row.action'
@@ -809,7 +811,7 @@ export function SessionNodeItem({
       anchor={ownRow}
       content={<SessionHoverContent
         node={node}
-        cwd={row.cwd === undefined ? undefined : abbreviateHomePath(row.cwd, home)}
+        place={place}
         now={now}
         renderSlot={renderSlot}
         t={t}

@@ -156,18 +156,19 @@ export function RechargeDialog({ useBilling, api, close, paid }: RechargeDialogP
       {step === 'form'
         ? <div className={css.body}>
           <div className={css.grid}>
-            {FIXED_AMOUNTS.map(value => <button key={value} type="button" className={css.amount}
-              data-selected={custom.trim() === '' && amount === String(value)}
-              onClick={() => { setAmount(String(value)); setCustom('') }}>
-              <span className={css.yuan}>¥{value.toLocaleString('zh-CN')}</span>
-              <span className={css.coins}>{formatCoins(value * perYuan)} AI币</span>
-            </button>)}
+            {FIXED_AMOUNTS.map(value => {
+              const selected = custom.trim() === '' && amount === String(value)
+              return <button key={value} type="button" className={css.amount}
+                data-selected={selected} aria-pressed={selected}
+                onClick={() => { setAmount(String(value)); setCustom('') }}>
+                ¥{value.toLocaleString('zh-CN')}
+              </button>
+            })}
           </div>
-          <label className={css.customRow}>
-            <span>自定义金额（元）</span>
-            <Input className={css.customInput ?? ''} inputMode="decimal" placeholder="1 – 100000" value={custom}
-              onChange={(e) => { setCustom(e.target.value.replace(/[^\d.]/g, '')) }} />
-          </label>
+          <Input className={`${css.customInput ?? ''} ${custom.trim() !== '' ? css.customOn ?? '' : ''}`}
+            icon={<span aria-hidden="true">¥</span>} inputMode="decimal"
+            placeholder="自定义金额，上限 100,000.00" value={custom}
+            onChange={(e) => { setCustom(e.target.value.replace(/[^\d.]/g, '')) }} />
           <div className={css.summary} data-error={custom.trim() !== '' && amountError !== undefined}>
             {custom.trim() !== '' && amountError !== undefined ? amountError
               : `应付 ¥${Number(amountText).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}，到账 ${formatCoins(coins)} AI币`}

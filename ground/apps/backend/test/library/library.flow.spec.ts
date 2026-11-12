@@ -263,7 +263,7 @@ describe('enterprise library', () => {
     assert.equal((await service.list(owner, 'trash')).items.length, 2);
   });
 
-  it('purges a recycled folder together with the recycled items inside it', async () => {
+  it('keeps a recycled folder while a protected file is still inside it', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');
     const folder = await service.createFolder(owner, '资料夹');
@@ -271,9 +271,11 @@ describe('enterprise library', () => {
     await service.move(owner, child.id, folder.id);
     await service.recycle(owner, child.id);
     await service.recycle(owner, folder.id);
-    await service.purge(owner, folder.id);
-    assert.equal((await store.getNode(folder.id))?.state, 'PURGED');
-    assert.equal((await store.getNode(child.id))?.state, 'PURGED');
+    const blocked = code(await service.purge(owner, folder.id).catch((error: unknown) => error));
+    assert.equal(blocked.status, 400);
+    assert.equal(blocked.code, 'FOLDER_NONEMPTY');
+    assert.equal((await store.getNode(folder.id))?.state, 'RECYCLED');
+    assert.equal((await store.getNode(child.id))?.state, 'RECYCLED');
   });
 
   it('opens a single ready chunk without a locator and still rejects missing or forbidden versions', async () => {

@@ -168,7 +168,6 @@ function mount(
     useContextMenu: contextMenuHook(),
     onDelete: vi.fn<TaskManagerPageProps['onDelete']>(async () => 'deleted'),
     onRetry: vi.fn(async () => {}),
-    onNewTask: vi.fn(),
     onClearEnded: vi.fn(async () => {}),
     onCreateTask: vi.fn<TaskManagerPageProps['onCreateTask']>(async () => ({ created: at })),
     onOpenSession: vi.fn(),
@@ -484,26 +483,13 @@ it('updates original Session navigation as metadata arrives and archive state ch
 })
 
 describe('Task manager catalog', () => {
-  it('starts a new Session from the heading and offers manual creation from its method menu', () => {
+  it('opens manual creation from the heading', () => {
     const h = mount({ records: [at] })
-    // The heading's compact action and the empty state's named action are the
-    // mock's two creation entries; only the heading's shows while a row exists.
-    const group = screen.getByRole('group', { name: en['host.create'] })
-    fireEvent.click(within(group).getByRole('button', { name: en['new.action'] }))
-    expect(h.props.onNewTask).toHaveBeenCalledOnce()
     expect(screen.queryByRole('button', { name: en['empty.action'] })).toBeNull()
-    const method = within(group).getByRole('button', { name: en['host.createMethod'] })
-    expect(method.getAttribute('aria-haspopup')).toBe('menu')
-    fireEvent.click(method)
-    expect(method.getAttribute('aria-expanded')).toBe('true')
-    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([en['host.chatCreate'], en['host.manualCreate']])
-    fireEvent.click(screen.getByRole('menuitem', { name: en['host.chatCreate'] }))
-    expect(h.props.onNewTask).toHaveBeenCalledTimes(2)
-    expect(screen.queryByRole('dialog')).toBeNull()
-    fireEvent.click(method)
-    fireEvent.click(screen.getByRole('menuitem', { name: en['host.manualCreate'] }))
+    fireEvent.click(screen.getByRole('button', { name: en['new.action'] }))
     const dialog = screen.getByRole('dialog', { name: en['host.manualCreate'] })
-    expect(h.props.onNewTask).toHaveBeenCalledTimes(2)
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.queryByRole('menuitem')).toBeNull()
     fireEvent.click(within(dialog).getByRole('button', { name: en['host.closeCreate'] }))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(h.props.onCreateTask).not.toHaveBeenCalled()
@@ -719,7 +705,7 @@ describe('Task manager catalog', () => {
     // filters the reader chose; closing the form leaves both in place.
     fireEvent.click(emptyNewTaskButton())
     const dialog = screen.getByRole('dialog', { name: en['host.manualCreate'] })
-    expect(h.props.onNewTask).not.toHaveBeenCalled()
+    expect(h.props.onCreateTask).not.toHaveBeenCalled()
     fireEvent.click(within(dialog).getByRole('button', { name: en['host.closeCreate'] }))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(taskNames()).toEqual([])
@@ -903,7 +889,7 @@ describe('clearing inactive tasks', () => {
     h.update({ records: [...records, endedTask] })
     // The cleanup is the search row's More menu, not a second heading action.
     expect(document.querySelector(`.${css.searchTools!}`)?.contains(moreTrigger())).toBe(true)
-    expect(within(creationActions()).getAllByRole('button')).toHaveLength(2)
+    expect(within(creationActions()).getAllByRole('button')).toHaveLength(1)
     // The Active view hides the cleanup even though the catalog holds ended rows.
     fireEvent.click(screen.getByRole('button', { name: en['status.active'] }))
     expect(screen.queryByRole('button', { name: en['list.more'] })).toBeNull()

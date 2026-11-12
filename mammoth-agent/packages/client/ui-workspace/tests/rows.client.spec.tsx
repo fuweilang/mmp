@@ -919,36 +919,36 @@ describe('workspace browser rows', () => {
     }
   })
 
-  describe('Session hover-card working directory', () => {
+  describe('Session hover-card place', () => {
     const located: SessionNode = {
       id: sid('s-cwd'), title: 'Located', blank: false, running: false,
       runningSubagentCount: 0, completed: false, updatedAt: 0, pinned: false, archived: false,
-      cwd: '/home/u/project',
+      cwd: '/home/u/Documents/deepseek-harness/default-workspace',
     }
-    function hoverCard(node: SessionNode): void {
-      render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()} home="/home/u" t={t} />)
+    function hoverCard(node: SessionNode, place?: string): void {
+      render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()} place={place} t={t} />)
       fireEvent.pointerEnter(screen.getByRole('treeitem').parentElement as HTMLElement)
       act(() => { vi.advanceTimersByTime(800) })
     }
     beforeEach(() => { vi.useFakeTimers() })
     afterEach(() => { vi.useRealTimers() })
 
-    it('shows a home-rooted directory as ~', () => {
+    it('shows the workspace name and not the directory', () => {
+      hoverCard(located, '默认工作区')
+      expect(screen.getByText('默认工作区')).toBeTruthy()
+      expect(screen.queryByText(/deepseek-harness/)).toBeNull()
+    })
+
+    it('omits the line when no workspace name is given', () => {
       hoverCard(located)
-      expect(screen.getByText('~/project')).toBeTruthy()
-    })
-
-    it('omits the line when the Host reports no directory', () => {
-      const { cwd: _cwd, ...withoutCwd } = located
-      hoverCard(withoutCwd)
       expect(screen.getAllByText('Located')).toHaveLength(2)
-      expect(screen.queryByText(/project/)).toBeNull()
+      expect(screen.queryByText(/deepseek-harness/)).toBeNull()
     })
 
-    it('shows the directory on a blank New Session card', () => {
-      hoverCard({ ...located, blank: true })
-      expect(screen.getAllByText('新会话')).toHaveLength(2)
-      expect(screen.getByText('~/project')).toBeTruthy()
+    it('shows the workspace name on a blank New Session card', () => {
+      hoverCard({ ...located, blank: true }, '默认工作区')
+      expect(screen.getAllByText('新任务')).toHaveLength(2)
+      expect(screen.getByText('默认工作区')).toBeTruthy()
     })
   })
 

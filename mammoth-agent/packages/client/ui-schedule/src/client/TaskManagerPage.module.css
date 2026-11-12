@@ -101,18 +101,7 @@
   border-radius: 16px;
 }
 
-/* The existing Plugins page's adjacent creation menu. */
-.createGroup { display: inline-flex; align-items: stretch; }
-.createPrimary { border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.createMore {
-  height: 32px;
-  width: 32px;
-  padding: 0;
-  border-radius: 0 var(--dsw-radius-lg) var(--dsw-radius-lg) 0;
-  border-left: 0.5px solid color-mix(in srgb, var(--dsw-alias-label-primary-foreground) 30%, transparent);
-}
 .manualDialog { width: 520px; max-width: calc(100vw - 48px); }
-.createMenu [role='menuitem'] { gap: 10px; padding: 6px 12px; }
 .targetMenu { width: 320px; max-width: calc(100vw - 48px); }
 .targetMenu [role='menuitem'] { height: 72px; box-sizing: border-box; gap: 10px; padding: 6px 12px; }
 .targetMenuItem { display: flex; flex-direction: column; gap: 2px; white-space: normal; }

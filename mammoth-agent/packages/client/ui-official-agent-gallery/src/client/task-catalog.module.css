@@ -46,7 +46,8 @@
 .tag:hover .remove:disabled,
 .tag:focus-within .remove:disabled { opacity: 0.5; }
 /* Fixed against the shared Modal padding box so filtering cannot resize the card. */
-.dialog { box-sizing: border-box; max-width: 100%; height: min(640px, 100%); max-height: 100%; min-width: 0; min-height: 0; }
+.dialog { box-sizing: border-box; width: min(560px, 100%); max-width: 100%; height: min(640px, 100%); max-height: 100%; min-width: 0; min-height: 0; }
+.dialog.dialog { width: min(560px, 100%); }
 .sheet { flex: 1 1 auto; min-height: 0; overflow: hidden; }
 .sheet > :not(:last-child) { flex-shrink: 0; }
 .sheet > div:last-child { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
@@ -55,7 +56,7 @@
 .list {
   display: grid;
   flex: 1 1 auto;
-  gap: 12px;
+  gap: 8px;
   align-content: start;
   min-height: 0;
   overflow-y: auto;
@@ -64,10 +65,11 @@
   --mmp-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 .search { height: 38px; width: 100%; box-sizing: border-box; border: 1px solid var(--dsw-alias-border-subtle, #ddd); border-radius: 8px; background: var(--dsw-alias-bg-layer1, #fff); color: inherit; padding: 0 12px; }
-.item { display: flex; gap: 12px; align-items: center; border: 1px solid var(--dsw-alias-border-subtle, #ddd); padding: 12px; border-radius: 14px; min-width: 0; }
-.itemText { flex: 1; min-width: 0; }
-.itemText strong { font-size: 14px; overflow-wrap: anywhere; }
-.itemText p { font-size: 12px; line-height: 1.6; margin: 4px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.item { display: flex; gap: 12px; align-items: center; border: 1px solid var(--dsw-alias-border-subtle, #ddd); padding: 8px 12px; border-radius: 14px; min-width: 0; }
+.item > button { flex: none; }
+.itemText { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; }
+.itemText strong { flex: none; font-size: 14px; font-weight: 500; white-space: nowrap; }
+.itemText p { flex: 1 1 auto; min-width: 0; margin: 0; color: var(--dsw-alias-label-secondary); font-size: 13px; line-height: 20px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .star { border: 0; background: transparent; color: inherit; font-size: 20px; min-width: 28px; min-height: 28px; cursor: pointer; }
 @media (hover: none) {
   .remove { opacity: 1; pointer-events: auto; }
@@ -75,6 +77,7 @@
 }
 @media (max-width: 520px) {
   .item { gap: 8px; padding: 10px; flex-wrap: wrap; }
-  .itemText { min-width: 150px; }
+  .itemText { flex-wrap: wrap; min-width: 150px; }
+  .itemText strong, .itemText p { max-width: none; white-space: normal; }
   .tag { max-width: 150px; }
 }

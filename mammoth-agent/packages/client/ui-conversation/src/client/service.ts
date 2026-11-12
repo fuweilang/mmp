@@ -243,6 +243,7 @@ export class ConversationController extends Service implements IConversation {
     signal?: AbortSignal,
     accept?: () => void,
     catalogSelection?: CatalogDraftSelection,
+    presentation?: { display: string; images: readonly { mediaType: ImageMediaType; data: string; name?: string }[] },
   ): Promise<SubmitOutcome> {
     // Catalog protocol is a new immutable attempt, never a mutation of the running turn.
     if(catalogSelection!==undefined)mode='queue'
@@ -291,7 +292,7 @@ export class ConversationController extends Service implements IConversation {
     const libraryReferences: LibrarySourceReference[] = promptParts.flatMap(part => part.type === 'library' ? [{
       source: 'library' as const, nodeId: part.nodeId, versionId: part.versionId, name: part.name,
     }] : [])
-    const displayText = typeof text === 'string' ? text : promptParts.filter(part => part.type === 'text').map(part => part.text).join('').trim()
+    const displayText = presentation?.display ?? (typeof text === 'string' ? text : promptParts.filter(part => part.type === 'text').map(part => part.text).join('').trim())
     const sentSkills = (catalogSelection?.skillRefs ?? []).map((skill): EchoSkill => {
       const icon = typeof skill.icon === 'string' && skill.icon !== '' ? skill.icon : undefined
       const offset = Number.isSafeInteger(skill.offset) && Number(skill.offset) >= 0 ? Number(skill.offset) : undefined
@@ -325,7 +326,8 @@ export class ConversationController extends Service implements IConversation {
     try {
       await nextPaint()
       const uploaded = await serializeAttachments()
-      content = [...uploaded, ...promptParts]
+      const images = (presentation?.images ?? []).map(image => ({ type: 'image' as const, mediaType: image.mediaType, data: image.data, ...(image.name === undefined ? {} : { name: image.name }) }))
+      content = [...uploaded, ...images, ...promptParts]
     } catch (error) {
       submission.abandon()
       throw error

@@ -16,9 +16,12 @@ export type MenuSection = 'add' | 'commands'
 
 /** Row names per section, highest usage first; rows outside both lists close the Commands section in catalog order. */
 const SECTION_ROWS: Readonly<Record<MenuSection, readonly string[]>> = {
-  add: ['file', 'goal', 'plan', 'feedback'],
-  commands: ['compact', 'permission', 'model', 'export'],
+  add: ['file'],
+  commands: ['permission', 'model', 'export'],
 }
+
+/** Kept as commands, omitted from the empty plus menu. A typed query still finds them. */
+const HIDDEN_FROM_EMPTY_MENU = new Set(['goal', 'plan', 'feedback', 'compact'])
 
 /** The dictionary keys and glyph of one built-in Host command's client face. */
 interface HostFace {
@@ -71,15 +74,16 @@ export function builtinRowFace(
  * @returns the sectioned rows.
  */
 export function sectionRows(rows: readonly InputTriggerCandidate[], t: TranslateNS<'command'>): readonly InputTriggerCandidate[] {
+  const shown = rows.filter(row => !HIDDEN_FROM_EMPTY_MENU.has(row.name))
   const listed = new Set([...SECTION_ROWS.add, ...SECTION_ROWS.commands])
-  const byName = new Map(rows.map(row => [row.name, row]))
+  const byName = new Map(shown.map(row => [row.name, row]))
   const pick = (names: readonly string[]): InputTriggerCandidate[] =>
     names.flatMap((name) => {
       const row = byName.get(name)
       return row === undefined ? [] : [row]
     })
   const add = pick(SECTION_ROWS.add).map(row => ({ ...row, section: t('section.add') }))
-  const commands = [...pick(SECTION_ROWS.commands), ...rows.filter(row => !listed.has(row.name))]
+  const commands = [...pick(SECTION_ROWS.commands), ...shown.filter(row => !listed.has(row.name))]
     .map(row => ({ ...row, section: t('section.commands') }))
   return [...add, ...commands]
 }

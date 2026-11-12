@@ -4,7 +4,7 @@
  * The chip is not draft text: clipboard projection is empty.
  */
 import type { JSX } from 'react'
-import type { LexicalEditor, LexicalNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical'
+import type { LexicalEditor, LexicalNode, NodeKey, RangeSelection, SerializedLexicalNode, Spread } from 'lexical'
 import {
   $createParagraphNode, $createTextNode, $getAdjacentNode, $getRoot, $getSelection, $isElementNode, $isRangeSelection,
   createCommand, DecoratorNode,
@@ -185,10 +185,9 @@ export function $skillChips(): SkillChipNode[] {
 
 /**
  * Make the draft show exactly `skills`.
- * Chips already on screen keep their places. Missing skills are inserted at
- * the caret, or at the start when the draft has no skill chip yet.
- * When every missing skill carries an `offset` and the draft has no chip yet,
- * `insertAnchored` puts them back beside the saved characters.
+ * Chips already on screen keep their places. A skill that is not on screen
+ * yet is inserted at the caret. When the draft has no chip yet and every
+ * missing skill carries an `offset`, `insertAnchored` restores those places.
  * @param skills - skills this round sends, in preferred order.
  * @param insertAnchored - restore chips that remember a text offset.
  */
@@ -205,15 +204,8 @@ export function $syncSkillSet(
   const present = new Set($skillChips().map(chip => chip.getData().id))
   const missing = skills.filter(skill => !present.has(skill.id))
   if (missing.length === 0) return
-  if (present.size === 0) {
-    if (insertAnchored !== undefined && missing.every(skill => Number.isSafeInteger(skill.offset) && Number(skill.offset) >= 0)) {
-      insertAnchored(missing)
-      return
-    }
-    for (let index = missing.length - 1; index >= 0; index -= 1) {
-      const skill = missing[index]
-      if (skill !== undefined) $insertSkillChip(skill)
-    }
+  if (present.size === 0 && insertAnchored !== undefined && missing.every(skill => Number.isSafeInteger(skill.offset) && Number(skill.offset) >= 0)) {
+    insertAnchored(missing)
     return
   }
   for (const skill of missing) $insertSkillChipAtCaret(skill)
@@ -227,32 +219,17 @@ export function $syncSkillChip(data: SkillChipData | null): void {
   $syncSkillSet(data === null ? [] : [data])
 }
 
-/** Insert one chip at the start, without taking a command chip's leading seat. */
-function $insertSkillChip(data: SkillChipData): void {
-  const root = $getRoot()
-  let block = root.getFirstChild()
-  if (block === null) {
-    block = $createParagraphNode()
-    root.append(block)
-  }
-  if (!$isElementNode(block)) return
-  const chip = $createSkillChipNode(data)
-  const first = block.getFirstChild()
-  if ($isCommandChipNode(first)) {
-    const next = first.getNextSibling()
-    if (next === null) first.insertAfter(chip)
-    else next.insertBefore(chip)
-    return
-  }
-  if (first === null) block.append(chip)
-  else first.insertBefore(chip)
-}
-
-/** Insert one chip at the caret, or at the end of the draft when there is no caret. */
+/** Insert one chip at the caret, or at the end of the draft when there is no caret. A caret in front of a command chip lands after that chip. */
 function $insertSkillChipAtCaret(data: SkillChipData): void {
   const chip = $createSkillChipNode(data)
   const selection = $getSelection()
   if ($isRangeSelection(selection)) {
+    const lead = selection.isCollapsed() ? $commandChipBeforeCaret(selection) : null
+    if (lead !== null) {
+      lead.insertAfter(chip)
+      chip.selectNext()
+      return
+    }
     selection.insertNodes([chip])
     return
   }
@@ -264,6 +241,16 @@ function $insertSkillChipAtCaret(data: SkillChipData): void {
   }
   if (!$isElementNode(block)) return
   block.append(chip)
+}
+
+/** The command chip when the caret is sitting in its leading seat. */
+function $commandChipBeforeCaret(selection: RangeSelection): LexicalNode | null {
+  const node = selection.anchor.getNode()
+  if ($isElementNode(node)) {
+    const first = node.getFirstChild()
+    return selection.anchor.offset === 0 && $isCommandChipNode(first) ? first : null
+  }
+  return $isCommandChipNode(node) && selection.anchor.offset === 0 ? node : null
 }
 
 /**

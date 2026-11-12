@@ -61,7 +61,7 @@ function mount(rows: readonly ScheduleCatalogEntry[] = [task], overrides: Partia
     useSessionStatus: select => select(new Map()), useSessionRetainInfo: () => undefined,
     useResource: () => { throw new Error('Task editor loads no document resources') },
     useContextMenu: contextMenuHook(),
-    onNewTask: vi.fn(), onClearEnded: vi.fn(async () => {}),
+    onClearEnded: vi.fn(async () => {}),
     onCreateTask: vi.fn<TaskManagerPageProps['onCreateTask']>(async () => ({ created: task })),
     onDelete: vi.fn<TaskManagerPageProps['onDelete']>(async () => 'deleted'), onRetry: vi.fn(async () => {}), onOpenSession: vi.fn(),
     hostActions: hostActions(),
@@ -75,8 +75,7 @@ function mount(rows: readonly ScheduleCatalogEntry[] = [task], overrides: Partia
   } }
 }
 function openManual(): HTMLElement {
-  fireEvent.click(screen.getByRole('button', { name: en['host.createMethod'] }))
-  fireEvent.click(screen.getByRole('menuitem', { name: en['host.manualCreate'] }))
+  fireEvent.click(screen.getByRole('button', { name: en['new.action'] }))
   return screen.getByRole('dialog', { name: en['host.manualCreate'] })
 }
 function openEdit(): HTMLElement {
@@ -121,6 +120,10 @@ describe('Host task editor on the existing manager', () => {
     const detail = openEdit()
     fireEvent.change(within(detail).getByRole('textbox', { name: en['detail.name'] }), { target: { value: 'Unsaved title' } })
     const dialog = openManual()
+    const mask = dialog.parentElement?.querySelector('[aria-hidden="true"]')
+    expect(mask).toBeTruthy()
+    fireEvent.click(mask!)
+    expect(screen.getByRole('dialog', { name: en['host.manualCreate'] })).toBe(dialog)
     fireEvent.keyDown(within(dialog).getByRole('textbox', { name: en['detail.name'] }), { key: 'Escape' })
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(within(detail).getByRole('textbox', { name: en['detail.name'] }).getAttribute('value')).toBe('Unsaved title')
@@ -382,15 +385,13 @@ describe('Host task editor on the existing manager', () => {
     expect(screen.getByRole('status').textContent).toContain(dictionary['list.noMatches'])
     fireEvent.click(screen.getByRole('button', { name: dictionary['empty.action'] }))
     expect(screen.getByRole('dialog', { name: dictionary['host.manualCreate'] })).toBeDefined()
-    expect(h.props.onNewTask).not.toHaveBeenCalled()
+    expect(h.props.onCreateTask).not.toHaveBeenCalled()
   })
 
-  it('keeps New on the existing conversation path and exposes manual creation separately', () => {
+  it('opens the manual form from New', () => {
     const h = mount()
-    fireEvent.click(screen.getByRole('button', { name: en['new.action'] }))
-    expect(h.props.onNewTask).toHaveBeenCalledTimes(1)
-    expect(h.props.onCreateTask).not.toHaveBeenCalled()
     const modal = openManual()
+    expect(h.props.onCreateTask).not.toHaveBeenCalled()
     expect(within(modal).getByRole('button', { name: en['host.create'] }).hasAttribute('disabled')).toBe(true)
     expect(within(modal).getByRole('button', { name: new RegExp('^' + en['host.target'] + ' ') }).textContent).toContain(en['host.targetNewOnce'])
   })
@@ -406,7 +407,6 @@ describe('Host task editor on the existing manager', () => {
     const request = vi.mocked(h.props.onCreateTask).mock.calls[0]![0]
     expect(request).toMatchObject({ title: 'Morning news', prompt: 'Find the latest news', target: { kind: 'new_once', create: {} } })
     expect(rruleOf(request.timing)).toContain('RRULE:FREQ=DAILY;COUNT=1')
-    expect(h.props.onNewTask).not.toHaveBeenCalled()
     expect(h.props.onOpenSession).not.toHaveBeenCalled()
   })
 
@@ -562,14 +562,6 @@ describe('Host task editor on the existing manager', () => {
     const history = screen.getByRole('tabpanel')
     fireEvent.click(within(history).getByRole('button', { name: 'Report conversation' }))
     expect(h.props.onOpenSession).toHaveBeenCalledWith(targetSession)
-  })
-
-  it('closes the creation menu on Escape without opening a form', () => {
-    mount([])
-    fireEvent.click(screen.getByRole('button', { name: en['host.createMethod'] }))
-    fireEvent.keyDown(screen.getByRole('menuitem', { name: en['host.manualCreate'] }), { key: 'Escape' })
-    expect(screen.queryByRole('menu')).toBeNull()
-    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('keeps a pending manual form open until the Host answers, then selects the new task', async () => {

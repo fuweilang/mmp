@@ -7,10 +7,14 @@
 export declare const zh: {
     'data.title': string;
     'data.archived': string;
+    'data.count': string;
     'data.search': string;
     'data.empty': string;
     'data.view': string;
     'data.restore': string;
+    'data.restore.title': string;
+    'data.restore.description': string;
+    'data.restore.confirm': string;
     'data.restored': string;
     'data.deleted': string;
     'data.previous': string;
@@ -162,10 +166,14 @@ export type WorkspaceKey = keyof typeof zh;
 export declare const en: {
     'data.title': string;
     'data.archived': string;
+    'data.count': string;
     'data.search': string;
     'data.empty': string;
     'data.view': string;
     'data.restore': string;
+    'data.restore.title': string;
+    'data.restore.description': string;
+    'data.restore.confirm': string;
     'data.restored': string;
     'data.deleted': string;
     'data.previous': string;
@@ -315,10 +323,14 @@ export declare const en: {
 export declare const ja: {
     'data.title': string;
     'data.archived': string;
+    'data.count': string;
     'data.search': string;
     'data.empty': string;
     'data.view': string;
     'data.restore': string;
+    'data.restore.title': string;
+    'data.restore.description': string;
+    'data.restore.confirm': string;
     'data.restored': string;
     'data.deleted': string;
     'data.previous': string;
@@ -468,10 +480,14 @@ export declare const ja: {
 export declare const es: {
     'data.title': string;
     'data.archived': string;
+    'data.count': string;
     'data.search': string;
     'data.empty': string;
     'data.view': string;
     'data.restore': string;
+    'data.restore.title': string;
+    'data.restore.description': string;
+    'data.restore.confirm': string;
     'data.restored': string;
     'data.deleted': string;
     'data.previous': string;
@@ -621,10 +637,14 @@ export declare const es: {
 export declare const fr: {
     'data.title': string;
     'data.archived': string;
+    'data.count': string;
     'data.search': string;
     'data.empty': string;
     'data.view': string;
     'data.restore': string;
+    'data.restore.title': string;
+    'data.restore.description': string;
+    'data.restore.confirm': string;
     'data.restored': string;
     'data.deleted': string;
     'data.previous': string;
@@ -774,10 +794,14 @@ export declare const fr: {
 export declare const de: {
     'data.title': string;
     'data.archived': string;
+    'data.count': string;
     'data.search': string;
     'data.empty': string;
     'data.view': string;
     'data.restore': string;
+    'data.restore.title': string;
+    'data.restore.description': string;
+    'data.restore.confirm': string;
     'data.restored': string;
     'data.deleted': string;
     'data.previous': string;
@@ -927,10 +951,14 @@ export declare const de: {
 export declare const ru: {
     'data.title': string;
     'data.archived': string;
+    'data.count': string;
     'data.search': string;
     'data.empty': string;
     'data.view': string;
     'data.restore': string;
+    'data.restore.title': string;
+    'data.restore.description': string;
+    'data.restore.confirm': string;
     'data.restored': string;
     'data.deleted': string;
     'data.previous': string;
@@ -1080,10 +1108,14 @@ export declare const ru: {
 export declare const pt: {
     'data.title': string;
     'data.archived': string;
+    'data.count': string;
     'data.search': string;
     'data.empty': string;
     'data.view': string;
     'data.restore': string;
+    'data.restore.title': string;
+    'data.restore.description': string;
+    'data.restore.confirm': string;
     'data.restored': string;
     'data.deleted': string;
     'data.previous': string;

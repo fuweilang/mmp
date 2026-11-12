@@ -16,6 +16,8 @@ import { SessionMe } from '@mammoth/shared';
 import { computeEffectivePermissions } from '../permissions/effective';
 import { JwtPayload } from './jwt.guard';
 import { creditSignupGiftInTx } from '../billing/welcome-gift';
+import { removeStoredFile } from '../knowledge/storage';
+import { saveUserAvatar, userAvatarPublicUrl } from './user-avatar';
 
 @Injectable()
 export class AuthService {
@@ -256,6 +258,44 @@ export class AuthService {
     return this.me({ ...user, name: trimmed } as User, tenantId);
   }
 
+  /** Replace this account's picture. The same URL is returned by every session. */
+  async setAvatar(
+    user: User,
+    file: { originalname?: string; buffer?: Buffer; mimetype?: string },
+    tenantId: string | null,
+  ) {
+    if (!file.buffer?.length) throw new BadRequestException('请选择头像图片');
+    let storagePath: string;
+    try {
+      storagePath = await saveUserAvatar(file.originalname || 'avatar.png', file.buffer, file.mimetype);
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : '头像上传失败');
+    }
+    const fresh = await this.prisma.user.findUnique({ where: { id: user.id } });
+    if (!fresh) throw new UnauthorizedException();
+    const previous = fresh.avatarPath;
+    await this.prisma.user.update({ where: { id: user.id }, data: { avatarPath: storagePath } });
+    if (previous && previous !== storagePath) await removeStoredFile(previous);
+    await this.prisma.auditLog.create({
+      data: { userId: user.id, tenantId, action: 'update_own_avatar' },
+    });
+    return this.me({ ...fresh, avatarPath: storagePath }, tenantId);
+  }
+
+  /** Drop the picture so every surface shows the name initial again. */
+  async clearAvatar(user: User, tenantId: string | null) {
+    const fresh = await this.prisma.user.findUnique({ where: { id: user.id } });
+    if (!fresh) throw new UnauthorizedException();
+    if (fresh.avatarPath) {
+      await this.prisma.user.update({ where: { id: user.id }, data: { avatarPath: null } });
+      await removeStoredFile(fresh.avatarPath);
+      await this.prisma.auditLog.create({
+        data: { userId: user.id, tenantId, action: 'clear_own_avatar' },
+      });
+    }
+    return this.me({ ...fresh, avatarPath: null }, tenantId);
+  }
+
   async issueBrowserSsoTicket(user: User, tenantId: string | null) {
     // 没有企业控制台权限的账号不给签发 handoff 票（企业成员预设已含 access）。
     if (!user.isPlatformAdmin) {
@@ -389,6 +429,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        avatarUrl: userAvatarPublicUrl(user.avatarPath),
         isPlatformAdmin,
         platformRoleKey: eff.platformRoleKey,
         roleNames: boundRoles.map((row) => row.role.name),

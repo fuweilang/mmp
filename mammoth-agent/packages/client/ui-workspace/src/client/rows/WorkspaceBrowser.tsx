@@ -636,6 +636,7 @@ function SessionTree({
                 : undefined}
               drag={dragProps}
               home={home}
+              place={group.label}
               useSessionAccess={useSessionAccess}
               t={t}
             />

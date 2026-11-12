@@ -575,7 +575,7 @@ export class LibraryService {
     }
     if (node.kind === 'FILE') throw new LibraryError(409, FILE_PURGE_BLOCKED_REASON, 'REFERENCE_UNVERIFIED');
     const descendants = this.recycledSubtree(await this.store.listNodes(actor.tenantId), node.id);
-    if (descendants.some(row => row.state === 'ACTIVE')) throw new LibraryError(400, '目录不为空', 'FOLDER_NONEMPTY');
+    if (descendants.some(row => row.state === 'ACTIVE' || row.kind === 'FILE')) throw new LibraryError(400, '目录不为空', 'FOLDER_NONEMPTY');
     for (const child of descendants) {
       if (child.state === 'RECYCLED') await this.purgeStored(child);
     }

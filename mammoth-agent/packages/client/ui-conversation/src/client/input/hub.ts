@@ -28,7 +28,7 @@ import type { PopupDismissFace } from './facade.ts'
 import { SessionInputShell } from './facade.ts'
 import { reportMessageSubmission } from './submission-analytics.ts'
 import { readConversationDraft, writeConversationDraftCatalog } from '../stores.ts'
-import { enterpriseKnowledgePrompt } from './enterprise-knowledge.ts'
+import { enterpriseKnowledgePrompt, type KnowledgeImage } from './enterprise-knowledge.ts'
 
 /** Structural command face for per-session popup resolution. */
 interface CommandFace {
@@ -52,6 +52,7 @@ interface ConversationAttachmentFace {
     signal?: AbortSignal,
     accept?: () => void,
     catalogSelection?: CatalogDraftSelection,
+    presentation?: { display: string; images: readonly KnowledgeImage[] },
   ): Promise<SubmitOutcome>
   serializeDraftAttachments(attachmentIds: readonly DraftAttachmentId[]): Promise<DraftAttachmentSerializationResult>
   releaseDraftAttachment(id: DraftAttachmentId): void
@@ -272,10 +273,13 @@ export class InputHub implements SessionInputResolver {
       if (question === '') return { kind: 'error', text: '请输入要查询企业知识库的问题' }
       try {
         const knowledge = await enterpriseKnowledgePrompt(question, signal)
-        text = typeof text === 'string' ? knowledge : [
-          ...text.filter(part => part.type === 'library'), { type: 'text', text: knowledge },
+        text = typeof text === 'string' ? knowledge.prompt : [
+          ...text.filter(part => part.type === 'library'), { type: 'text', text: knowledge.prompt },
         ]
         signal.throwIfAborted()
+        return this.conversation().sendSession(session, text, attachmentIds, mode, signal, accept, catalogSelection, {
+          display: question, images: knowledge.images,
+        })
       } catch (error) {
         return { kind: 'error', text: error instanceof Error ? error.message : '企业知识库检索失败' }
       }

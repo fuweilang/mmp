@@ -20,7 +20,7 @@
  */
 
 import { z } from 'zod'
-import { isLibrarySourceReference } from '@mammoth-ai/mmp-llm/user-content'
+import { isLibrarySourceReference, userVisibleText } from '@mammoth-ai/mmp-llm/user-content'
 import type { ZodType } from 'zod'
 import { SessionSeq, type SessionEvent } from '@mammoth-ai/mmp-session'
 import type { ProjectionDefinition } from '@mammoth-ai/mmp-session-projection'
@@ -43,7 +43,8 @@ function preview(content: MessageContent, limit: number): string {
     if (block.type !== 'text') continue
     const reference = isLibrarySourceReference(block.reference) ? block.reference : undefined
     if (reference !== undefined && hasOriginalText) continue
-    const displayText = reference?.name ?? block.text
+    const displayText = reference?.name ?? userVisibleText(block.text)
+    if (displayText === '') continue
     if (text.length >= limit * 2) {
       unread = true
       break

@@ -335,6 +335,8 @@ export type RowToast = {
 } | {
     kind: 'taskDeleted';
 } | {
+    kind: 'taskRestored';
+} | {
     kind: 'sessionIdCopied';
 } | {
     kind: 'sessionIdCopyFailed';

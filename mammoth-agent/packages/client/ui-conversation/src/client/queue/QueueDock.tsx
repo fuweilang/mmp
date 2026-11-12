@@ -2,7 +2,7 @@ import type { Context } from '@mammoth-ai/cordis'
 import { useEffect, useId, useMemo, useState } from 'react'
 import type { FileAttachmentRef, ImageAttachmentRef } from '@mammoth-ai/mmp-attachment'
 import type { LibrarySourceReference } from '@mammoth-ai/mmp-attachment/types'
-import { isLibrarySourceReference } from '@mammoth-ai/mmp-llm/user-content'
+import { isLibrarySourceReference, userVisibleText } from '@mammoth-ai/mmp-llm/user-content'
 import type { PropsLocale, PropsRenderFactories, PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import {
@@ -25,7 +25,7 @@ const QUEUE_TEXT_FACTS: Readonly<Partial<UserTextFacts>> = {
 
 function textOf(content: InboxState['next-turn'][number]['content']): string | null {
   if (!content.every(block => block.type === 'text')) return null
-  return content.filter(block => !isLibrarySourceReference(block.reference)).map(block => block.text).join('')
+  return content.filter(block => !isLibrarySourceReference(block.reference)).map(block => userVisibleText(block.text)).join('')
 }
 
 /** Queue operations injected by the session-scoped registration. */
@@ -246,7 +246,7 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
                         </span>
                       )}
                       <span className={css.preview}>{renderFactorySlot('conversation.user.text', {
-                        text: row.content.flatMap(block => block.type === 'text' && !isLibrarySourceReference(block.reference) ? [block.text] : []).join(''),
+                        text: row.content.flatMap(block => block.type === 'text' && !isLibrarySourceReference(block.reference) ? [userVisibleText(block.text)] : []).join(''),
                         facts: QUEUE_TEXT_FACTS,
                         interactive: false, ellipsis: true,
                       })}</span>

@@ -232,7 +232,7 @@ export function Welcome({ api }: { api: WelcomeApi }) {
   return <>
     {expiryNotice && <Toast text={m.welcomeSessionExpired} onDone={() => { setExpiryNotice(false) }} />}
     <div className="titlebar" aria-hidden="true" />
-    <main className="welcome" aria-labelledby={heading}>
+    <main className="welcome" data-page={page} aria-labelledby={heading}>
       <img className="brand" src="assets/welcome-brand.svg" alt={m.welcomeBrand} width="472" height="40" />
       <div id="tagline" className="tagline" hidden={page !== 'entry'}>
         <h1 id="welcome-heading"><span>{m.welcomeTaglineBefore}</span><em>{m.welcomeTaglineBrand}</em><span>{m.welcomeTaglineAfter}</span></h1>
@@ -240,6 +240,7 @@ export function Welcome({ api }: { api: WelcomeApi }) {
       </div>
       <form id="login-form" className={`login-card${authMode === 'register' ? ' login-card--register' : ''}`} hidden={page !== 'login'} noValidate onSubmit={(event) => { void submitPassword(event) }} aria-busy={busy}>
         <header className="login-head">
+          <img className="login-logo" src="assets/mengma-logo.png" alt="" width="64" height="64" />
           <h1 id="login-title">{m.welcomeLoginTitle}</h1>
           <p id="login-subtitle">{authMode === 'register' ? m.welcomeRegisterSubtitle : m.welcomeLoginSubtitle}</p>
         </header>
@@ -279,11 +280,13 @@ export function Welcome({ api }: { api: WelcomeApi }) {
         </label>
         <label className="login-agreement" hidden={authMode !== 'register'}>
           <input id="register-agree" type="checkbox" checked={agree} disabled={busy} onChange={(event) => { setAgree(event.target.checked) }} />
-          <span>{m.welcomeAgreement}</span>
+          <span>{api.id === 'zh-CN'
+            ? <>我已阅读并同意<span className="agreement-doc">用户协议</span>和<span className="agreement-doc">隐私政策</span></>
+            : m.welcomeAgreement}</span>
         </label>
         <p id="login-error" className="login-error" role="alert" hidden={loginError === ''}>{loginError}</p>
-        <button id="sign-in" className="primary" type="submit" hidden={authMode !== 'password'} disabled={busy || phone === '' || loginPassword === ''}>{m.welcomeSignIn}</button>
-        <button id="register" className="primary" type="submit" hidden={authMode !== 'register'} disabled={busy || !agree || name.trim() === '' || phone === '' || enterpriseName.trim() === '' || slug.trim() === '' || loginPassword === ''}>{m.welcomeRegisterSubmit}</button>
+        <button id="sign-in" className="primary" type="submit" hidden={authMode !== 'password'} disabled={busy}>{m.welcomeSignIn}</button>
+        <button id="register" className="primary" type="submit" hidden={authMode !== 'register'} disabled={busy || !agree}>{m.welcomeRegisterSubmit}</button>
       </form>
       <form id="key-form" className="key-form" hidden={page !== 'key'} noValidate onSubmit={(event) => { void saveKey(event) }} aria-busy={busy}>
         <header className="key-heading"><h1 id="key-title">{m.welcomeKeyTitle}</h1><p id="key-description">{m.welcomeKeyDescription}</p></header>

@@ -94,6 +94,30 @@ export const groundBillingApi: GroundBillingApi = {
   me: () => call('me'),
 }
 
+async function readProxyError(response: Response): Promise<string> {
+  const text = await response.text()
+  let json: unknown
+  try { json = text ? JSON.parse(text) : undefined } catch { json = undefined }
+  const raw = (json as { message?: unknown } | undefined)?.message
+  return Array.isArray(raw) ? raw.join('；') : typeof raw === 'string' && raw ? raw : `请求失败（HTTP ${String(response.status)}）`
+}
+
+/** Upload the signed-in account picture through the Host proxy. */
+export async function uploadAccountAvatar(file: File): Promise<void> {
+  const body = new FormData()
+  body.append('file', file)
+  const response = await fetch('ground-billing/avatar', { method: 'POST', credentials: 'same-origin', body })
+  if (!response.ok) throw new GroundBillingError(await readProxyError(response), response.status)
+  await response.body?.cancel()
+}
+
+/** Remove the account picture so surfaces show the name initial. */
+export async function resetAccountAvatar(): Promise<void> {
+  const response = await fetch('ground-billing/avatar', { method: 'DELETE', credentials: 'same-origin' })
+  if (!response.ok) throw new GroundBillingError(await readProxyError(response), response.status)
+  await response.body?.cancel()
+}
+
 /**
  * Open Ground Admin/Console via a short-lived single-use SSO ticket. Desktop routes
  * window.open(http) through shell.openExternal (system browser); Web opens a new tab.

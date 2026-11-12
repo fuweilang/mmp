@@ -93,13 +93,27 @@
           <TenantSwitcher v-if="!isPlatformArea" />
           <el-dropdown trigger="click" popper-class="user-dropdown">
             <span class="user-menu">
-              <span class="user-avatar">{{ avatar }}</span>
+              <img
+                v-if="showAvatar"
+                class="user-avatar user-avatar-photo"
+                :src="session?.user.avatarUrl || ''"
+                alt=""
+                @error="avatarBroken = true"
+              />
+              <span v-else class="user-avatar">{{ avatar }}</span>
               <span class="username">{{ session?.user.name }}</span>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
                 <div class="user-menu-card">
-                  <span class="user-menu-card-avatar">{{ avatar }}</span>
+                  <img
+                    v-if="showAvatar"
+                    class="user-menu-card-avatar user-menu-card-avatar-photo"
+                    :src="session?.user.avatarUrl || ''"
+                    alt=""
+                    @error="avatarBroken = true"
+                  />
+                  <span v-else class="user-menu-card-avatar">{{ avatar }}</span>
                   <div class="user-menu-card-info">
                     <div class="user-menu-card-line">
                       <span class="user-menu-card-name">{{ session?.user.name }}</span>
@@ -223,6 +237,9 @@ const isAdminLibraryPage = computed(() => route.path === '/admin/library' || rou
 const libraryChildren = computed(() => consoleLibraryNav(session.value?.currentRole));
 const pageTitle = computed(() => (typeof route.meta.title === 'string' ? route.meta.title : '工作台'));
 const avatar = computed(() => (session.value?.user.name || '猛').slice(0, 1));
+const avatarBroken = ref(false);
+watch(() => session.value?.user.avatarUrl, () => { avatarBroken.value = false; });
+const showAvatar = computed(() => Boolean(session.value?.user.avatarUrl) && !avatarBroken.value);
 const isPlatformArea = computed(() => route.path.startsWith('/admin'));
 const areaLabel = computed(() => (isPlatformArea.value ? '总后台' : '企业控制台'));
 const brandName = computed(() => (isPlatformArea.value ? '猛犸管理端' : '企业控制台'));

@@ -41,7 +41,7 @@ async function readErrorMessage(response: Response): Promise<string> {
   }
 }
 
-async function readClientSession(response: Response): Promise<
+async function readClientSession(response: Response, origin: string): Promise<
   | { ok: true; token: string; profile: AccountProfile }
   | { ok: false; reason: 'unavailable' }
 > {
@@ -57,7 +57,7 @@ async function readClientSession(response: Response): Promise<
   const token = (payload as { token: string }).token
   if (!token) return { ok: false, reason: 'unavailable' }
   try {
-    return { ok: true, token, profile: groundSessionProfile((payload as { session?: unknown }).session) }
+    return { ok: true, token, profile: groundSessionProfile((payload as { session?: unknown }).session, origin) }
   } catch {
     return { ok: false, reason: 'unavailable' }
   }
@@ -236,8 +236,6 @@ export class PlatformAccount extends DeepSeekAccount {
       },
     })
     if (this.authMode === 'oidc') {
-      // Same-origin recharge proxy for the client RechargeDialog (Ground JWT stays on the Host).
-      installGroundBilling(ctx, this.origin, () => this.groundSessionJwt(), token => this.rejectToken(token))
       // Library member selection is account-owned and never replaces the Admin/SSO credential.
       let libraryContext: { account: string; selected: string } | undefined
       const libraryToken = async () => {
@@ -249,6 +247,8 @@ export class PlatformAccount extends DeepSeekAccount {
         if (libraryContext?.selected === token) libraryContext = undefined
         else await this.rejectToken(token)
       }
+      // Knowledge keeps the admin credential and only borrows the library's selected enterprise.
+      installGroundBilling(ctx, this.origin, () => this.groundSessionJwt(), token => this.rejectToken(token), libraryToken)
       installGroundLibrary(ctx, this.origin, libraryToken, rejectLibrary, this.requestTimeout, async (captured, selected) => {
         const account = await this.groundSessionJwt()
         if (!account || await libraryToken() !== captured) return false
@@ -337,7 +337,7 @@ export class PlatformAccount extends DeepSeekAccount {
       await this.ctx.credentials.modifyRecord(KEY, () => Promise.resolve({ kind: 'grant', payload: { version: 1, token, issuer: this.origin } }))
       this.invalidateDetails()
     }
-    this.cacheProfile(token, { status: 'ready', value: groundSessionProfile(session) })
+    this.cacheProfile(token, { status: 'ready', value: groundSessionProfile(session, this.origin) })
     // Same browser credential must not wake account watchers on every index auth; that
     // re-triggers getProfile → /api/auth/me and floods `pnpm run dev` request logs.
     if (grantChanged) this.changed()
@@ -748,7 +748,7 @@ export class PlatformAccount extends DeepSeekAccount {
       const message = await readErrorMessage(response)
       return { ok: false, reason: 'forbidden', ...(message ? { message } : {}) }
     }
-    return readClientSession(response)
+    return readClientSession(response, this.origin)
   }
 
   private async requestClientLogin(phone: string, password: string): Promise<
@@ -773,7 +773,7 @@ export class PlatformAccount extends DeepSeekAccount {
       const message = await readErrorMessage(response)
       return { ok: false, reason: 'forbidden', ...(message ? { message } : {}) }
     }
-    return readClientSession(response)
+    return readClientSession(response, this.origin)
   }
 
   override async startSignIn(client: AccountClientMetadata, callbackOrigin: string, loginSource: 'web' | 'desktop'): Promise<AccountView> {

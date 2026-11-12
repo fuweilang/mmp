@@ -28,6 +28,19 @@ export function librarySourceUrl(reference: LibrarySourceReference): string {
   return `/ground-library/nodes/${encodeURIComponent(reference.nodeId)}/source?versionId=${encodeURIComponent(reference.versionId)}`
 }
 
+/** Model-only trailer appended after an enterprise-knowledge retrieval. */
+const KNOWLEDGE_TRAILER = '\n\n【企业知识库】'
+
+/**
+ * Keep the question from one stored prompt block. The trailer stays in the log for the model.
+ * @param text - one durable text block.
+ * @returns the text a person should see.
+ */
+export function userVisibleText(text: string): string {
+  const at = text.indexOf(KNOWLEDGE_TRAILER)
+  return at === -1 ? text : text.slice(0, at)
+}
+
 /**
  * Project source blocks as file links and retain the original ordinary text.
  * @param content - durable message blocks, including unknown legacy values.
@@ -44,7 +57,7 @@ export function userContentText(content: readonly unknown[]): string {
       text = ''
       const name = block.reference.name.replace(/\s+/gu, ' ').replace(/[\\[\]]/gu, '\\$&')
       parts.push(`[${name}](${librarySourceUrl(block.reference)})`)
-    } else text += block.text
+    } else text += userVisibleText(block.text)
   }
   if (text !== '') parts.push(text)
   return parts.join('\n\n')

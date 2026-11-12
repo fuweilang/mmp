@@ -81,6 +81,7 @@ export function registerToasts(
       }),
     }, ToastEntry<PropsRuntime<'workspace.toast', 'forkRequiresOpen'>>)
     yield ctx.slots.register({ name: 'workspace.toast', key: 'taskDeleted', locale: 'workspace', inject: (): ToastDisplayInjected<'taskDeleted'> => ({ display: (_notice, t) => ({ text: t('data.deleted'), tone: 'success' }) }) }, ToastEntry<PropsRuntime<'workspace.toast', 'taskDeleted'>>)
+    yield ctx.slots.register({ name: 'workspace.toast', key: 'taskRestored', locale: 'workspace', inject: (): ToastDisplayInjected<'taskRestored'> => ({ display: (_notice, t) => ({ text: t('data.restored'), tone: 'success' }) }) }, ToastEntry<PropsRuntime<'workspace.toast', 'taskRestored'>>)
     yield ctx.slots.register({
       name: 'workspace.toast', key: 'archived', locale: 'workspace', store: viewStore,
       inject: (): ArchiveToastInjected => ({

@@ -38,7 +38,7 @@ export function TaskCreateDialog({ projects, onCreate, onClose, onCreated, loadN
     if ('created' in outcome) onCreated(outcome.created)
     else setFailure(outcome.failed)
   }
-  return <Modal open className={css.manualDialog as string} title={t('host.manualCreate')}
+  return <Modal open closeOnMaskClick={false} className={css.manualDialog as string} title={t('host.manualCreate')}
     closeLabel={t('host.closeCreate')} onClose={() => { if (!pending) onClose() }}
     footer={<div className={css.confirmActions}>
       <Button disabled={pending} onClick={onClose}>{t('delete.cancel')}</Button>

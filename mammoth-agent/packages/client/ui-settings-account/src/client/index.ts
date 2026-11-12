@@ -26,7 +26,7 @@ import { en, ja, es, fr, de, ru, pt, zh, type AccountKey } from './locales.ts'
 import { AccountQuotaNotice, type AccountQuotaNoticeInjected } from './AccountQuotaNotice.tsx'
 import { refreshAfterReturn } from './account-refresh.ts'
 import { AccountAvatarLoader } from './account-avatar.ts'
-import { createBillingStore, openEnterpriseConsole } from './ground-billing.ts'
+import { createBillingStore, openEnterpriseConsole, resetAccountAvatar, uploadAccountAvatar } from './ground-billing.ts'
 import { RechargeDialog, type RechargeDialogInjected } from './RechargeDialog.tsx'
 import { DesktopOnboardingController } from './onboarding-state.ts'
 import { DesktopOnboardingEntry, type DesktopOnboardingInjected } from './DesktopOnboardingEntry.tsx'
@@ -274,6 +274,8 @@ export function apply(ctx: Context): void {
     subscribeModelSignInRequired: listener => ctx.remote.$on('deepseek-account/model-sign-in-required', listener),
     ...nativePlatform === undefined ? {} : { openPlatformPage: platformPageOpener(refreshAccount) },
     refreshAccount,
+    uploadAvatar: file => uploadAccountAvatar(file),
+    resetAvatar: () => resetAccountAvatar(),
     openRecharge: () => { billing.open() },
     refreshBilling: () => { if (billingSignedIn) void billing.refresh() },
     openEnterpriseConsole: () => { void openEnterpriseConsole(billing.api).catch((error: unknown) => { console.warn('account: enterprise console', error) }) },
@@ -400,7 +402,6 @@ export function apply(ctx: Context): void {
       retry: () => onboarding.retry(),
       setVisible: (visible) => { publish({ ...snapshot, desktopOnboardingVisible: visible }) },
       hooks: { onboarding: onboarding.state, account: operations.hooks.account },
-      ...nativePlatform === undefined ? {} : { openPlatformPage: platformPageOpener(refreshAccount) },
     }),
   }, DesktopOnboardingEntry)))
   ctx.remoteAccess.whenAccess('account/watch', () => ctx.slots.inject('shell.quota-notice', () => ctx.slots.register({

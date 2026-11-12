@@ -265,6 +265,8 @@ export type PublicUser = {
   name: string;
   email: string | null;
   phone: string | null;
+  /** Public path of this account's picture. Null when the name initial is shown. */
+  avatarUrl?: string | null;
   isPlatformAdmin: boolean;
   platformRoleKey?: string | null;
   /** 当前用户绑定的全部角色名（个人账号弹窗展示用）。 */

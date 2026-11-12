@@ -144,11 +144,20 @@ export async function fetchGroundUserinfo(userinfoEndpoint: string, token: strin
   } catch {
     throw new PlatformAuthError('protocol')
   }
-  return groundProfile(payload)
+  return groundProfile(payload, new URL(userinfoEndpoint).origin)
+}
+
+/** Turn a Ground avatar path into a URL an <img> can load from the terminal host. */
+export function absoluteAccountAvatar(value: unknown, origin: string | undefined): string | null {
+  if (typeof value !== 'string' || value.length === 0) return null
+  if (/^https?:\/\//i.test(value)) return value
+  if (!value.startsWith('/') || value.startsWith('//')) return null
+  if (!origin) return value
+  try { return new URL(value, origin).href } catch { return null }
 }
 
 /** Map Ground userinfo / id_token claims to the Host account profile projection. */
-export function groundProfile(value: unknown): AccountProfile {
+export function groundProfile(value: unknown, origin?: string): AccountProfile {
   if (typeof value !== 'object' || value === null) throw new PlatformAuthError('protocol')
   const row = value as Record<string, unknown>
   const sub = typeof row.sub === 'string' ? row.sub : null
@@ -160,7 +169,7 @@ export function groundProfile(value: unknown): AccountProfile {
     id: sub as AccountUserId | null,
     name,
     contact,
-    avatarUrl: null,
+    avatarUrl: absoluteAccountAvatar(row.picture, origin),
   }
 }
 
@@ -194,11 +203,11 @@ export async function fetchGroundSessionMe(origin: string, token: string, signal
   } catch {
     throw new PlatformAuthError('protocol')
   }
-  return groundSessionProfile(payload)
+  return groundSessionProfile(payload, origin)
 }
 
 /** Map Ground /api/auth/me JSON to the Host account profile projection. */
-export function groundSessionProfile(value: unknown): AccountProfile {
+export function groundSessionProfile(value: unknown, origin?: string): AccountProfile {
   if (typeof value !== 'object' || value === null) throw new PlatformAuthError('protocol')
   const row = value as { user?: unknown }
   if (typeof row.user !== 'object' || row.user === null) throw new PlatformAuthError('protocol')
@@ -211,7 +220,7 @@ export function groundSessionProfile(value: unknown): AccountProfile {
     id: id as AccountUserId | null,
     name,
     contact,
-    avatarUrl: null,
+    avatarUrl: absoluteAccountAvatar(user.avatarUrl, origin),
     // Missing or any value other than false counts as already seen.
     welcomeSeen: (value as { welcomeSeen?: unknown }).welcomeSeen !== false,
   }
