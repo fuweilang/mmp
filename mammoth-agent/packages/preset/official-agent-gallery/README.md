@@ -11,7 +11,7 @@ English | [中文](README.zh.md)
 
 The Host creates native standard sessions from published experts or immutable creator-only previews. Frozen roles, skills, retrieval policy and generation model do not grant capabilities; native filesystem, shell, skills and their existing authorization remain available. Cloud tool scope controls only additional cloud tools.
 
-Per-message expert selections freeze the complete execution configuration, including knowledge and model policy. The current expert owns the speaker identity; user facts and previous answers remain in the conversation as history, with up to 16 previous speakers attributed in the logged prompt. Previous experts' self-introductions and methods do not define the current role, and each turn retrieves only under its selected expert's current knowledge configuration.
+Each message freezes its selected expert's full execution, knowledge and model configuration. The current expert defines the role; prior identities and methods remain historical. User facts and answers persist, with up to 16 previous speakers attributed in the logged prompt. Retrieval follows the current expert's knowledge configuration.
 
 ## Remote API
 

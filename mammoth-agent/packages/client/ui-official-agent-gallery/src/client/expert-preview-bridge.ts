@@ -12,6 +12,7 @@ interface Reply extends PreviewTarget {
   requestId: string
   message?: string
 }
+/** Display identity supplied by the authorized preview parent after profile validation. */
 export interface PreviewProfile { name: string; avatarUrl: string | null }
 
 function previewProfile(value: unknown, origin: string): PreviewProfile | undefined {

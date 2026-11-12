@@ -351,7 +351,13 @@ export class GroundOfficialAgentClient {
   authorizeHistory(scope:{userId:string;scope:string},entries:readonly {binding:RuntimeBinding;sources:ExactSource[]}[],signal?:AbortSignal):Promise<{authorized:true}>{
     return this.request(`/api/official-agents/${encodeURIComponent(entries[0]!.binding.agentId)}/runtime/history/authorize`,z.object({authorized:z.literal(true)}).strict(),{method:'POST',body:JSON.stringify({...scope,entries:entries.map(({binding,sources})=>({agentId:binding.agentId,...runtimeReference(binding),sources}))}),...signal?{signal}:{}})
   }
-  /** Verify exact persisted text prefixes and authority together in one fresh database decision. */
+  /**
+   * Verify exact persisted text prefixes and authority together in one fresh database decision.
+   * @param scope - Original user and account-space identity.
+   * @param entries - Nonempty frozen bindings and exact source references with persisted text.
+   * @param signal - Optional cancellation forwarded to Ground.
+   * @returns Authorization and content verification for the complete historical lineage.
+   */
   validateHistory(scope:{userId:string;scope:string},entries:readonly {binding:RuntimeBinding;sources:Array<ExactSource & {text:string}>}[],signal?:AbortSignal):Promise<{authorized:true;contentVerified:true}>{
     return this.request(`/api/official-agents/${encodeURIComponent(entries[0]!.binding.agentId)}/runtime/history/authorize`,z.object({authorized:z.literal(true),contentVerified:z.literal(true)}).strict(),{method:'POST',body:JSON.stringify({...scope,verifyContent:true,entries:entries.map(({binding,sources})=>({agentId:binding.agentId,...runtimeReference(binding),sources}))}),...signal?{signal}:{}})
   }

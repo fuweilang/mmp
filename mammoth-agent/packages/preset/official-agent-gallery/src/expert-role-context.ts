@@ -1,6 +1,12 @@
 import type {OfficialGalleryAnswerExpertState} from './types.ts'
 
-/** Attribute past answers without removing the facts and advice retained in conversation history. */
+/**
+ * Attribute past answers without removing facts and advice from conversation history.
+ * @param history - Recorded answer speakers keyed by turn.
+ * @param currentName - Expert identity for the current answer.
+ * @param turn - Current turn; later and current history entries are excluded.
+ * @returns Role instructions with at most 16 previous speaker attributions.
+ */
 export function expertRoleContext(history:OfficialGalleryAnswerExpertState['byTurn'], currentName:string, turn:number):string {
   const speakers=Object.entries(history).filter(([previousTurn])=>Number(previousTurn)<turn).sort(([a],[b])=>Number(a)-Number(b)).slice(-16)
   return [
