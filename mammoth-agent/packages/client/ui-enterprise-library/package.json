@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-enterprise-library",
   "description": "Enterprise library sidebar and composer picker over the ground /api/library dataset",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "type": "module",
   "main": "lib/index.js",

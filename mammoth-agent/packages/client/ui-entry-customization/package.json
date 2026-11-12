@@ -1,6 +1,6 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-entry-customization",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Customize plugin entries in the left sidebar, conversation views, and right sidebar, and quickly create new plugins.",
   "publishConfig": { "access": "public" },
   "repository": {

@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-session-log-export",
   "description": "Web Session-log ZIP export and Session Markdown copy",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publishConfig": {
     "access": "public"
   },

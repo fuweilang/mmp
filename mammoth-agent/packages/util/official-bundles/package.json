@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-official-bundles",
   "description": "Installation-owned lists of official mmp bundles (shipped profile templates, optional, on-demand, and retired bundles) and the plugin manager's protected and presented packages",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publishConfig": {
     "access": "public"
   },

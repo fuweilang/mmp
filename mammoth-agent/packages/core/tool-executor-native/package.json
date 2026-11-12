@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-tool-executor-native",
   "description": "Native tool execution plugin",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publishConfig": {
     "access": "public"
   },

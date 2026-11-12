@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-package-manifest",
   "description": "Shared type declarations for package.json.mmp configuration fields",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-client-download",
   "description": "Web-only sidebar footer action offering the 猛犸AI desktop client downloads",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publishConfig": {
     "access": "public"
   },

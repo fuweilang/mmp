@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-attachment-local",
   "description": "Private content-addressed MMP_HOME attachment storage",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publishConfig": {
     "access": "public"
   },

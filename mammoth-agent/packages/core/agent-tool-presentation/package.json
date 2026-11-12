@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-agent-tool-presentation",
   "description": "Deprecated tool presentation selector; use mmp-tool-executor-native or mmp-tool-executor-ptc directly",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publishConfig": {
     "access": "public"
   },

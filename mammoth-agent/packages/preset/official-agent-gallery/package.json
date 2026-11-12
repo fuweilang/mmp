@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-official-agent-gallery",
   "description": "Ground official Agent Remote service, frozen Sessions, controlled knowledge tools, and usage attribution",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publishConfig": {
     "access": "public"
   },

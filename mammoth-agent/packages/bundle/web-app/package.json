@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-web-app",
   "description": "The mmp browser-surface bundle: the web patch layer over mmp-base plus the runtime glue plugin (frontend dist serving, bash runtime variables, URL line)",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publishConfig": {
     "access": "public"
   },
