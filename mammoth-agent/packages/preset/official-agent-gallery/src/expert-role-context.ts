@@ -1,4 +1,4 @@
-import type {OfficialGalleryAnswerExpertState} from './types.ts'
+import type { OfficialGalleryAnswerExpertState } from './types.ts'
 
 /**
  * Attribute past answers without removing facts and advice from conversation history.

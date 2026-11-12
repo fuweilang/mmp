@@ -318,10 +318,15 @@ export class ExpertKnowledgeRuntime {
         }
         if (sources.size > this.sourceLimit || bindings.size > this.sourceLimit)
             throw Error('EXPERT_SOURCE_HISTORY_LIMIT: start a new chat to continue with fresh authorized evidence');
-        // Ground checks binding, every immutable tuple and every admitted text prefix in
-        // the same statement snapshot. No individual reopen or later source I/O follows.
-        await this.ground.validateHistory(scope, [...bindings.values()].map(binding => ({binding, sources: [...sources.values()].filter(row=>identity(row.binding)===identity(binding)).map(row=>({...exactSource(row.evidence),text:row.evidence.text}))})), signal);
-        signal?.throwIfAborted();
+    // Ground checks binding, every immutable tuple and every admitted text prefix in
+    // the same statement snapshot. No individual reopen or later source I/O follows.
+    await this.ground.validateHistory(scope, [...bindings.values()].map(binding => ({
+      binding,
+      sources: [...sources.values()]
+        .filter(row=>identity(row.binding)===identity(binding))
+        .map(row=>({ ...exactSource(row.evidence),text:row.evidence.text })),
+    })), signal)
+        signal?.throwIfAborted()
 
     }
 }

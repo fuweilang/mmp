@@ -358,8 +358,14 @@ export class GroundOfficialAgentClient {
    * @param signal - Optional cancellation forwarded to Ground.
    * @returns Authorization and content verification for the complete historical lineage.
    */
-  validateHistory(scope:{userId:string;scope:string},entries:readonly {binding:RuntimeBinding;sources:Array<ExactSource & {text:string}>}[],signal?:AbortSignal):Promise<{authorized:true;contentVerified:true}>{
-    return this.request(`/api/official-agents/${encodeURIComponent(entries[0]!.binding.agentId)}/runtime/history/authorize`,z.object({authorized:z.literal(true),contentVerified:z.literal(true)}).strict(),{method:'POST',body:JSON.stringify({...scope,verifyContent:true,entries:entries.map(({binding,sources})=>({agentId:binding.agentId,...runtimeReference(binding),sources}))}),...signal?{signal}:{}})
+  validateHistory(
+    scope:{ userId:string;scope:string },
+    entries:readonly { binding:RuntimeBinding;sources:Array<ExactSource & { text:string }> }[],
+    signal?:AbortSignal,
+  ):Promise<{ authorized:true;contentVerified:true }>{
+    const first = entries[0]
+    if (!first) throw new Error('Historical authorization requires at least one binding')
+    return this.request(`/api/official-agents/${encodeURIComponent(first.binding.agentId)}/runtime/history/authorize`,z.object({ authorized:z.literal(true),contentVerified:z.literal(true) }).strict(),{ method:'POST',body:JSON.stringify({ ...scope,verifyContent:true,entries:entries.map(({ binding,sources })=>({ agentId:binding.agentId,...runtimeReference(binding),sources })) }),...signal?{ signal }:{} })
   }
   /**
    * Reauthorize and open exactly the persisted source tuple, never the latest revision.

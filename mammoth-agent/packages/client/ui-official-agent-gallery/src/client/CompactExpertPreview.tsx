@@ -19,9 +19,9 @@ declare module '@mammoth-ai/mmp-client-ui-slots' {
 
 type RootProps = PropsRuntime<'rootframe'> & PropsRenderSlots<'official.expert.preview.session'> & {
   target: PreviewTarget
-  launch(): Promise<string | undefined>
-  getSession(): SessionAreaProps['session']
-  reportUnavailable(): void
+  launch: () => Promise<string | undefined>
+  getSession: () => SessionAreaProps['session']
+  reportUnavailable: () => void
   t: Translate<OfficialAgentGalleryLocaleKey>
 }
 
@@ -39,10 +39,10 @@ export function CompactExpertPreview({ target, launch, getSession, reportUnavail
   </section>
 }
 
-type MessagesProps = PropsRuntime<'official.expert.preview.session'> & PropsLocale<'officialAgentGallery'> & InjectFace<{hooks:{previewProfile:HostObservable<PreviewProfile>}}> & {
+type MessagesProps = PropsRuntime<'official.expert.preview.session'> & PropsLocale<'officialAgentGallery'> & InjectFace<{ hooks:{ previewProfile:HostObservable<PreviewProfile> } }> & {
   chatText: import('@mammoth-ai/mmp-client-ui-chat/client').ChatViewSlotProps['t']
-  openSource(sessionId: SessionId, recordId: string, label: string): Promise<{ text: string; locator: unknown }>
-  reportContent(hasMessages: boolean, userCount: number): void
+  openSource: (sessionId: SessionId, recordId: string, label: string) => Promise<{ text: string; locator: unknown }>
+  reportContent: (hasMessages: boolean, userCount: number) => void
 }
 
 function failureText(message: string, code: string | undefined, t: MessagesProps['chatText']): string {
@@ -54,7 +54,9 @@ function failureText(message: string, code: string | undefined, t: MessagesProps
 }
 
 /** Reuse the ordinary incremental Chat projection and shared Markdown renderer. */
-export function CompactExpertMessages({ sessionId, useChat, useSession, useProjection, usePreviewProfile, chatText, openSource, reportContent, t }: MessagesProps) {
+export function CompactExpertMessages({
+  sessionId, useChat, useSession, useProjection, usePreviewProfile, chatText, openSource, reportContent, t,
+}: MessagesProps) {
   const chat = useChat(value => value.legacy)
   const profile = usePreviewProfile(value => value)
   const running = useSession(value => value.running)
@@ -117,7 +119,7 @@ export function CompactExpertMessages({ sessionId, useChat, useSession, useProje
   </div>
 }
 
-function PreviewByline({name,avatarUrl}: PreviewProfile) {
+function PreviewByline({ name,avatarUrl }: PreviewProfile) {
   const [failedUrl,setFailedUrl]=useState<string|null>(null)
-  return <header className={css.byline} data-expert-preview-byline=""><span className={css.avatar} aria-hidden="true">{avatarUrl && failedUrl!==avatarUrl ? <img src={avatarUrl} alt="" onError={()=>setFailedUrl(avatarUrl)} /> : <IconUsersOutlineRegular size={18}/>}</span><strong>{name}</strong></header>
+  return <header className={css.byline} data-expert-preview-byline=""><span className={css.avatar} aria-hidden="true">{avatarUrl && failedUrl!==avatarUrl ? <img src={avatarUrl} alt="" onError={()=>{setFailedUrl(avatarUrl)}} /> : <IconUsersOutlineRegular size={18}/>}</span><strong>{name}</strong></header>
 }

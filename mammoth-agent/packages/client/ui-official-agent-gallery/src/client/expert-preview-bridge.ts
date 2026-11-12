@@ -17,12 +17,12 @@ export interface PreviewProfile { name: string; avatarUrl: string | null }
 
 function previewProfile(value: unknown, origin: string): PreviewProfile | undefined {
   if (!value || typeof value !== 'object' || !('name' in value) || typeof value.name !== 'string' || !value.name.trim() || value.name.length>200 || !('avatarUrl' in value)) return
-  if (value.avatarUrl===null) return {name:value.name,avatarUrl:null}
+  if (value.avatarUrl===null) return { name:value.name,avatarUrl:null }
   if (typeof value.avatarUrl!=='string' || value.avatarUrl.length>4096) return
   try {
     const url=new URL(value.avatarUrl,origin)
     if (!['http:','https:'].includes(url.protocol) || url.username || url.password) return
-    return {name:value.name,avatarUrl:url.href}
+    return { name:value.name,avatarUrl:url.href }
   } catch { return }
 }
 
@@ -37,7 +37,13 @@ export function installExpertPreviewBridge(options: {
   input: () => PreviewInput | undefined
   message: (key: Failure) => string
   onProfile?: (profile: PreviewProfile) => void
-}): { start(): void; state(running: boolean): void; content(hasMessages: boolean, userCount: number): void; unavailable(): void; dispose(): void } {
+}): {
+  start(): void
+  state(running: boolean): void
+  content(hasMessages: boolean, userCount: number): void
+  unavailable(): void
+  dispose(): void
+} {
   const { frame, target, input, message } = options
   const parent = frame.parent
   const origin = frame.location.origin
@@ -71,14 +77,15 @@ export function installExpertPreviewBridge(options: {
       try {
         const current = started ? input() : undefined
         if (!current?.cancel) { settle(fail('previewInputNotReady')); return }
-        const admission=submitting;
+        const cancel = current.cancel.bind(current)
+        const admission=submitting
         const interrupt=async()=>{
-          let failed=false;
-          try {await current.cancel!();} catch {failed=true;}
+          let failed=false
+          try {await cancel()} catch {failed=true}
           // Admission may enqueue after an early cancel. Interrupt once more once that handoff settles.
-          if(admission) {await admission.catch(()=>{});await current.cancel!();}
-          else if(failed) throw new Error('preview cancellation failed');
-        };
+          if(admission) {await admission.catch(()=>{});await cancel()}
+          else if(failed) throw new Error('preview cancellation failed')
+        }
         void interrupt().then(
           () => settle({ type: 'mmp.expert-preview.accepted', ...target, requestId }),
           () => settle(fail('previewSubmitFailed')),
@@ -103,8 +110,8 @@ export function installExpertPreviewBridge(options: {
           else {
             const pending = current.submit()
             if (pending instanceof Promise) {
-              submitting=pending;
-              void pending.then(()=>{if(submitting===pending) submitting=undefined;},()=>{if(submitting===pending) submitting=undefined;});
+              submitting=pending
+              void pending.then(()=>{if(submitting===pending) submitting=undefined},()=>{if(submitting===pending) submitting=undefined})
               const settle = (result: Reply) => { if (!disposed) { replies.set(requestId, result); post(result) } }
               void pending.then(
                 () => settle({ type: 'mmp.expert-preview.accepted', ...target, requestId }),

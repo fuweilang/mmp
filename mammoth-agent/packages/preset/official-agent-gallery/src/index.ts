@@ -1,5 +1,5 @@
 import type {} from '@mammoth-ai/mmp-working-directory'
-import {expertRoleContext} from './expert-role-context.ts'
+import { expertRoleContext } from './expert-role-context.ts'
 import { COMPLETE_SKILL_LIMITS, type SkillPackageLimits } from './skill-package-format.ts'
 import { ExpertKnowledgeRuntime, knowledgeProjection, type KnowledgeState } from './knowledge-runtime.ts'
 import { exactSource, type OpenedSource, type RuntimeBinding } from './knowledge-protocol.ts'
@@ -142,7 +142,23 @@ export default class OfficialAgentGallery extends TypertRemoteService {
   private readonly origin: string
   private readonly hostInstance=randomUUID()
   private readonly expertTools = new Map<string, () => void>()
-  private readonly runtimes=new Map<string,{epoch:number;used:boolean;invalidateSkills:()=>Promise<void>;skillsCleanup:Promise<void>;active?:CatalogAttempt|undefined;marker:string;agent:Agent;documents:ManagedDocuments;composition:ManagedComposition|null;bodies:Map<string,{body:string;hash:string;paths:readonly string[];id:string;revision:number}>;attempt:string;turn:number;step:number;modelBeforeFixed:Readonly<ModelSelection>|undefined;fixedModel:Readonly<ModelSelection>|undefined}>()
+  private readonly runtimes=new Map<string,{
+    epoch:number
+    used:boolean
+    invalidateSkills:()=>Promise<void>
+    skillsCleanup:Promise<void>
+    active?:CatalogAttempt|undefined
+    marker:string
+    agent:Agent
+    documents:ManagedDocuments
+    composition:ManagedComposition|null
+    bodies:Map<string,{ body:string;hash:string;paths:readonly string[];id:string;revision:number }>
+    attempt:string
+    turn:number
+    step:number
+    modelBeforeFixed:Readonly<ModelSelection>|undefined
+    fixedModel:Readonly<ModelSelection>|undefined
+  }>()
   private readonly packageLimits: SkillPackageLimits
   private knowledgeProjection!: ProjectionHandle<KnowledgeState>
   private readonly knowledge = new Map<string, ExpertKnowledgeRuntime>()
@@ -210,7 +226,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       const skillBinding = this.skillBindingFor(agent.session)
       if (skillBinding === null) return
     })
-    this.ctx.on('agent/pre-step', async ({agent,signal,turn,step,messages},next):Promise<PreStepDecision>=>{
+    this.ctx.on('agent/pre-step', async ({ agent,signal,turn,step,messages },next):Promise<PreStepDecision>=>{
       const runtime=this.runtimes.get(agent.id);if(!runtime)return next()
       if(runtime.turn!==turn){runtime.attempt=randomUUID();runtime.turn=turn;runtime.step=step;this.receipt(agent,'preparing')}else runtime.step=step
       try{
@@ -457,9 +473,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
 
   /** Current speaker identity is independent of identities claimed in previous answers. */
   private productIdentity(agent: Agent): string | undefined {
-    const active = this.runtimes.get(agent.id)?.active
-    const unnamed = active !== undefined ? active.expert === null : this.bindingFor(agent.session) === null
-    if (!unnamed) return `当前回答者：${this.bindingFor(agent.session)!.name}。你的身份和专业职责以本轮当前专家设定为准，不沿用其他专家历史回答中的角色。`
+    const binding = this.bindingFor(agent.session)
+    if (binding) return `当前回答者：${binding.name}。你的身份和专业职责以本轮当前专家设定为准，不沿用其他专家历史回答中的角色。`
     return `你是${MAMMOTH_AI_ANSWER.name}。用户问你是谁或使用什么模型时，只回答你是${MAMMOTH_AI_ANSWER.name}。不要提及底层服务商或模型名称。`
   }
 
@@ -514,7 +529,13 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       this.receipt(agent,'prepared',{skillHash:sha(payload.instruction),skillKey:payload.key,revision:payload.packageRevision})
     },()=>this.runtimes.get(agent.id)?.epoch,this.packageLimits)
   }
-  private requiredContext(runtime:{marker:string;active?:CatalogAttempt|undefined;bodies:Map<string,{body:string}>;agent:Agent;turn:number}):string|undefined {
+  private requiredContext(runtime:{
+    marker:string
+    active?:CatalogAttempt|undefined
+    bodies:Map<string,{ body:string }>
+    agent:Agent
+    turn:number
+  }):string|undefined {
     const bodies=[...runtime.bodies.values()].map(body=>body.body).join('\n\n')
     return runtime.active ? `${runtime.marker}\n${expertRoleContext(this.answerProjection.stateOf(runtime.agent.session).byTurn,runtime.active.expert?.name??MAMMOTH_AI_ANSWER.name,runtime.turn)}\n${runtime.active.expert?.systemPrompt??''}\n${bodies}` : bodies||undefined
   }
@@ -538,7 +559,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     let expert:OfficialAgentBinding|null=null,skills:OfficialSkillBinding[]=[],skillHashes:string[]=[]
     if(previous){expert=previous.expert;skills=Array.isArray(previous.skills)?[...previous.skills]:previous.skill?[previous.skill]:[];skillHashes=Array.isArray(previous.skillHashes)?[...previous.skillHashes]:previous.skillHash?[previous.skillHash]:[]}
     else {
-      if(selection.expertRef){const card=await this.ground.getCard(selection.expertRef.id);if(!card.executionGranted)throw new Error('TASK_EXPERT_ACCESS_CHANGED');const execution=await this.ground.resolve(selection.expertRef.id,selection.expertRef.versionId);if(execution.agentId!==selection.expertRef.id||execution.versionId!==selection.expertRef.versionId)throw new Error('TASK_EXPERT_REVISION_CHANGED');expert={agentId:execution.agentId,versionId:execution.versionId,kind:execution.kind,name:card.name,...this.executionFields(execution),systemPrompt:execution.systemPrompt,toolScope:execution.toolScope,...execution.linkedSkills?{linkedSkills:execution.linkedSkills}:{}}}
+      if(selection.expertRef){const card=await this.ground.getCard(selection.expertRef.id);if(!card.executionGranted)throw new Error('TASK_EXPERT_ACCESS_CHANGED');const execution=await this.ground.resolve(selection.expertRef.id,selection.expertRef.versionId);if(execution.agentId!==selection.expertRef.id||execution.versionId!==selection.expertRef.versionId)throw new Error('TASK_EXPERT_REVISION_CHANGED');expert={ agentId:execution.agentId,versionId:execution.versionId,kind:execution.kind,name:card.name,...this.executionFields(execution),systemPrompt:execution.systemPrompt,toolScope:execution.toolScope,...execution.linkedSkills?{ linkedSkills:execution.linkedSkills }:{} }}
       for(const ref of selectionSkills(selection)){const skill=await this.ground.beginSkillSession(ref.id,ref.revision);if(skill.sessionSource.id!==ref.id||skill.sessionSource.packageRevision!==ref.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');if(skills.some(existing=>existing.sessionSource.key===skill.sessionSource.key))throw new Error('TASK_SELECTION_DUPLICATE_SKILL');const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision);if(content.id!==ref.id||content.key!==skill.sessionSource.key||content.packageRevision!==ref.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');skills.push(skill);skillHashes.push(sha(content.instruction))}
     }
     if(expert)await this.resolveBinding(expert)
@@ -591,10 +612,10 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     if(lastStart&&!restored)throw new Error('TASK_COMPOSITION_HISTORY_INVALID')
     const initialExpert=restored?.expert??this.projection.stateOf(agent.session).binding
     const initialPolicy=initialExpert?.executionConfig?.generationModel
-    const initialFixed:ModelSelection|undefined=initialPolicy?.mode==='FIXED'?{provider:'mammoth-ground',model:initialPolicy.modelRef}:undefined
-    const original:ModelSelection={provider:agent.options.provider??'mammoth-ground',model:agent.options.model??'auto',...agent.options.reasoningEffort?{reasoningEffort:agent.options.reasoningEffort}:{}}
-    const baseline=initialFixed&&original.provider===initialFixed.provider&&original.model===initialFixed.model?{provider:'mammoth-ground',model:'auto'}:original
-    const runtime={modelBeforeFixed:initialFixed?baseline:undefined,fixedModel:initialFixed,epoch:0,used:false,invalidateSkills:async()=>{},skillsCleanup:Promise.resolve(),active:restored,marker:'',agent,composition,documents,bodies:new Map<string,{body:string;hash:string;paths:readonly string[];id:string;revision:number}>(),attempt:restored?.requestId??String(randomUUID()),turn:lastStart?.type==='official-gallery/attempt-start'?lastStart.data.turn:0,step:0}
+    const initialFixed:ModelSelection|undefined=initialPolicy?.mode==='FIXED'?{ provider:'mammoth-ground',model:initialPolicy.modelRef }:undefined
+    const original:ModelSelection={ provider:agent.options.provider??'mammoth-ground',model:agent.options.model??'auto',...agent.options.reasoningEffort?{ reasoningEffort:agent.options.reasoningEffort }:{} }
+    const baseline=initialFixed&&original.provider===initialFixed.provider&&original.model===initialFixed.model?{ provider:'mammoth-ground',model:'auto' }:original
+    const runtime={ modelBeforeFixed:initialFixed?baseline:undefined,fixedModel:initialFixed,epoch:0,used:false,invalidateSkills:async()=>{},skillsCleanup:Promise.resolve(),active:restored,marker:'',agent,composition,documents,bodies:new Map<string,{ body:string;hash:string;paths:readonly string[];id:string;revision:number }>(),attempt:restored?.requestId??randomUUID(),turn:lastStart?.type==='official-gallery/attempt-start'?lastStart.data.turn:0,step:0 }
     this.runtimes.set(agent.id,runtime)
     const knowledge=new ExpertKnowledgeRuntime(agent,this.ground,this.knowledgeProjection.readerFor(agent.session),()=>this.bindingFor(agent.session),this.sourceLimit)
     this.knowledge.set(agent.id,knowledge)
@@ -611,7 +632,25 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     runtime.invalidateSkills=resetSkills
     agent.ctx.on('agent/inbox/claimed',({message,turn})=>{
       const frozen=attemptForMessage(agent.session,message.id)
-      if(!frozen){runtime.epoch++;runtime.active=undefined;runtime.used=false;runtime.bodies.clear();resetSkills();runtime.turn=turn;runtime.step=1;runtime.attempt=randomUUID();this.ctx.groundRequestAttribution.unbind(agent.id);this.replaceExpertTools(agent,null);const original=this.bindingFor(agent.session);this.selectFixedModel(agent,original);if(original){this.ctx.groundRequestAttribution.bind(agent.id,this.attributionFor(original));this.replaceExpertTools(agent,original)}return}
+      if(!frozen){
+        runtime.epoch++
+        runtime.active=undefined
+        runtime.used=false
+        runtime.bodies.clear()
+        void resetSkills()
+        runtime.turn=turn
+        runtime.step=1
+        runtime.attempt=randomUUID()
+        this.ctx.groundRequestAttribution.unbind(agent.id)
+        this.replaceExpertTools(agent,null)
+        const original=this.bindingFor(agent.session)
+        this.selectFixedModel(agent,original)
+        if(original){
+          this.ctx.groundRequestAttribution.bind(agent.id,this.attributionFor(original))
+          this.replaceExpertTools(agent,original)
+        }
+        return
+      }
       if(runtime.active&&runtime.turn===turn&&runtime.active.compositionHash!==frozen.compositionHash)throw new Error('TASK_COMPOSITION_STEER_CONFLICT')
       this.expertTools.get(agent.id)?.();this.expertTools.delete(agent.id)
       runtime.epoch++;runtime.active=frozen;runtime.used=false;runtime.bodies.clear();resetSkills();runtime.turn=turn;runtime.step=1;runtime.attempt=frozen.requestId
@@ -675,10 +714,11 @@ export default class OfficialAgentGallery extends TypertRemoteService {
   private attributionFor(binding:OfficialAgentBinding){return binding.preview?{agentId:binding.agentId,previewId:binding.preview.id}:{agentId:binding.agentId,versionId:this.publishedVersion(binding)}}
   private selectFixedModel(agent:Agent,binding:OfficialAgentBinding|null){
     const policy=binding?.executionConfig?.generationModel,runtime=this.runtimes.get(agent.id),current=agent.model.current()
-    const stillOwned=runtime?.fixedModel&&current?.provider===runtime.fixedModel.provider&&current.model===runtime.fixedModel.model&&current.reasoningEffort===runtime.fixedModel.reasoningEffort
+    const stillOwned=runtime?.fixedModel&&current?.provider===runtime.fixedModel.provider
+      &&current.model===runtime.fixedModel.model&&current.reasoningEffort===runtime.fixedModel.reasoningEffort
     if(policy?.mode==='FIXED'){
       if(runtime&&!stillOwned)runtime.modelBeforeFixed=current
-      const selected={provider:'mammoth-ground',model:policy.modelRef}
+      const selected={ provider:'mammoth-ground',model:policy.modelRef }
       agent.model.select(selected)
       if(runtime)runtime.fixedModel=selected
     }else if(runtime?.fixedModel){
