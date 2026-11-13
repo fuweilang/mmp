@@ -229,6 +229,8 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'officialAgentGallery/listSkillFacets': 'owner-only', // authenticated owner catalog compatibility endpoint
   'officialAgentGallery/listSkills': 'owner-only', // authenticated owner skill catalog compatibility endpoint
   'officialAgentGallery/pageExperts': 'owner-only', // authenticated account catalog/filter/page, no share-viewer catalog grant
+  'officialAgentGallery/openExperts': 'owner-only', // first-screen facets+page for the authenticated owner catalog, same grant as pageExperts
+  'officialAgentGallery/openSkills': 'owner-only', // first-screen facets+page for the authenticated owner skill catalog, same grant as pageSkills
   'officialAgentGallery/pageSkills': 'owner-only', // authenticated account skill catalog/filter/page
   'officialAgentGallery/preferences': 'owner-only', // tenant+user private favourites and genuine recent-use references
   'officialAgentGallery/skillFacets': 'owner-only', // authenticated owner skill catalog metadata
