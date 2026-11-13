@@ -204,7 +204,9 @@ export class MemoryLibraryStore implements LibraryStore {
         || version.nodeId !== node.id || version.tenantId !== input.tenantId) {
         throw new LibraryError(409, '资料已更新，请刷新后重试', 'VERSION_CONFLICT');
       }
-      if (version.parseStatus === 'READY' || version.parseStatus === 'DOWNLOAD_ONLY') return 'unchanged' as const;
+      // A READY parse is part of the immutable citation version: retrying it must not remap locators.
+      // DOWNLOAD_ONLY carries no citable chunks, so a later parser may still upgrade it to READY.
+      if (version.parseStatus === 'READY') return 'unchanged' as const;
       const chunks = await this.listChunks(version.id);
       try {
         await this.updateVersion(version.id, {

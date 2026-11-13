@@ -354,7 +354,10 @@ describe('enterprise library', () => {
     await store.updateVersion(sheet.currentVersion!.id, { parseStatus: 'DOWNLOAD_ONLY', parseReason: '旧状态' });
     await store.replaceChunks(sheet.currentVersion!.id, 'ta', []);
     const again = await service.retryParse(owner, sheet.id);
+    // Download-only carries no citable locators, so a later parser may upgrade the same version.
     assert.equal(again.currentVersion?.parseStatus, 'READY');
+    assert.equal(again.currentVersion?.parseReason ?? null, null);
+    assert.match((await store.listChunks(sheet.currentVersion!.id)).map((chunk) => chunk.content).join('\n'), /品名/);
   });
 
   it('cites a legacy Word file and text inside a picture on this Mac', async () => {
@@ -949,6 +952,20 @@ describe('atomic parse retry', () => {
     assert.deepEqual(await store.getVersion(versionId), beforeVersion);
     assert.deepEqual(await store.listChunks(versionId), beforeChunks);
     assert.deepEqual(store.audits, beforeAudits);
+  });
+
+  it('keeps a ready version and its locators unchanged when parsed again', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const item = await upload(service, owner, '稳定.md', Buffer.from('第一段正文\n\n第二段正文'));
+    const versionId = item.currentVersion!.id;
+    const chunks = structuredClone(await store.listChunks(versionId));
+    const audits = store.audits.filter(row => row.action === 'library_retry_parse').length;
+    const again = await service.retryParse(owner, item.id);
+    // A READY parse is immutable: retrying must neither downgrade it nor remap citation locators.
+    assert.equal(again.currentVersion?.parseStatus, 'READY');
+    assert.deepEqual(await store.listChunks(versionId), chunks);
+    assert.equal(store.audits.filter(row => row.action === 'library_retry_parse').length, audits);
   });
 
   it('commits simultaneous retries once and preserves the successful chunk ids and locators', async () => {
