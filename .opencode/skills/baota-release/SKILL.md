@@ -914,6 +914,57 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 - 发布脚本先 `--dry-run` 看 manifest diff，再 `--yes`；三端逐个发、逐个公网校验。
 - 中台 smoke 与包上传错峰，避免抢上行。
 
+## 4M. 2026-11-14 官网进根、agent 移到 /agent（3.5.0）：28 分钟、4 个新坑
+
+> 范围：新增 `website/`（Next 静态导出）占 `https://www.mmai.vip/`；智能体网页版从根移到 `/agent/`；Ground 3.5.0；**桌面客户端不重打**（`MMP_DESKTOP_PLATFORM_ORIGIN`、`/console`、`/admin`、`/console/api/oidc` 全是根路径，未变）。
+
+### 4M.1 新路由（nginx-mmai.conf）
+
+| 路径 | 归属 |
+|---|---|
+| `/`、`/_next/`、`/privacy`、`/logo.webp`、`/shots/`、`/experts/` | 官网 `/www/mmp-prod/website`（`try_files $uri $uri.html`） |
+| `/agent` → 301 `/agent/`；`/agent/` | 代理 `127.0.0.1:33080`，**剥掉前缀** |
+| `/plugins/`、`/auth/ground/logout` | 代理 agent（这两个是根上的绝对路径） |
+| `/api/`（普通前缀，**禁止 `^~`**） | 代理 agent；Ground 正则/精确匹配仍优先 |
+| `/console`、`/admin`、`/login`、`/middle-static/`、`/downloads/` | 不变 |
+
+### 4M.2 代码改动（这四处必须一起改，缺一登录就回官网）
+
+1. `mammoth-agent/scripts/ground-web-router.ts`：新增 `publicPath`（`MMP_WEB_PUBLIC_PATH=/agent/`），登录 `next` 与 worker `--public-url` 都用挂载地址。
+2. `mammoth-agent/scripts/serve-ground-web.ts`：把带前缀的 public URL 传给 worker（`--public-url`/`MMP_WEB_SESSION_ORIGIN`）。
+3. `mammoth-agent/packages/credentials/deepseek-account-platform/src/web-sso.ts`：`next` 用挂载根，而不是写死 `/`。
+4. Ground：`VITE_AGENT_WEB_URL=https://www.mmai.vip/agent/`（`release.sh`、`build-local.sh`、`apps/frontend/.env.production(.example)`），否则中台“打开网页版”跳官网。
+
+`<base href="./">` + 相对 `./assets` 让 SPA 在任何前缀下都能加载；`/plugins` 仍是绝对路由，所以 nginx 必须单独代理。
+
+### 4M.3 本轮 4 个坑
+
+| # | 现象 | 根因 | 处理 / 固化 |
+|---|---|---|---|
+| 1 | `nginx: [emerg] "root" directive is duplicate ... mammoth.conf:7` | 宝塔 server 块已有 `root`；include 里再写 server 级 `root` 必冲突 | include 只在 `location` 内写 `root`；预检容器要**带一个父 root** 再 `nginx -t` |
+| 2 | 修完模板重跑 `--only nginx,smoke` 仍报同样的 duplicate | nginx 步骤复制的是 `$PROD_DIR/nginx-mmai.conf`，那是 deploy 时上传的旧模板 | 先 `scp nginx-mmai.conf $HOST:/www/mmp-prod/`，再跑 nginx 步骤；或重跑 deploy |
+| 3 | 官网 JS 无 gzip | 全局 `gzip on` 在别的 server 块里，本 server 没继承 | 模板显式写 `gzip on` + `gzip_types`；改完 `curl -H 'Accept-Encoding: gzip' -D -` 验 `content-encoding` |
+| 4 | 匿名访问 `/agent/` 登录后回官网首页 | 路由 `next` 恒为 `${origin}/`；中台 `trustedAgentReturn` 只比 origin，不拦路径 | 加 `MMP_WEB_PUBLIC_PATH`；smoke 断言 `location` 含 `login?next=` 且 `next` 带 `/agent/` |
+
+### 4M.4 门禁与 smoke 增量
+
+- `release.sh` 新增 `website` 步骤（`pnpm --dir website install --frozen-lockfile && build` → `website.tar.gz`），deploy 备份/还原 `website.bak-<ts>`，rollback 的 `--restore-web` 同时恢复中台与官网。
+- `smoke.sh` 不再断言 `/agent` 410；改为：`/` 200 且含官网首屏文案、`/_next` 资产 200、`/privacy` 200、`/agent` 301、匿名 `/agent/` 303 且 `next` 带 `/agent/`、`/plugins/` 401/403。
+- 官网下载按钮改为读 `/downloads/mammoth-latest.json` 的 `file`，别名只在加载失败时兜底；别名与 manifest 字节数仍由 smoke 校验。
+- `state.json` 的 `nginx_backup` 会停在 deploy 的时间戳（与真实 nginx 备份不同）：本轮真实老配置备份是 `mammoth.conf.bak-20261114-010237`，收尾要手工改 state。
+
+### 4M.5 本轮基线（`3.5.0-20261114-0045`）
+
+| 项 | 值 |
+|---|---|
+| 源码 | `d68bb0a4`（功能）+ `396a6c67`（nginx root 修复）+ gzip 修复提交 |
+| 镜像 | api `mmp-api:3.5.0-20261114-0045`、web `mmp-web:3.5.0-20261114-0045`；上一版 `3.4.1-20261113-*` |
+| DB | 备份 `backups/20261114-004505/mammoth_core.dump`（92M）；演练 60 表/59 迁移/5 用户/134 专家/115 技能；本轮无新迁移 |
+| 官网 | `/www/mmp-prod/website`，约 328K tar |
+| 客户端 | 未重发，manifest 仍 0.3.4；三个别名与 manifest 字节一致 |
+| 验收 | 官网 200、`/agent/` 登录后 200（`<title>猛犸AI</title>`、assets 200）、console/admin 200、`/admin/api/users` 5 用户、`/console/api/version` 3.5.0、gzip 生效 |
+| 回滚 | nginx `mammoth.conf.bak-20261114-010237`；`.env.bak-20261114-005953`；`middle-web.bak-20261114-005953`；`website.bak-20261114-005953` |
+
 ## 5. 网络与下载（最容易吃掉几小时）
 
 > 2026-11-04 这次发版，10h47m 里至少 3h 花在“拉文件”：GitHub 0 字节、Docker Hub 超时、
