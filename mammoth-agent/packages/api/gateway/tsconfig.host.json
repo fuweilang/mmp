@@ -7,7 +7,12 @@
   },
   "files": [
     "src/access.ts",
+    "src/binding.ts",
+    "src/envelope.ts",
+    "src/errors.ts",
     "src/index.ts",
+    "src/invocation.ts",
+    "src/remote-event-queue.ts",
     "src/remote-error-codes.ts",
     "src/stream-protocol.ts",
     "src/stream-server.ts",

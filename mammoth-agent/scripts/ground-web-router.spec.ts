@@ -200,6 +200,71 @@ it('accepts only the configured HTTPS public authority behind a loopback proxy',
 })
 
 
+it('stops an idle identity so the next account can use the same worker slot', async () => {
+  const first = { userId: 'idle-user', tenantId: 'idle-enterprise' }
+  const second = { userId: 'next-user', tenantId: 'next-enterprise' }
+  const sessions = new Map([[token(first), first], [token(second), second]])
+  const ground = createServer((req, res) => {
+    const identity = sessions.get(req.headers.authorization?.slice(7) ?? '')
+    if (!identity) { res.writeHead(401).end(); return }
+    res.end(JSON.stringify({ user: { id: identity.userId }, currentTenant: { id: identity.tenantId, status: 'active' } }))
+  })
+  const groundOrigin = await listen(ground)
+  cleanup.push(() => close(ground))
+  const started: string[] = []
+  let closed = 0
+  const router = await startGroundWebRouter({ host: '127.0.0.1', port: 0, groundOrigin,
+    cookieName: 'mammothai_access_token', maxWorkers: 1, requestTimeoutMs: 1000, idleMs: 80,
+    async startWorker(identity) {
+      started.push(identity.userId)
+      const server = createServer((_req, res) => res.end(identity.userId))
+      const origin = await listen(server)
+      return { origin, close: async () => { closed += 1; server.closeAllConnections(); await close(server) } }
+    } })
+  cleanup.push(router.close)
+  const headers = (jwt: string) => ({ cookie: `mammothai_access_token=${jwt}` })
+  expect(await (await fetch(`${router.origin}/api/identity`, { headers: headers(token(first)) })).text()).toBe('idle-user')
+  expect((await fetch(`${router.origin}/api/identity`, { headers: headers(token(second)) })).status).toBe(503)
+  await new Promise(resolve => setTimeout(resolve, 200))
+  expect(closed).toBe(1)
+  expect(await (await fetch(`${router.origin}/api/identity`, { headers: headers(token(second)) })).text()).toBe('next-user')
+  expect(started).toEqual(['idle-user', 'next-user'])
+})
+
+it('holds an identity while its websocket stays open', async () => {
+  const first = { userId: 'live-user', tenantId: 'live-enterprise' }
+  const second = { userId: 'waiting-user', tenantId: 'waiting-enterprise' }
+  const sessions = new Map([[token(first), first], [token(second), second]])
+  const ground = createServer((req, res) => {
+    const identity = sessions.get(req.headers.authorization?.slice(7) ?? '')
+    if (!identity) { res.writeHead(401).end(); return }
+    res.end(JSON.stringify({ user: { id: identity.userId }, currentTenant: { id: identity.tenantId, status: 'active' } }))
+  })
+  const groundOrigin = await listen(ground)
+  cleanup.push(() => close(ground))
+  let closed = 0
+  const router = await startGroundWebRouter({ host: '127.0.0.1', port: 0, groundOrigin,
+    cookieName: 'mammothai_access_token', maxWorkers: 1, requestTimeoutMs: 1000, idleMs: 80,
+    async startWorker(identity) {
+      const server = createServer((_req, res) => res.end(identity.userId))
+      const ws = new WebSocketServer({ noServer: true })
+      server.on('upgrade', (req, socket, head) => { ws.handleUpgrade(req, socket, head, connection => { connection.send('open') }) })
+      const origin = await listen(server)
+      return { origin, close: async () => { closed += 1; for (const client of ws.clients) client.terminate(); ws.close(); server.closeAllConnections(); await close(server) } }
+    } })
+  cleanup.push(router.close)
+  const headers = (jwt: string) => ({ cookie: `mammothai_access_token=${jwt}` })
+  const ws = new WebSocket(`${router.origin.replace('http:', 'ws:')}/api`, { headers: headers(token(first)) })
+  await new Promise<void>((resolve, reject) => { ws.once('message', () => resolve()); ws.once('error', reject) })
+  await new Promise(resolve => setTimeout(resolve, 200))
+  expect((await fetch(`${router.origin}/api/identity`, { headers: headers(token(second)) })).status).toBe(503)
+  expect(closed).toBe(0)
+  ws.terminate()
+  await new Promise(resolve => setTimeout(resolve, 200))
+  expect(closed).toBe(1)
+  expect(await (await fetch(`${router.origin}/api/identity`, { headers: headers(token(second)) })).text()).toBe('waiting-user')
+})
+
 it('serves PWA manifest without login while keeping API routes protected', async () => {
   const ground = createServer((_req, res) => { res.writeHead(401).end() })
   const groundOrigin = await listen(ground)

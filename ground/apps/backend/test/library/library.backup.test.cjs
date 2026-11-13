@@ -8,7 +8,7 @@ const {join,resolve}=require('node:path');
 const {createHash}=require('node:crypto');
 const {PrismaClient}=require('@prisma/client');
 const {withLibraryHttpFixture}=require('./library.http-fixture.cjs');
-const {LibraryService}=require('../../dist/library/library.service.js');
+const {createLibraryService}=require('../../dist/library/library.service.js');
 const {PrismaLibraryStore}=require('../../dist/library/library.prisma-store.js');
 const {assertLocalDocker}=require('../../../../scripts/library-docker-local.mjs');
 const ground=resolve(__dirname,'../../../..');
@@ -74,7 +74,7 @@ test('paired backup restores private/shared/recycled history and rejects corrupt
         assert.deepEqual(await client.libraryVersion.findMany({orderBy:{id:'asc'}}),versions);
         for(const v of versions)assert.equal(digest(await readFile(join(destination,v.storageKey))),hashes[v.storageKey]);
         process.env.LIBRARY_DIR=destination;
-        const service=new LibraryService(new PrismaLibraryStore(client));
+        const service=createLibraryService({store:new PrismaLibraryStore(client)});
         const owner={userId:users[0].id,tenantId:tenants[0].id,isPlatformAdmin:false,isOrgAdmin:false,activeMember:true};
         const old=await service.openCitation(owner,privateFile.id,privateFile.currentVersion.id,'paragraph:1',false);
         assert.equal(old.quote,'OLD fixed source');assert.equal(old.versionId,privateFile.currentVersion.id);

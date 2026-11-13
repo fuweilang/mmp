@@ -1,96 +1,40 @@
+import type { NumericColumn } from './stats-table-columns.tsx'
+import {
+  ContextCell, MetricCells, metricsCells, MixBar, TimeCell, toolStat, TOTAL_COLUMNS,
+} from './stats-table-columns.tsx'
+import { callGroups, contextDeltas, stepGaps, stepsOf } from './stats-table-data.tsx'
+import {
+  STEP_GAP_MIN_MS, STEP_LIMIT, answerPreview, codeBlock, cx, eventAction,
+  eventApproval, eventLabel, eventReason, eventSource, fileContentOf, imageName,
+  lineDiff, prettyArguments, textLines, toneClass, totalSpan, triggerBodyOf,
+  triggerLabelOf,
+} from './stats-table-format.tsx'
+import type { StatsTranslate } from './locales.ts'
+import type { ContextMode } from './stats-aggregate.ts'
+import { turnContext } from './stats-aggregate.ts'
+import type {
+  LoadOlderResult, StatsCall, StatsCompactionMetrics, StatsEventMetrics, StatsSnapshot, StatsStepMetrics, StatsToolCount, StatsTurnMetrics,
+} from './stats-contract.ts'
+import { CALL_LIMIT } from './stats-fold.ts'
+import {
+  DASH, formatChars, formatClock, formatDateTime, formatDateTimeMs, formatDateTimeShort, formatMs, formatStepClock, formatTokens,
+} from './stats-format.ts'
+import { isNumber } from './stats-usage.ts'
+import type { ImageAttachmentRef } from '@mammoth-ai/mmp-attachment'
+import type { ObservableSnapshot } from '@mammoth-ai/mmp-client-store'
+import type { ConvViewProps } from '@mammoth-ai/mmp-client-ui-conversation/client'
+import type { MarkdownLabels } from '@mammoth-ai/mmp-client-ui-primitives'
+import { HoverCard, ImageLightbox, MarkdownText } from '@mammoth-ai/mmp-client-ui-primitives'
+import type { InjectFace, PropsLocale } from '@mammoth-ai/mmp-client-ui-slots'
+import type { ReactElement, ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import css from './stats.module.css'
+
 /**
  * Statistics table for one conversation: per-turn aggregates, expandable step
  * rows, the time-composition bars, and the per-step tool-call accordion.
  */
 
-import {
-  Fragment, useCallback, useEffect, useMemo, useState,
-  type ReactElement, type ReactNode,
-} from 'react'
-import type { ImageAttachmentRef } from '@mammoth-ai/mmp-attachment'
-import type { ObservableSnapshot } from '@mammoth-ai/mmp-client-store'
-import { HoverCard, ImageLightbox, MarkdownText } from '@mammoth-ai/mmp-client-ui-primitives'
-import type { MarkdownLabels } from '@mammoth-ai/mmp-client-ui-primitives'
-import type { ConvViewProps } from '@mammoth-ai/mmp-client-ui-conversation/client'
-import type { InjectFace, PropsLocale } from '@mammoth-ai/mmp-client-ui-slots'
-import type {
-  StatsCall, StatsCompactionMetrics, StatsEventKind, StatsEventMetrics, StatsSnapshot, StatsStepMetrics,
-  LoadOlderResult, StatsToolCount, StatsTurnMetrics,
-} from './stats-contract.ts'
-import {
-  DASH, barShare, formatChars, formatClock, formatDateTime, formatDateTimeShort, formatDateTimeMs, formatMs,
-  formatPercent, formatStepClock,
-  formatTokens, formatTokensDelta, formatTokensShort, formatTps,
-} from './stats-format.ts'
-import { turnContext, type ContextMode, type StatsTotals } from './stats-aggregate.ts'
-import { isNumber } from './stats-usage.ts'
-import { CALL_LIMIT } from './stats-fold.ts'
-import type { StatsTranslate } from './locales.ts'
-import css from './stats.module.css'
-// Type-only: merges sessionStats and tokenUsage into SessionProjectionMap for useProjection.
-import type {} from '@mammoth-ai/mmp-session-stats/client'
-import type {} from '@mammoth-ai/mmp-token-meter/client'
-
-/** Steps one turn renders before the "show all" control appears. */
-const STEP_LIMIT = 24
-/** Distance from the scroll top, in pixels, that requests one older history page. */
-export const LOAD_OLDER_THRESHOLD = 64
-/** Ignore sub-second idles when showing the gap since the previous step. */
-const STEP_GAP_MIN_MS = 1_000
-/** How long the clipboard button reports its outcome, in milliseconds. */
-const COPY_FEEDBACK_MS = 1_200
-/** Lines one code block renders before the line-cap notice. */
-const CODE_LINE_LIMIT = 400
-/** Line count above which a diff falls back to whole-side removal and addition. */
-const DIFF_LINE_LIMIT = 300
-/** Hover dwell before the prompt image preview opens. */
-const IMAGE_PREVIEW_DELAY_MS = 200
-/** Numeric columns in table order. */
-export const COLUMNS = ['context', 'output', 'cache', 'ttft', 'model', 'tps', 'tool'] as const
-
-/** One numeric column name. */
-type NumericColumn = typeof COLUMNS[number]
-
-/** Column count of the scope, prompt, did, numeric, and time columns. */
-const TOTAL_COLUMNS = COLUMNS.length + 4
-
-/** Fixed palette indexes for tools that keep one tone across sessions. */
-const TOOL_TONES: Readonly<Record<string, number>> = {
-  read: 0,
-  glob: 1,
-  grep: 1,
-  edit: 2,
-  write: 2,
-  apply_patch: 2,
-  pwsh: 4,
-  shell: 4,
-  bash: 4,
-  web_fetch: 5,
-  web_search: 5,
-  ask_user_question: 3,
-  todo_write: 7,
-  subagent: 5,
-  subagent_fork: 5,
-}
-
-/** Tone classes, one per palette index; each sets `--stats-tool-color`. */
-const TONE_CLASSES: readonly (string | undefined)[] = [
-  css.tone0, css.tone1, css.tone2, css.tone3,
-  css.tone4, css.tone5, css.tone6, css.tone7,
-]
-
-/**
- * Join CSS module classes into one `className`, dropping absent entries: the
- * module's index-signature declaration types every lookup as possibly absent
- * under `noUncheckedIndexedAccess`.
- * @param names - class names in declaration order.
- * @returns the space-joined class list.
- */
-function cx(...names: readonly (string | undefined)[]): string {
-  return names.filter((name): name is string => name !== undefined).join(' ')
-}
-
-/** Business face injected by the browser plugin. */
 export interface StatsViewInjected {
   /** Snapshot sources bound by InjectFace. */
   hooks: {
@@ -328,183 +272,7 @@ interface ImagePromptPillProps {
 }
 
 /** Empty per-turn step state, shared so unexpanded turns allocate nothing. */
-export const EMPTY_STEP_VIEW: StepViewState = {}
 
-/** Index of the tool tone for one call name; unknown names hash to a stable tone. */
-function toneIndex(name: string | null): number {
-  if (name === null) return 7
-  const fixed = TOOL_TONES[name]
-  if (fixed !== undefined) return fixed
-  let hash = 0
-  for (let index = 0; index < name.length; index += 1) {
-    hash = (hash * 31 + name.charCodeAt(index)) % 9973
-  }
-  return hash % TONE_CLASSES.length
-}
-
-/** CSS class carrying the tool tone for one call name. */
-function toneClass(name: string | null): string | undefined {
-  return TONE_CLASSES[toneIndex(name)]
-}
-
-/** Whether a row is running with no measured wall time yet. */
-export function isTimeRunning(value: TimeState): boolean {
-  return value.running && !isNumber(value.wall) && isNumber(value.startTime)
-}
-
-/** Measured span; a running row falls back to the elapsed time at `now`. */
-export function totalSpan(value: TimeState, now: number): number | null {
-  if (isNumber(value.wall)) return value.wall
-  if (isNumber(value.startTime) && value.running) return Math.max(0, now - value.startTime)
-  return null
-}
-
-/** Default fold state of a turn the user never toggled. */
-export function defaultTurnOpen(mode: ViewMode, turnNumber: number, latestTurn: number | null): boolean {
-  if (mode === 'all') return true
-  if (mode === 'none') return false
-  return turnNumber === latestTurn
-}
-
-/** Fresh table state: follow the newest turn's open default. */
-export function createViewState(): ViewState {
-  return { mode: 'newest', openTurns: {}, stepViews: {}, showTotals: false, showEvents: false, showContextDelta: false, contextMode: 'latest' }
-}
-
-/** Read an array element whose index the surrounding bounds already prove. */
-function at(lines: readonly string[], index: number): string {
-  return lines[index] as string
-}
-
-/** Split a text block into lines; an empty string has no lines. */
-function splitLines(text: string): readonly string[] {
-  return text === '' ? [] : text.split('\n')
-}
-
-/** Map a plain text block to code lines. */
-function textLines(text: string): readonly CodeLine[] {
-  return splitLines(text).map(line => ({ sign: ' ', text: line }))
-}
-
-/**
- * Readable argument body: parse and indent JSON by two spaces, or keep the
- * text verbatim when the model produced arguments this build cannot parse.
- * @param args - raw tool arguments as recorded.
- * @returns the body the raw view displays and copies.
- */
-function prettyArguments(args: string): string {
-  try {
-    const parsed: unknown = JSON.parse(args)
-    return JSON.stringify(parsed, null, 2)
-  } catch {
-    // Model-produced arguments are not always JSON; show them verbatim.
-    return args
-  }
-}
-
-/**
- * Line-level diff: removal/addition rows for the parts that differ, common
- * lines kept in place. Above the size cap the two sides are shown whole.
- */
-function lineDiff(before: string | null, after: string | null): readonly CodeLine[] {
-  const left = splitLines(before ?? '')
-  const right = splitLines(after ?? '')
-  if (left.length > DIFF_LINE_LIMIT || right.length > DIFF_LINE_LIMIT) {
-    return [
-      ...left.map(text => ({ sign: '−' as const, text })),
-      ...right.map(text => ({ sign: '+' as const, text })),
-    ]
-  }
-  const width = right.length + 1
-  // LCS lengths for cells with row and column at least 1; the implicit zero row
-  // and column are served by the missing-key fallback, never stored.
-  const table = new Map<number, number>()
-  let previousRow = 0
-  for (let row = 1; row <= left.length; row += 1) {
-    let leftCell = 0
-    for (let column = 1; column <= right.length; column += 1) {
-      const up = table.get(previousRow + column) ?? 0
-      const diagonal = table.get(previousRow + column - 1) ?? 0
-      const value = at(left, row - 1) === at(right, column - 1)
-        ? diagonal + 1
-        : Math.max(up, leftCell)
-      table.set(row * width + column, value)
-      leftCell = value
-    }
-    previousRow = row * width
-  }
-  const rows: CodeLine[] = []
-  let row = left.length
-  let column = right.length
-  while (row > 0 && column > 0) {
-    const leftLine = at(left, row - 1)
-    const rightLine = at(right, column - 1)
-    if (leftLine === rightLine) {
-      rows.push({ sign: ' ', text: leftLine })
-      row -= 1
-      column -= 1
-    } else if ((table.get((row - 1) * width + column) ?? 0) >= (table.get(row * width + column - 1) ?? 0)) {
-      rows.push({ sign: '−', text: leftLine })
-      row -= 1
-    } else {
-      rows.push({ sign: '+', text: rightLine })
-      column -= 1
-    }
-  }
-  while (row > 0) {
-    rows.push({ sign: '−', text: at(left, row - 1) })
-    row -= 1
-  }
-  while (column > 0) {
-    rows.push({ sign: '+', text: at(right, column - 1) })
-    column -= 1
-  }
-  return rows.reverse()
-}
-
-/** Unwrap the `<path>`/`<content>` envelope a `read` result carries. */
-function fileContentOf(text: string | null): FileContent | null {
-  if (text === null) return null
-  const open = text.indexOf('<content>')
-  const close = text.lastIndexOf('</content>')
-  if (open < 0 || close < 0 || close < open) return null
-  const pathMatch = /<path>([\s\S]*?)<\/path>/.exec(text)
-  const body = text.slice(open + '<content>'.length, close).replace(/^\n/, '')
-  let path: string | null = null
-  if (pathMatch !== null) {
-    /* v8 ignore next -- a matched `<path>` group is non-optional in the regexp, so the fallback is unreachable. */
-    path = (pathMatch[1] ?? '').trim()
-  }
-  return { path, body }
-}
-
-/** CSS class of one code line by its diff sign. */
-function lineClass(sign: CodeLine['sign']): string | undefined {
-  if (sign === '+') return css.diffAdd
-  if (sign === '−') return css.diffDel
-  return css.codeLine
-}
-
-/** Code block: monospaced lines, capped at CODE_LINE_LIMIT rows. */
-function codeBlock(lines: readonly CodeLine[], t: StatsTranslate, wrap: boolean): ReactElement {
-  const shown = lines.length > CODE_LINE_LIMIT ? lines.slice(0, CODE_LINE_LIMIT) : lines
-  return (
-    <pre className={wrap ? cx(css.code, css.codeWrap) : css.code}>
-      {shown.map((line, index) => (
-        <span key={index} className={lineClass(line.sign)}>
-          {line.sign === ' ' ? line.text : `${line.sign} ${line.text}`}
-        </span>
-      ))}
-      {shown.length < lines.length ? (
-        <span className={css.blockEmpty}>
-          {t('detail.lineCap', { shown: formatTokens(shown.length), total: formatTokens(lines.length) })}
-        </span>
-      ) : null}
-    </pre>
-  )
-}
-
-/** Body of one tool call: raw arguments, a line diff, a file, or result text. */
 function callBody(call: StatsCall, t: StatsTranslate, wrap: boolean, raw: boolean): ReactNode {
   if (raw && call.args !== null) {
     return (
@@ -682,328 +450,7 @@ function ToolPill({ item, t }: { readonly item: StatsToolCount; readonly t: Stat
 }
 
 /** Turn tool composition bar: one growing segment per tool, ordered by count. */
-function MixBar({ tools }: { readonly tools: readonly StatsToolCount[] }): ReactElement {
-  return (
-    <div className={css.mix}>
-      {tools.map(item => (
-        <span
-          key={item.name}
-          className={cx(css.mixSegment, toneClass(item.name))}
-          style={{ flexGrow: item.count }}
-        />
-      ))}
-    </div>
-  )
-}
 
-/** Tool output summary shown after a call group in the did column. */
-function toolStat(name: string, calls: readonly StatsCall[], t: StatsTranslate): ReactNode {
-  if (name === 'read') {
-    const lines = calls.reduce((sum, call) => sum + (isNumber(call.lines) ? call.lines : 0), 0)
-    if (lines <= 0) return null
-    return <span className={css.didStat}>{` ${t('did.lines', { lines: formatTokens(lines) })}`}</span>
-  }
-  if (name === 'edit' || name === 'write' || name === 'apply_patch') {
-    const added = calls.reduce((sum, call) => sum + (isNumber(call.added) ? call.added : 0), 0)
-    const removed = calls.reduce((sum, call) => sum + (isNumber(call.removed) ? call.removed : 0), 0)
-    if (added === 0 && removed === 0) return null
-    return (
-      <span className={css.didStat}>
-        {' '}
-        {added > 0 ? (
-          <span className={css.added}>
-            {`+${formatTokens(added)}${removed > 0 ? '' : ` ${t('did.lines.unit')}`}`}
-          </span>
-        ) : null}
-        {added > 0 && removed > 0 ? ' ' : null}
-        {removed > 0 ? (
-          <span className={css.removed}>
-            {`−${formatTokens(removed)}${added > 0 ? '' : ` ${t('did.lines.unit')}`}`}
-          </span>
-        ) : null}
-      </span>
-    )
-  }
-  const chars = calls.reduce((sum, call) => sum + (isNumber(call.chars) ? call.chars : 0), 0)
-  return chars > 0
-    ? <span className={css.didStat}>{` ${t('did.chars', { chars: formatChars(chars) })}`}</span>
-    : null
-}
-
-/** Group calls by tool name and target so `×2` means one target twice. */
-function callGroups(calls: readonly StatsCall[]): readonly CallGroup[] {
-  const groups = new Map<string, { key: string; name: string | null; hint: string | null; calls: StatsCall[] }>()
-  for (const call of calls) {
-    const key = `${call.name ?? ''}\u0000${call.hint ?? ''}`
-    const group = groups.get(key)
-    if (group === undefined) {
-      groups.set(key, { key, name: call.name, hint: call.hint, calls: [call] })
-    } else {
-      group.calls.push(call)
-    }
-  }
-  return [...groups.values()]
-}
-
-/** Gap between one step's start and the previous step's end. */
-function stepGaps(turn: StatsTurnMetrics): ReadonlyMap<number, number> {
-  const gaps = new Map<number, number>()
-  let previousEnd: number | null = null
-  for (const step of turn.steps) {
-    const startTime = step.startTime
-    if (isNumber(previousEnd) && isNumber(startTime) && startTime > previousEnd) {
-      gaps.set(step.step, startTime - previousEnd)
-    }
-    if (isNumber(step.endTime)) previousEnd = step.endTime
-  }
-  return gaps
-}
-
-/** Context change of each step against the previous measured step in its turn. */
-function contextDeltas(turn: StatsTurnMetrics): ReadonlyMap<number, number> {
-  const deltas = new Map<number, number>()
-  let previous: number | null = null
-  for (const step of turn.steps) {
-    if (!isNumber(step.context)) continue
-    if (isNumber(previous) && step.context !== previous) deltas.set(step.step, step.context - previous)
-    previous = step.context
-  }
-  return deltas
-}
-
-/** Step slice shown for one turn: filtered pool, then the newest STEP_LIMIT. */
-function stepsOf(
-  turn: StatsTurnMetrics,
-  state: StepViewState,
-): { readonly pool: readonly StatsStepMetrics[]; readonly shown: readonly StatsStepMetrics[] } {
-  const filter = state.filter ?? null
-  const pool = filter === null
-    ? turn.steps
-    : turn.steps.filter(step => step.tools.some(item => item.name === filter))
-  const shown = state.mode === 'all' ? pool : pool.slice(-STEP_LIMIT)
-  return { pool, shown }
-}
-
-/** One table cell holding a formatted number plus the tooltip for its source. */
-function metricCell(
-  value: number | null,
-  format: (input: number | null) => string,
-  t: StatsTranslate,
-  pending: number | undefined,
-): CellText {
-  if (!isNumber(value)) return { text: DASH, title: t('unknown') }
-  const text = format(value)
-  if (pending === undefined || pending <= 0) return { text, title: '' }
-  return { text: `≥ ${text}`, title: t('partial', { count: pending }) }
-}
-
-/** Reading of one numeric column; turn and step rows share it. */
-const COLUMN_READ: Readonly<Record<NumericColumn, (value: MetricsValues) => number | null>> = {
-  context: value => value.context,
-  output: value => value.output,
-  cache: value => value.cacheHit,
-  ttft: value => value.ttft,
-  model: value => value.model,
-  tps: value => value.tps,
-  tool: value => value.tool,
-}
-
-/** Formatting of one numeric column. */
-const COLUMN_FORMAT: Readonly<Record<NumericColumn, (value: number | null) => string>> = {
-  context: formatTokensShort,
-  output: formatTokensShort,
-  cache: formatPercent,
-  ttft: formatMs,
-  model: formatMs,
-  tps: formatTps,
-  tool: formatMs,
-}
-
-/** Unsettled calls that make a measured duration a lower bound. */
-const COLUMN_PARTIAL: Readonly<
-  Partial<Record<NumericColumn, (value: MetricsValues) => number | undefined>>
-> = {
-  ttft: value => value.ttftPending,
-  model: value => value.modelPending,
-  tool: value => value.toolPending,
-}
-
-/** Source breakdown of a cell that has one, replacing the formula tooltip. */
-const COLUMN_DETAIL: Readonly<
-  Partial<Record<NumericColumn, (value: MetricsValues, t: StatsTranslate) => string>>
-> = {
-  cache: (value, t) => {
-    if (!isNumber(value.cacheHit)) return ''
-    // A row without a recorded breakdown keeps the column's formula explanation.
-    if (!isNumber(value.cacheRead) && !isNumber(value.cacheWrite)) return t('column.cache.title')
-    const read = value.cacheRead ?? 0
-    const write = value.cacheWrite ?? 0
-    const context = isNumber(value.cacheContext)
-      ? value.cacheContext
-      : isNumber(value.context) ? value.context : read + write
-    const input = Math.max(0, context - read - write)
-    return t('cache.detail', {
-      read: formatTokens(read),
-      input: formatTokens(input),
-      write: formatTokens(write),
-    })
-  },
-}
-
-/** All numeric cells of one row, in table order. */
-function metricsCells(value: MetricsValues, t: StatsTranslate): readonly MetricCell[] {
-  return COLUMNS.map((name) => {
-    const partial = COLUMN_PARTIAL[name]
-    const cell = metricCell(
-      COLUMN_READ[name](value),
-      COLUMN_FORMAT[name],
-      t,
-      partial === undefined ? undefined : partial(value),
-    )
-    const detail = COLUMN_DETAIL[name]
-    if (detail === undefined) return { name, ...cell }
-    const title = detail(value, t)
-    return { name, text: cell.text, title: title === '' ? cell.title : title }
-  })
-}
-
-/** Numeric cells after the context column. */
-function MetricCells({ cells, className }: MetricCellsProps): ReactElement {
-  return (
-    <Fragment>
-      {cells.slice(1).map(cell => (
-        <td key={cell.name} className={className} title={cell.title === '' ? undefined : cell.title}>
-          {cell.text}
-        </td>
-      ))}
-    </Fragment>
-  )
-}
-
-/** Context column: the last measured prompt size of the row. */
-function ContextCell({ value, className, delta = null }: ContextCellProps): ReactElement {
-  return (
-    <td className={className}>
-      <span className={css.num}>{formatTokensShort(value)}</span>
-      {isNumber(delta) && delta !== 0
-        ? (
-          <span className={cx(css.numDelta, delta > 0 ? css.deltaUp : css.deltaDown)}>
-            {formatTokensDelta(delta)}
-          </span>
-        )
-        : null}
-    </td>
-  )
-}
-
-/** Time-composition cell: four stacked segments plus the measured total. */
-function TimeCell({ value, scale, gap, className, trackClass, now, t }: TimeCellProps): ReactElement {
-  const total = totalSpan(value, now)
-  if (total === null || total <= 0) {
-    return (
-      <td className={className} title={t('unknown')}>
-        <span className={css.timeValue}>{DASH}</span>
-      </td>
-    )
-  }
-  const running = isTimeRunning(value)
-  const ttft = isNumber(value.ttft) ? Math.min(value.ttft, total) : 0
-  const model = isNumber(value.model) ? Math.min(value.model, total) : ttft
-  // The bar shows the non-overlapping tool span, not the sum the tool column shows.
-  const toolSpan = isNumber(value.toolWall) ? value.toolWall : value.tool
-  const tool = isNumber(toolSpan) ? Math.min(toolSpan, total) : 0
-  const decode = Math.max(0, model - ttft)
-  const rest = Math.max(0, total - model - tool)
-  const share = barShare(total, scale)
-  const segments: ReactNode[] = []
-  if (ttft > 0) {
-    segments.push(<span key="ttft" className={cx(css.barSegment, css.barTtft)} style={{ flexGrow: ttft }} />)
-  }
-  if (decode > 0) {
-    segments.push(<span key="decode" className={cx(css.barSegment, css.barDecode)} style={{ flexGrow: decode }} />)
-  }
-  if (tool > 0) {
-    segments.push(<span key="tool" className={cx(css.barSegment, css.barTool)} style={{ flexGrow: tool }} />)
-  }
-  if (rest > 0) {
-    segments.push(<span key="rest" className={cx(css.barSegment, css.barRest)} style={{ flexGrow: rest }} />)
-  }
-  const parts = [
-    t('bar.ttft', { value: formatMs(ttft) }),
-    t('bar.gen', { value: formatMs(decode) }),
-    t('bar.tool', { value: formatMs(tool) }),
-    t('bar.rest', { value: formatMs(rest) }),
-    t('bar.wall', { value: formatMs(total) }),
-  ]
-  if (isNumber(value.startTime)) {
-    parts.unshift(t('bar.start', { clock: formatClock(value.startTime) }))
-  }
-  if (gap !== undefined && gap > 0) parts.push(t('bar.gap', { value: formatMs(gap) }))
-  if (running) parts.push(t('bar.running'))
-  return (
-    <td className={className} title={parts.join(' · ')}>
-      <div className={css.timeWrap}>
-        <div className={trackClass}>
-          <div className={css.barFill} style={{ width: `${Math.round(share * 100)}%` }}>
-            {segments}
-          </div>
-        </div>
-        <span className={running ? css.timeRunning : css.timeValue}>
-          {running ? `≥ ${formatMs(total)}` : formatMs(total)}
-        </span>
-      </div>
-    </td>
-  )
-}
-
-/** Props of the totals row. */
-interface TotalsRowProps {
-  readonly totals: StatsTotals
-  readonly full: boolean
-  readonly t: StatsTranslate
-  readonly now: number
-}
-
-/** Bottom row summing the turns loaded in the current window. */
-export function TotalsRow({ totals, full, t, now }: TotalsRowProps): ReactElement {
-  const cells = metricsCells(totals, t)
-  const value: TimeState = {
-    running: false,
-    startTime: null,
-    wall: totals.wall,
-    ttft: totals.ttft,
-    model: totals.model,
-    tool: totals.tool,
-    toolWall: totals.toolWall,
-  }
-  return (
-    <tr className={css.totalsRow} title={full ? t('totals.full.title') : t('totals.window.title')}>
-      <td colSpan={2} className={css.totalsLabel}>
-        <span className={css.totalsTitle}>{full ? t('totals.full') : t('totals.window')}</span>
-        <span className={css.totalsMeta}>{` · ${t('summary', { turns: totals.turnCount, steps: totals.stepCount })}`}</span>
-      </td>
-      <td className={css.turnMetric} />
-      <ContextCell value={totals.context} className={css.turnMetric} />
-      <MetricCells cells={cells} className={css.turnMetric} />
-      <TimeCell
-        value={value}
-        scale={totals.wall ?? 0}
-        gap={undefined}
-        className={css.turnMetric}
-        trackClass={css.barTurn}
-        now={now}
-        t={t}
-      />
-    </tr>
-  )
-}
-
-/** Display name of one prompt image: its recorded name, otherwise its position. */
-function imageName(attachment: ImageAttachmentRef, index: number, count: number, t: StatsTranslate): string {
-  return attachment.name ?? t('imagePreview.alt', { index, count })
-}
-
-/** One prompt-image thumbnail: loads while the preview is open and opens the full image on click. */
 function PromptImageThumb({
   attachment, index, count, loadImage, t, onOpen,
 }: PromptImageThumbProps): ReactElement {
@@ -1174,51 +621,6 @@ function PromptCell({ turn, t, className, loadImage }: PromptCellProps): ReactEl
   )
 }
 
-const TEAM_FRAME = /^Team message from /u
-const AGENT_FRAME = /^Agent \S+ sent a message:/u
-const SUBAGENT_FRAME = /^Background subagent \S+ finished/u
-
-/** Label of the concrete wake frame, falling back to the producer source kind. */
-function triggerLabelOf(text: string, source: string, t: StatsTranslate): string {
-  if (TEAM_FRAME.test(text)) return t('trigger.team-message')
-  if (source === 'subagent-settled' && SUBAGENT_FRAME.test(text)) return t('trigger.subagent-settled')
-  if (source === 'agent-message' && AGENT_FRAME.test(text)) return t('trigger.agent-message')
-  return triggerLabel(source, t)
-}
-
-/** Remove the transport framing so only the message body is previewed. */
-function triggerBodyOf(text: string): string {
-  return text
-    .replace(/^Team message from [^:]+:\s*/u, '')
-    .replace(/^Agent \S+ sent a message:\s*/u, '')
-    .replace(/^Background subagent \S+ finished\s*/u, '')
-}
-
-/** Localized label for one automated turn trigger. */
-function triggerLabel(source: string, t: StatsTranslate): string {
-  switch (source) {
-    case 'agent-message': return t('trigger.agent-message')
-    case 'team-message': return t('trigger.team-message')
-    case 'subagent-settled': return t('trigger.subagent-settled')
-    case 'schedule': return t('trigger.schedule')
-    case 'webhook': return t('trigger.webhook')
-    case 'tool-jobs': return t('trigger.tool-jobs')
-    case 'cordis-host-runner': return t('trigger.cordis-host-runner')
-    case 'goal': return t('trigger.goal')
-    case 'runtime-context':
-    case 'time-context': return t('trigger.context')
-    default: return t('trigger.other')
-  }
-}
-
-/** Step did column: tool calls grouped by name and target, with output sizes. */
-/** One-line answer preview appended beside the answer label. */
-function answerPreview(answer: string | null): ReactNode {
-  if (answer === null) return null
-  const line = answer.split('\n').find(part => part.trim() !== '') ?? ''
-  if (line.trim() === '') return null
-  return <span className={css.answerPreview} title={answer}>{` · ${line.trim()}`}</span>
-}
 
 function stepDidCell(step: StatsStepMetrics, t: StatsTranslate): ReactElement {
   const nodes: ReactNode[] = []
@@ -1475,66 +877,7 @@ function moreRows(
 }
 
 /** Localized label of one non-step event kind. */
-function eventLabel(kind: StatsEventKind, t: StatsTranslate): string {
-  switch (kind) {
-    case 'request-header': return t('event.request-header')
-    case 'system-prompt': return t('event.system-prompt')
-    case 'tool-set': return t('event.tool-set')
-    case 'context-prune': return t('event.context-prune')
-    case 'request-context': return t('event.request-context')
-    case 'model-retry': return t('event.model-retry')
-    case 'model-attempt': return t('event.model-attempt')
-    case 'context-refresh': return t('event.context-refresh')
-    case 'approval': return t('event.approval')
-    /* v8 ignore next -- StatsEventKind is exhaustive. */
-    default: return ''
-  }
-}
 
-/** Localized request-header reason. */
-function eventReason(reason: string | null, t: StatsTranslate): string {
-  switch (reason) {
-    case 'initial': return t('event.reason.initial')
-    case 'resume': return t('event.reason.resume')
-    case 'change': return t('event.reason.change')
-    case 'series': return t('event.reason.series')
-    default: return reason ?? ''
-  }
-}
-
-/** Localized system-message operation. */
-function eventAction(action: StatsEventMetrics['surfaceOp'], t: StatsTranslate): string {
-  switch (action) {
-    case 'append': return t('event.system.append')
-    case 'replace': return t('event.system.replace')
-    case 'clear': return t('event.system.clear')
-    /* v8 ignore next -- surfaceOp is null or one of the three actions. */
-    default: return ''
-  }
-}
-
-/** Localized Context refresh source. */
-function eventSource(source: string | null, t: StatsTranslate): string {
-  switch (source) {
-    case 'runtime-context': return t('event.source.runtime')
-    case 'time-context': return t('event.source.time')
-    default: return source ?? ''
-  }
-}
-
-/** Localized approval state or outcome. */
-function eventApproval(status: string | null, t: StatsTranslate): string {
-  switch (status) {
-    case 'asked': return t('event.approval.asked')
-    case 'allowed-once': return t('event.approval.allowed')
-    case 'rejected': return t('event.approval.rejected')
-    case 'cancelled': return t('event.approval.cancelled')
-    case 'unavailable': return t('event.approval.unavailable')
-    default: return status ?? ''
-  }
-}
-
-/** One-line explanation of a non-step event. */
 function eventDetail(event: StatsEventMetrics, t: StatsTranslate): string {
   switch (event.kind) {
     case 'request-header': {
@@ -1906,3 +1249,71 @@ export function TableButton({ caption, enabled, onClick }: TableButtonProps): Re
     </button>
   )
 }
+
+/** Distance from the scroll top, in pixels, that requests one older history page. */
+export const LOAD_OLDER_THRESHOLD = 64
+/** How long the clipboard button reports its outcome, in milliseconds. */
+const COPY_FEEDBACK_MS = 1_200
+/** Hover dwell before the prompt image preview opens. */
+const IMAGE_PREVIEW_DELAY_MS = 200
+
+export {
+  AnswerBody,
+  CallBlock,
+  CallBlockProps,
+  CallGroup,
+  CellText,
+  CodeLine,
+  ContextCellProps,
+  CopyButton,
+  CopyButtonProps,
+  FileContent,
+  ImageLoad,
+  ImagePromptPill,
+  ImagePromptPillProps,
+  LightboxImage,
+  LoadImage,
+  MetricCell,
+  MetricCellsProps,
+  MetricsValues,
+  PromptCell,
+  PromptCellProps,
+  PromptImageThumb,
+  PromptImageThumbProps,
+  ScopeState,
+  StepRowsOptions,
+  TableButtonProps,
+  TimeCellProps,
+  TimeState,
+  ToolPill,
+  TurnRowsOptions,
+  ViewMode,
+  callBody,
+  clipboardOf,
+  compactionRow,
+  eventDetail,
+  eventRow,
+  moreRows,
+  scopeMarkers,
+  stepDetailRow,
+  stepDidCell,
+  stepRows,
+  turnDidCell,
+}
+
+export {
+  COLUMNS,
+  ContextCell,
+  MetricCells,
+  TotalsRow,
+  metricsCells,
+} from './stats-table-columns.tsx'
+export {
+  EMPTY_STEP_VIEW,
+  createViewState,
+} from './stats-table-data.tsx'
+export {
+  defaultTurnOpen,
+  isTimeRunning,
+  totalSpan,
+} from './stats-table-format.tsx'

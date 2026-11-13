@@ -14,7 +14,7 @@ import {
   SessionFormatUnsupportedMigrationError,
   sessionFormatCatalog,
 } from '@mammoth-ai/mmp-session-format-catalog'
-import { readdirSync, type Dirent } from 'node:fs'
+import type { Dirent } from 'node:fs'
 import { open, mkdir, readdir, realpath, link, rm, stat, lstat, unlink, truncate } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
@@ -27,7 +27,6 @@ import {
   SessionAlreadyExistsError, SessionPersistenceNotFoundError,
   assertStoredId, materializeCreateHeader, sessionFormatVersionRefusal, validateStoredEvents,
   type SessionAccess, type SessionHandle,
-  type SessionHandleReadResult,
   type SessionLocation, type SessionPersistenceCreateOptions,
   type SessionPersistenceListOptions, type SessionPersistenceOpenOptions,
   type SessionPersistenceSnapshot, type SessionPersistenceStatOptions,
@@ -55,10 +54,32 @@ import {
   readStableJsonlFile,
   type JsonlGenerationFormatAdapter,
   type JsonlPhysicalIdentity,
-  type PreparedJsonlMigration,
 } from './generation.ts'
 
 export type { JsonlCompression } from './format.ts'
+import {
+  freezeStoredEvents,
+  fileRevision,
+  type CurrentStoredLog,
+  type GenerationHeader,
+  type MigrationPreparation,
+  type PreparedStoredLog,
+  type ResolvedJsonlGeneration,
+  type StoredLog,
+} from './stored-log.ts'
+import {
+  assertUsableRoot,
+  encodingMismatch,
+  legacyLayout,
+  oppositeCompression,
+} from './encoding.ts'
+import {
+  isENOENT,
+  isErrnoException,
+  settledValues,
+  settleLimited,
+  waitWithAbort,
+} from './fs-helpers.ts'
 
 /**
  * Internal handoff-reuse policy, not deployment configuration: a cold
@@ -109,178 +130,6 @@ export interface Config {
    * fingerprints). Defaults to 3.
    */
   listConcurrency?: number
-}
-
-/** Logical header paired with the catalog's selected physical-generation classification. */
-interface GenerationHeader {
-  readonly header: SessionHeader
-  readonly formatStatus: NonNullable<SessionPersistenceSnapshot['formatStatus']>
-}
-
-/** One stored event graph whose producer has established immutable sharing. */
-interface FrozenStoredEvents extends SessionHandleReadResult {
-  readonly eventState: 'shared-frozen'
-}
-
-/** State shared by prepared historical and published current logs. */
-interface StoredLogBase extends FrozenStoredEvents {
-  readonly meta: SessionHeader
-  readonly tornTruncateTo: number | undefined
-  /** Complete events recovered from the torn final frame; the write path rewrites them durably. */
-  readonly recoveredTail: SessionEvent[]
-  /** Exact fork-inherited prefix length stored in the header line. */
-  readonly inheritedEventCount: SessionLogOffsetType
-  readonly revision: PersistenceRevision
-}
-
-/** A decoded current generation that is already durable. */
-interface CurrentStoredLog extends StoredLogBase {
-  readonly status: 'current'
-}
-
-/** A migrated historical generation retained until an explicit write open publishes it. */
-interface PreparedStoredLog extends StoredLogBase {
-  readonly status: 'prepared'
-  readonly validateRelatedSources: () => Promise<void>
-  readonly publication: {
-    readonly source: ResolvedJsonlGeneration
-    readonly value: PreparedJsonlMigration
-  }
-}
-
-/** A validated logical log, either durable current state or prepared historical state. */
-type StoredLog = CurrentStoredLog | PreparedStoredLog
-
-/** Deep-freeze acyclic stored JSON; its arrays contain only indexed JSON values. */
-function freezeStoredEvent(event: SessionEvent): void {
-  const pending: object[] = [event]
-  while (pending.length > 0) {
-    // The non-empty check proves an object remains to visit.
-    // oxlint-disable-next-line typescript/no-non-null-assertion
-    const current = pending.pop()!
-    Object.freeze(current)
-    if (Array.isArray(current)) {
-      for (let index = 0; index < current.length; index += 1) {
-        const child: unknown = current[index]
-        if (child !== null && typeof child === 'object') pending.push(child)
-      }
-    } else {
-      for (const key in current) {
-        const child = (current as Record<string, unknown>)[key]
-        if (child !== null && typeof child === 'object') pending.push(child)
-      }
-    }
-  }
-}
-
-/** Establish immutable sharing for one decoded event graph and report that state. */
-function freezeStoredEvents(events: SessionEvent[]): FrozenStoredEvents {
-  for (const event of events) freezeStoredEvent(event)
-  Object.freeze(events)
-  return { eventState: 'shared-frozen', events }
-}
-
-/** One authoritative immutable generation selected from a Session directory. */
-interface ResolvedJsonlGeneration {
-  readonly sourcePath: string
-  readonly sourceVersion: number
-  readonly currentPath: string
-}
-
-/** One backend-owned historical preparation shared by its current callers. */
-interface MigrationPreparation {
-  readonly sourcePath: string
-  readonly sourceRevision: PersistenceRevision
-  readonly controller: AbortController
-  readonly promise: Promise<PreparedStoredLog>
-  settled: boolean
-  waiters: number
-}
-
-/** Build the stat-derived best-effort change token shared by full and lightweight reads. */
-function fileRevision(identity: JsonlPhysicalIdentity): PersistenceRevision {
-  return SessionPersistenceRevision([
-    identity.dev,
-    identity.ino,
-    identity.size,
-    identity.mtimeNs,
-    identity.ctimeNs,
-  ].join(':'))
-}
-
-/** Whether a filesystem error means absence; every non-ENOENT failure must surface. */
-function isENOENT(error: unknown): boolean {
-  return (error as NodeJS.ErrnoException | null)?.code === 'ENOENT'
-}
-
-/**
- * Run `task` over `items` through the backend's shared listing limiter and
- * settle every call. Callers consume the outcomes in input order, so the first
- * failure they report matches a sequential loop whatever the completion order.
- * A limited task must never wait on the same limiter.
- * @param limit - the backend's shared listing limiter.
- * @param items - inputs in their sequential order.
- * @param task - per-item operation.
- * @returns one outcome per item, in input order.
- */
-function settleLimited<T, R>(
-  limit: LimitFunction,
-  items: readonly T[],
-  task: (item: T) => Promise<R>,
-): Promise<PromiseSettledResult<R>[]> {
-  return Promise.allSettled(items.map(item => limit(() => task(item))))
-}
-
-/**
- * Unwrap outcomes from {@link settleLimited}, rethrowing the first rejection in input order.
- * @param outcomes - outcomes in input order.
- * @returns the fulfilled values in input order.
- */
-function settledValues<R>(outcomes: readonly PromiseSettledResult<R>[]): R[] {
-  return outcomes.map((outcome) => {
-    if (outcome.status === 'rejected') throw outcome.reason
-    return outcome.value
-  })
-}
-
-/** Whether a filesystem-owned failure should retain its original errno and path. */
-function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return typeof (error as NodeJS.ErrnoException | null)?.code === 'string'
-}
-
-/** Preserve an Error abort reason and normalize hostile non-Error reasons. */
-function abortError(signal: AbortSignal): Error {
-  return signal.reason instanceof Error
-    ? signal.reason
-    : new Error('session migration preparation aborted', { cause: signal.reason })
-}
-
-/** Let one caller stop waiting without transferring cancellation ownership to shared work. */
-function waitWithAbort<T>(operation: Promise<T>, signal?: AbortSignal): Promise<T> {
-  if (signal === undefined) return operation
-  /* v8 ignore next -- requireStoredLog synchronously rechecks the signal immediately before waiting. */
-  if (signal.aborted) return Promise.reject(abortError(signal))
-  return new Promise<T>((resolve, reject) => {
-    const stopWaiting = (): void => {
-      reject(abortError(signal))
-    }
-    signal.addEventListener('abort', stopWaiting, { once: true })
-    void operation.then(
-      (value) => {
-        signal.removeEventListener('abort', stopWaiting)
-        resolve(value)
-      },
-      (error: unknown) => {
-        signal.removeEventListener('abort', stopWaiting)
-        /* v8 ignore else -- the preparation owner normalizes every rejection before this waiter sees it. */
-        if (error instanceof Error) {
-          reject(error)
-        } else {
-          reject(new Error('session migration preparation failed', { cause: error }))
-        }
-      },
-    )
-  })
 }
 
 /**
@@ -335,7 +184,7 @@ class JsonlSessionPersistence extends SessionPersistence {
       isUnsupportedMigrationError: (error): error is SessionFormatUnsupportedMigrationError =>
         error instanceof SessionFormatUnsupportedMigrationError,
     }
-    this.assertUsableRoot()
+    assertUsableRoot(this.root)
   }
 
   /**
@@ -1589,11 +1438,11 @@ class JsonlSessionPersistence extends SessionPersistence {
         generations.push({ path: join(dir, entry.name), version })
         continue
       }
-      if (parseGenerationLogFilename(entry.name, this.oppositeCompression()) !== undefined) {
+      if (parseGenerationLogFilename(entry.name, oppositeCompression(this.compression)) !== undefined) {
         opposite.push(join(dir, entry.name))
       }
     }
-    if (opposite.length > 0) throw this.encodingMismatch(opposite[0] as string)
+    if (opposite.length > 0) throw encodingMismatch(this.compression, opposite[0] as string)
     const latest = generations.sort((left, right) => right.version - left.version)[0]
     if (latest === undefined) return undefined
     return {
@@ -1622,16 +1471,6 @@ class JsonlSessionPersistence extends SessionPersistence {
     }
     signal?.throwIfAborted()
     return matches[0]
-  }
-
-  /** Require an existing configured root to be a readable directory. */
-  private assertUsableRoot(): void {
-    try {
-      readdirSync(this.root)
-    } catch (error) {
-      if (isENOENT(error)) return
-      throw error
-    }
   }
 
   /** Reject metadata that does not identify the selected physical log. */
@@ -1723,7 +1562,7 @@ class JsonlSessionPersistence extends SessionPersistence {
     signal?.throwIfAborted()
     const legacy = entries.find(entry =>
       entry.isFile() && (entry.name.endsWith('.jsonl') || entry.name.endsWith('.jsonl.zstd')))
-    if (legacy !== undefined) throw this.legacyLayout(join(project, legacy.name))
+    if (legacy !== undefined) throw legacyLayout(join(project, legacy.name))
     return entries.filter(entry => entry.isDirectory()).map(entry => join(project, entry.name))
   }
 
@@ -1736,7 +1575,7 @@ class JsonlSessionPersistence extends SessionPersistence {
   private async checkRootEncoding(): Promise<void> {
     await this.mapSessionDirectories(async (dir) => {
       const incompatible = await this.findOppositeGenerationInDirectory(dir)
-      if (incompatible !== undefined) throw this.encodingMismatch(incompatible)
+      if (incompatible !== undefined) throw encodingMismatch(this.compression, incompatible)
     })
   }
 
@@ -1751,13 +1590,13 @@ class JsonlSessionPersistence extends SessionPersistence {
       const path = join(project, encoded + logSuffix(compression))
       const artifactExists = await this.exists(path)
       signal?.throwIfAborted()
-      if (artifactExists) throw this.legacyLayout(path)
+      if (artifactExists) throw legacyLayout(path)
     }
   }
 
   private async rejectOppositeArtifact(cwd: string | undefined, id: SessionId): Promise<void> {
     const path = await this.findOppositeGenerationInDirectory(sessionDir(this.root, cwd, id))
-    if (path !== undefined) throw this.encodingMismatch(path)
+    if (path !== undefined) throw encodingMismatch(this.compression, path)
   }
 
   /** Return the highest canonical generation encoded with the other configured suffix. */
@@ -1771,31 +1610,13 @@ class JsonlSessionPersistence extends SessionPersistence {
     }
     const generations: Array<{ readonly name: string; readonly version: number }> = []
     for (const entry of entries) {
-      const version = parseGenerationLogFilename(entry.name, this.oppositeCompression())
+      const version = parseGenerationLogFilename(entry.name, oppositeCompression(this.compression))
       if (version !== undefined) generations.push({ name: entry.name, version })
     }
     const latest = generations.sort((left, right) => right.version - left.version)[0]
     return latest === undefined ? undefined : join(dir, latest.name)
   }
 
-  private oppositeCompression(): JsonlCompression {
-    return this.compression === 'zstd' ? 'none' : 'zstd'
-  }
-
-  private encodingMismatch(path: string): Error {
-    return new Error(
-      `session artifact ${JSON.stringify(path)} uses ${logSuffix(this.oppositeCompression())}, `
-      + `but this backend is configured for compression ${JSON.stringify(this.compression)}; `
-      + 'use a separate root or select the matching compression mode',
-    )
-  }
-
-  private legacyLayout(path: string): Error {
-    return new Error(
-      `session artifact ${JSON.stringify(path)} uses the unsupported flat-file layout; `
-      + 'use a separate root or move it into a project/session directory before loading',
-    )
-  }
 
   private async exists(path: string): Promise<boolean> {
     try {

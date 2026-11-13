@@ -278,13 +278,13 @@ import { Search } from 'lucide-vue-next';
 import { adminEnterpriseApi, type AdminEnterpriseRow } from '../../api/admin';
 import { useAuthStore } from '../../stores/auth';
 import { sanitizeText } from '../../utils/sanitizeText';
+import { useAdminSearch, useAdminTable } from '../../composables/useAdminTable';
 
 const ENTERPRISE_COLORS = ['#7c3aed', '#0891b2', '#c2410c', '#15803d', '#be123c', '#4f46e5', '#a16207', '#0f766e'];
 
 const auth = useAuthStore();
 const router = useRouter();
 const rows = ref<AdminEnterpriseRow[]>([]);
-const loading = ref(false);
 const open = ref(false);
 const saving = ref(false);
 const editingId = ref('');
@@ -298,11 +298,7 @@ const viewingRow = ref<AdminEnterpriseRow | null>(null);
 const nameDraft = ref('');
 const slugDraft = ref('');
 const statusFilter = ref('');
-const currentPage = ref(1);
-const pageSize = ref(20);
 const formRef = ref<FormInstance>();
-let searchTimer = 0;
-let requestSequence = 0;
 
 const form = reactive({
   name: '',
@@ -324,22 +320,47 @@ const hasActiveFilters = computed(() =>
   Boolean(nameDraft.value || slugDraft.value || statusFilter.value),
 );
 
-const emptyText = computed(() => (hasActiveFilters.value ? '没有符合条件的企业' : '还没有企业'));
-
-const filteredRows = computed(() => {
-  const name = nameDraft.value.trim().toLowerCase();
-  const slug = slugDraft.value.trim().toLowerCase();
-  return rows.value.filter((row) => {
+const {
+  currentPage,
+  pageSize,
+  filteredRows,
+  pagedRows,
+  emptyText,
+  resetPage,
+  onPageChange,
+  onPageSizeChange,
+} = useAdminTable<AdminEnterpriseRow>({
+  rows: () => rows.value,
+  pageSize: 20,
+  hasFilters: () => hasActiveFilters.value,
+  emptyAll: '还没有企业',
+  emptyFiltered: '没有符合条件的企业',
+  filter: (row) => {
+    const name = nameDraft.value.trim().toLowerCase();
+    const slug = slugDraft.value.trim().toLowerCase();
     if (name && !row.name.toLowerCase().includes(name)) return false;
     if (slug && !row.slug.toLowerCase().includes(slug)) return false;
     if (statusFilter.value && row.status !== statusFilter.value) return false;
     return true;
-  });
+  },
 });
 
-const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredRows.value.slice(start, start + pageSize.value);
+const {
+  loading,
+  onSearchInput,
+  onSearchNow,
+  onReset,
+  runLoad,
+  dispose: disposeSearch,
+} = useAdminSearch({
+  debounceMs: 350,
+  load: () => load(),
+  resetPage,
+  clearFilters: () => {
+    nameDraft.value = '';
+    slugDraft.value = '';
+    statusFilter.value = '';
+  },
 });
 
 function statusLabel(status: string) {
@@ -352,41 +373,21 @@ function enterpriseColor(id: string) {
   return ENTERPRISE_COLORS[hash % ENTERPRISE_COLORS.length];
 }
 
-function resetPage() {
-  currentPage.value = 1;
-}
-
-function onSearchInput() {
-  window.clearTimeout(searchTimer);
-  searchTimer = window.setTimeout(onSearchNow, 350);
-}
-
-function onSearchNow() {
-  window.clearTimeout(searchTimer);
-  resetPage();
-  void load();
-}
-
 function onFilterChange() {
   resetPage();
 }
 
-function onReset() {
-  window.clearTimeout(searchTimer);
-  nameDraft.value = '';
-  slugDraft.value = '';
-  statusFilter.value = '';
-  resetPage();
-  void load();
-}
-
-function onPageChange(page: number) {
-  currentPage.value = page;
-}
-
-function onPageSizeChange(size: number) {
-  pageSize.value = size;
-  resetPage();
+async function load() {
+  await runLoad(async (isCurrent) => {
+    try {
+      const result = await adminEnterpriseApi.list();
+      if (!isCurrent()) return;
+      rows.value = result;
+    } catch (e) {
+      if (!isCurrent()) return;
+      ElMessage.error(e instanceof Error ? e.message : '加载失败');
+    }
+  });
 }
 
 function resetForm() {
@@ -414,21 +415,6 @@ function openEdit(row: AdminEnterpriseRow) {
 function openView(row: AdminEnterpriseRow) {
   viewingRow.value = row;
   viewOpen.value = true;
-}
-
-async function load() {
-  const sequence = ++requestSequence;
-  loading.value = true;
-  try {
-    const result = await adminEnterpriseApi.list();
-    if (sequence !== requestSequence) return;
-    rows.value = result;
-  } catch (e) {
-    if (sequence !== requestSequence) return;
-    ElMessage.error(e instanceof Error ? e.message : '加载失败');
-  } finally {
-    if (sequence === requestSequence) loading.value = false;
-  }
 }
 
 async function onSave() {
@@ -620,8 +606,7 @@ async function onDelete(row: AdminEnterpriseRow) {
 onMounted(load);
 
 onBeforeUnmount(() => {
-  window.clearTimeout(searchTimer);
-  requestSequence += 1;
+  disposeSearch();
 });
 </script>
 

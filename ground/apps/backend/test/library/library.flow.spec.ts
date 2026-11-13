@@ -24,7 +24,7 @@ import { buildLibraryModelRequest, readModelText } from '../../src/library/libra
 import { LIBRARY_ALLOWED_EXTENSIONS } from '../../src/library/library.limits';
 import { htmlToText, listZipEntries, parseLibraryBytes } from '../../src/library/library.parse';
 import { canSee } from '../../src/library/library.policy';
-import { LibraryService } from '../../src/library/library.service';
+import { createLibraryService, type LibraryService } from '../../src/library/library.service';
 import { MemoryLibraryStore } from '../../src/library/library.store';
 import type { Actor, LibraryItem } from '../../src/library/library.types';
 
@@ -82,13 +82,13 @@ function world() {
     store.rememberUser(id, name);
   }
   let clock = Date.parse('2026-11-08T00:00:00Z');
-  const service = new LibraryService(store, {
+  const service = createLibraryService({ store, limits: {
     maxFileBytes: 1000,
     tenantQuotaBytes: 2500,
     recycleDays: 30,
     askMaxChars: 12_000,
     allowedExtensions: LIBRARY_ALLOWED_EXTENSIONS,
-  }, () => clock);
+  }, now: () => clock });
   const actor = (userId: string, tenantId: string, extra: Partial<Actor> = {}): Actor => ({
     userId,
     tenantId,
@@ -452,13 +452,13 @@ describe('enterprise library', () => {
     store.rememberTenant('ta', '甲企业');
     store.rememberUser('owner', '甲');
     store.rememberUser('mate', '乙');
-    const service = new LibraryService(store, {
+    const service = createLibraryService({ store, limits: {
       maxFileBytes: 5000,
       tenantQuotaBytes: 5000,
       recycleDays: 30,
       askMaxChars: 12,
       allowedExtensions: LIBRARY_ALLOWED_EXTENSIONS,
-    });
+    } });
     const owner: Actor = { userId: 'owner', tenantId: 'ta', isPlatformAdmin: false, isOrgAdmin: false, activeMember: true };
     const mate: Actor = { ...owner, userId: 'mate' };
     const item = await upload(service, owner, '长文.md', Buffer.from('一二三四五六七八九十甲乙丙丁'));

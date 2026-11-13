@@ -308,6 +308,7 @@ import { computed, h, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { Search } from 'lucide-vue-next';
 import { isOrgAdmin } from '@mammoth/shared';
+import { useAdminTable, useDebouncedCallback } from '../composables/useAdminTable';
 import {
   tenantRoleApi,
   type PermissionCatalogGroup,
@@ -327,7 +328,6 @@ const saving = ref(false);
 const rows = ref<TenantRoleRow[]>([]);
 const keywordDraft = ref('');
 const keyword = ref('');
-let searchTimer = 0;
 const drawerOpen = ref(false);
 const editing = ref<TenantRoleRow | null>(null);
 const viewOpen = ref(false);
@@ -355,15 +355,17 @@ const rules: FormRules = {
   ],
 };
 
-const filteredRows = computed(() => {
-  const q = keyword.value.trim().toLowerCase();
-  if (!q) return rows.value;
-  return rows.value.filter((row) => row.name.toLowerCase().includes(q));
+const { filteredRows, emptyText } = useAdminTable<TenantRoleRow>({
+  rows: () => rows.value,
+  paginate: false,
+  hasFilters: () => Boolean(keyword.value),
+  emptyAll: '暂无角色',
+  emptyFiltered: '没有符合搜索的角色',
+  filter: (row) => {
+    const q = keyword.value.trim().toLowerCase();
+    return !q || row.name.toLowerCase().includes(q);
+  },
 });
-
-const emptyText = computed(() =>
-  keyword.value ? '没有符合搜索的角色' : '暂无角色',
-);
 
 /** 平台预置（展示用）。 */
 function isPresetRole(row: TenantRoleRow) {
@@ -390,18 +392,19 @@ function canDeleteRole(row: TenantRoleRow) {
   return row.scope === 'ORG_CUSTOM' && row.editable !== false && !isPresetRole(row);
 }
 
+const debouncedSearch = useDebouncedCallback(500, () => onSearchNow());
+
 function onSearchInput() {
-  window.clearTimeout(searchTimer);
-  searchTimer = window.setTimeout(onSearchNow, 500);
+  debouncedSearch.onInput();
 }
 
 function onSearchNow() {
-  window.clearTimeout(searchTimer);
+  debouncedSearch.cancel();
   keyword.value = keywordDraft.value.trim();
 }
 
 function onReset() {
-  window.clearTimeout(searchTimer);
+  debouncedSearch.cancel();
   keywordDraft.value = '';
   keyword.value = '';
 }
@@ -587,7 +590,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  window.clearTimeout(searchTimer);
+  debouncedSearch.cancel();
 });
 </script>
 

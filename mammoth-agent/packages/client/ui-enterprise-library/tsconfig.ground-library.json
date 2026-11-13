@@ -10,16 +10,24 @@
     "noUnusedParameters": false
   },
   "include": [
+    "../../../../ground/apps/backend/src/library/library.ask.service.ts",
     "../../../../ground/apps/backend/src/library/library.ask.ts",
+    "../../../../ground/apps/backend/src/library/library.auth.ts",
+    "../../../../ground/apps/backend/src/library/library.context.ts",
     "../../../../ground/apps/backend/src/library/library.errors.ts",
     "../../../../ground/apps/backend/src/library/library.files.ts",
+    "../../../../ground/apps/backend/src/library/library.items.ts",
     "../../../../ground/apps/backend/src/library/library.limits.ts",
+    "../../../../ground/apps/backend/src/library/library.media.ts",
+    "../../../../ground/apps/backend/src/library/library.mutate.ts",
     "../../../../ground/apps/backend/src/library/library.ocr.ts",
     "../../../../ground/apps/backend/src/library/library.office-convert.ts",
     "../../../../ground/apps/backend/src/library/library.office-text.ts",
     "../../../../ground/apps/backend/src/library/library.parse.ts",
     "../../../../ground/apps/backend/src/library/library.policy.ts",
+    "../../../../ground/apps/backend/src/library/library.read.ts",
     "../../../../ground/apps/backend/src/library/library.service.ts",
+    "../../../../ground/apps/backend/src/library/library.stats.ts",
     "../../../../ground/apps/backend/src/library/library.store.ts",
     "../../../../ground/apps/backend/src/library/library.types.ts"
   ]

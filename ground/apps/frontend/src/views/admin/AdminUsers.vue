@@ -169,6 +169,7 @@
 import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { Search } from 'lucide-vue-next';
+import { useAdminSearch, useAdminTable } from '../../composables/useAdminTable';
 import { adminEnterpriseApi, adminPermissionApi, adminRoleApi, adminUserApi, type AdminEnterpriseRow, type AdminRoleRow, type AdminUserRow, type PermissionCatalogGroup, type RolePermSource } from '../../api/admin';
 import { useAuthStore } from '../../stores/auth';
 import UserTable from '@/components/admin/users/UserTable.vue';
@@ -183,7 +184,6 @@ const editingEnterprises = ref<Array<Pick<AdminEnterpriseRow, 'id' | 'name'>>>([
 const enterprisesLoading = ref(false);
 const enterprisesError = ref('');
 const roleOptions = ref<AdminRoleRow[]>([]);
-const loading = ref(false);
 const loadError = ref('');
 const open = ref(false);
 const saving = ref(false);
@@ -249,11 +249,7 @@ const phoneDraft = ref('');
 const roleFilter = ref('');
 const statusFilter = ref('');
 const enterpriseFilter = ref('');
-const currentPage = ref(1);
-const pageSize = ref(20);
 const userFormDialogRef = ref<InstanceType<typeof UserFormDialog> | null>(null);
-let searchTimer = 0;
-let requestSequence = 0;
 
 const form = reactive({
   name: '',
@@ -284,6 +280,50 @@ const hasActiveFilters = computed(() =>
   Boolean(nameDraft.value || phoneDraft.value || roleFilter.value || statusFilter.value || enterpriseFilter.value),
 );
 
+const {
+  currentPage,
+  pageSize,
+  filteredRows,
+  pagedRows,
+  emptyText,
+  resetPage,
+  onPageChange,
+  onPageSizeChange,
+} = useAdminTable<AdminUserRow>({
+  rows: () => rows.value,
+  pageSize: 20,
+  hasFilters: () => hasActiveFilters.value,
+  emptyAll: '还没有用户',
+  emptyFiltered: '没有符合条件的用户',
+  filter: (row) => {
+    const name = nameDraft.value.trim();
+    const phone = phoneDraft.value.trim();
+    if (name && !row.name.includes(name)) return false;
+    if (phone && !row.phone.includes(phone)) return false;
+    return true;
+  },
+});
+
+const {
+  loading,
+  onSearchInput,
+  onSearchNow,
+  onReset,
+  runLoad,
+  dispose: disposeSearch,
+} = useAdminSearch({
+  debounceMs: 350,
+  load: () => load(),
+  resetPage,
+  clearFilters: () => {
+    nameDraft.value = '';
+    phoneDraft.value = '';
+    roleFilter.value = '';
+    statusFilter.value = '';
+    enterpriseFilter.value = '';
+  },
+});
+
 const passwordRules: FormRules = {
   password: [{ required: true, message: '请输入新密码', trigger: 'blur' }],
   confirm: [
@@ -301,66 +341,14 @@ const passwordRules: FormRules = {
   ],
 };
 
-const emptyText = computed(() => (hasActiveFilters.value ? '没有符合条件的用户' : '还没有用户'));
-
-const filteredRows = computed(() => {
-  const name = nameDraft.value.trim();
-  const phone = phoneDraft.value.trim();
-  return rows.value.filter((row) => {
-    if (name && !row.name.includes(name)) return false;
-    if (phone && !row.phone.includes(phone)) return false;
-    return true;
-  });
-});
-
-const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredRows.value.slice(start, start + pageSize.value);
-});
-
-function resetPage() {
-  currentPage.value = 1;
-}
-
-function onSearchInput() {
-  window.clearTimeout(searchTimer);
-  searchTimer = window.setTimeout(onSearchNow, 350);
-}
-
 function onPhoneInput(value: string) {
   phoneDraft.value = value.replace(/\D/g, '').slice(0, 11);
   onSearchInput();
 }
 
-function onSearchNow() {
-  window.clearTimeout(searchTimer);
-  resetPage();
-  void load();
-}
-
 function onEnterpriseChange() {
   resetPage();
   void load();
-}
-
-function onReset() {
-  window.clearTimeout(searchTimer);
-  nameDraft.value = '';
-  phoneDraft.value = '';
-  roleFilter.value = '';
-  statusFilter.value = '';
-  enterpriseFilter.value = '';
-  resetPage();
-  void load();
-}
-
-function onPageChange(page: number) {
-  currentPage.value = page;
-}
-
-function onPageSizeChange(size: number) {
-  pageSize.value = size;
-  resetPage();
 }
 
 function resetForm() {
@@ -453,25 +441,23 @@ function openEdit(row: AdminUserRow) {
 }
 
 async function load() {
-  const sequence = ++requestSequence;
-  loading.value = true;
-  try {
-    const result = await adminUserApi.list({
-      keyword: nameDraft.value.trim() || phoneDraft.value.trim(),
-      role: roleFilter.value,
-      status: statusFilter.value,
-      enterpriseId: enterpriseFilter.value,
-    });
-    if (sequence !== requestSequence) return;
-    rows.value = result;
-    loadError.value = '';
-  } catch (e) {
-    if (sequence !== requestSequence) return;
-    loadError.value = e instanceof Error ? e.message : '加载失败';
-    ElMessage.error(loadError.value);
-  } finally {
-    if (sequence === requestSequence) loading.value = false;
-  }
+  await runLoad(async (isCurrent) => {
+    try {
+      const result = await adminUserApi.list({
+        keyword: nameDraft.value.trim() || phoneDraft.value.trim(),
+        role: roleFilter.value,
+        status: statusFilter.value,
+        enterpriseId: enterpriseFilter.value,
+      });
+      if (!isCurrent()) return;
+      rows.value = result;
+      loadError.value = '';
+    } catch (e) {
+      if (!isCurrent()) return;
+      loadError.value = e instanceof Error ? e.message : '加载失败';
+      ElMessage.error(loadError.value);
+    }
+  });
 }
 
 async function loadEnterprises() {
@@ -651,8 +637,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  window.clearTimeout(searchTimer);
-  requestSequence += 1;
+  disposeSearch();
 });
 </script>
 

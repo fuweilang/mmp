@@ -135,7 +135,8 @@ async function main(): Promise<void> {
   const router = await startGroundWebRouter({ host, port, groundOrigin,
     ...(publicOrigin ? { publicOrigin } : {}),
     cookieName: process.env.MMP_GROUND_COOKIE_NAME || 'mammothai_access_token',
-    maxWorkers: positiveEnvironment('MMP_WEB_MAX_IDENTITIES', publicOrigin ? 4 : 8),
+    maxWorkers: positiveEnvironment('MMP_WEB_MAX_IDENTITIES', publicOrigin ? 12 : 8),
+    idleMs: positiveEnvironment('MMP_WEB_IDENTITY_IDLE_MS', 600_000),
     requestTimeoutMs: positiveEnvironment('MMP_WEB_AUTH_TIMEOUT_MS', 30000),
     startWorker: (identity, origin, signal) => startIdentityHost(identity, origin, signal, {
       groundOrigin, home: resolve(process.env.MMP_HOME || join(homedir(), '.mmp')), workerArgs,

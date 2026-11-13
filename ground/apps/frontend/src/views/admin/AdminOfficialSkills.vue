@@ -273,7 +273,8 @@ import {
   type OfficialSkillRow,
   type OfficialSkillZipPreview,
 } from '../../api/admin';
-import { clampPage, keepStoredExecution, skillDeleteConfirm, skillDeleteRequest, skillFormIssues, skillFormToast } from '../../utils/skill-form';
+import { keepStoredExecution, skillDeleteConfirm, skillDeleteRequest, skillFormIssues, skillFormToast } from '../../utils/skill-form';
+import { useAdminSearch, useAdminTable } from '../../composables/useAdminTable';
 
 const rows = ref<OfficialSkillRow[]>([]);
 const categoryFilter = ref<OfficialSkillCategory | ''>('');
@@ -281,28 +282,28 @@ function rowCategories(row: OfficialSkillRow): OfficialSkillCategory[] {
   if (row.categories?.length) return row.categories;
   return row.category ? [row.category] : [];
 }
-const filteredRows = computed(() => categoryFilter.value ? rows.value.filter(row => rowCategories(row).includes(categoryFilter.value as OfficialSkillCategory)) : rows.value);
-const loading = ref(false);
 const pageError = ref('');
 const keywordDraft = ref('');
 const keyword = ref('');
 const enabledFilter = ref<'true' | 'false' | ''>('');
-let searchTimer = 0;
-let requestSequence = 0;
-const currentPage = ref(1);
-const pageSize = ref(10);
 const hasActiveFilters = computed(() => Boolean(keyword.value || enabledFilter.value || categoryFilter.value));
-const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredRows.value.slice(start, start + pageSize.value);
+
+const {
+  currentPage,
+  pageSize,
+  filteredRows,
+  pagedRows,
+  resetPage,
+} = useAdminTable<OfficialSkillRow>({
+  rows: () => rows.value,
+  pageSize: 10,
+  clampOnShrink: true,
+  hasFilters: () => hasActiveFilters.value,
+  emptyAll: '还没有技能',
+  emptyFiltered: '没有符合条件的技能',
+  errorText: () => (pageError.value ? '技能加载失败' : undefined),
+  filter: (row) => (categoryFilter.value ? rowCategories(row).includes(categoryFilter.value as OfficialSkillCategory) : true),
 });
-function resetPage() {
-  currentPage.value = 1;
-}
-// Reload after delete/disable may shrink the last page; never leave an empty out-of-range page.
-watch([() => filteredRows.value.length, pageSize], () => {
-  currentPage.value = clampPage(currentPage.value, pageSize.value, filteredRows.value.length);
-}, { flush: 'sync' });
 
 const editorOpen = ref(false);
 const editingId = ref('');
@@ -428,46 +429,44 @@ function formatTime(value: string) {
 }
 
 async function reload() {
-  const sequence = ++requestSequence;
-  loading.value = true;
-  pageError.value = '';
-  try {
-    const result = await adminOfficialSkillApi.list({
-      keyword: keyword.value,
-      enabled: enabledFilter.value,
-    });
-    if (sequence !== requestSequence) return;
-    rows.value = result;
-  } catch (error) {
-    if (sequence !== requestSequence) return;
-    pageError.value = error instanceof Error ? error.message : '暂时无法加载，请稍后重试';
-    rows.value = [];
-  } finally {
-    if (sequence === requestSequence) loading.value = false;
-  }
+  await runLoad(async (isCurrent) => {
+    pageError.value = '';
+    try {
+      const result = await adminOfficialSkillApi.list({
+        keyword: keyword.value,
+        enabled: enabledFilter.value,
+      });
+      if (!isCurrent()) return;
+      rows.value = result;
+    } catch (error) {
+      if (!isCurrent()) return;
+      pageError.value = error instanceof Error ? error.message : '暂时无法加载，请稍后重试';
+      rows.value = [];
+    }
+  });
 }
 
-function onSearchNow() {
-  window.clearTimeout(searchTimer);
-  resetPage();
-  keyword.value = keywordDraft.value.trim();
-  reload();
-}
+const {
+  loading,
+  onSearchInput: scheduleSearch,
+  onSearchNow,
+  onReset,
+  runLoad,
+  dispose: disposeSearch,
+} = useAdminSearch({
+  debounceMs: 300,
+  load: () => reload(),
+  resetPage,
+  beforeSearch: () => { keyword.value = keywordDraft.value.trim(); },
+  clearFilters: () => {
+    keywordDraft.value = '';
+    keyword.value = '';
+    enabledFilter.value = '';
+    categoryFilter.value = '';
+  },
+});
 
-function onReset() {
-  window.clearTimeout(searchTimer);
-  resetPage();
-  keywordDraft.value = '';
-  keyword.value = '';
-  enabledFilter.value = '';
-  categoryFilter.value = '';
-  reload();
-}
 
-function scheduleSearch() {
-  window.clearTimeout(searchTimer);
-  searchTimer = window.setTimeout(() => onSearchNow(), 300);
-}
 
 function resetEditor() {
   editorSequence += 1;
@@ -799,8 +798,7 @@ async function onDelete(row: OfficialSkillRow) {
 
 onMounted(() => { void reload(); });
 onUnmounted(() => {
-  window.clearTimeout(searchTimer);
-  requestSequence += 1;
+  disposeSearch();
   editorSequence += 1;
 });
 </script>

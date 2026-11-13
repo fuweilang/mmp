@@ -6,7 +6,7 @@ import { after, before, describe, it } from 'node:test';
 import { PrismaClient } from '@prisma/client';
 import { LibraryError } from '../../src/library/library.errors';
 import { PrismaLibraryStore } from '../../src/library/library.prisma-store';
-import { LibraryService } from '../../src/library/library.service';
+import { createLibraryService } from '../../src/library/library.service';
 import type { Actor, ChunkRecord, NodeRecord, VersionRecord } from '../../src/library/library.types';
 
 const databaseUrl = process.env.LIBRARY_TEST_DATABASE_URL;
@@ -97,7 +97,7 @@ describe('library postgres', () => {
 
   it('persists the first markdown upload, parses it, and opens the real source', async () => {
     const store = new PrismaLibraryStore(prisma as never);
-    const service = new LibraryService(store);
+    const service = createLibraryService({ store });
     const owner = actor(ownerId, tenantA);
     const mate = actor(mateId, tenantA);
     const other = actor(otherId, tenantB);
@@ -169,7 +169,7 @@ describe('library postgres', () => {
       transactionStore.commitNewFile = async () => { throw new Error('forced commit failure'); };
       return work(transactionStore);
     });
-    const service = new LibraryService(store);
+    const service = createLibraryService({ store });
     const error = await service.upload(actor(ownerId, tenantA), {
       originalName: 'orphan.md',
       mimeType: 'text/markdown',
@@ -234,8 +234,8 @@ describe('library postgres', () => {
     assert.equal(await prisma.libraryChunk.count({ where: { versionId: version } }), 0);
   });
   it('persists shared roots, inherited uploads, recursive scope and concurrent tree writes', async () => {
-    const first = new LibraryService(new PrismaLibraryStore(prisma as never));
-    const second = new LibraryService(new PrismaLibraryStore(prisma as never));
+    const first = createLibraryService({ store: new PrismaLibraryStore(prisma as never) });
+    const second = createLibraryService({ store: new PrismaLibraryStore(prisma as never) });
     const owner = actor(ownerId, tenantA);
     const mate = actor(mateId, tenantA);
     const root = await first.createFolder(owner, '共享根', null, { scope: 'ENTERPRISE', confirmShare: true });
@@ -255,7 +255,7 @@ describe('library postgres', () => {
   });
 
   it('rolls back every recursive update and audit when Postgres rejects a descendant write', async () => {
-    const service = new LibraryService(new PrismaLibraryStore(prisma as never));
+    const service = createLibraryService({ store: new PrismaLibraryStore(prisma as never) });
     const owner = actor(ownerId, tenantA);
     const root = await service.createFolder(owner, '回滚根');
     const child = await service.createFolder(owner, '回滚子项', root.id);
@@ -277,7 +277,7 @@ describe('library postgres', () => {
   it('serializes concurrent tenant quota admissions and removes the rejected blob', async () => {
     const aggregate = await prisma.libraryVersion.aggregate({ where: { tenantId: tenantB, node: { state: { not: 'PURGED' } } }, _sum: { sizeBytes: true } });
     const store = new PrismaLibraryStore(prisma as never);
-    const service = new LibraryService(store, { maxFileBytes: 1000, tenantQuotaBytes: (aggregate._sum.sizeBytes ?? 0) + 600, recycleDays: 30, askMaxChars: 12000, allowedExtensions: ['.md'] });
+    const service = createLibraryService({ store, limits: { maxFileBytes: 1000, tenantQuotaBytes: (aggregate._sum.sizeBytes ?? 0) + 600, recycleDays: 30, askMaxChars: 12000, allowedExtensions: ['.md'] } });
     const before = (await filesUnder(libraryDir)).length;
     const outcomes = await Promise.allSettled(['a.md', 'b.md'].map(originalName => service.upload(actor(otherId, tenantB), { originalName, mimeType: 'text/markdown', bytes: Buffer.from('a'.repeat(400)) })));
     assert.equal(outcomes.filter(row => row.status === 'fulfilled').length, 1);
@@ -288,7 +288,7 @@ describe('library postgres', () => {
 
   it('rolls back retry status and chunks when the transactional audit violates a database constraint', async () => {
     const store = new PrismaLibraryStore(prisma as never);
-    const service = new LibraryService(store);
+    const service = createLibraryService({ store });
     const item = await service.upload(actor(ownerId, tenantA), { originalName: 'retry-atomic.md', mimeType: 'text/markdown', bytes: Buffer.from('transaction source') });
     const versionId = item.currentVersion!.id;
     await store.updateVersion(versionId, { parseStatus: 'FAILED', parseReason: 'retryable' });
@@ -316,7 +316,7 @@ describe('library postgres', () => {
   it('serializes retries from separate store instances without replacing a successful locator', async () => {
     const firstStore = new PrismaLibraryStore(prisma as never);
     const secondStore = new PrismaLibraryStore(prisma as never);
-    const first = new LibraryService(firstStore), second = new LibraryService(secondStore);
+    const first = createLibraryService({ store: firstStore }), second = createLibraryService({ store: secondStore });
     const owner = actor(ownerId, tenantA);
     const item = await first.upload(owner, { originalName: 'parallel-retry.md', mimeType: 'text/markdown', bytes: Buffer.from('first\n\nsecond') });
     const versionId = item.currentVersion!.id;
@@ -339,7 +339,7 @@ describe('library postgres', () => {
 
   for (const action of ['replace', 'recycle'] as const) it('rejects a stale PostgreSQL retry after ' + action, async () => {
     const store = new PrismaLibraryStore(prisma as never);
-    const service = new LibraryService(store), owner = actor(ownerId, tenantA);
+    const service = createLibraryService({ store }), owner = actor(ownerId, tenantA);
     const item = await service.upload(owner, { originalName: 'changed-retry.md', mimeType: 'text/markdown', bytes: Buffer.from('old source') });
     const versionId = item.currentVersion!.id;
     await store.updateVersion(versionId, { parseStatus: 'FAILED' });

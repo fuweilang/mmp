@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 import { Prisma, type LibraryNode, type LibraryVersion, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FILE_PURGE_BLOCKED_REASON, LibraryError, libraryNotFound } from './library.errors';
-import { LibraryService } from './library.service';
+import { LibraryService, createLibraryService } from './library.service';
 import { PrismaLibraryStore } from './library.prisma-store';
 import type { Actor } from './library.types';
 import type { AdminLibraryQuery, AdminLibraryCreate, AdminLibraryCommand, AdminLibraryContext, AdminLibraryScopeImpactQuery } from './library.admin.dto';
@@ -35,7 +35,7 @@ export class LibraryAdminService {
   const memberFiles=await this.prisma.libraryNode.findMany({where:{tenantId,kind:'FILE',state:'ACTIVE'},select:{ownerUserId:true}});
   const folders=await this.prisma.libraryNode.findMany({where:{tenantId,kind:'FOLDER',state:'ACTIVE'}});
   const ownerIds=await this.prisma.libraryNode.findMany({where:{tenantId,state:{not:'PURGED'}},distinct:['ownerUserId'],select:{ownerUserId:true}});const filterOwners=await this.prisma.user.findMany({where:{id:{in:ownerIds.map(n=>n.ownerUserId)}},select:{id:true,name:true}});
-  return {tenant,members:members.map(m=>({...m.user,fileCount:memberFiles.filter(n=>n.ownerUserId===m.user.id).length})),filterOwners,filterFolders:folders.map(f=>({id:f.id,name:f.name,parentId:f.parentId})),limits:new LibraryService(new PrismaLibraryStore(this.prisma)).limitsView(),owners:members.map(m=>m.user),folders:folders.map(n=>({id:n.id,name:n.name,parentId:n.parentId,ownerUserId:n.ownerUserId,scope:n.scope}))};
+  return {tenant,members:members.map(m=>({...m.user,fileCount:memberFiles.filter(n=>n.ownerUserId===m.user.id).length})),filterOwners,filterFolders:folders.map(f=>({id:f.id,name:f.name,parentId:f.parentId})),limits:createLibraryService({store:new PrismaLibraryStore(this.prisma)}).limitsView(),owners:members.map(m=>m.user),folders:folders.map(n=>({id:n.id,name:n.name,parentId:n.parentId,ownerUserId:n.ownerUserId,scope:n.scope}))};
  }
  async items(user: Platform, tenantId: string, query: AdminLibraryQuery) {
   this.platform(user);const tenant=await this.tenant(this.prisma,tenantId);const canWrite=tenant.status==='active';
@@ -63,7 +63,7 @@ export class LibraryAdminService {
   return this.prisma.$transaction(async tx => {
    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'library-tree:' + tenantId}))`;
    await this.tenant(tx,tenantId,true);
-   const domain = new LibraryService(new PrismaLibraryStore(tx));
+   const domain = createLibraryService({store:new PrismaLibraryStore(tx)});
    return domain.scopeImpact(this.actor(user,tenantId),nodeId,query.scope);
   },{maxWait:10000,timeout:60000});
  }
@@ -79,7 +79,7 @@ export class LibraryAdminService {
    const prior=await tx.auditLog.findFirst({where:{tenantId,userId:user.id,action:'library_admin_result',meta:{path:['requestId'],equals:input.requestId}},orderBy:[{createdAt:'asc'},{id:'asc'}]});
    if(prior?.meta&&typeof prior.meta==='object'&&!Array.isArray(prior.meta)) {const m=prior.meta;if(m.requestHash!==requestHash)throw new LibraryError(409,'同一请求标识不能用于不同操作','REQUEST_CONFLICT');if(m.success===true&&typeof m.resultNodeId==='string')return {nodeId:m.resultNodeId,versionId:typeof m.resultVersionId==='string'?m.resultVersionId:null,replayed:true};}
    const before=nodeId?await this.lockNode(tx,tenantId,nodeId):null;
-   const result=await work(tx,new LibraryService(new PrismaLibraryStore(tx), undefined, () => Math.max(Date.now(), (before?.updatedAt.getTime() ?? 0) + 1)),this.actor(user,tenantId));
+   const result=await work(tx,createLibraryService({store:new PrismaLibraryStore(tx), now:() => Math.max(Date.now(), (before?.updatedAt.getTime() ?? 0) + 1)}),this.actor(user,tenantId));
    const after=await tx.libraryNode.findFirst({where:{id:result.nodeId,tenantId}});
    await tx.auditLog.create({data:{tenantId,userId:user.id,action:'library_admin_result',meta:{requestId:input.requestId,requestHash,operation:action,nodeId:result.nodeId,originalOwnerUserId:before?.ownerUserId??null,ownerUserId:after?.ownerUserId??null,reason:input.reason??'',success:true,before:this.snapshot(before),after:this.snapshot(after),resultNodeId:result.nodeId,resultVersionId:result.versionId??after?.currentVersionId??null}}});return {...result,replayed:false};
   },{maxWait:10000,timeout:60000});} catch(error) {
@@ -113,7 +113,7 @@ export class LibraryAdminService {
   });
  }
  async content(user:Platform,tenantId:string,nodeId:string,versionId?:string,download=false,inline=false) {
-  this.platform(user);return this.prisma.$transaction(async tx=>{await this.tenant(tx,tenantId);await this.lockNode(tx,tenantId,nodeId);const domain=new LibraryService(new PrismaLibraryStore(tx));const actor=this.actor(user,tenantId);return download?domain.download(actor,nodeId,versionId,inline):domain.preview(actor,nodeId,versionId);},{timeout:60000});
+  this.platform(user);return this.prisma.$transaction(async tx=>{await this.tenant(tx,tenantId);await this.lockNode(tx,tenantId,nodeId);const domain=createLibraryService({store:new PrismaLibraryStore(tx)});const actor=this.actor(user,tenantId);return download?domain.download(actor,nodeId,versionId,inline):domain.preview(actor,nodeId,versionId);},{timeout:60000});
  }
  async impact(user:Platform,tenantId:string,nodeId:string) {
   this.platform(user);const node=await this.prisma.libraryNode.findFirst({where:{id:nodeId,tenantId}});if(!node)throw libraryNotFound();const [versions,children]=await Promise.all([this.prisma.libraryVersion.aggregate({where:{nodeId,tenantId},_count:true,_sum:{sizeBytes:true}}),this.prisma.libraryNode.count({where:{tenantId,parentId:nodeId,state:{in:['ACTIVE','RECYCLED']}}})]);return {nodeId,versionCount:versions._count,bytes:versions._sum.sizeBytes??0,children,referenceStatus:'UNVERIFIED',activeUseStatus:'UNVERIFIED',canPurge:node.state==='RECYCLED'&&node.kind!=='FILE'&&children===0,blockedReason:node.kind==='FILE'?FILE_PURGE_BLOCKED_REASON:children?'目录非空，请先处理子项':node.state!=='RECYCLED'?'请先移入回收站':null};

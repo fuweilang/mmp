@@ -1,13 +1,13 @@
 import 'reflect-metadata';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {LibraryService} from '../../src/library/library.service';
+import {createLibraryService} from '../../src/library/library.service';
 import {MemoryLibraryStore} from '../../src/library/library.store';
 import {KnowledgeLibrarySourceAdapter} from '../../src/knowledge-core/library-source.adapter';
 
 test('Library bridge retains full exact version and reuses owning private/shared/recycle ACL',async()=>{
  const store=new MemoryLibraryStore();store.rememberTenant('tenant','Tenant');store.rememberUser('owner','Owner');store.rememberUser('peer','Peer');
- const library=new LibraryService(store);
+ const library=createLibraryService({store});
  const actor={userId:'owner',tenantId:'tenant',activeMember:true,isOrgAdmin:false,isPlatformAdmin:false};
  const text='头部说明。\n\n'+Array.from({length:100},(_,i)=>`第${i}段，保留完整内容。`).join('\n\n')+'\n\n尾部 MMP-OLD-001';
  const file=await library.upload(actor,{originalName:'original.txt',mimeType:'text/plain',bytes:Buffer.from(text)});

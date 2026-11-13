@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { LibraryService } from '../../src/library/library.service';
+import { createLibraryService } from '../../src/library/library.service';
 import { MemoryLibraryStore } from '../../src/library/library.store';
 import type { Actor } from '../../src/library/library.types';
 
 function setup() {
   const store = new MemoryLibraryStore();
   store.rememberTenant('a', '企业甲');
-  const service = new LibraryService(store);
+  const service = createLibraryService({ store });
   const owner: Actor = { userId: 'owner', tenantId: 'a', activeMember: true, isOrgAdmin: false, isPlatformAdmin: false };
   const mate = { ...owner, userId: 'mate' };
   const admin = { ...owner, userId: 'admin', isOrgAdmin: true };

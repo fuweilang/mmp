@@ -270,6 +270,7 @@ import {
   type PermissionCatalogGroup,
 } from '../../api/admin';
 import { useAuthStore } from '../../stores/auth';
+import { useAdminSearch, useAdminTable } from '../../composables/useAdminTable';
 import PlatformRolesPane from '@/components/admin/roles/PlatformRolesPane.vue';
 import TenantRolesPane from '@/components/admin/roles/TenantRolesPane.vue';
 import PermCatalogPicker from '@/components/admin/roles/PermCatalogPicker.vue';
@@ -294,14 +295,10 @@ const isTenantTab = computed(() => activeTab.value === 'tenant');
 const tenantFilter = ref('');
 const enterprises = ref<Array<{ id: string; name: string }>>([]);
 const createTenantId = ref('');
-const loading = ref(false);
 const saving = ref(false);
 const errorText = ref('');
 const keywordDraft = ref('');
 const keyword = ref('');
-const currentPage = ref(1);
-const pageSize = ref(10);
-let searchTimer = 0;
 
 const drawerOpen = ref(false);
 const drawerMode = ref<'create' | 'edit'>('edit');
@@ -354,22 +351,48 @@ const canEditMeta = computed(() => {
 });
 
 const hasActiveFilters = computed(() => Boolean(keyword.value));
-const emptyText = computed(() => (hasActiveFilters.value ? '没有符合条件的角色' : '暂无角色'));
 
-const filteredRows = computed(() => {
-  const q = keyword.value.trim().toLowerCase();
-  if (!q) return rows.value;
-  return rows.value.filter((row) =>
-    row.name.toLowerCase().includes(q)
-    || row.key.toLowerCase().includes(q)
-    || (row.description || '').toLowerCase().includes(q),
-  );
+const {
+  currentPage,
+  pageSize,
+  filteredRows,
+  pagedRows,
+  emptyText,
+  resetPage,
+  onPageChange,
+  onPageSizeChange,
+} = useAdminTable<RoleRow>({
+  rows: () => rows.value,
+  pageSize: 10,
+  hasFilters: () => hasActiveFilters.value,
+  emptyAll: '暂无角色',
+  emptyFiltered: '没有符合条件的角色',
+  filter: (row) => {
+    const q = keyword.value.trim().toLowerCase();
+    if (!q) return true;
+    return row.name.toLowerCase().includes(q)
+      || row.key.toLowerCase().includes(q)
+      || (row.description || '').toLowerCase().includes(q);
+  },
 });
 
-const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredRows.value.slice(start, start + pageSize.value);
+const {
+  loading,
+  onSearchInput,
+  onSearchNow,
+  onReset,
+  dispose: disposeSearch,
+} = useAdminSearch({
+  debounceMs: 500,
+  load: () => reload(),
+  resetPage,
+  beforeSearch: () => { keyword.value = keywordDraft.value.trim(); },
+  clearFilters: () => {
+    keywordDraft.value = '';
+    keyword.value = '';
+  },
 });
+
 
 const viewSelected = computed(() => new Set(viewing.value?.permissions ?? []));
 
@@ -608,46 +631,13 @@ async function onDelete(row: RoleRow) {
   }
 }
 
-function resetPage() {
-  currentPage.value = 1;
-}
-
-function onSearchInput() {
-  window.clearTimeout(searchTimer);
-  searchTimer = window.setTimeout(onSearchNow, 500);
-}
-
-function onSearchNow() {
-  window.clearTimeout(searchTimer);
-  keyword.value = keywordDraft.value.trim();
-  resetPage();
-  void reload();
-}
-
-function onReset() {
-  window.clearTimeout(searchTimer);
-  keywordDraft.value = '';
-  keyword.value = '';
-  resetPage();
-  void reload();
-}
-
-function onPageChange(page: number) {
-  currentPage.value = page;
-}
-
-function onPageSizeChange(size: number) {
-  pageSize.value = size;
-  resetPage();
-}
-
 onMounted(() => {
   syncTabQuery(activeTab.value);
   void reload();
 });
 
 onBeforeUnmount(() => {
-  window.clearTimeout(searchTimer);
+  disposeSearch();
 });
 </script>
 

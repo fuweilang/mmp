@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
-import { LibraryService } from '../../src/library/library.service';
+import { createLibraryService } from '../../src/library/library.service';
 import { MemoryLibraryStore } from '../../src/library/library.store';
 import type { Actor } from '../../src/library/library.types';
 const owner: Actor = { userId: 'owner', tenantId: 'ta', activeMember: true, isOrgAdmin: false, isPlatformAdmin: false };
@@ -8,7 +8,7 @@ const platform = { userId: 'platform', isPlatformAdmin: true };
 function setup() {
  const store = new MemoryLibraryStore(); store.rememberTenant('ta', '甲'); store.rememberTenant('tb', '乙');
  let now = Date.parse('2026-11-08T00:00:00+08:00');
- return { store, service: new LibraryService(store, undefined, () => now), expire: () => { now += 120_000; }, end: () => now + 60_000 };
+ return { store, service: createLibraryService({ store, now: () => now }), expire: () => { now += 120_000; }, end: () => now + 60_000 };
 }
 it('managed browsing derives the tenant from one grant and never leaks another owner title, even under multiple grants', async () => {
  const h = setup(); const upload = (who: Actor, name: string) => h.service.upload(who, { originalName: name, mimeType: 'text/markdown', bytes: Buffer.from('测试授权正文') });

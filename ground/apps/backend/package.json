@@ -12,7 +12,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "test:library": "node --import tsx --test test/library/library.flow.spec.ts test/library/library.sharing.spec.ts test/library/library.custody.spec.ts test/tenant/effective-permissions.unit.test.ts test/library/library.member-isolation.spec.ts",
+    "test:library": "node --import tsx --test test/library/library.context.spec.ts test/library/library.flow.spec.ts test/library/library.sharing.spec.ts test/library/library.custody.spec.ts test/tenant/effective-permissions.unit.test.ts test/library/library.member-isolation.spec.ts",
     "test:auth": "node --import tsx --test test/auth/sms.unit.test.ts test/auth/aliyun-sms.unit.test.ts test/auth/sms-auth.spec.ts test/auth/startup.spec.ts",
     "test:library:db": "node --import tsx --test test/library/library.postgres.spec.ts",
     "postinstall": "prisma generate",

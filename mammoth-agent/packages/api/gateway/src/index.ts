@@ -1,19 +1,15 @@
 /**
  * Live Typert Remote dispatch over Cordis Services and registered providers.
  * Unary transport and response envelopes belong to Connection; live Remote
- * streams use the Gateway-owned WebSocket mux.
+ * streams use the Gateway-owned WebSocket mux. RPC envelopes, call bindings,
+ * invocation contexts, and the Remote event queue live in their own modules.
  * @module @mammoth-ai/mmp-api-gateway
  */
 
 import { randomUUID } from 'node:crypto'
-import { Context, Service, symbols } from '@mammoth-ai/cordis'
-import type {
-  ConnectionRpcAttachment,
-  ConnectionRpcHandler,
-} from '@mammoth-ai/mmp-client-connection'
+import { Context, Service } from '@mammoth-ai/cordis'
 import type { RemoteAccessDecision } from '@mammoth-ai/mmp-api-remote-access'
 import { callResources, eventResources } from './access.ts'
-import { Deque } from '@mammoth-ai/mmp-deque'
 import type { WebUpgradeRoute } from '@mammoth-ai/mmp-host-webserver'
 import { MAX_TIMER_DELAY_MS } from '@mammoth-ai/mmp-timeout'
 import type {} from '@mammoth-ai/mmp-cmdline'
@@ -38,7 +34,6 @@ import type {
   InvokeRemoteRequest,
   PendingRemoteEventInfo,
   TypertGateway,
-  TypertGatewayErrorCode,
   TypertGatewayWireStream,
   TypertRemoteEventDispatch,
   TypertRemoteEventFrame,
@@ -66,9 +61,41 @@ import {
   type RemoteEventId,
   type RemoteEventInvocationFrame,
   type RemoteEventReadyFrame,
-  type RemoteStreamFailure,
 } from './stream-protocol.ts'
+import {
+  TypertGatewayError,
+} from './errors.ts'
+import {
+  assertExactArguments,
+  decode,
+  isObject,
+  isPlainObject,
+  methodParameterNames,
+  originalOf,
+  readBinding,
+  validateArguments,
+  validateBinding,
+} from './binding.ts'
+import {
+  assertPeerLive,
+  cancellableStream,
+  GatewayInvocation,
+  isIterable,
+  methodSignal,
+  NEVER_ABORTED_SIGNAL,
+  releaseUplink,
+  remoteCancelled,
+} from './invocation.ts'
+import type { ConnectionRpcResult } from './envelope.ts'
+import {
+  encodeRpcResult,
+  endpointOf,
+  rpcError,
+  rpcFailure,
+} from './envelope.ts'
+import { RemoteEventQueue } from './remote-event-queue.ts'
 
+export { TypertGatewayError } from './errors.ts'
 export type {
   InvokeRemoteRequest,
   PendingRemoteEventInfo,
@@ -84,16 +111,6 @@ export type {
 } from './types.ts'
 export type { RemoteEventHostInfo } from './stream-protocol.ts'
 
-interface GatewayErrorOptions {
-  readonly cause?: unknown
-  readonly field?: string
-}
-
-interface ResolvedBinding {
-  readonly binding: TypertGatewayBinding
-  readonly original: object
-}
-
 interface PreparedInvocation {
   readonly endpoint: string
   readonly descriptor: InvocationDescriptor
@@ -102,18 +119,6 @@ interface PreparedInvocation {
   readonly args: readonly unknown[]
   readonly method: (...args: never[]) => unknown
   readonly invocation: GatewayInvocation
-}
-
-/** Carrier inputs `GatewayInvocation.uplink()` decodes on first use. */
-interface UplinkSource {
-  readonly window: RemoteInvocation['uplinkWindow']
-  /** Carrier items; an immediately ended iterable when the carrier has none. */
-  readonly source: AsyncIterable<unknown>
-  /** Descriptor codec, or the JSON-safety codec when the descriptor declares no uplink. */
-  readonly codec: TypertCodec
-  readonly endpoint: string
-  /** Fail the logical stream with a Remote failure as the reason. */
-  readonly abort: (reason: unknown) => void
 }
 
 interface RegisteredRemoteEventSource {
@@ -143,15 +148,11 @@ interface PendingRemoteEvent {
   releaseSignal: () => void
 }
 
-type ConnectionRpcResult = Awaited<ReturnType<ConnectionRpcHandler>>
-type ConnectionRpcError = Extract<ConnectionRpcResult, { readonly ok: false }>['error']
-const NEVER_ABORTED_SIGNAL = new AbortController().signal
 const DEFAULT_WEBSOCKET_HEARTBEAT_INTERVAL_MS = 2_000
 const DEFAULT_STREAM_INBOX_BYTES = 262_144
 const EMPTY_ASYNC_ITERABLE: AsyncIterable<never> = {
   [Symbol.asyncIterator]: () => ({ next: () => Promise.resolve({ value: undefined, done: true }) }),
 }
-const UPLINK_DONE: IteratorReturnResult<undefined> = { value: undefined, done: true }
 const SRC_JSON_CODEC: TypertCodec = { mode: 'src-json' }
 
 /** Gateway transport configuration. */
@@ -170,47 +171,6 @@ interface ResolvedConfig extends Config {
   readonly websocketCompression: 'none' | 'deflate'
 }
 
-/**
- * Dispatch failure produced outside the invoked business method. Rides the
- * shared Remote failure vocabulary, so its code crosses the wire instead of
- * folding to `internal`.
- */
-export class TypertGatewayError extends RemoteError<TypertGatewayErrorCode> {
-  /** Canonical `<namespace>/<method>` endpoint. */
-  readonly endpoint: string
-  /** Affected wire field when the failure is field-specific. */
-  readonly field: string | undefined
-
-  /**
-   * Construct a Gateway failure without embedding boundary values in its message.
-   * @param code - stable failure category.
-   * @param endpoint - canonical Remote endpoint.
-   * @param message - correction-oriented diagnostic without sensitive values.
-   * @param options - optional field and contained cause.
-   */
-  constructor(
-    code: TypertGatewayErrorCode,
-    endpoint: string,
-    message: string,
-    options: GatewayErrorOptions = {},
-  ) {
-    super(
-      code,
-      `typert gateway: ${endpoint}: ${message}`,
-      { endpoint, ...options.field === undefined ? {} : { field: options.field } },
-      options.cause === undefined ? undefined : { cause: options.cause },
-    )
-    this.name = 'TypertGatewayError'
-    this.endpoint = endpoint
-    this.field = options.field
-  }
-}
-
-/**
- * Resolve strict generated definitions or conservative SRC markers against
- * current Cordis Services and Typert providers.
- * @typert service typertGateway
- */
 export class TypertGatewayService extends Service implements TypertGateway {
   static inject = ['typert', 'remoteAccess']
   static Config: z<Config> = z.object({
@@ -1120,111 +1080,7 @@ export class TypertGatewayService extends Service implements TypertGateway {
   }
 }
 
-function encodeRpcResult(value: unknown, codec: TypertCodec): ConnectionRpcResult {
-  const attachments: ConnectionRpcAttachment[] = []
-  const writeBytes = (bytes: Uint8Array, path: readonly (string | number)[]): null => {
-    attachments.push({ path: [...path], bytes })
-    return null
-  }
-  const encoded = codec.mode === 'strict'
-    ? codec.encode?.(value, writeBytes) ?? value
-    : encodeRuntimeResult(value, writeBytes)
-  return { ok: true, value: encoded, ...(attachments.length === 0 ? {} : { attachments }) }
-}
 
-function encodeRuntimeResult(
-  input: unknown,
-  writeBytes: (bytes: Uint8Array, path: readonly (string | number)[]) => null,
-): unknown {
-  const path: (string | number)[] = []
-  const ancestors = new Set<object>()
-  const extract = (input: unknown, key: string): unknown => {
-    // Capture accessors and toJSON once, before materializing the JSON metadata.
-    let value = input
-    if (input !== null && typeof input === 'object' && !(input instanceof Uint8Array)) {
-      const toJSON: unknown = Reflect.get(input, 'toJSON')
-      if (typeof toJSON === 'function') value = Reflect.apply(toJSON, input, [key])
-    }
-    if (value instanceof Uint8Array) return writeBytes(value, path)
-    if (typeof value !== 'object' || value === null) return value
-    if (value instanceof Number || value instanceof String || value instanceof Boolean) return value.valueOf()
-    if (ancestors.has(value)) throw new TypeError('gateway: circular RPC result')
-    ancestors.add(value)
-    let copy: object
-    if (Array.isArray(value)) {
-      const items: unknown[] = []
-      // JSON arrays include every index, even holes and non-enumerable elements.
-      for (let index = 0, length = value.length; index < length; index++) items.push(child(value[index], index))
-      copy = items
-    } else {
-      const fields: Record<string, unknown> = {}
-      for (const key of Object.keys(value)) {
-        const item: unknown = Reflect.get(value, key)
-        // A toJSON method on the projected object must not run a second time.
-        if (key === 'toJSON' && typeof item === 'function') continue
-        const extracted = child(item, key)
-        if (key === '__proto__') Object.defineProperty(fields, key, { value: extracted, enumerable: true })
-        else fields[key] = extracted
-      }
-      copy = fields
-    }
-    ancestors.delete(value)
-    return copy
-  }
-  const child = (value: unknown, key: string | number): unknown => {
-    if (typeof value !== 'object' || value === null) return value
-    path.push(key)
-    const extracted = extract(value, String(key))
-    path.pop()
-    return extracted
-  }
-  return extract(input, 'value')
-}
-
-type RemoteEventWireFrame =
-  | RemoteEventEmitFrame
-  | RemoteEventInvocationFrame
-  | RemoteEventCancellationFrame
-
-/** Pull-driven queue owned by one connected Client event generation. */
-class RemoteEventQueue {
-  private readonly frames = new Deque<RemoteEventWireFrame>()
-  private waiter: (() => void) | undefined
-  private closed = false
-
-  push(frame: RemoteEventWireFrame): void {
-    if (this.closed) return
-    this.frames.pushBack(frame)
-    this.waiter?.()
-  }
-
-  end(): void {
-    if (this.closed) return
-    this.closed = true
-    this.waiter?.()
-  }
-
-  /**
-   * Yield buffered and later frames until the queue ends or `signal` aborts.
-   * An abort discards the frames still buffered, so a revoked Peer receives none of them.
-   * @param signal - Client generation lifetime.
-   * @returns the queued wire frames in push order.
-   */
-  async *iterate(signal: AbortSignal): AsyncGenerator<RemoteEventWireFrame> {
-    const abort = (): void => { this.end() }
-    signal.addEventListener('abort', abort, { once: true })
-    try {
-      while (true) {
-        while (this.frames.size > 0 && !signal.aborted) yield this.frames.popFront() as RemoteEventWireFrame
-        if (this.closed || signal.aborted) return
-        await new Promise<void>((resolve) => { this.waiter = resolve })
-        this.waiter = undefined
-      }
-    } finally {
-      signal.removeEventListener('abort', abort)
-    }
-  }
-}
 
 function assertRemoteEventFrame(frame: TypertRemoteEventFrame): void {
   assertRemoteEventName(frame)
@@ -1282,468 +1138,7 @@ function remoteRequest(
   return { namespace, method, args: payload.args, signal, peer }
 }
 
-/**
- * The signal a method observes. A carrier that supplies an uplink fails the
- * stream through `control` when an item is rejected, so that invocation joins
- * `control` with the carrier signal; a stream also ends with its Peer. Every
- * other invocation keeps the carrier signal's identity.
- */
-function methodSignal(request: InvokeRemoteRequest, control: AbortController, stream: boolean): AbortSignal {
-  const carrier = request.signal
-  if (request.uplink === undefined && !stream) return carrier ?? NEVER_ABORTED_SIGNAL
-  const joined = carrier === undefined || carrier === control.signal ? [control.signal] : [carrier, control.signal]
-  // `AbortSignal.any` leaves each source only a weak reference to the joined signal,
-  // so per-stream joins on a Host-lifetime Peer signal accumulate nothing.
-  return AbortSignal.any(stream ? [...joined, request.peer.signal] : joined)
-}
 
-/**
- * Refuse a call whose Peer has been disposed.
- * @param peer - Peer the call speaks for.
- * @param endpoint - endpoint named in the failure.
- * @throws {@link TypertGatewayError} `gateway/peer-disposed` once the Peer is disposed.
- */
-function assertPeerLive(peer: PeerScope, endpoint: string): void {
-  if (peer.signal.aborted) {
-    throw new TypertGatewayError('gateway/peer-disposed', endpoint, 'the calling Peer has been disposed')
-  }
-}
 
-function isIterable(value: unknown): value is Iterable<unknown> | AsyncIterable<unknown> {
-  return isObject(value)
-    && (typeof Reflect.get(value, Symbol.iterator) === 'function'
-      || typeof Reflect.get(value, Symbol.asyncIterator) === 'function')
-}
-
-async function *cancellableStream(
-  source: Iterable<unknown> | AsyncIterable<unknown>,
-  endpoint: string,
-  invocation: GatewayInvocation,
-): AsyncGenerator {
-  const { signal } = invocation
-  const asyncFactory: unknown = Reflect.get(source, Symbol.asyncIterator)
-  const syncFactory: unknown = Reflect.get(source, Symbol.iterator)
-  const iterator = typeof asyncFactory === 'function'
-    ? Reflect.apply(asyncFactory, source, []) as AsyncIterator<unknown>
-    : Reflect.apply(syncFactory as (...args: never[]) => Iterator<unknown>, source, [])
-  let rejectAbort: ((error: unknown) => void) | undefined
-  const onAbort = (): void => {
-    rejectAbort?.(streamAbortFailure(endpoint, signal.reason))
-  }
-  signal.addEventListener('abort', onAbort, { once: true })
-  try {
-    while (true) {
-      if (signal.aborted) throw streamAbortFailure(endpoint, signal.reason)
-      // Reusing a pending cancellation promise retains every completed race.
-      const aborted = new Promise<never>((_resolve, reject) => { rejectAbort = reject })
-      // next() can abort and throw synchronously before the race subscribes.
-      void aborted.catch(() => undefined)
-      const next = await Promise.race([Promise.resolve(iterator.next()), aborted])
-      rejectAbort = undefined
-      if (next.done === true) return
-      yield next.value
-    }
-  } finally {
-    rejectAbort = undefined
-    signal.removeEventListener('abort', onAbort)
-    // The uplink closes first so a method blocked on `uplink.next()` unwinds
-    // before its iterator is asked to return.
-    await invocation.close()
-    await iterator.return?.()
-  }
-}
-
-/**
- * The failure a stream surfaces for its abort: a Remote failure used as the
- * reason is the Gateway or carrier failing the stream itself (a rejected,
- * overflowing, or misplaced uplink item); any other abort is a cancellation.
- */
-function streamAbortFailure(endpoint: string, reason: unknown): unknown {
-  return remoteErrorOf(reason) === undefined ? remoteCancelled(endpoint, reason) : reason
-}
-
-/** Carrier-signal cancellation as the shared failure vocabulary expresses it. */
-function remoteCancelled(endpoint: string, cause: unknown): RemoteError<'gateway/cancelled'> {
-  return new RemoteError('gateway/cancelled', `Remote invocation "${endpoint}" was aborted`, {}, { cause })
-}
-
-/**
- * The iterable `invocation.uplink()` returns. Each uplink item passes the
- * descriptor codec, or the JSON-safety check when the descriptor declares no
- * uplink, before delivery; a rejected item fails the whole logical stream.
- * Iteration ends when the Client half-closes or the downlink finishes, and
- * fails when the stream is cancelled, so a method blocked on the uplink always
- * wakes.
- */
-class UplinkDecoder implements AsyncIterable<unknown>, AsyncIterator<unknown> {
-  private readonly source: AsyncIterator<unknown>
-  private readonly interrupted = new Set<PromiseWithResolvers<IteratorResult<unknown>>>()
-  private readonly onAbort = (): void => {
-    const failure = streamAbortFailure(this.endpoint, this.signal.reason)
-    for (const read of this.interrupted) read.reject(failure)
-  }
-  private closed = false
-
-  constructor(
-    uplink: AsyncIterable<unknown>,
-    private readonly codec: TypertCodec,
-    private readonly endpoint: string,
-    private readonly signal: AbortSignal,
-    private readonly abort: (reason: unknown) => void,
-  ) {
-    this.source = uplink[Symbol.asyncIterator]()
-    signal.addEventListener('abort', this.onAbort, { once: true })
-  }
-
-  [Symbol.asyncIterator](): AsyncIterator<unknown> {
-    return this
-  }
-
-  async next(): Promise<IteratorResult<unknown>> {
-    // A cancelled stream reports the cancellation on every read, closed or not.
-    if (this.signal.aborted) throw streamAbortFailure(this.endpoint, this.signal.reason)
-    if (this.closed) return UPLINK_DONE
-    // Only pending reads belong to the decoder; finish() must wake all of them.
-    const interrupted = Promise.withResolvers<IteratorResult<unknown>>()
-    this.interrupted.add(interrupted)
-    // The source can abort and throw synchronously before the race subscribes.
-    void interrupted.promise.catch(() => undefined)
-    let next: IteratorResult<unknown>
-    try {
-      next = await Promise.race([this.source.next(), interrupted.promise])
-    } finally {
-      this.interrupted.delete(interrupted)
-    }
-    if (next.done === true) {
-      this.finish()
-      return UPLINK_DONE
-    }
-    let value: unknown
-    try {
-      // A top-level `undefined` is the absent `value` of its frame: without a codec it is the item itself.
-      value = next.value === undefined && this.codec.mode === 'src-json'
-        ? undefined
-        : decode(this.codec, next.value, this.endpoint, 'uplink')
-    } catch (failure) {
-      // The codec failure (`gateway/input-invalid`, field `uplink`) fails the whole logical stream.
-      this.abort(failure)
-      throw failure
-    }
-    return { value, done: false }
-  }
-
-  /** Downlink finished or the method stopped reading: unread uplink items are dropped. */
-  return(): Promise<IteratorResult<unknown>> {
-    if (!this.closed) {
-      this.finish()
-      // The carrier owns the source iterator; a generator blocked in next()
-      // completes this return once it yields, so it is not awaited here.
-      void Promise.resolve().then(() => this.source.return?.()).catch(() => undefined)
-    }
-    return Promise.resolve(UPLINK_DONE)
-  }
-
-  private finish(): void {
-    this.closed = true
-    this.signal.removeEventListener('abort', this.onAbort)
-    for (const read of this.interrupted) read.resolve(UPLINK_DONE)
-  }
-}
-
-/**
- * The context of one Remote call as the receiving method reads it through
- * `this.ctx.invocation`. The uplink is decoded on first use and released when
- * the call's downlink finishes.
- */
-class GatewayInvocation implements RemoteInvocation {
-  private decoder: UplinkDecoder | undefined
-  private taken = false
-
-  get uplinkWindow(): RemoteInvocation['uplinkWindow'] { return this.uplink_.window }
-
-  /**
-   * @param request - decoded endpoint and wire arguments.
-   * @param service - Cordis service key of the receiver.
-   * @param peer - Peer the call speaks for.
-   * @param signal - the signal the method observes.
-   * @param uplink - carrier items and the codec that decodes them.
-   */
-  constructor(
-    readonly request: RemoteInvocation['request'],
-    readonly service: string,
-    readonly peer: PeerScope,
-    readonly signal: AbortSignal,
-    private readonly uplink_: UplinkSource,
-  ) {}
-
-  uplink<In = unknown>(): AsyncIterable<In> {
-    if (this.taken) {
-      throw new Error(`typert gateway: ${this.uplink_.endpoint}: invocation.uplink() is available once per call`)
-    }
-    this.taken = true
-    const { source, codec, endpoint, abort } = this.uplink_
-    this.decoder = new UplinkDecoder(source, codec, endpoint, this.signal, abort)
-    // The descriptor codec decides what arrives; `In` is the caller's assertion.
-    return this.decoder as AsyncIterable<In>
-  }
-
-  /**
-   * The downlink finished: release the uplink. Unread items are dropped, and a
-   * carrier iterable the method never took is returned so it stops producing;
-   * a later `uplink()` throws like a second one would.
-   * @returns settles once a taken uplink has closed.
-   */
-  async close(): Promise<void> {
-    if (this.decoder !== undefined) {
-      await this.decoder.return()
-      return
-    }
-    this.taken = true
-    releaseUplink(this.uplink_.source)
-  }
-}
-
-/**
- * Return a carrier uplink nobody will read, so it drops later items instead of
- * buffering them. The carrier owns the iterator and `return()` is not awaited:
- * a generator blocked in `next()` completes it only once it yields.
- * @param source - the carrier's uplink iterable.
- */
-function releaseUplink(source: AsyncIterable<unknown>): void {
-  void Promise.resolve().then(() => source[Symbol.asyncIterator]().return?.()).catch(() => undefined)
-}
-
-function rpcFailure(error: unknown): ConnectionRpcResult {
-  const remote = remoteErrorOf(error)
-  if (remote !== undefined) {
-    return { ok: false, error: { code: remote.code, message: remote.message, details: remote.details } }
-  }
-  return {
-    ok: false,
-    error: {
-      code: 'gateway/internal',
-      message: error instanceof Error ? error.message : String(error),
-      details: {},
-    },
-  }
-}
-
-function rpcError(error: unknown): ConnectionRpcError & RemoteStreamFailure {
-  return (rpcFailure(error) as Extract<ConnectionRpcResult, { readonly ok: false }>).error
-}
-
-function endpointOf(namespace: string, method: string): string {
-  return `${namespace}/${method}`
-}
-
-function validateBinding(
-  receiver: object,
-  serviceKey: string,
-  namespace: string,
-  endpoint: string,
-): ResolvedBinding {
-  const original = originalOf(receiver)
-  const value: unknown = Reflect.get(original, 'typertRemote')
-  if (value === undefined) {
-    throw new TypertGatewayError(
-      'gateway/binding-invalid',
-      endpoint,
-      `Service ${JSON.stringify(serviceKey)} has no visible typertRemote binding`,
-    )
-  }
-  return {
-    binding: readBinding(value, original, serviceKey, endpoint, namespace),
-    original,
-  }
-}
-
-function readBinding(
-  value: unknown,
-  original: object,
-  serviceKey: string,
-  endpoint: string,
-  namespace?: string,
-): TypertGatewayBinding {
-  if (!isObject(value)
-    || Reflect.get(value, 'service') !== original
-    || Reflect.get(value, 'serviceKey') !== serviceKey
-    || typeof Reflect.get(value, 'namespace') !== 'string'
-    || (namespace !== undefined && Reflect.get(value, 'namespace') !== namespace)) {
-    throw new TypertGatewayError(
-      'gateway/binding-invalid',
-      endpoint,
-      `Service ${JSON.stringify(serviceKey)} has an inconsistent typertRemote binding`,
-    )
-  }
-  return value as TypertGatewayBinding
-}
-
-function originalOf(receiver: object): object {
-  const original: unknown = Reflect.get(receiver, symbols.original)
-  return isObject(original) ? original : receiver
-}
-
-function methodParameterNames(service: object, method: string, endpoint: string): readonly string[] {
-  let prototype: object | null = Object.getPrototypeOf(service) as object | null
-  let implementation: ((this: object, ...args: never[]) => unknown) | undefined
-  while (prototype !== null) {
-    const descriptor = Object.getOwnPropertyDescriptor(prototype, method)
-    if (descriptor !== undefined) {
-      if ('value' in descriptor && typeof descriptor.value === 'function') {
-        implementation = descriptor.value as (this: object, ...args: never[]) => unknown
-      }
-      break
-    }
-    prototype = Object.getPrototypeOf(prototype) as object | null
-  }
-  if (implementation === undefined) {
-    throw new TypertGatewayError(
-      'gateway/method-unavailable',
-      endpoint,
-      `Remote marker has no prototype method ${JSON.stringify(method)}`,
-    )
-  }
-  const source = Function.prototype.toString.call(implementation)
-  const open = source.indexOf('(')
-  const close = source.indexOf(')', open + 1)
-  /* v8 ignore next -- standard public class-method syntax always contains a parenthesized parameter list. */
-  if (open < 0 || close < 0) return invalidSignature(endpoint, method)
-  const body = source.slice(open + 1, close).trim()
-  if (body.length === 0) return []
-  const parts = body.split(',').map(part => part.trim())
-  const names = new Set<string>()
-  for (const part of parts) {
-    if (!/^[$A-Z_a-z][$\w]*$/u.test(part) || names.has(part)) return invalidSignature(endpoint, method)
-    names.add(part)
-  }
-  return [...names]
-}
-
-function invalidSignature(endpoint: string, method: string): never {
-  throw new TypertGatewayError(
-    'gateway/signature-invalid',
-    endpoint,
-    `SRC method ${JSON.stringify(method)} must use unique identifier parameters without destructuring, defaults, or rest`,
-  )
-}
-
-function assertExactArguments(
-  args: Readonly<Record<string, unknown>>,
-  descriptor: InvocationDescriptor,
-  endpoint: string,
-): void {
-  if (!isPlainObject(args)) {
-    throw new TypertGatewayError('gateway/arguments-invalid', endpoint, 'args must be a plain object')
-  }
-  const expected = new Set(descriptor.parameters.map(parameter => parameter.wire))
-  if (descriptor.invocation.kind === 'context') expected.add(descriptor.invocation.wire)
-  const actual = Reflect.ownKeys(args)
-  const extra = actual.filter(key => typeof key !== 'string' || !expected.has(key))
-  // A JSON field may be omitted when the strict descriptor declares absence,
-  // and always under SRC: a weak descriptor reads parameter names from the
-  // JavaScript signature and cannot see which are optional, so LIB is where an
-  // omitted required argument is caught. Lookup ids are never omissible.
-  const acceptsMissing = new Set(descriptor.parameters
-    .filter(parameter => parameter.source === 'json'
-      && (parameter.acceptsUndefined === true || parameter.codec.mode === 'src-json'))
-    .map(parameter => parameter.wire))
-  const missing = [...expected].filter(key => !Object.hasOwn(args, key) && !acceptsMissing.has(key))
-  if (extra.length === 0 && missing.length === 0) return
-  const clauses: string[] = []
-  if (missing.length > 0) clauses.push(`missing ${missing.map(key => JSON.stringify(key)).join(', ')}`)
-  if (extra.length > 0) clauses.push(`unexpected ${extra.map(key => JSON.stringify(String(key))).join(', ')}`)
-  throw new TypertGatewayError('gateway/arguments-invalid', endpoint, `args fields do not match the descriptor: ${clauses.join('; ')}`)
-}
-
-/**
- * Decode every present JSON argument once through its parameter codec; a
- * Typert codec drops object fields its compiled type does not declare. Lookup
- * and Context identities keep their wire values; dispatch decodes and resolves
- * them only after the access check. An absent field stays absent; a present
- * `undefined` is not JSON-safe and fails decoding.
- */
-function validateArguments(
-  descriptor: InvocationDescriptor,
-  args: Readonly<Record<string, unknown>>,
-  endpoint: string,
-): Readonly<Record<string, unknown>> {
-  const entries: [string, unknown][] = []
-  if (descriptor.invocation.kind === 'context') entries.push([descriptor.invocation.wire, args[descriptor.invocation.wire]])
-  for (const parameter of descriptor.parameters) {
-    if (!Object.hasOwn(args, parameter.wire)) continue
-    const value = args[parameter.wire]
-    entries.push([parameter.wire, parameter.source === 'json' ? decode(parameter.codec, value, endpoint, parameter.wire) : value])
-  }
-  return Object.fromEntries(entries)
-}
-
-function decode(
-  codec: TypertCodec,
-  value: unknown,
-  endpoint: string,
-  field: string,
-): unknown {
-  try {
-    if (codec.mode === 'strict') {
-      value = codec.create().parse(value)
-      /* v8 ignore next -- generated optional-input codecs are the only strict codecs that return undefined. */
-      if (value === undefined) return value
-    }
-    assertJsonValue(value, new Set())
-    return value
-  } catch (cause) {
-    throw new TypertGatewayError(
-      'gateway/input-invalid',
-      endpoint,
-      `wire field ${JSON.stringify(field)} failed boundary validation`,
-      { cause, field },
-    )
-  }
-}
-
-function assertJsonValue(value: unknown, ancestors: Set<object>): void {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return
-  if (typeof value === 'number') {
-    if (Number.isFinite(value)) return
-    throw new TypeError('non-finite number is not JSON-safe')
-  }
-  if (!isObject(value)) throw new TypeError(`${typeof value} is not JSON-safe`)
-  if (ancestors.has(value)) throw new TypeError('cyclic value is not JSON-safe')
-  ancestors.add(value)
-  try {
-    if (Array.isArray(value)) {
-      if (Object.getOwnPropertySymbols(value).length > 0 || Object.keys(value).length !== value.length) {
-        throw new TypeError('sparse or decorated array is not JSON-safe')
-      }
-      for (let index = 0; index < value.length; index += 1) {
-        if (!Object.hasOwn(value, index)) throw new TypeError('sparse array is not JSON-safe')
-        assertJsonValue(value[index], ancestors)
-      }
-      return
-    }
-    if (!isPlainObject(value)) throw new TypeError('non-plain object is not JSON-safe')
-    if (Object.getOwnPropertySymbols(value).length > 0) throw new TypeError('symbol property is not JSON-safe')
-    for (const key of Reflect.ownKeys(value)) {
-      const descriptor = Object.getOwnPropertyDescriptor(value, key)
-      /* v8 ignore next -- ownKeys() just returned this key; only a hostile same-process Proxy can delete it between operations. */
-      if (descriptor === undefined || !descriptor.enumerable || !('value' in descriptor)) {
-        throw new TypeError('non-data property is not JSON-safe')
-      }
-      assertJsonValue(descriptor.value, ancestors)
-    }
-  } finally {
-    ancestors.delete(value)
-  }
-}
-
-function isPlainObject(value: object): value is Record<string, unknown> {
-  if (Array.isArray(value)) return false
-  const prototype = Object.getPrototypeOf(value) as object | null
-  return prototype === null || prototype === Object.prototype
-}
-
-function isObject(value: unknown): value is object {
-  return (typeof value === 'object' && value !== null) || typeof value === 'function'
-}
 
 export default TypertGatewayService

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
-import { LibraryService } from '../../src/library/library.service';
+import { createLibraryService } from '../../src/library/library.service';
 import { LibraryAdminService } from '../../src/library/library.admin.service';
 import { LibraryController } from '../../src/library/library.controller';
 import { MemoryLibraryStore } from '../../src/library/library.store';
@@ -14,7 +14,7 @@ import type { Actor } from '../../src/library/library.types';
 
 it('management visibility never grants AI reference access through search/open/ask/source-use', async () => {
   const store = new MemoryLibraryStore(); store.rememberTenant('a', 'A'); store.rememberTenant('b', 'B');
-  const service = new LibraryService(store);
+  const service = createLibraryService({ store });
   const owner: Actor = { userId: 'owner', tenantId: 'a', activeMember: true, isOrgAdmin: false, isPlatformAdmin: false };
   const platform = { ...owner, userId: 'platform', isPlatformAdmin: true, isOrgAdmin: true };
   const mine = await service.upload(platform, { originalName: 'mine.md', mimeType: 'text/markdown', bytes: Buffer.from('member isolation mine') });

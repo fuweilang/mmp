@@ -39,6 +39,8 @@ export async function startGroundWebRouter(options: {
   publicOrigin?: string
   cookieName: string
   maxWorkers: number
+  /** Stop an identity Host after this many milliseconds with no open request or socket. Omit to keep it until process exit. */
+  idleMs?: number
   requestTimeoutMs: number
   startWorker: (identity: GroundWebIdentity, publicOrigin: string, signal: AbortSignal) => Promise<IdentityWebWorker>
 }): Promise<{ origin: string; listenerOrigin: string; close: () => Promise<void> }> {
@@ -53,8 +55,15 @@ export async function startGroundWebRouter(options: {
     throw new Error('Local Web and Ground must use the same HTTP loopback hostname')
   }
   if (!Number.isSafeInteger(options.maxWorkers) || options.maxWorkers < 1) throw new Error('maxWorkers must be a positive integer')
+  if (options.idleMs !== undefined && (!Number.isSafeInteger(options.idleMs) || options.idleMs < 1)) throw new Error('idleMs must be a positive integer')
   const lifetime = new AbortController()
-  const workers = new Map<string, Promise<IdentityWebWorker>>()
+  interface IdentitySlot {
+    readonly worker: Promise<IdentityWebWorker>
+    busy: number
+    evicting?: Promise<void>
+    timer?: ReturnType<typeof setTimeout>
+  }
+  const slots = new Map<string, IdentitySlot>()
   const sockets = new Set<Socket>()
   const proxy = httpProxy.createProxyServer({ ws: true, xfwd: false, changeOrigin: false })
   let origin = ''
@@ -79,22 +88,71 @@ export async function startGroundWebRouter(options: {
       AbortSignal.any([lifetime.signal, AbortSignal.timeout(options.requestTimeoutMs)]))
     return verified.identity
   }
-  const workerFor = (identity: GroundWebIdentity): Promise<IdentityWebWorker> => {
+  const activeSlots = (): number => {
+    let count = 0
+    for (const slot of slots.values()) if (slot.evicting === undefined) count += 1
+    return count
+  }
+  const retain = (slot: IdentitySlot): void => {
+    slot.busy += 1
+    if (slot.timer !== undefined) { clearTimeout(slot.timer); slot.timer = undefined }
+  }
+  const armIdle = (key: string, slot: IdentitySlot): void => {
+    if (options.idleMs === undefined || slot.busy > 0 || slot.evicting !== undefined || lifetime.signal.aborted) return
+    slot.timer = setTimeout(() => { void retire(key, slot) }, options.idleMs)
+    slot.timer.unref()
+  }
+  const release = (key: string, slot: IdentitySlot): void => {
+    if (slots.get(key) !== slot) return
+    slot.busy = Math.max(0, slot.busy - 1)
+    if (slot.busy === 0) armIdle(key, slot)
+  }
+  const shutdownSlot = (slot: IdentitySlot): Promise<void> => {
+    if (slot.evicting !== undefined) return slot.evicting
+    if (slot.timer !== undefined) clearTimeout(slot.timer)
+    let finish: () => void = () => {}
+    slot.evicting = new Promise<void>(resolve => { finish = resolve })
+    return (async () => {
+      try { await (await slot.worker).close() }
+      catch (error) { console.error('[web-sso] identity shutdown failed:', error instanceof Error ? error.message : String(error)) }
+      finally { finish() }
+    })()
+  }
+  const retire = async (key: string, slot: IdentitySlot): Promise<void> => {
+    if (lifetime.signal.aborted || slots.get(key) !== slot || slot.busy > 0 || slot.evicting !== undefined) return
+    await shutdownSlot(slot)
+    if (slots.get(key) === slot) slots.delete(key)
+  }
+  /** Reserve one running identity. An idle Host is closed by `idleMs`; a full set of busy Hosts rejects. */
+  const hold = async (identity: GroundWebIdentity): Promise<{ worker: Promise<IdentityWebWorker>; release: () => void }> => {
     const key = groundWebPartition(ground.origin, identity)
-    let worker = workers.get(key)
-    if (worker !== undefined) return worker
-    if (workers.size >= options.maxWorkers) {
-      return Promise.reject(new GroundWebSessionError(503, '网页版已达到同时运行的账号环境上限，请联系管理员。'))
-    }
-    worker = options.startWorker(identity, origin, lifetime.signal)
-    workers.set(key, worker)
-    void worker.then(value => {
-      if (value.exited !== undefined) {
-        const remove = (): void => { if (workers.get(key) === worker) workers.delete(key) }
-        void value.exited.then(remove, remove)
+    for (;;) {
+      const current = slots.get(key)
+      if (current !== undefined && current.evicting === undefined) {
+        retain(current)
+        return { worker: current.worker, release: () => release(key, current) }
       }
-    }, () => { if (workers.get(key) === worker) workers.delete(key) })
-    return worker
+      if (current?.evicting !== undefined) { await current.evicting; continue }
+      if (activeSlots() >= options.maxWorkers) {
+        throw new GroundWebSessionError(503, '网页版已达到同时运行的账号环境上限，请联系管理员。')
+      }
+      const created: IdentitySlot = { busy: 1, worker: options.startWorker(identity, origin, lifetime.signal) }
+      slots.set(key, created)
+      void created.worker.then(value => {
+        if (value.exited === undefined) return
+        const remove = (): void => { if (slots.get(key) === created && created.evicting === undefined) slots.delete(key) }
+        void value.exited.then(remove, remove)
+      }, () => {
+        if (slots.get(key) !== created) return
+        if (created.timer !== undefined) clearTimeout(created.timer)
+        slots.delete(key)
+      })
+      return { worker: created.worker, release: () => release(key, created) }
+    }
+  }
+  const releaseOnce = (fn: () => void): (() => void) => {
+    let done = false
+    return () => { if (done) return; done = true; fn() }
   }
   const send = (res: ServerResponse, status: number, text: string): void => {
     if (res.headersSent) { res.destroy(); return }
@@ -186,6 +244,7 @@ probe();
   const server = createServer((req, res) => {
     void (async () => {
       if (!trusted(req)) { send(res, 403, '请求来源不受信任'); return }
+      let releaseHold = (): void => {}
       try {
         if (await servePublicPwaAsset(req, res)) return
         const identity = await identify(req)
@@ -194,7 +253,12 @@ probe();
           else send(res, 401, '请先从 Web 首页登录')
           return
         }
-        const pending = workerFor(identity)
+        const held = await hold(identity)
+        releaseHold = releaseOnce(held.release)
+        res.once('finish', releaseHold)
+        res.once('close', releaseHold)
+        if (res.destroyed) releaseHold()
+        const pending = held.worker
         if (warmupProbe(req)) {
           await pending
           if (!res.destroyed) res.writeHead(204, { 'cache-control': 'no-store' }).end()
@@ -207,9 +271,10 @@ probe();
           }
         }
         const worker = await pending
-        if (lifetime.signal.aborted || res.destroyed) return
+        if (lifetime.signal.aborted || res.destroyed) { releaseHold(); return }
         proxy.web(req, res, { target: worker.origin }, () => { send(res, 502, '智能体运行环境暂不可用，请刷新重试。') })
       } catch (error) {
+        releaseHold()
         if (!(error instanceof GroundWebSessionError)) console.error('[web-sso] isolated Host unavailable:', error instanceof Error ? error.message : String(error))
         if (error instanceof GroundWebSessionError && error.status === 401 && rootRequest(req)) redirect(res)
         else send(res, error instanceof GroundWebSessionError ? error.status : 503,
@@ -229,13 +294,18 @@ probe();
     void (async () => {
       const refuse = (status: 401 | 403 | 503): void => { socket.end(`HTTP/1.1 ${status} Rejected\r\nConnection: close\r\n\r\n`) }
       if (!trusted(req)) { refuse(403); return }
+      let releaseHold = (): void => {}
       try {
         const identity = await identify(req)
         if (identity === undefined) { refuse(401); return }
-        const worker = await workerFor(identity)
-        if (lifetime.signal.aborted || socket.destroyed) return
-        proxy.ws(req, socket as Socket, head, { target: worker.origin }, () => { socket.destroy() })
+        const held = await hold(identity)
+        releaseHold = releaseOnce(held.release)
+        socket.once('close', releaseHold)
+        const worker = await held.worker
+        if (lifetime.signal.aborted || socket.destroyed) { releaseHold(); return }
+        proxy.ws(req, socket as Socket, head, { target: worker.origin }, () => { socket.destroy(); releaseHold() })
       } catch (error) {
+        releaseHold()
         console.error('[web-sso] connection unavailable:', error instanceof Error ? error.message : String(error))
         refuse(503)
       }
@@ -255,9 +325,11 @@ probe();
   let closing: Promise<void> | undefined
   return { origin, listenerOrigin: `http://${options.host === '::1' ? '[::1]' : options.host}:${address.port}`, close: () => closing ??= (async () => {
     lifetime.abort()
+    for (const slot of slots.values()) if (slot.timer !== undefined) clearTimeout(slot.timer)
     for (const socket of sockets) socket.destroy()
     const closed = new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
-    await Promise.allSettled([...workers.values()].map(async worker => (await worker).close()))
+    await Promise.allSettled([...slots.values()].map(slot => shutdownSlot(slot)))
+    slots.clear()
     await closed
   })() }
 }

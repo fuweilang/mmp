@@ -15,6 +15,8 @@
     "verify": "pnpm verify:web && pnpm verify:api",
     "verify:web": "pnpm --filter @mammoth/shared build && pnpm --filter @mammoth/frontend typecheck && pnpm --filter @mammoth/frontend build",
     "verify:api": "pnpm --filter @mammoth/backend build",
+    "test:web": "pnpm --filter @mammoth/frontend test",
+    "test:web:ui": "pnpm --filter @mammoth/frontend test:ui",
     "setup": "pnpm setup:deps && pnpm setup:db && pnpm build",
     "setup:deps": "pnpm install",
     "setup:db": "docker info >/dev/null 2>&1 || { printf '%s\\n' 'Docker/Colima 没开，Postgres :5433 起不来。先 colima start（或打开 Docker Desktop），再重跑。' >&2; exit 1; } && test -f apps/backend/.env || cp apps/backend/.env.example apps/backend/.env && pnpm db:up && docker compose -f infra/docker-compose.yml up -d --wait && pnpm db:deploy && pnpm db:seed",

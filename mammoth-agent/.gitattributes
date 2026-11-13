@@ -8,6 +8,12 @@
 
 *.pdf binary
 
+# Generated catalogs: review-free in diffs (linguist), regenerate with the
+# scripts named in each file's header.
+packages/extensions/tool-cordis/src/api-catalog.ts linguist-generated=true
+packages/extensions/cordis-client-runner/src/client/api-catalog.ts linguist-generated=true
+packages/extensions/cordis-client-runner/src/client/slot-catalog.ts linguist-generated=true
+
 # The persistence catalog is the readable projection of these generated schemas.
 docs/persistence-schema.json linguist-generated=true
 docs/persistence-changes/*.schema.json linguist-generated=true

@@ -17,5 +17,5 @@ test('new and replacement upload entrypoints retain their original auth/API cont
   }
   const kb=readFileSync(new URL('../src/views/Knowledge.vue',import.meta.url),'utf8');assert.match(kb,/form.append\('visibility', context.visibility\)/);assert.match(kb,/form.append\('userIds'/);
   const official=readFileSync(new URL('../src/views/admin/AdminOfficialKnowledge.vue',import.meta.url),'utf8');assert.match(official,/body.append\('agentId', context.agentId\)/);assert.match(official,/adminOfficialKnowledgeApi.replace\(context.replacementId, body\)/);
-  const admin=readFileSync(new URL('../src/views/admin/AdminLibrary.vue',import.meta.url),'utf8');assert.doesNotMatch(admin,/type="file"|LibraryUploadDialog/);
+  const admin=readFileSync(new URL('../src/views/admin/AdminLibrary.vue',import.meta.url),'utf8');assert.match(admin,/<LibraryUploadDialog/);assert.doesNotMatch(admin,/<input[^>]*type="file"/);
 });
