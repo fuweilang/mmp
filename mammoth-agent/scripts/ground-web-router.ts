@@ -69,9 +69,9 @@ export async function startGroundWebRouter(options: {
     busy: number
     lastActive: number
     evicting?: Promise<void>
-    timer?: ReturnType<typeof setTimeout>
+    timer?: ReturnType<typeof setTimeout> | undefined
   }
-  interface AdmissionWaiter { resolve: () => void; reject: (error: Error) => void; timer?: ReturnType<typeof setTimeout> }
+  interface AdmissionWaiter { resolve: () => void; reject: (error: Error) => void; timer?: ReturnType<typeof setTimeout> | undefined }
   const slots = new Map<string, IdentitySlot>()
   const waiters: AdmissionWaiter[] = []
   const sockets = new Set<Socket>()
@@ -381,7 +381,7 @@ probe();
         const write = socket.write
         socket.write = ((...args: Parameters<Socket['write']>) => {
           held.touch()
-          return write.apply(socket, args)
+          return Reflect.apply(write, socket, args) as boolean
         }) as Socket['write']
         proxy.ws(req, socket as Socket, head, { target: worker.origin }, () => { socket.destroy(); releaseHold() })
         releaseHold()

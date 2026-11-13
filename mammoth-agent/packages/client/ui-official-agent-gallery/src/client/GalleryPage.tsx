@@ -119,7 +119,7 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
     readonly kind: GalleryTab;
     readonly active: boolean;
     readonly loadPage: (query: CatalogQuery) => Promise<Page>;
-    readonly loadHome?: (query: CatalogQuery) => Promise<{ facets: CatalogFacets; page: Page }>;
+    readonly loadHome?: ((query: CatalogQuery) => Promise<{ facets: CatalogFacets; page: Page }>) | undefined;
     readonly loadFacets: () => Promise<CatalogFacets>;
     readonly starting: string | undefined;
     readonly onStart: (item: Item) => Promise<void>;
