@@ -45,7 +45,7 @@ sshq() { ssh "${SSH_OPTS[@]}" "$HOST" "$1"; }
 
 if (( LIST_ONLY )); then
   log '服务器备份：'
-  sshq "cd '$PROD_DIR' 2>/dev/null && ls -1dt .env.bak-* middle-web.bak-* 2>/dev/null | head -20"
+  sshq "cd '$PROD_DIR' 2>/dev/null && ls -1dt .env.bak-* middle-web.bak-* website.bak-* 2>/dev/null | head -20"
   log 'nginx 备份：'
   sshq "ls -1t /www/server/panel/vhost/nginx/extension/www.mmai.vip/mammoth.conf.bak-* 2>/dev/null | head -10"
   log '现有镜像：'
@@ -134,12 +134,19 @@ else
 fi"
 
 if (( RESTORE_WEB )); then
-  log '3.5 恢复静态包'
+  log '3.5 恢复静态包（中台 + 官网）'
   sshq "set -e; cd '$PROD_DIR'
   test -d 'middle-web.bak-$NGINX_TS' || { echo '没有 middle-web 备份' >&2; exit 1; }
   cp -a middle-web \"middle-web.before-rollback-\$(date +%Y%m%d-%H%M%S)\"
   find middle-web -mindepth 1 -delete
-  cp -a 'middle-web.bak-$NGINX_TS'/. middle-web/"
+  cp -a 'middle-web.bak-$NGINX_TS'/. middle-web/
+  if [ -d 'website.bak-$NGINX_TS' ]; then
+    cp -a website \"website.before-rollback-\$(date +%Y%m%d-%H%M%S)\" 2>/dev/null || true
+    find website -mindepth 1 -delete
+    cp -a 'website.bak-$NGINX_TS'/. website/
+  else
+    echo '没有 website 备份，跳过官网恢复' >&2
+  fi"
 fi
 
 log '4/4 验收'

@@ -15,7 +15,7 @@ function positiveEnvironment(name: string, fallback: number): number {
   return value
 }
 
-async function startIdentityHost(identity: GroundWebIdentity, publicOrigin: string, signal: AbortSignal, options: {
+async function startIdentityHost(identity: GroundWebIdentity, publicWebUrl: string, signal: AbortSignal, options: {
   groundOrigin: string; home: string; workerArgs: readonly string[]; startupTimeoutMs: number
 }): Promise<IdentityWebWorker> {
   const home = join(options.home, 'web-identities', groundWebPartition(options.groundOrigin, identity))
@@ -28,7 +28,7 @@ async function startIdentityHost(identity: GroundWebIdentity, publicOrigin: stri
   const built = process.env.MMP_WEB_BUILT_RUNTIME === '1'
   const cli = built ? [join(ROOT, 'apps/cli/lib/bin.js')] : ['--import', import.meta.resolve('tsx/esm'), join(ROOT, 'apps/cli/src/bin.ts')]
   const webArgs = ['web', ...options.workerArgs, '--host', '127.0.0.1', '--port', '0', '--no-open',
-    '--public-url', publicOrigin, '--trusted-host', new URL(publicOrigin).host]
+    '--public-url', publicWebUrl, '--trusted-host', new URL(publicWebUrl).host]
   let command = process.execPath, args = [...cli, ...webArgs]
   if (docker) {
     if (options.workerArgs.length) throw new Error('Production workers use the image profile; arbitrary CLI overrides are not allowed')
@@ -45,11 +45,11 @@ async function startIdentityHost(identity: GroundWebIdentity, publicOrigin: stri
       '--tmpfs', '/tmp:rw,nosuid,nodev,exec,size=256m',
       '--mount', `type=bind,source=${join(hostRoot, 'web-identities', partition)},target=/home/mmp`,
       '--workdir', '/home/mmp', '-e', 'HOME=/home/mmp', '-e', 'MMP_HOME=/home/mmp', '-e', 'MMP_WEB_SSO=1',
-      '-e', 'MMP_WEB_READY_STDOUT=1', '-e', `MMP_WEB_SESSION_ORIGIN=${publicOrigin}`,
+      '-e', 'MMP_WEB_READY_STDOUT=1', '-e', `MMP_WEB_SESSION_ORIGIN=${publicWebUrl}`,
       '-e', `GROUND_PUBLIC_ORIGIN=${options.groundOrigin}`, image, 'node', '/app/apps/cli/lib/bin.js', ...webArgs]
   }
   const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, MMP_HOME: home,
-    MMP_WEB_SSO: '1', MMP_WEB_SESSION_ORIGIN: publicOrigin, GROUND_PUBLIC_ORIGIN: options.groundOrigin },
+    MMP_WEB_SSO: '1', MMP_WEB_SESSION_ORIGIN: publicWebUrl, GROUND_PUBLIC_ORIGIN: options.groundOrigin },
     stdio: docker ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'pipe', 'pipe', 'ipc'] })
   const exited = new Promise<void>(resolveExit => { child.once('exit', () => resolveExit()); child.once('error', () => resolveExit()) })
   let stopping: Promise<void> | undefined
@@ -134,6 +134,7 @@ async function main(): Promise<void> {
   if (publicOrigin && process.env.MMP_WEB_WORKER_MODE !== 'docker') throw new Error('Production Web requires isolated Docker workers')
   const router = await startGroundWebRouter({ host, port, groundOrigin,
     ...(publicOrigin ? { publicOrigin } : {}),
+    publicPath: process.env.MMP_WEB_PUBLIC_PATH ?? '/',
     cookieName: process.env.MMP_GROUND_COOKIE_NAME || 'mammothai_access_token',
     maxWorkers: positiveEnvironment('MMP_WEB_MAX_IDENTITIES', publicOrigin ? 12 : 8),
     idleMs: positiveEnvironment('MMP_WEB_IDENTITY_IDLE_MS', 600_000),

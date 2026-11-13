@@ -10,7 +10,7 @@ RELEASE_ID="${RELEASE_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
 PLATFORM="${DOCKER_PLATFORM:-linux/amd64}"
 mkdir -p "$OUTPUT"
 cp "$TASK_DIR/compose.yml" "$TASK_DIR/production.env.example" "$TASK_DIR/nginx-mmai.conf" "$TASK_DIR/proxy-common.conf" "$TASK_DIR/init-db.sh" "$OUTPUT/"
-(cd "$GROUND_ROOT" && VITE_AGENT_WEB_URL=https://www.mmai.vip/ pnpm --filter @mammoth/shared build && VITE_AGENT_WEB_URL=https://www.mmai.vip/ pnpm --filter @mammoth/frontend build)
+(cd "$GROUND_ROOT" && VITE_AGENT_WEB_URL=https://www.mmai.vip/agent/ pnpm --filter @mammoth/shared build && VITE_AGENT_WEB_URL=https://www.mmai.vip/agent/ pnpm --filter @mammoth/frontend build)
 tar -C "$GROUND_ROOT/apps/frontend/dist" -czf "$OUTPUT/middle-web.tar.gz" .
 if [[ "${2:-}" != '--skip-images' ]]; then
   docker build --platform "$PLATFORM" -f "$TASK_DIR/Dockerfile.api" -t "mmp-api:$RELEASE_ID" "$GROUND_ROOT"

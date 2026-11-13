@@ -42,6 +42,8 @@ services:
     environment:
       GROUND_PUBLIC_ORIGIN: https://www.mmai.vip
       MMP_WEB_PUBLIC_ORIGIN: https://www.mmai.vip
+      # 网页版挂在 /agent/：nginx 剥前缀转发到 root 监听，广告地址与登录回跳都带这个前缀。
+      MMP_WEB_PUBLIC_PATH: /agent/
       MMP_HOME: /state
       MMP_WEB_BUILT_RUNTIME: '1'
       MMP_WEB_SSO: '1'

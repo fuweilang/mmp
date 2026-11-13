@@ -197,6 +197,28 @@ it('accepts only the configured HTTPS public authority behind a loopback proxy',
   expect(new URL(anonymous.location!).searchParams.get('next')).toBe('https://www.mmai.vip/')
   await expect(startGroundWebRouter({ host: '127.0.0.1', port: 0, groundOrigin: 'https://www.mmai.vip', publicOrigin: 'https://attacker.invalid',
     cookieName: 'mammothai_access_token', maxWorkers: 1, requestTimeoutMs: 1000, startWorker: async () => { throw new Error('must not start') } })).rejects.toThrow('canonical HTTPS origin')
+
+  // The official site owns /, so the Web app is mounted below /agent/; login must come back there.
+  let mountedOrigin = ''
+  const mounted = await startGroundWebRouter({ host: '127.0.0.1', port: 0, groundOrigin: 'https://www.mmai.vip',
+    publicOrigin: 'https://www.mmai.vip', publicPath: '/agent/', cookieName: 'mammothai_access_token', maxWorkers: 1, requestTimeoutMs: 1000,
+    startWorker: async (_verified, origin) => { mountedOrigin = origin; return { origin: workerOrigin, close: async () => {} } } })
+  cleanup.push(mounted.close)
+  const mountedRedirect = await new Promise<{ status: number; location: string | undefined }>((done, fail) => {
+    const req = httpRequest(mounted.listenerOrigin, { headers: { host: 'www.mmai.vip' } }, res => {
+      res.resume(); res.on('end', () => done({ status: res.statusCode!, location: res.headers.location }))
+    })
+    req.on('error', fail); req.end()
+  })
+  expect(mountedRedirect.status).toBe(303)
+  expect(new URL(mountedRedirect.location!).searchParams.get('next')).toBe('https://www.mmai.vip/agent/')
+  await new Promise<void>((done, fail) => {
+    const req = httpRequest(mounted.listenerOrigin, { headers: { host: 'www.mmai.vip', cookie: `mammothai_access_token=${jwt}` } }, res => {
+      res.resume(); res.on('end', () => done())
+    })
+    req.on('error', fail); req.end()
+  })
+  expect(mountedOrigin).toBe('https://www.mmai.vip/agent/')
 })
 
 

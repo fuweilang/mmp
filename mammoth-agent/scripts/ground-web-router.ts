@@ -37,6 +37,8 @@ export async function startGroundWebRouter(options: {
   port: number
   groundOrigin: string
   publicOrigin?: string
+  /** Browser-facing mount below the public origin, slash-terminated (for example `/agent/`). */
+  publicPath?: string
   cookieName: string
   maxWorkers: number
   /** Stop an identity Host after this many milliseconds with no request traffic. Omit to keep it until process exit. */
@@ -58,6 +60,10 @@ export async function startGroundWebRouter(options: {
   if (!external && (ground.protocol !== 'http:' || ground.hostname !== (options.host === '::1' ? '[::1]' : options.host))) {
     throw new Error('Local Web and Ground must use the same HTTP loopback hostname')
   }
+  const publicPath = options.publicPath ?? '/'
+  if (!/^\/(?:[A-Za-z0-9._~-]+\/)*$/.test(publicPath)) {
+    throw new Error('publicPath must be a slash-terminated absolute path such as /agent/')
+  }
   if (!Number.isSafeInteger(options.maxWorkers) || options.maxWorkers < 1) throw new Error('maxWorkers must be a positive integer')
   if (options.idleMs !== undefined && (!Number.isSafeInteger(options.idleMs) || options.idleMs < 1)) throw new Error('idleMs must be a positive integer')
   if (options.handoffMs !== undefined && (!Number.isSafeInteger(options.handoffMs) || options.handoffMs < 1)) throw new Error('handoffMs must be a positive integer')
@@ -77,7 +83,7 @@ export async function startGroundWebRouter(options: {
   const sockets = new Set<Socket>()
   const proxy = httpProxy.createProxyServer({ ws: true, xfwd: false, changeOrigin: false })
   let origin = ''
-  const loginUrl = (): string => { const url = new URL('/login', ground); url.searchParams.set('next', `${origin}/`); return url.href }
+  const loginUrl = (): string => { const url = new URL('/login', ground); url.searchParams.set('next', new URL(publicPath, origin).href); return url.href }
   // The dev gateway serves this listener under Ground's own origin (`/agent`).
   // A browser there sends Host and Origin for that origin, not for :3080.
   // Direct loopback access to this listener stays valid. Any other host or a
@@ -211,7 +217,7 @@ export async function startGroundWebRouter(options: {
         })
         continue
       }
-      const created: IdentitySlot = { busy: 1, lastActive: Date.now(), worker: options.startWorker(identity, origin, lifetime.signal) }
+      const created: IdentitySlot = { busy: 1, lastActive: Date.now(), worker: options.startWorker(identity, new URL(publicPath, origin).href, lifetime.signal) }
       slots.set(key, created)
       void created.worker.then(value => {
         if (value.exited === undefined) return

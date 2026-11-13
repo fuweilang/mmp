@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Comma-separated expected mac platform keys. Default requires both Mac architectures.
 EXPECTED_MAC="${MMP_PREFLIGHT_MAC_PLATFORMS:-darwin-arm64,darwin-amd64}"
 export EXPECTED_MAC
-for file in compose.yml production.env.example nginx-mmai.conf proxy-common.conf init-db.sh middle-web.tar.gz; do
+for file in compose.yml production.env.example nginx-mmai.conf proxy-common.conf init-db.sh middle-web.tar.gz website.tar.gz; do
   test -s "$RELEASE_DIR/$file" || { echo "Missing $file" >&2; exit 1; }
 done
 # Production SMS is fail-closed: the template must carry every SMS key, and an actual

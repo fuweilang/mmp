@@ -27,7 +27,7 @@ PROD_DIR="${MMP_PROD_DIR:-/www/mmp-prod}"
 ORIGIN="${MMP_ORIGIN:-https://www.mmai.vip}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
 
-STEPS="preflight frontend api web deploy nginx smoke"
+STEPS="preflight frontend website api web deploy nginx smoke"
 DRY_RUN=0
 ASSUME_YES=0
 FROM_STEP=""
@@ -53,7 +53,7 @@ usage() {
   ./release.sh                     # 全流程（preflight -> smoke）
   ./release.sh --dry-run           # 只打印计划，不执行
   ./release.sh --yes               # 跳过交互确认
-  ./release.sh --from web          # 从某一步继续（preflight/frontend/api/web/deploy/nginx/smoke）
+  ./release.sh --from web          # 从某一步继续（preflight/frontend/website/api/web/deploy/nginx/smoke）
   ./release.sh --only deploy,smoke # 只跑指定步骤
   ./release.sh --release-id 2.0.0-20261105-1200   # 续跑已有版本
   ./release.sh --skip-nginx        # 不动 nginx（仅内部验证）
@@ -159,10 +159,10 @@ const s = {
   commits: { ground, 'mammoth-agent': agent },
   started_at: now, finished_at: null,
   operator: process.env.USER || 'local',
-  steps: ['preflight','frontend','api-image','web-image','deploy','nginx','smoke']
+  steps: ['preflight','frontend','website','api-image','web-image','deploy','nginx','smoke']
     .map(name => ({ name, status: 'pending' })),
   images: { api: `mmp-api:${id}`, web: `mmp-web:${id}` },
-  rollback: { nginx_backup: null, previous_env: null, previous_images: {}, previous_middle_web: null },
+  rollback: { nginx_backup: null, previous_env: null, previous_images: {}, previous_middle_web: null, previous_website: null },
   notes: [],
 };
 fs.writeFileSync(file, JSON.stringify(s, null, 2) + '\n');
@@ -334,8 +334,8 @@ step_preflight() {
 # ---------- 前端 ----------
 step_frontend() {
   log '构建前端 dist'
-  run_in "$GROUND_ROOT" env VITE_AGENT_WEB_URL=https://www.mmai.vip/ pnpm --filter @mammoth/shared build
-  run_in "$GROUND_ROOT" env VITE_AGENT_WEB_URL=https://www.mmai.vip/ pnpm --filter @mammoth/frontend build
+  run_in "$GROUND_ROOT" env VITE_AGENT_WEB_URL=https://www.mmai.vip/agent/ pnpm --filter @mammoth/shared build
+  run_in "$GROUND_ROOT" env VITE_AGENT_WEB_URL=https://www.mmai.vip/agent/ pnpm --filter @mammoth/frontend build
   local dist="$GROUND_ROOT/apps/frontend/dist"
   (( DRY_RUN )) || [[ -f "$dist/index.html" ]] || die "前端产物不存在：$dist/index.html"
   if (( DRY_RUN )); then
@@ -345,6 +345,22 @@ step_frontend() {
     [[ -s "$RELEASE_DIR/middle-web.tar.gz" ]] || die 'middle-web.tar.gz 为空'
   fi
   log "前端完成：$( ((DRY_RUN)) || du -h "$RELEASE_DIR/middle-web.tar.gz" | awk '{print $1}' )"
+}
+
+# ---------- 官网 ----------
+step_website() {
+  log '构建官网静态导出'
+  local site="$REPO_ROOT/website" out="$REPO_ROOT/website/out"
+  run_in "$site" pnpm install --frozen-lockfile --prefer-offline
+  run_in "$site" pnpm run build
+  (( DRY_RUN )) || [[ -f "$out/index.html" ]] || die "官网产物不存在：$out/index.html"
+  if (( DRY_RUN )); then
+    printf '  [dry] tar -C %s -czf %s/website.tar.gz .\n' "$out" "$RELEASE_DIR"
+  else
+    COPYFILE_DISABLE=1 tar -C "$out" -czf "$RELEASE_DIR/website.tar.gz" .
+    [[ -s "$RELEASE_DIR/website.tar.gz" ]] || die 'website.tar.gz 为空'
+  fi
+  log "官网完成：$( ((DRY_RUN)) || du -h "$RELEASE_DIR/website.tar.gz" | awk '{print $1}' )"
 }
 
 # ---------- api 镜像 ----------
@@ -451,6 +467,7 @@ step_deploy() {
     return 0
   fi
   [[ -s "$RELEASE_DIR/middle-web.tar.gz" ]] || die "缺少 $RELEASE_DIR/middle-web.tar.gz"
+  [[ -s "$RELEASE_DIR/website.tar.gz" ]] || die "缺少 $RELEASE_DIR/website.tar.gz"
   [[ -s "$RELEASE_DIR/mmp-api-image.tar.gz" ]] || die "缺少 $RELEASE_DIR/mmp-api-image.tar.gz"
 
   # production.env 不在仓库；本地没有就从服务器拉，绝不覆盖服务器已有文件。
@@ -474,7 +491,7 @@ step_deploy() {
   log "上传发布包到 $stage_dir"
   rsh "mkdir -p '$stage_dir'"
   run rsync -az --partial -e "ssh ${SSH_OPTS[*]}" \
-    "$RELEASE_DIR/middle-web.tar.gz" "$RELEASE_DIR/mmp-api-image.tar.gz" \
+    "$RELEASE_DIR/middle-web.tar.gz" "$RELEASE_DIR/website.tar.gz" "$RELEASE_DIR/mmp-api-image.tar.gz" \
     "$RELEASE_DIR/compose.yml" "$RELEASE_DIR/production.env" "$RELEASE_DIR/nginx-mmai.conf" \
     "$RELEASE_DIR/proxy-common.conf" "$RELEASE_DIR/proxy-common-long.conf" "$RELEASE_DIR/init-db.sh" \
     "$HOST:$stage_dir/"
@@ -488,17 +505,20 @@ step_deploy() {
     ts="$(rsh_script 'set -e
 cd "$1"
 TS=$(date +%Y%m%d-%H%M%S)
-mkdir -p middle-web downloads data/uploads data/library data/api-state secrets
+mkdir -p middle-web website downloads data/uploads data/library data/api-state secrets
 cp -a .env ".env.bak-$TS"
 cp -a middle-web "middle-web.bak-$TS"
+cp -a website "website.bak-$TS"
 find middle-web -mindepth 1 -delete
+find website -mindepth 1 -delete
 tar -xzf "$2/middle-web.tar.gz" -C middle-web
+tar -xzf "$2/website.tar.gz" -C website
 cp "$2"/compose.yml "$2"/nginx-mmai.conf "$2"/proxy-common.conf "$2"/proxy-common-long.conf "$2"/init-db.sh .
 if [ ! -s production.env ]; then cp "$2/production.env" production.env; fi
 chmod 600 production.env 2>/dev/null || true
 echo "$TS"' "$PROD_DIR" "$stage_dir")"
   fi
-  log "备份完成：.env.bak-$ts / middle-web.bak-$ts"
+  log "备份完成：.env.bak-$ts / middle-web.bak-$ts / website.bak-$ts"
 
   log '载入 api 镜像'
   if (( DRY_RUN )); then
@@ -537,6 +557,7 @@ s.rollback = s.rollback || {};
 s.rollback.nginx_backup = ts;
 s.rollback.previous_env = `.env.bak-${ts}`;
 s.rollback.previous_middle_web = `middle-web.bak-${ts}`;
+s.rollback.previous_website = `website.bak-${ts}`;
 s.rollback.previous_images = { api, web };
 if (s.steps.find(x => x.name === 'web-image')) {
   const w = s.steps.find(x => x.name === 'web-image');
@@ -700,6 +721,9 @@ main() {
 
   CURRENT_STEP=frontend
   if step_selected frontend; then state_update frontend running; step_frontend; state_update frontend done; fi
+
+  CURRENT_STEP=website
+  if step_selected website; then state_update website running; step_website; state_update website done; fi
 
   CURRENT_STEP=api-image
   if step_selected api; then state_update api-image running; step_api; state_update api-image done; fi

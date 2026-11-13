@@ -92,8 +92,9 @@ export function createGroundWebIdentity(options: {
       && ['127.0.0.1', 'localhost', '[::1]'].includes(web.hostname))) {
     throw new Error('Ground Web SSO requires one HTTPS origin in production, or matching HTTP loopback hostnames in development.')
   }
+  const mountRoot = new URL(web.pathname.endsWith('/') ? web.pathname : `${web.pathname}/`, web).href
   const login = new URL('/login', ground)
-  login.searchParams.set('next', new URL('/', web).href)
+  login.searchParams.set('next', mountRoot)
   const verified = new Map<string, number>()
   const digest = (token: string): string => createHash('sha256').update(token).digest('hex')
   let lifetime = new AbortController()
