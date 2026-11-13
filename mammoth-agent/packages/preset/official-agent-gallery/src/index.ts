@@ -291,9 +291,15 @@ export default class OfficialAgentGallery extends TypertRemoteService {
   /** Read20 visible experts with a stable server cursor. */
   @Remote
   pageExperts(query:CatalogQuery):Promise<ExpertCatalogPage>{return this.ground.pageExperts(query)}
+  /** First screen: facets and the first page in one response. Later pages stay on pageExperts. */
+  @Remote
+  openExperts(query:CatalogQuery){return this.ground.openExperts(query)}
   /** Read20 enabled skills; never bulk-prefetch the catalog. */
   @Remote
   pageSkills(query:CatalogQuery):Promise<SkillCatalogPage>{return this.ground.pageSkills(query)}
+  /** First screen: facets and the first page in one response. Later pages stay on pageSkills. */
+  @Remote
+  openSkills(query:CatalogQuery){return this.ground.openSkills(query)}
   /** Aggregate all visible expert metadata, no cards/bodies. */
   @Remote
   expertFacets():Promise<CatalogFacets>{return this.ground.expertFacets()}

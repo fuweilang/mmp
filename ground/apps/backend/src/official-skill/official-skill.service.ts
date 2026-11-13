@@ -81,6 +81,7 @@ export class OfficialSkillService {
   // ---- 管理端列表/详情/发现/目录（保留在门面） ----
 
   async catalogFacets(){const rows=await this.prisma.officialSkill.findMany({where:{deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}},select:{key:true}});return catalogFacets('skill',rows.map(x=>x.key));}
+  async catalogHome(query:CatalogQuery){const [facets,page]=await Promise.all([this.catalogFacets(),this.catalogPage(query)]);return {facets,page};}
   async catalogPage(query:CatalogQuery){
     const f=catalogQuery(query,'skill');const filters:Prisma.OfficialSkillWhereInput[]=[{deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}}];
     if(f.capability!=='all'||f.industry!=='all')filters.push(catalogDiscoveryWhere('skill',f.capability,f.industry));

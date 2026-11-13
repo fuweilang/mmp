@@ -51,6 +51,7 @@ export interface LibraryStore {
   updateNode(id: string, patch: Partial<NodeRecord>): Promise<void>;
   listVersions(nodeId: string): Promise<VersionRecord[]>;
   getVersion(id: string): Promise<VersionRecord | null>;
+  getVersions(ids: readonly string[]): Promise<VersionRecord[]>;
   insertVersion(row: VersionRecord): Promise<void>;
   /** 节点、版本、摘录一次提交。失败时调用方删掉已经写入的文件。 */
   commitNewFile(input: NewFileCommit): Promise<void>;
@@ -71,6 +72,7 @@ export interface LibraryStore {
   deleteBlob(key: string): Promise<void>;
   audit(row: AuditRecord): Promise<void>;
   userName(userId: string): Promise<string | null>;
+  userNames(ids: readonly string[]): Promise<Map<string, string>>;
   tenantName(tenantId: string): Promise<string | null>;
   listTenants(): Promise<TenantBrief[]>;
 }
@@ -152,6 +154,11 @@ export class MemoryLibraryStore implements LibraryStore {
 
   async getVersion(id: string) {
     return this.versions.get(id) ?? null;
+  }
+
+  async getVersions(ids: readonly string[]) {
+    const wanted = new Set(ids);
+    return [...this.versions.values()].filter(row => wanted.has(row.id));
   }
 
   async insertVersion(row: VersionRecord) {
@@ -309,6 +316,15 @@ export class MemoryLibraryStore implements LibraryStore {
 
   async userName(userId: string) {
     return this.users.get(userId) ?? null;
+  }
+
+  async userNames(ids: readonly string[]) {
+    const names = new Map<string, string>();
+    for (const id of ids) {
+      const name = this.users.get(id);
+      if (name !== undefined) names.set(id, name);
+    }
+    return names;
   }
 
   async tenantName(tenantId: string) {

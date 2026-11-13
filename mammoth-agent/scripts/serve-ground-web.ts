@@ -137,6 +137,8 @@ async function main(): Promise<void> {
     cookieName: process.env.MMP_GROUND_COOKIE_NAME || 'mammothai_access_token',
     maxWorkers: positiveEnvironment('MMP_WEB_MAX_IDENTITIES', publicOrigin ? 12 : 8),
     idleMs: positiveEnvironment('MMP_WEB_IDENTITY_IDLE_MS', 600_000),
+    handoffMs: positiveEnvironment('MMP_WEB_HANDOFF_MS', 15_000),
+    queueTimeoutMs: positiveEnvironment('MMP_WEB_QUEUE_TIMEOUT_MS', 120_000),
     requestTimeoutMs: positiveEnvironment('MMP_WEB_AUTH_TIMEOUT_MS', 30000),
     startWorker: (identity, origin, signal) => startIdentityHost(identity, origin, signal, {
       groundOrigin, home: resolve(process.env.MMP_HOME || join(homedir(), '.mmp')), workerArgs,

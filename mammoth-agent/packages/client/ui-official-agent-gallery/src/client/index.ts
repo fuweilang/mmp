@@ -174,8 +174,18 @@ export function apply(ctx: ClientContext): void {
       if(!result.ok)throw new Error(result.error.message)
       return result.value
     },
+    openExperts: async query => {
+      const result=await ctx.remote.officialAgentGallery.openExperts(query)
+      if(!result.ok)throw new Error(result.error.message)
+      return result.value
+    },
     pageSkills: async query => {
       const result=await ctx.remote.officialAgentGallery.pageSkills(query)
+      if(!result.ok)throw new Error(result.error.message)
+      return result.value
+    },
+    openSkills: async query => {
+      const result=await ctx.remote.officialAgentGallery.openSkills(query)
       if(!result.ok)throw new Error(result.error.message)
       return result.value
     },

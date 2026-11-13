@@ -571,6 +571,24 @@ JS
   [[ "$code" == 200 || "$code" == 302 || "$code" == 303 ]] \
     || die "web 端口 33080 异常（${code}）"
   log "web 端口正常（${code}）"
+
+  log '导出官方头像到 nginx 静态目录'
+  if (( DRY_RUN )); then
+    log '[dry] 将从 api 容器复制内置头像，并链接上传目录'
+  else
+    rsh_script 'set -e
+cd "$1"
+mkdir -p brand-avatars/packaged data/uploads/official-avatars
+ln -sfn "$PWD/data/uploads/official-avatars" brand-avatars/uploads
+cid=$(docker compose ps -q api | head -n 1)
+if [ -z "$cid" ]; then
+  echo "api container missing; avatars stay on the API" >&2
+  exit 0
+fi
+docker cp "$cid:/app/apps/backend/dist/official-agent/assets/avatars/." brand-avatars/packaged/ \
+  || echo "packaged avatars not copied; nginx will fall back to the API" >&2
+' "$PROD_DIR" || warn '头像静态目录未就绪，头像仍由 API 提供'
+  fi
 }
 
 # ---------- nginx ----------

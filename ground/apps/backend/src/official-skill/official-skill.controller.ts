@@ -47,6 +47,9 @@ export class OfficialSkillController {
   @Get('catalog-page')
   @Header('Cache-Control','private, no-store')
   page(@CurrentUser() user:User,@Query('q') q?:string,@Query('capability') capability?:string,@Query('industry') industry?:string,@Query('cursor') cursor?:string){if(user.status!=='active')throw new ForbiddenException('账号已停用');return this.skills.catalogPage({q,capability,industry,cursor});}
+  @Get('catalog-home')
+  @Header('Cache-Control','private, no-store')
+  home(@CurrentUser() user:User,@Query('q') q?:string,@Query('capability') capability?:string,@Query('industry') industry?:string){if(user.status!=='active')throw new ForbiddenException('账号已停用');return this.skills.catalogHome({q,capability,industry});}
   @Get('catalog-facets')
   @Header('Cache-Control','private, no-store')
   facets(@CurrentUser() user:User){if(user.status!=='active')throw new ForbiddenException('账号已停用');return this.skills.catalogFacets();}

@@ -59,6 +59,7 @@ export type OfficialAgentExecution = {
   }>;
 };
 
+const CATALOG_EXPERT_PAGE_SELECT={id:true,key:true,kind:true,category:true,capabilities:true,customAvatarPath:true,onlineVersion:{select:{id:true,version:true,name:true,summary:true,openingQuestions:true,toolScope:true,linkedSkillSummaries:true,customAvatarPath:true}}} as const;
 const CATALOG_EXPERT_SELECT={id:true,key:true,kind:true,category:true,capabilities:true,customAvatarPath:true,onlineVersion:{select:{id:true,version:true,name:true,summary:true,openingQuestions:true,toolScope:true,expertDefinition:true,linkedSkillSummaries:true,customAvatarPath:true}}} as const;
 
 @Injectable()
@@ -88,22 +89,19 @@ export class OfficialAgentService {
         status: OfficialAgentStatus.PUBLISHED,
         onlineVersionId: { not: null },
       },
-      include: {
-        onlineVersion: true,
-        skillLinks: { select: { skillId: true } },
-      },
       orderBy: { createdAt: 'asc' },
+      select: CATALOG_EXPERT_PAGE_SELECT,
     });
     const avatarByKey = new Map(
       loadOfficialAgentAssets().map((asset) => [asset.key, asset.avatar ?? null] as const),
     );
+    const linked = await this.linkedSkillsByAgent(agents.flatMap(agent => agent.onlineVersion ? [{ id: agent.id, versionId: agent.onlineVersion.id, linkedSkillSummaries: agent.onlineVersion.linkedSkillSummaries }] : []));
     const cards = [];
     for (const agent of agents) {
       if (!agent.onlineVersion) continue;
-      const linkedSkills = await this.versionLinkedSkills(agent.id, agent.onlineVersion, agent.skillLinks.map(link => link.skillId));
       cards.push({
         ...this.publicCatalogCard(agent, true, avatarByKey.get(agent.key) ?? null),
-        linkedSkills,
+        linkedSkills: linked.get(agent.id) ?? [],
       });
     }
     return cards;
@@ -137,6 +135,7 @@ export class OfficialAgentService {
   }
 
   async catalogFacets(user:User){this.requireActiveAccount(user);const rows=await this.prisma.officialAgent.findMany({where:{status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}},select:{key:true,category:true}});return catalogFacets('expert',rows.map(x=>({key:x.key,category:x.category})));}
+  async catalogHome(user:User,query:CatalogQuery){const [facets,page]=await Promise.all([this.catalogFacets(user),this.catalogPage(user,query)]);return {facets,page};}
   async catalogCard(user:User,id:string){this.requireActiveAccount(user);const row=await this.prisma.officialAgent.findFirst({where:{id,status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}},select:CATALOG_EXPERT_SELECT});if(!row?.onlineVersion)throw new NotFoundException('专家不可用');return {...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),linkedSkills:await this.versionLinkedSkills(row.id,row.onlineVersion)};}
   async catalogDetail(user:User,id:string){
     const card=await this.catalogCard(user,id);
@@ -151,20 +150,32 @@ export class OfficialAgentService {
     if(f.capability!=='all'||f.industry!=='all')filters.push(catalogDiscoveryWhere('expert',f.capability,f.industry));
     if(f.q)filters.push({OR:[{key:{contains:f.q,mode:'insensitive'}},{onlineVersion:{is:{OR:[{name:{contains:f.q,mode:'insensitive'}},{summary:{contains:f.q,mode:'insensitive'}}]}}},...Object.entries(DESCRIPTIONS).filter(([,v])=>v.summary.toLocaleLowerCase().includes(f.q.toLocaleLowerCase())).map(([key,v])=>({key,onlineVersion:{is:{summary:v.expectedOriginal}}}))]});
     const where:Prisma.OfficialAgentWhereInput={AND:filters};
-    const [total,rows]=await Promise.all([this.prisma.officialAgent.count({where}),this.prisma.officialAgent.findMany({where:{AND:[where,...f.after?[{key:{gt:f.after}}]:[]]},orderBy:{key:'asc'},take:21,select:CATALOG_EXPERT_SELECT})]);
+    const [total,rows]=await Promise.all([this.prisma.officialAgent.count({where}),this.prisma.officialAgent.findMany({where:{AND:[where,...f.after?[{key:{gt:f.after}}]:[]]},orderBy:{key:'asc'},take:21,select:CATALOG_EXPERT_PAGE_SELECT})]);
     const page=rows.slice(0,20);
-    const linked=await this.linkedSkillsByAgent(page.flatMap(row=>row.onlineVersion?[{id:row.id,expertDefinition:row.onlineVersion.expertDefinition,linkedSkillSummaries:row.onlineVersion.linkedSkillSummaries}]:[]));
+    const linked=await this.linkedSkillsByAgent(page.flatMap(row=>row.onlineVersion?[{id:row.id,versionId:row.onlineVersion.id,linkedSkillSummaries:row.onlineVersion.linkedSkillSummaries}]:[]));
     const items=page.map(row=>({...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),summary:displaySummary(row.key,row.onlineVersion!.summary),discovery:discoveryOf('expert',row.key,row.category),linkedSkills:linked.get(row.id)??[]}));
     return {items,total,hasMore:rows.length>20,nextCursor:rows.length>20?nextCatalogCursor(page[page.length-1]!.key,f.signature):null};
   }
 
+  /** schemaVersion lives inside expertDefinition. The list only needs that one flag, not the document. */
+  private async frozenVersionIds(versionIds: string[]): Promise<Set<string>> {
+    if (versionIds.length === 0) return new Set();
+    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM official_agent_version
+      WHERE id IN (${Prisma.join(versionIds)})
+        AND jsonb_typeof(expert_definition) = 'object'
+        AND expert_definition->>'schemaVersion' = '1'
+    `;
+    return new Set(rows.map(row => row.id));
+  }
+
   /** One enabled-skill lookup for the whole page. A remote catalog cannot afford one query per card. */
-  private async linkedSkillsByAgent(rows: Array<{ id: string; expertDefinition: Prisma.JsonValue; linkedSkillSummaries: Prisma.JsonValue }>): Promise<Map<string, SkillSummary[]>> {
+  private async linkedSkillsByAgent(rows: Array<{ id: string; versionId: string; linkedSkillSummaries: Prisma.JsonValue }>): Promise<Map<string, SkillSummary[]>> {
+    const frozenIds = await this.frozenVersionIds(rows.map(row => row.versionId));
     const legacyIds: string[] = [];
     const frozen = new Map<string, Prisma.JsonObject[]>();
     for (const row of rows) {
-      const definition = row.expertDefinition;
-      if (!definition || typeof definition !== 'object' || Array.isArray(definition) || definition.schemaVersion !== 1) {
+      if (!frozenIds.has(row.versionId)) {
         legacyIds.push(row.id);
         continue;
       }

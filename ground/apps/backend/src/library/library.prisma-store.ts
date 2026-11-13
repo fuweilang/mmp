@@ -94,6 +94,12 @@ export class PrismaLibraryStore implements LibraryStore {
     return row ? toVersion(row) : null;
   }
 
+  async getVersions(ids: readonly string[]): Promise<VersionRecord[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.prisma.libraryVersion.findMany({ where: { id: { in: [...ids] } } });
+    return rows.map(toVersion);
+  }
+
   async insertVersion(row: VersionRecord): Promise<void> {
     await this.prisma.libraryVersion.create({ data: versionData(row) });
   }
@@ -295,6 +301,15 @@ export class PrismaLibraryStore implements LibraryStore {
   async userName(userId: string): Promise<string | null> {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
     return user?.name ?? null;
+  }
+
+  async userNames(ids: readonly string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.prisma.user.findMany({
+      where: { id: { in: [...ids] } },
+      select: { id: true, name: true },
+    });
+    return new Map(rows.map(row => [row.id, row.name]));
   }
 
   async tenantName(tenantId: string): Promise<string | null> {

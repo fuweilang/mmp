@@ -121,6 +121,8 @@ const discoverySchema=z.object({capability:z.string(),industries:z.array(z.strin
 const expertPageSchema=z.object({items:z.array(cardSchema.extend({discovery:discoverySchema.optional()})),total:z.number(),hasMore:z.boolean(),nextCursor:z.string().nullable()}).strict()
 const skillPageSchema=z.object({items:z.array(skillCardSchema.extend({avatarUrl:z.string().nullable().optional()})),total:z.number(),hasMore:z.boolean(),nextCursor:z.string().nullable()}).strict()
 const facetSchema=z.object({total:z.number(),capabilities:z.array(z.object({id:z.string(),count:z.number()}).strict()),industries:z.array(z.object({id:z.string(),count:z.number()}).strict())}).strict()
+const expertHomeSchema=z.object({facets:facetSchema,page:expertPageSchema}).strict()
+const skillHomeSchema=z.object({facets:facetSchema,page:skillPageSchema}).strict()
 
 const legacyExecutionSchema = z.object({
   agentId: z.string().min(1),
@@ -256,8 +258,11 @@ export class GroundOfficialAgentClient {
   }
 
   private catalogSuffix(query:CatalogQuery){const params=new URLSearchParams();for(const key of ['q','capability','industry','cursor'] as const){const value=query[key];if(value)params.set(key,value);}return params.size?`?${params}`:''}
+  private homeSuffix(query:CatalogQuery){const params=new URLSearchParams();for(const key of ['q','capability','industry'] as const){const value=query[key];if(value)params.set(key,value);}return params.size?`?${params}`:''}
   pageExperts(query:CatalogQuery){return this.request(`/api/official-agents/catalog-page${this.catalogSuffix(query)}`,expertPageSchema,{})}
   pageSkills(query:CatalogQuery){return this.request(`/api/official-skills/catalog-page${this.catalogSuffix(query)}`,skillPageSchema,{})}
+  openExperts(query:CatalogQuery){return this.request(`/api/official-agents/catalog-home${this.homeSuffix(query)}`,expertHomeSchema,{})}
+  openSkills(query:CatalogQuery){return this.request(`/api/official-skills/catalog-home${this.homeSuffix(query)}`,skillHomeSchema,{})}
   expertFacets(){return this.request('/api/official-agents/catalog-facets',facetSchema,{})}
   skillFacets(){return this.request('/api/official-skills/catalog-facets',facetSchema,{})}
   getCard(id:string){return this.request(`/api/official-agents/${encodeURIComponent(id)}/catalog-card`,cardSchema,{})}

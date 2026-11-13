@@ -113,6 +113,11 @@ export async function versionStatus(ctx: LibraryContext, node: NodeRecord): Prom
   return version?.parseStatus ?? null;
 }
 
+export function versionStatusFrom(node: NodeRecord, versions: ReadonlyMap<string, VersionRecord>): string | null {
+  if (node.kind !== 'FILE' || !node.currentVersionId) return null;
+  return versions.get(node.currentVersionId)?.parseStatus ?? null;
+}
+
 /**
  * 打开一个节点/版本的读取句柄。预览、下载、精确版本读取、来源使用标记共用同一套
  * 可见性判断（canKnow）与状态错误码。
@@ -148,19 +153,33 @@ export async function toLibraryItem(
   node: NodeRecord,
   custodies: CustodyRecord[],
   accessedAt: number | null,
+  sources?: {
+    nodes?: ReadonlyMap<string, NodeRecord>;
+    versions?: ReadonlyMap<string, VersionRecord>;
+    names?: ReadonlyMap<string, string>;
+  },
 ): Promise<LibraryItem> {
   let parentName: string | null = null;
   let parentHidden = false;
   let parentId: string | null = node.parentId;
   if (node.parentId) {
-    const parent = await ctx.store.getNode(node.parentId);
+    const parent = sources?.nodes
+      ? sources.nodes.get(node.parentId) ?? null
+      : await ctx.store.getNode(node.parentId);
     if (!parent || !canSee(actor, parent, custodies, ctx.now())) {
       parentName = null;
       parentHidden = true;
       parentId = null;
     } else parentName = parent.name;
   }
-  const version = node.currentVersionId ? await ctx.store.getVersion(node.currentVersionId) : null;
+  const version = node.currentVersionId
+    ? sources?.versions
+      ? sources.versions.get(node.currentVersionId) ?? null
+      : await ctx.store.getVersion(node.currentVersionId)
+    : null;
+  const ownerName = sources?.names
+    ? sources.names.get(node.ownerUserId) ?? null
+    : await ctx.store.userName(node.ownerUserId);
   return {
     id: node.id,
     kind: node.kind,
@@ -168,7 +187,7 @@ export async function toLibraryItem(
     scope: node.scope,
     state: node.state,
     ownerUserId: node.ownerUserId,
-    ownerName: await ctx.store.userName(node.ownerUserId),
+    ownerName,
     parentId,
     parentName,
     parentHidden,

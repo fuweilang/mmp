@@ -39,8 +39,12 @@ export async function startGroundWebRouter(options: {
   publicOrigin?: string
   cookieName: string
   maxWorkers: number
-  /** Stop an identity Host after this many milliseconds with no open request or socket. Omit to keep it until process exit. */
+  /** Stop an identity Host after this many milliseconds with no request traffic. Omit to keep it until process exit. */
   idleMs?: number
+  /** When newcomers are waiting, give away a Host that has been idle this long. Omit to refuse immediately at the cap. */
+  handoffMs?: number
+  /** How long a newcomer waits for a Host before the capacity refusal. Omit to refuse immediately. */
+  queueTimeoutMs?: number
   requestTimeoutMs: number
   startWorker: (identity: GroundWebIdentity, publicOrigin: string, signal: AbortSignal) => Promise<IdentityWebWorker>
 }): Promise<{ origin: string; listenerOrigin: string; close: () => Promise<void> }> {
@@ -56,14 +60,20 @@ export async function startGroundWebRouter(options: {
   }
   if (!Number.isSafeInteger(options.maxWorkers) || options.maxWorkers < 1) throw new Error('maxWorkers must be a positive integer')
   if (options.idleMs !== undefined && (!Number.isSafeInteger(options.idleMs) || options.idleMs < 1)) throw new Error('idleMs must be a positive integer')
+  if (options.handoffMs !== undefined && (!Number.isSafeInteger(options.handoffMs) || options.handoffMs < 1)) throw new Error('handoffMs must be a positive integer')
+  if (options.queueTimeoutMs !== undefined && (!Number.isSafeInteger(options.queueTimeoutMs) || options.queueTimeoutMs < 1)) throw new Error('queueTimeoutMs must be a positive integer')
   const lifetime = new AbortController()
+  const capacityMessage = '网页版已达到同时运行的账号环境上限，请联系管理员。'
   interface IdentitySlot {
     readonly worker: Promise<IdentityWebWorker>
     busy: number
+    lastActive: number
     evicting?: Promise<void>
     timer?: ReturnType<typeof setTimeout>
   }
+  interface AdmissionWaiter { resolve: () => void; reject: (error: Error) => void; timer?: ReturnType<typeof setTimeout> }
   const slots = new Map<string, IdentitySlot>()
+  const waiters: AdmissionWaiter[] = []
   const sockets = new Set<Socket>()
   const proxy = httpProxy.createProxyServer({ ws: true, xfwd: false, changeOrigin: false })
   let origin = ''
@@ -95,17 +105,38 @@ export async function startGroundWebRouter(options: {
   }
   const retain = (slot: IdentitySlot): void => {
     slot.busy += 1
+    slot.lastActive = Date.now()
     if (slot.timer !== undefined) { clearTimeout(slot.timer); slot.timer = undefined }
   }
-  const armIdle = (key: string, slot: IdentitySlot): void => {
-    if (options.idleMs === undefined || slot.busy > 0 || slot.evicting !== undefined || lifetime.signal.aborted) return
-    slot.timer = setTimeout(() => { void retire(key, slot) }, options.idleMs)
+  const wakeWaiter = (): void => {
+    const next = waiters.shift()
+    if (next === undefined) return
+    if (next.timer !== undefined) clearTimeout(next.timer)
+    next.resolve()
+  }
+  const scheduleIdle = (key: string, slot: IdentitySlot): void => {
+    if (slot.busy > 0 || slot.evicting !== undefined || lifetime.signal.aborted) return
+    if (slot.timer !== undefined) clearTimeout(slot.timer)
+    const handingOff = waiters.length > 0 && options.handoffMs !== undefined
+    const delay = handingOff ? options.handoffMs : options.idleMs
+    if (delay === undefined) return
+    slot.timer = setTimeout(() => {
+      slot.timer = undefined
+      if (waiters.length > 0) void retire(key, slot).then(() => wakeWaiter())
+      else void retire(key, slot)
+    }, delay)
     slot.timer.unref()
   }
   const release = (key: string, slot: IdentitySlot): void => {
     if (slots.get(key) !== slot) return
     slot.busy = Math.max(0, slot.busy - 1)
-    if (slot.busy === 0) armIdle(key, slot)
+    slot.lastActive = Date.now()
+    if (slot.busy === 0) scheduleIdle(key, slot)
+  }
+  const touch = (key: string, slot: IdentitySlot): void => {
+    if (slots.get(key) !== slot || slot.evicting !== undefined) return
+    slot.lastActive = Date.now()
+    if (slot.busy === 0) scheduleIdle(key, slot)
   }
   const shutdownSlot = (slot: IdentitySlot): Promise<void> => {
     if (slot.evicting !== undefined) return slot.evicting
@@ -123,20 +154,64 @@ export async function startGroundWebRouter(options: {
     await shutdownSlot(slot)
     if (slots.get(key) === slot) slots.delete(key)
   }
-  /** Reserve one running identity. An idle Host is closed by `idleMs`; a full set of busy Hosts rejects. */
-  const hold = async (identity: GroundWebIdentity): Promise<{ worker: Promise<IdentityWebWorker>; release: () => void }> => {
+  const expediteOldestIdle = (): void => {
+    if (options.handoffMs === undefined) return
+    let chosen: { key: string; slot: IdentitySlot } | undefined
+    for (const [key, slot] of slots) {
+      if (slot.busy > 0 || slot.evicting !== undefined) continue
+      if (chosen === undefined || slot.lastActive < chosen.slot.lastActive) chosen = { key, slot }
+    }
+    if (chosen === undefined) return
+    const remaining = Math.max(1, options.handoffMs - (Date.now() - chosen.slot.lastActive))
+    if (chosen.slot.timer !== undefined) clearTimeout(chosen.slot.timer)
+    const target = chosen
+    target.slot.timer = setTimeout(() => {
+      target.slot.timer = undefined
+      void retire(target.key, target.slot).then(() => wakeWaiter())
+    }, remaining)
+    target.slot.timer.unref()
+  }
+  const yieldIdleSlot = async (): Promise<boolean> => {
+    if (options.handoffMs === undefined) return false
+    const now = Date.now()
+    let chosen: { key: string; slot: IdentitySlot } | undefined
+    for (const [key, slot] of slots) {
+      if (slot.evicting !== undefined || slot.busy > 0) continue
+      if (now - slot.lastActive < options.handoffMs) continue
+      if (chosen === undefined || slot.lastActive < chosen.slot.lastActive) chosen = { key, slot }
+    }
+    if (chosen === undefined) return false
+    await retire(chosen.key, chosen.slot)
+    return activeSlots() < options.maxWorkers
+  }
+  /** Reserve one running identity. Quiet Hosts are closed for newcomers after `handoffMs`; a full set of busy Hosts waits, then refuses. */
+  const hold = async (identity: GroundWebIdentity): Promise<{ worker: Promise<IdentityWebWorker>; release: () => void; touch: () => void }> => {
     const key = groundWebPartition(ground.origin, identity)
     for (;;) {
+      if (lifetime.signal.aborted) throw new GroundWebSessionError(503, capacityMessage)
       const current = slots.get(key)
       if (current !== undefined && current.evicting === undefined) {
         retain(current)
-        return { worker: current.worker, release: () => release(key, current) }
+        return { worker: current.worker, release: () => release(key, current), touch: () => touch(key, current) }
       }
       if (current?.evicting !== undefined) { await current.evicting; continue }
       if (activeSlots() >= options.maxWorkers) {
-        throw new GroundWebSessionError(503, '网页版已达到同时运行的账号环境上限，请联系管理员。')
+        if (await yieldIdleSlot()) continue
+        if (options.queueTimeoutMs === undefined) throw new GroundWebSessionError(503, capacityMessage)
+        expediteOldestIdle()
+        await new Promise<void>((resolve, reject) => {
+          const waiter: AdmissionWaiter = { resolve, reject }
+          waiter.timer = setTimeout(() => {
+            const index = waiters.indexOf(waiter)
+            if (index >= 0) waiters.splice(index, 1)
+            reject(new GroundWebSessionError(503, capacityMessage))
+          }, options.queueTimeoutMs)
+          waiter.timer.unref()
+          waiters.push(waiter)
+        })
+        continue
       }
-      const created: IdentitySlot = { busy: 1, worker: options.startWorker(identity, origin, lifetime.signal) }
+      const created: IdentitySlot = { busy: 1, lastActive: Date.now(), worker: options.startWorker(identity, origin, lifetime.signal) }
       slots.set(key, created)
       void created.worker.then(value => {
         if (value.exited === undefined) return
@@ -147,7 +222,7 @@ export async function startGroundWebRouter(options: {
         if (created.timer !== undefined) clearTimeout(created.timer)
         slots.delete(key)
       })
-      return { worker: created.worker, release: () => release(key, created) }
+      return { worker: created.worker, release: () => release(key, created), touch: () => touch(key, created) }
     }
   }
   const releaseOnce = (fn: () => void): (() => void) => {
@@ -300,10 +375,16 @@ probe();
         if (identity === undefined) { refuse(401); return }
         const held = await hold(identity)
         releaseHold = releaseOnce(held.release)
-        socket.once('close', releaseHold)
         const worker = await held.worker
         if (lifetime.signal.aborted || socket.destroyed) { releaseHold(); return }
+        socket.on('data', () => held.touch())
+        const write = socket.write
+        socket.write = ((...args: Parameters<Socket['write']>) => {
+          held.touch()
+          return write.apply(socket, args)
+        }) as Socket['write']
         proxy.ws(req, socket as Socket, head, { target: worker.origin }, () => { socket.destroy(); releaseHold() })
+        releaseHold()
       } catch (error) {
         releaseHold()
         console.error('[web-sso] connection unavailable:', error instanceof Error ? error.message : String(error))
@@ -325,6 +406,10 @@ probe();
   let closing: Promise<void> | undefined
   return { origin, listenerOrigin: `http://${options.host === '::1' ? '[::1]' : options.host}:${address.port}`, close: () => closing ??= (async () => {
     lifetime.abort()
+    for (const waiter of waiters.splice(0)) {
+      if (waiter.timer !== undefined) clearTimeout(waiter.timer)
+      waiter.reject(new GroundWebSessionError(503, capacityMessage))
+    }
     for (const slot of slots.values()) if (slot.timer !== undefined) clearTimeout(slot.timer)
     for (const socket of sockets) socket.destroy()
     const closed = new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))

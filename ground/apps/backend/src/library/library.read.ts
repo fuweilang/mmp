@@ -10,7 +10,7 @@ import {
   SEARCH_HITS,
   toLibraryItem,
   versionBrief,
-  versionStatus,
+  versionStatusFrom,
   VIEWABLE_IMAGE_EXTENSIONS,
 } from './library.items';
 import { canManage, canSee, matchingCustody } from './library.policy';
@@ -47,19 +47,23 @@ export class LibraryReadService {
     await this.auth.sweep(actor.tenantId);
     const custodies = await this.auth.custodiesFor(actor);
     const nodes = await this.ctx.store.listNodes(actor.tenantId);
+    const versions = await this.versionsFor(nodes);
     const query = q?.trim().toLowerCase();
     const rows = [];
     for (const node of nodes) {
       if (node.kind !== 'FILE' || node.state !== 'ACTIVE' || !canSee(actor, node, custodies, this.ctx.now())) continue;
       if (query && !node.name.toLowerCase().includes(query)) continue;
-      if (await versionStatus(this.ctx, node) === 'FAILED') continue;
+      if (versionStatusFrom(node, versions) === 'FAILED') continue;
       rows.push(node);
     }
     rows.sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
+    const pageRows = rows.slice((page - 1) * pageSize, page * pageSize);
+    const names = await this.ctx.store.userNames(pageRows.map(node => node.ownerUserId));
+    const nodeById = new Map(nodes.map(node => [node.id, node]));
     const items = [];
-    for (const node of rows.slice((page - 1) * pageSize, page * pageSize)) {
+    for (const node of pageRows) {
       const location = node.ownerUserId === actor.userId ? 'mine' as const : 'shared' as const;
-      const item = await toLibraryItem(this.ctx, actor, node, custodies, null);
+      const item = await toLibraryItem(this.ctx, actor, node, custodies, null, { nodes: nodeById, versions, names });
       item.location = location;
       item.parentPath = this.catalogPath(node, nodes, actor, custodies, location);
       items.push(item);
@@ -100,10 +104,11 @@ export class LibraryReadService {
     if (!query && parentId) rows = rows.filter((node) => node.parentId === parentId);
     else if (!query && !flat && (view === 'mine' || view === 'shared' || view === 'members' || view === 'managed')) rows = rows.filter((node) => this.isRootForView(node, nodes, actor, custodies, view, memberOwner));
     if (query) rows = rows.filter((node) => node.name.toLowerCase().includes(query));
+    const versions = await this.versionsFor(rows);
     if (agent) {
       const visible: NodeRecord[] = [];
       for (const node of rows) {
-        if (node.kind === 'FILE' && await versionStatus(this.ctx, node) === 'FAILED') continue;
+        if (node.kind === 'FILE' && versionStatusFrom(node, versions) === 'FAILED') continue;
         visible.push(node);
       }
       rows = visible;
@@ -111,14 +116,14 @@ export class LibraryReadService {
     if (status === 'uncitable') {
       const matched: NodeRecord[] = [];
       for (const node of rows) {
-        if (node.kind === 'FILE' && await versionStatus(this.ctx, node) !== 'READY') matched.push(node);
+        if (node.kind === 'FILE' && versionStatusFrom(node, versions) !== 'READY') matched.push(node);
       }
       rows = matched;
     } else if (status !== 'all') {
       const statuses = status === 'processing' ? ['PENDING', 'PROCESSING'] : [({ ready: 'READY', failed: 'FAILED', download: 'DOWNLOAD_ONLY' } as Record<string, string>)[status]].filter(value => value !== undefined);
       const matched: NodeRecord[] = [];
       for (const node of rows) {
-        const version = node.currentVersionId ? await this.ctx.store.getVersion(node.currentVersionId) : null;
+        const version = node.currentVersionId ? versions.get(node.currentVersionId) ?? null : null;
         if (node.kind === 'FILE' && version && statuses.includes(version.parseStatus)) matched.push(node);
       }
       rows = matched;
@@ -127,7 +132,7 @@ export class LibraryReadService {
     else if (fileType) {
       const matched: NodeRecord[] = [];
       for (const node of rows) {
-        const version = node.kind === 'FILE' && node.currentVersionId ? await this.ctx.store.getVersion(node.currentVersionId) : null;
+        const version = node.kind === 'FILE' && node.currentVersionId ? versions.get(node.currentVersionId) ?? null : null;
         if (libraryFileTypeKey(node.kind, version?.mimeType) === fileType) matched.push(node);
       }
       rows = matched;
@@ -139,14 +144,16 @@ export class LibraryReadService {
       if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) throw new LibraryError(400, '分页参数无效', 'BAD_PAGE');
       rows = rows.slice((page - 1) * pageSize, page * pageSize);
     }
+    const names = await this.ctx.store.userNames(rows.map(node => node.ownerUserId));
+    const nodeById = new Map(nodes.map(node => [node.id, node]));
     const items = [];
     for (const node of rows) {
-      const item = await toLibraryItem(this.ctx, actor, node, custodies, recentAt.get(node.id) ?? null);
-      if (flat && (view === 'mine' || view === 'members')) item.parentPath = node.parentId ? await this.breadcrumb(actor, node.parentId, custodies) : [];
+      const item = await toLibraryItem(this.ctx, actor, node, custodies, recentAt.get(node.id) ?? null, { nodes: nodeById, versions, names });
+      if (flat && (view === 'mine' || view === 'members')) item.parentPath = node.parentId ? this.breadcrumb(nodes, actor, node.parentId, custodies) : [];
       items.push(item);
       if (actor.custodyId) await this.auth.auditCustodyRead(actor, node);
     }
-    const breadcrumb = parentId ? await this.breadcrumb(actor, parentId, custodies) : [];
+    const breadcrumb = parentId ? this.breadcrumb(nodes, actor, parentId, custodies) : [];
     return { items, breadcrumb, parentScope, total, page, pageSize: pageSize ?? total, ownerUserId: folderOwner };
   }
 
@@ -238,17 +245,24 @@ export class LibraryReadService {
     return items.reverse();
   }
 
-  private async breadcrumb(actor: Actor, parentId: string, custodies: CustodyRecord[]) {
+  private breadcrumb(nodes: readonly NodeRecord[], actor: Actor, parentId: string, custodies: CustodyRecord[]) {
+    const byId = new Map(nodes.map(node => [node.id, node]));
     const items: { id: string; name: string }[] = [];
     let current: string | null = parentId;
     const seen = new Set<string>();
     while (current && !seen.has(current)) {
       seen.add(current);
-      const node = await this.ctx.store.getNode(current);
+      const node = byId.get(current);
       if (!node || !canSee(actor, node, custodies, this.ctx.now())) break;
       items.push({ id: node.id, name: node.name });
       current = node.parentId;
     }
     return items.reverse();
+  }
+
+  private async versionsFor(nodes: readonly NodeRecord[]) {
+    const ids = [...new Set(nodes.flatMap(node => node.currentVersionId ? [node.currentVersionId] : []))];
+    const rows = await this.ctx.store.getVersions(ids);
+    return new Map(rows.map(row => [row.id, row]));
   }
 }

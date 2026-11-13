@@ -15,6 +15,8 @@ export interface GalleryFace {
     readonly catalogDetail: (kind:'expert'|'skill',id:string) => Promise<CatalogDetail>;
     readonly pageExperts: (query: CatalogQuery) => Promise<ExpertCatalogPage>;
     readonly pageSkills: (query: CatalogQuery) => Promise<SkillCatalogPage>;
+    readonly openExperts?: (query: CatalogQuery) => Promise<{ facets: CatalogFacets; page: ExpertCatalogPage }>;
+    readonly openSkills?: (query: CatalogQuery) => Promise<{ facets: CatalogFacets; page: SkillCatalogPage }>;
     readonly expertFacets: () => Promise<CatalogFacets>;
     readonly skillFacets: () => Promise<CatalogFacets>;
     readonly startAgent: (id: string, draft?: string) => Promise<StartAgentFailure | undefined>;
@@ -51,7 +53,7 @@ function FavouriteStar({ filled }: { readonly filled: boolean }): ReactNode {
  </svg>;
 }
 /** Both panels stay mounted, preserving their own query, pages and scroll position. */
-export function GalleryPage({ t, preferences, favourite, catalogDetail, pageExperts, pageSkills, expertFacets, skillFacets, startAgent, requestSkill }: GalleryPageProps): ReactNode {
+export function GalleryPage({ t, preferences, favourite, catalogDetail, pageExperts, pageSkills, openExperts, openSkills, expertFacets, skillFacets, startAgent, requestSkill }: GalleryPageProps): ReactNode {
     const [favourites,setFavourites]=useState<Set<string>>(new Set()),[favBusy,setFavBusy]=useState<Set<string>>(new Set());
     const favouriteLock=useRef(new Set<string>());
     useEffect(()=>{let active=true;if(preferences)void Promise.all([preferences('expert','favourites'),preferences('skill','favourites')]).then(([experts,skills])=>{if(active)setFavourites(new Set([...experts.map(row=>`expert:${row.resourceId}`),...skills.map(row=>`skill:${row.resourceId}`)]))}).catch(()=>{});return()=>{active=false}},[preferences]);
@@ -106,17 +108,18 @@ export function GalleryPage({ t, preferences, favourite, catalogDetail, pageExpe
   <div className={css.tabWrap}><div className={css.tabs} role="tablist" aria-label={t('title')}>
    {(['experts', 'skills'] as const).map(id => <button key={id} id={`gallery-tab-${id}`} type="button" role="tab" data-tab={id} className={`${css.tab} ${tab === id ? css.tabActive : ''}`} aria-controls={`gallery-panel-${id}`} aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} onKeyDown={tabKey} onClick={() => { setTab(id); setNotice(undefined); }}>{t(id === 'experts' ? 'tabExperts' : 'tabSkills')}</button>)}
   </div></div>
-  <CatalogPanel kind="experts" active={tab === 'experts'} loadPage={pageExperts} loadFacets={expertFacets} starting={starting} onStart={start} onDetail={setSelected} renderFavourite={favouriteButton} t={t}/>
-  <CatalogPanel kind="skills" active={tab === 'skills'} loadPage={pageSkills} loadFacets={skillFacets} starting={starting} onStart={start} onDetail={setSelected} renderFavourite={favouriteButton} t={t}/>
+  <CatalogPanel kind="experts" active={tab === 'experts'} loadPage={pageExperts} loadHome={openExperts} loadFacets={expertFacets} starting={starting} onStart={start} onDetail={setSelected} renderFavourite={favouriteButton} t={t}/>
+  <CatalogPanel kind="skills" active={tab === 'skills'} loadPage={pageSkills} loadHome={openSkills} loadFacets={skillFacets} starting={starting} onStart={start} onDetail={setSelected} renderFavourite={favouriteButton} t={t}/>
   <p className={css.notice}>{t('selectorScopeHint')}</p>
   {selected ? <CatalogDetails key={selected.id} item={selected} load={catalogDetail} onClose={()=>setSelected(null)} onStart={start} busy={starting!==undefined} t={t}/> : null}
   {notice ? <p className={css.notice} role="alert">{notice}</p> : null}
  </main>;
 }
-function CatalogPanel({ kind, active, loadPage, loadFacets, starting, onStart, onDetail, renderFavourite, t }: {
+function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, onStart, onDetail, renderFavourite, t }: {
     readonly kind: GalleryTab;
     readonly active: boolean;
     readonly loadPage: (query: CatalogQuery) => Promise<Page>;
+    readonly loadHome?: (query: CatalogQuery) => Promise<{ facets: CatalogFacets; page: Page }>;
     readonly loadFacets: () => Promise<CatalogFacets>;
     readonly starting: string | undefined;
     readonly onStart: (item: Item) => Promise<void>;
@@ -169,9 +172,15 @@ function CatalogPanel({ kind, active, loadPage, loadFacets, starting, onStart, o
         const request = generation.current;
         setState(value => ({ ...append ? value : EMPTY, loading: true, error: null }));
         try {
-            const result = await loadPage({ q: query, capability, industry, ...append && previous.cursor ? { cursor: previous.cursor } : {} });
+            const opened = !append && loadHome ? await loadHome({ q: query, capability, industry }) : null;
+            const result = opened ? opened.page : await loadPage({ q: query, capability, industry, ...append && previous.cursor ? { cursor: previous.cursor } : {} });
             if (!mounted.current || request !== generation.current)
                 return;
+            if (opened) {
+                setFacets(opened.facets);
+                setFacetError(false);
+                facetsLoaded.current = true;
+            }
             setState(value => {
                 const seen = new Set<string>();
                 const items = [...append ? value.items : [], ...result.items].filter(item => { if (seen.has(item.id))
@@ -180,18 +189,23 @@ function CatalogPanel({ kind, active, loadPage, loadFacets, starting, onStart, o
             });
         }
         catch (error) {
-            if (mounted.current && request === generation.current)
+            if (mounted.current && request === generation.current) {
                 setState(value => ({ ...value, loading: false, error: error instanceof Error ? error.message : String(error) }));
+                if (!append && loadHome) {
+                    setFacetError(true);
+                    facetsLoaded.current = false;
+                }
+            }
         }
         finally {
             if (request === generation.current)
                 lock.current = false;
         }
-    }, [query, capability, industry, signature, loadPage]);
+    }, [query, capability, industry, signature, loadPage, loadHome]);
     useEffect(() => {
         if (!active)
             return;
-        if (!facetsLoaded.current)
+        if (!loadHome && !facetsLoaded.current)
             void fetchFacets();
         if (loadedSignature.current !== signature) {
             generation.current++;
@@ -202,17 +216,9 @@ function CatalogPanel({ kind, active, loadPage, loadFacets, starting, onStart, o
                 root.current.scrollTop = 0;
             void fetchPage(false);
         }
-    }, [active, signature, fetchPage, fetchFacets]);
+    }, [active, signature, fetchPage, fetchFacets, loadHome]);
     useLayoutEffect(() => { if (active && root.current)
         root.current.scrollTop = scroll.current; }, [active]);
-    useEffect(() => {
-        if (!active || !sentinel.current || !root.current || !state.hasMore || state.loading || state.error || typeof IntersectionObserver === 'undefined')
-            return;
-        const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting))
-            void fetchPage(true); }, { root: root.current, rootMargin: '160px 0px', threshold: 0 });
-        observer.observe(sentinel.current);
-        return () => observer.disconnect();
-    }, [active, state.hasMore, state.cursor, state.loading, state.error, fetchPage]);
     useLayoutEffect(() => {
         const element = facetList.current;
         if (!active || !element)
@@ -248,13 +254,13 @@ function CatalogPanel({ kind, active, loadPage, loadFacets, starting, onStart, o
    <div className={css.searchRow}>
     <Input className={css.search as string} type="search" maxLength={200} value={input} icon={<IconSearchOutlineRegular size={16}/>} placeholder={t(kind === 'experts' ? 'searchExpertsHint' : 'searchSkillsHint')} aria-label={t(kind === 'experts' ? 'searchExperts' : 'searchSkills')} onChange={event => setInput(event.target.value)} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; setInput(event.currentTarget.value); setComposeTick(value => value + 1); }} onKeyDown={event => { if (event.key === 'Enter' && !composing.current)
         setQuery(input.trim()); }}/>
-    <Button variant="ghost" size="sm" disabled={state.loading} onClick={() => { setRefresh(value => value + 1); void fetchFacets(); }}>{t('refresh')}</Button>
+    <Button variant="ghost" size="sm" disabled={state.loading} onClick={() => { setRefresh(value => value + 1); if (!loadHome) void fetchFacets(); }}>{t('refresh')}</Button>
    </div>
    {available.length ? <div className={css.filters}><span className={css.filterLabel}>{t('capabilityLabel')}</span><div className={css.facetList} ref={facetList} role="group" aria-label={t('capabilityLabel')}>
     <button type="button" className={`${css.chip} ${capability === 'all' ? css.chipActive : ''}`} aria-pressed={capability === 'all'} data-capability="all" onKeyDown={chipKey} onClick={() => setCapability('all')}>{t('categoryAll')}<span>{facets?.total ?? 0}</span></button>
     {shown.map(item => <button key={item.id} type="button" className={`${css.chip} ${capability === item.id ? css.chipActive : ''}`} aria-pressed={capability === item.id} data-capability={item.id} onKeyDown={chipKey} onClick={() => setCapability(item.id)}><span className={css.chipText}>{t(item.label)}</span><span>{item.count}</span></button>)}
    </div>{available.length > visibleCount ? <button className={`${css.chip} ${css.more}`} type="button" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{t(expanded ? 'lessCapabilities' : 'moreCapabilities')}</button> : null}</div> : null}
-   {facetError ? <p className={css.feedback}>{t('facetFailed')} <button type="button" onClick={() => { void fetchFacets(); }}>{t('retry')}</button></p> : null}
+   {facetError ? <p className={css.feedback}>{t('facetFailed')} <button type="button" onClick={() => { if (loadHome) void fetchPage(false); else void fetchFacets(); }}>{t('retry')}</button></p> : null}
    <div className={css.resultBar}><p role="status" aria-live="polite">{state.loaded ? t(kind === 'experts' ? 'expertsFound' : 'skillsFound', { count: String(state.total) }) : t(kind === 'experts' ? 'loadingExperts' : 'loadingSkills')}</p>{filtered ? <Button variant="ghost" size="sm" onClick={clear}>{t('clearSkillFilters')}</Button> : null}</div>
    {!state.loaded && state.loading ? <ul className={css.cards} aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <li key={index} className={`${css.card} ${css.skeleton}`}><span /><span /><span /></li>)}</ul> : null}
    {state.items.length ? <ul className={css.cards}>

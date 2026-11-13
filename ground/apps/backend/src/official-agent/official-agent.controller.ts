@@ -44,6 +44,9 @@ export class OfficialAgentController {
   @Get('catalog-page')
   @Header('Cache-Control','private, no-store')
   page(@CurrentUser() user:User,@Query('q') q?:string,@Query('capability') capability?:string,@Query('industry') industry?:string,@Query('cursor') cursor?:string){return this.officialAgents.catalogPage(user,{q,capability,industry,cursor});}
+  @Get('catalog-home')
+  @Header('Cache-Control','private, no-store')
+  home(@CurrentUser() user:User,@Query('q') q?:string,@Query('capability') capability?:string,@Query('industry') industry?:string){return this.officialAgents.catalogHome(user,{q,capability,industry});}
   @Get('catalog-facets')
   @Header('Cache-Control','private, no-store')
   facets(@CurrentUser() user:User){return this.officialAgents.catalogFacets(user);}

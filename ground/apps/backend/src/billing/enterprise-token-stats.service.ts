@@ -14,8 +14,10 @@ import {
   blendedYuanPer1mForModel,
   classifyVendor,
 } from './billing.shared';
-import { ledgerCoinsAtCurrentRate } from './billing.pricing';
 import { TokenStatsSupport } from './token-stats.support';
+
+const LEDGER_COINS = Prisma.raw(`GREATEST(COALESCE(coins, 0), 0)::numeric * 10000 / (CASE WHEN (meta->>'originalAiCoinsPerYuan') ~ '^[0-9]+([.][0-9]+)?$' AND (meta->>'originalAiCoinsPerYuan')::numeric > 0 THEN (meta->>'originalAiCoinsPerYuan')::numeric ELSE 10000 END)`);
+const RECORDED_COST = Prisma.raw(`CASE WHEN jsonb_typeof(meta->'purchaseCostYuan') = 'string' AND btrim(meta->>'purchaseCostYuan') ~ '^[0-9]+([.][0-9]+)?([eE][+-]?[0-9]+)?$' THEN (meta->>'purchaseCostYuan')::numeric WHEN jsonb_typeof(meta->'purchaseCostYuan') = 'string' AND btrim(meta->>'purchaseCostYuan') = '' THEN 0 ELSE NULL END`);
 
 @Injectable()
 export class EnterpriseTokenStatsService {
@@ -31,18 +33,30 @@ export class EnterpriseTokenStatsService {
   ) {
     this.support.requirePlatformAdmin(actor);
     const config = await this.config.getConfig();
-    const where: Prisma.TenantAiLedgerWhereInput = { type: 'chat_consume' };
-    if (query.tenantId) where.tenantId = query.tenantId;
-    if (query.from || query.to) {
-      where.createdAt = {};
-      if (query.from) where.createdAt.gte = new Date(query.from);
-      if (query.to) where.createdAt.lte = new Date(query.to);
-    }
-    const rows = await this.prisma.tenantAiLedger.findMany({
-      where,
-      select: { tokens: true, coins: true, meta: true, tenantId: true },
-      take: 20000,
-    });
+    const filters = [Prisma.sql`type = 'chat_consume'`];
+    if (query.tenantId) filters.push(Prisma.sql`tenant_id = ${query.tenantId}`);
+    if (query.from) filters.push(Prisma.sql`created_at >= ${new Date(query.from)}`);
+    if (query.to) filters.push(Prisma.sql`created_at <= ${new Date(query.to)}`);
+    const rows = await this.prisma.$queryRaw<Array<{
+      provider: string;
+      model: string;
+      tokens: number;
+      coins: number;
+      turns: number;
+      recorded_cost: number | null;
+      legacy_tokens: number;
+    }>>`
+      SELECT COALESCE(meta->>'provider', '') AS provider,
+             COALESCE(meta->>'model', '') AS model,
+             COALESCE(SUM(GREATEST(COALESCE(tokens, 0), 0)), 0)::float8 AS tokens,
+             COALESCE(SUM(${LEDGER_COINS}), 0)::float8 AS coins,
+             COUNT(*)::int AS turns,
+             SUM(${RECORDED_COST})::float8 AS recorded_cost,
+             COALESCE(SUM(CASE WHEN ${RECORDED_COST} IS NULL THEN GREATEST(COALESCE(tokens, 0), 0) ELSE 0 END), 0)::float8 AS legacy_tokens
+      FROM tenant_ai_ledger
+      WHERE ${Prisma.join(filters, ' AND ')}
+      GROUP BY 1, 2
+    `;
 
     type VendorBucket = 'deepseek' | 'kimi' | 'zhipu' | 'other';
     type Acc = {
@@ -71,18 +85,18 @@ export class EnterpriseTokenStatsService {
     }> = [];
     const modelMap = new Map<string, (typeof modelRows)[number]>();
 
+    let turnCount = 0;
     for (const r of rows) {
-      const meta = (r.meta && typeof r.meta === 'object' && !Array.isArray(r.meta)
-        ? (r.meta as Record<string, unknown>)
-        : {}) as Record<string, unknown>;
-      const provider = typeof meta.provider === 'string' ? meta.provider : '';
-      const model = typeof meta.model === 'string' ? meta.model : '';
+      const provider = r.provider || '';
+      const model = r.model || '';
       const vendor = toBucket(classifyVendor(provider, model));
-      const tokens = Math.max(0, r.tokens ?? 0);
-      const coins = Math.max(0, ledgerCoinsAtCurrentRate(r.coins, r.meta));
+      const tokens = Math.max(0, Number(r.tokens) || 0);
+      const coins = Math.max(0, Number(r.coins) || 0);
+      const turns = Math.max(0, Number(r.turns) || 0);
+      turnCount += turns;
       buckets[vendor].tokens += tokens;
       buckets[vendor].coins += coins;
-      buckets[vendor].turns += 1;
+      buckets[vendor].turns += turns;
       const key = `${vendor}|${provider}|${model}`;
       let m = modelMap.get(key);
       if (!m) {
@@ -90,12 +104,12 @@ export class EnterpriseTokenStatsService {
         modelMap.set(key, m);
         modelRows.push(m);
       }
-      const recordedCost = typeof meta.purchaseCostYuan === 'string' ? Number(meta.purchaseCostYuan) : NaN;
+      const recordedCost = r.recorded_cost == null ? NaN : Number(r.recorded_cost);
       if (Number.isFinite(recordedCost) && recordedCost >= 0) buckets[vendor].estimatedCostYuan += recordedCost;
-      else m.legacyTokens += tokens;
+      m.legacyTokens += Number(r.legacy_tokens) || 0;
       m.tokens += tokens;
       m.coins += coins;
-      m.turns += 1;
+      m.turns += turns;
     }
 
     const prices = config.vendorUnitPrices;
@@ -135,7 +149,7 @@ export class EnterpriseTokenStatsService {
       totals: {
         tokens: totalTokens,
         coins: totalCoins,
-        turns: rows.length,
+        turns: turnCount,
         estimatedCostYuan: Number(totalCost.toFixed(4)),
       },
       byVendor: (['deepseek', 'kimi', 'zhipu', 'other'] as VendorBucket[]).map((v) => {
@@ -176,18 +190,29 @@ export class EnterpriseTokenStatsService {
     };
     if (modelFilter) where.model = modelFilter;
 
-    const turns = await this.prisma.tokenUsageTurn.findMany({
-      where,
-      select: {
-        tenantId: true,
-        userId: true,
-        model: true,
-        inputTokens: true,
-        outputTokens: true,
-        totalTokens: true,
-        modelCalls: true,
-      },
-    });
+    const [turnTotals, turnByTenant, turnByModel, turnMembers] = await Promise.all([
+      this.prisma.tokenUsageTurn.aggregate({
+        where,
+        _sum: { inputTokens: true, outputTokens: true, totalTokens: true, modelCalls: true },
+        _count: { _all: true },
+      }),
+      this.prisma.tokenUsageTurn.groupBy({
+        by: ['tenantId'],
+        where,
+        _sum: { inputTokens: true, outputTokens: true, totalTokens: true, modelCalls: true },
+        _count: { _all: true },
+      }),
+      this.prisma.tokenUsageTurn.groupBy({
+        by: ['model'],
+        where,
+        _sum: { inputTokens: true, outputTokens: true, totalTokens: true },
+        _count: { _all: true },
+      }),
+      this.prisma.tokenUsageTurn.groupBy({
+        by: ['tenantId', 'userId'],
+        where,
+      }),
+    ]);
 
     const modelRows = await this.prisma.tokenUsageTurn.findMany({
       where: {
@@ -216,82 +241,62 @@ export class EnterpriseTokenStatsService {
       memberCount: number;
     };
     const entMap = new Map<string, EntAcc>();
-    const memberSeen = new Map<string, Set<string>>();
     const byModelMap = new Map<
       string,
       { model: string; inputTokens: number; outputTokens: number; totalTokens: number; turns: number }
     >();
     const platform = {
-      inputTokens: 0,
-      outputTokens: 0,
-      totalTokens: 0,
-      turns: 0,
-      modelCalls: 0,
+      inputTokens: turnTotals._sum.inputTokens ?? 0,
+      outputTokens: turnTotals._sum.outputTokens ?? 0,
+      totalTokens: turnTotals._sum.totalTokens ?? 0,
+      turns: turnTotals._count._all,
+      modelCalls: turnTotals._sum.modelCalls ?? 0,
     };
-
-    const tenantIds = [...new Set(turns.map((t) => t.tenantId!).filter(Boolean))];
-    const tenantRows = tenantIds.length
+    const memberCountByTenant = new Map<string, number>();
+    for (const pair of turnMembers) {
+      if (!pair.tenantId) continue;
+      memberCountByTenant.set(pair.tenantId, (memberCountByTenant.get(pair.tenantId) ?? 0) + 1);
+    }
+    const usageTenantIds = turnByTenant.flatMap(row => row.tenantId ? [row.tenantId] : []);
+    const usageTenants = usageTenantIds.length
       ? await this.prisma.tenant.findMany({
-          where: { id: { in: tenantIds } },
+          where: { id: { in: usageTenantIds }, type: { not: 'PLATFORM' } },
           select: { id: true, name: true, slug: true, type: true, status: true },
         })
       : [];
-    const tenantInfo = new Map(tenantRows.map((t) => [t.id, t]));
-
-    for (const row of turns) {
-      const tid = row.tenantId!;
-      const info = tenantInfo.get(tid);
-      if (!info || info.type === 'PLATFORM') continue;
-
-      platform.inputTokens += row.inputTokens;
-      platform.outputTokens += row.outputTokens;
-      platform.totalTokens += row.totalTokens;
-      platform.turns += 1;
-      platform.modelCalls += row.modelCalls;
-
+    const usageTenantInfo = new Map(usageTenants.map(row => [row.id, row]));
+    for (const row of turnByTenant) {
+      if (!row.tenantId) continue;
+      const info = usageTenantInfo.get(row.tenantId);
+      if (!info) continue;
+      entMap.set(info.id, {
+        tenantId: info.id,
+        tenantName: info.name,
+        tenantSlug: info.slug,
+        tenantType: info.type,
+        tenantStatus: info.status,
+        inputTokens: row._sum.inputTokens ?? 0,
+        outputTokens: row._sum.outputTokens ?? 0,
+        totalTokens: row._sum.totalTokens ?? 0,
+        turns: row._count._all,
+        modelCalls: row._sum.modelCalls ?? 0,
+        memberCount: memberCountByTenant.get(info.id) ?? 0,
+      });
+    }
+    for (const row of turnByModel) {
       const modelName = row.model || '(unknown)';
-      const bm = byModelMap.get(modelName) ?? {
+      const current = byModelMap.get(modelName) ?? {
         model: modelName,
         inputTokens: 0,
         outputTokens: 0,
         totalTokens: 0,
         turns: 0,
       };
-      bm.inputTokens += row.inputTokens;
-      bm.outputTokens += row.outputTokens;
-      bm.totalTokens += row.totalTokens;
-      bm.turns += 1;
-      byModelMap.set(modelName, bm);
-
-      let ent = entMap.get(tid);
-      if (!ent) {
-        ent = {
-          tenantId: info.id,
-          tenantName: info.name,
-          tenantSlug: info.slug,
-          tenantType: info.type,
-          tenantStatus: info.status,
-          inputTokens: 0,
-          outputTokens: 0,
-          totalTokens: 0,
-          turns: 0,
-          modelCalls: 0,
-          memberCount: 0,
-        };
-        entMap.set(tid, ent);
-        memberSeen.set(tid, new Set());
-      }
-      ent.inputTokens += row.inputTokens;
-      ent.outputTokens += row.outputTokens;
-      ent.totalTokens += row.totalTokens;
-      ent.turns += 1;
-      ent.modelCalls += row.modelCalls;
-      memberSeen.get(tid)!.add(row.userId);
-    }
-
-    for (const [tid, set] of memberSeen) {
-      const ent = entMap.get(tid);
-      if (ent) ent.memberCount = set.size;
+      current.inputTokens += row._sum.inputTokens ?? 0;
+      current.outputTokens += row._sum.outputTokens ?? 0;
+      current.totalTokens += row._sum.totalTokens ?? 0;
+      current.turns += row._count._all;
+      byModelMap.set(modelName, current);
     }
 
     const tenants = await this.prisma.tenant.findMany({
@@ -332,44 +337,20 @@ export class EnterpriseTokenStatsService {
     // AI币实扣：同时间窗 chat_consume ledger（与流水合计对齐；不再写死 1000/1:1）
     const billingConfig = await this.config.getConfig();
     const tokensPerAiCoin = billingConfig.tokensPerAiCoin;
-    const ledgerWhere: Prisma.TenantAiLedgerWhereInput = {
-      type: 'chat_consume',
-      createdAt: { gte: range.start, lt: range.end },
-      // TenantAiLedger 无 tenant 关联；用非 PLATFORM 企业 id 列表收口
-      tenantId: allTenantIds.length ? { in: allTenantIds } : { in: ['__none__'] },
-    };
-    if (modelFilter) {
-      ledgerWhere.meta = { path: ['model'], equals: modelFilter };
-    }
-    const ledgerRows = await this.prisma.tenantAiLedger.findMany({
-      where: ledgerWhere,
-      select: { tenantId: true, coins: true, tokens: true, meta: true },
-      take: 50000,
-    });
+    const ledgerGroups = await this.ledgerByTenantModel(range.start, range.end, allTenantIds, modelFilter);
     const coinsByTenant = new Map<string, number>();
     const ledgerTokensByTenant = new Map<string, number>();
     const coinsByModel = new Map<string, number>();
     let platformConsumedAiCoins = 0;
     let platformLedgerTokens = 0;
-    for (const row of ledgerRows) {
-      const coins = Math.max(0, ledgerCoinsAtCurrentRate(row.coins || 0, row.meta));
-      const tokens = Math.max(0, row.tokens ?? 0);
+    for (const row of ledgerGroups) {
+      const coins = Math.max(0, Number(row.coins) || 0);
+      const tokens = Math.max(0, Number(row.tokens) || 0);
       platformConsumedAiCoins += coins;
       platformLedgerTokens += tokens;
-      coinsByTenant.set(row.tenantId, (coinsByTenant.get(row.tenantId) ?? 0) + coins);
-      ledgerTokensByTenant.set(
-        row.tenantId,
-        (ledgerTokensByTenant.get(row.tenantId) ?? 0) + tokens,
-      );
-      const meta =
-        row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta)
-          ? (row.meta as Record<string, unknown>)
-          : {};
-      const modelName =
-        typeof meta.model === 'string' && meta.model.trim()
-          ? meta.model.trim()
-          : '(unknown)';
-      coinsByModel.set(modelName, (coinsByModel.get(modelName) ?? 0) + coins);
+      coinsByTenant.set(row.tenant_id, (coinsByTenant.get(row.tenant_id) ?? 0) + coins);
+      ledgerTokensByTenant.set(row.tenant_id, (ledgerTokensByTenant.get(row.tenant_id) ?? 0) + tokens);
+      coinsByModel.set(row.model, (coinsByModel.get(row.model) ?? 0) + coins);
     }
 
     const enterprises = enterprisesBase.map((e) => ({
@@ -453,12 +434,6 @@ export class EnterpriseTokenStatsService {
     });
     if (!tenant || tenant.type === 'PLATFORM') throw new NotFoundException('企业不存在');
 
-    const overview = await this.enterpriseTokenStatsOverview(actor, {
-      from: query.from,
-      to: query.to,
-      model: query.model,
-    });
-
     let range;
     try {
       range = this.support.shanghaiRangeDates(query.from, query.to);
@@ -466,24 +441,37 @@ export class EnterpriseTokenStatsService {
       throw new BadRequestException(e instanceof Error ? e.message : '日期无效');
     }
     const modelFilter = (query.model || '').trim() || null;
-
     const where: Prisma.TokenUsageTurnWhereInput = {
       tenantId: tenant.id,
       occurredAt: { gte: range.start, lt: range.end },
     };
     if (modelFilter) where.model = modelFilter;
-
-    const turns = await this.prisma.tokenUsageTurn.findMany({
-      where,
-      select: {
-        userId: true,
-        model: true,
-        inputTokens: true,
-        outputTokens: true,
-        totalTokens: true,
-        modelCalls: true,
-      },
-    });
+    const [billingConfig, modelOptionRows, turnTotals, turnByUserModel] = await Promise.all([
+      this.config.getConfig(),
+      this.prisma.tokenUsageTurn.findMany({
+        where: {
+          occurredAt: { gte: range.start, lt: range.end },
+          tenantId: { not: null },
+          tenant: { type: { not: 'PLATFORM' } },
+        },
+        distinct: ['model'],
+        select: { model: true },
+        orderBy: { model: 'asc' },
+        take: 200,
+      }),
+      this.prisma.tokenUsageTurn.aggregate({
+        where,
+        _sum: { inputTokens: true, outputTokens: true, totalTokens: true, modelCalls: true },
+        _count: { _all: true },
+      }),
+      this.prisma.tokenUsageTurn.groupBy({
+        by: ['userId', 'model'],
+        where,
+        _sum: { inputTokens: true, outputTokens: true, totalTokens: true, modelCalls: true },
+        _count: { _all: true },
+      }),
+    ]);
+    const modelFilterOptions = this.support.buildModelFilterOptions(modelOptionRows.map(row => row.model || '(unknown)'));
 
     const members = await this.prisma.orgMember.findMany({
       where: { tenantId: tenant.id },
@@ -524,7 +512,7 @@ export class EnterpriseTokenStatsService {
     }
     const modelByUser = new Map<string, Map<string, { model: string; totalTokens: number; turns: number }>>();
 
-    const missingUserIds = [...new Set(turns.map((t) => t.userId).filter((id) => !memMap.has(id)))];
+    const missingUserIds = [...new Set(turnByUserModel.map(row => row.userId).filter(id => !memMap.has(id)))];
     if (missingUserIds.length) {
       const extras = await this.prisma.user.findMany({
         where: { id: { in: missingUserIds } },
@@ -563,14 +551,14 @@ export class EnterpriseTokenStatsService {
       }
     }
 
-    for (const row of turns) {
+    for (const row of turnByUserModel) {
       let acc = memMap.get(row.userId);
       if (!acc) continue;
-      acc.inputTokens += row.inputTokens;
-      acc.outputTokens += row.outputTokens;
-      acc.totalTokens += row.totalTokens;
-      acc.turns += 1;
-      acc.modelCalls += row.modelCalls;
+      acc.inputTokens += row._sum.inputTokens ?? 0;
+      acc.outputTokens += row._sum.outputTokens ?? 0;
+      acc.totalTokens += row._sum.totalTokens ?? 0;
+      acc.turns += row._count._all;
+      acc.modelCalls += row._sum.modelCalls ?? 0;
       let mm = modelByUser.get(row.userId);
       if (!mm) {
         mm = new Map();
@@ -578,8 +566,8 @@ export class EnterpriseTokenStatsService {
       }
       const modelName = row.model || '(unknown)';
       const cur = mm.get(modelName) ?? { model: modelName, totalTokens: 0, turns: 0 };
-      cur.totalTokens += row.totalTokens;
-      cur.turns += 1;
+      cur.totalTokens += row._sum.totalTokens ?? 0;
+      cur.turns += row._count._all;
       mm.set(modelName, cur);
     }
 
@@ -593,31 +581,19 @@ export class EnterpriseTokenStatsService {
       };
     });
 
-    const detailLedgerWhere: Prisma.TenantAiLedgerWhereInput = {
-      tenantId: tenant.id,
-      type: 'chat_consume',
-      createdAt: { gte: range.start, lt: range.end },
-    };
-    if (modelFilter) {
-      detailLedgerWhere.meta = { path: ['model'], equals: modelFilter };
-    }
-    const detailLedgers = await this.prisma.tenantAiLedger.findMany({
-      where: detailLedgerWhere,
-      select: { actorUserId: true, coins: true, tokens: true, meta: true },
-      take: 50000,
-    });
+    const detailLedgers = await this.ledgerByActor(range.start, range.end, tenant.id, modelFilter);
     const coinsByActor = new Map<string, number>();
     const tokensByActor = new Map<string, number>();
     let detailConsumed = 0;
     let detailLedgerTokens = 0;
     for (const row of detailLedgers) {
-      const coins = Math.max(0, ledgerCoinsAtCurrentRate(row.coins || 0, row.meta));
-      const tokens = Math.max(0, row.tokens ?? 0);
+      const coins = Math.max(0, Number(row.coins) || 0);
+      const tokens = Math.max(0, Number(row.tokens) || 0);
       detailConsumed += coins;
       detailLedgerTokens += tokens;
-      if (!row.actorUserId) continue;
-      coinsByActor.set(row.actorUserId, (coinsByActor.get(row.actorUserId) ?? 0) + coins);
-      tokensByActor.set(row.actorUserId, (tokensByActor.get(row.actorUserId) ?? 0) + tokens);
+      if (!row.actor_user_id) continue;
+      coinsByActor.set(row.actor_user_id, (coinsByActor.get(row.actor_user_id) ?? 0) + coins);
+      tokensByActor.set(row.actor_user_id, (tokensByActor.get(row.actor_user_id) ?? 0) + tokens);
     }
     const memberById = new Map(memberRowsBase.map((m) => [m.userId, m]));
     const missingActorIds: string[] = [];
@@ -664,40 +640,74 @@ export class EnterpriseTokenStatsService {
         a.name.localeCompare(b.name, 'zh'),
     );
 
-    const entRow = overview.enterprises.find((e) => e.tenantId === tenant.id);
-
     return {
-      source: overview.source,
+      source: 'ground_token_usage_turn+ledger_chat_consume',
       tenant,
-      range: overview.range,
-      model: overview.model,
-      models: overview.models,
-      offlineModels: overview.offlineModels,
-      modelsSource: overview.modelsSource,
-      tokensPerAiCoin: overview.tokensPerAiCoin,
-      aiCoinSource: overview.aiCoinSource,
-      totals: entRow
-        ? {
-            inputTokens: entRow.inputTokens,
-            outputTokens: entRow.outputTokens,
-            totalTokens: entRow.totalTokens,
-            turns: entRow.turns,
-            modelCalls: entRow.modelCalls,
-            consumedAiCoins: entRow.consumedAiCoins,
-            ledgerTokens: entRow.ledgerTokens,
-          }
-        : {
-            inputTokens: 0,
-            outputTokens: 0,
-            totalTokens: 0,
-            turns: 0,
-            modelCalls: 0,
-            consumedAiCoins: detailConsumed,
-            ledgerTokens: detailLedgerTokens,
-          },
+      range: {
+        from: query.from ?? null,
+        to: query.to ?? null,
+        startUnix: range.startUnix,
+        endUnix: range.endUnix,
+        timezone: 'Asia/Shanghai',
+      },
+      model: modelFilter,
+      models: modelFilterOptions.models,
+      offlineModels: modelFilterOptions.offlineModels,
+      modelsSource: {
+        dbPath: modelFilterOptions.catalogDbPath,
+        ...(modelFilterOptions.catalogError ? { error: modelFilterOptions.catalogError } : {}),
+      },
+      tokensPerAiCoin: billingConfig.tokensPerAiCoin,
+      aiCoinSource: 'ledger_chat_consume' as const,
+      totals: {
+        inputTokens: turnTotals._sum.inputTokens ?? 0,
+        outputTokens: turnTotals._sum.outputTokens ?? 0,
+        totalTokens: turnTotals._sum.totalTokens ?? 0,
+        turns: turnTotals._count._all,
+        modelCalls: turnTotals._sum.modelCalls ?? 0,
+        consumedAiCoins: detailConsumed,
+        ledgerTokens: detailLedgerTokens,
+      },
       members: memberRows,
-      related: overview.related,
+      related: {
+        ledgerUsagePath: '/admin/enterprise-wallets',
+        note: 'Token 来自 token_usage_turn；AI币来自同时间窗 tenant_ai_ledger.chat_consume 实扣，与企业钱包流水合计对齐。不再使用写死 1000/1:1 旧口径。',
+      },
     };
+  }
+
+  private async ledgerByTenantModel(start: Date, end: Date, tenantIds: string[], model: string | null) {
+    if (tenantIds.length === 0) return [];
+    const modelSql = model ? Prisma.sql`AND meta->>'model' = ${model}` : Prisma.empty;
+    return this.prisma.$queryRaw<Array<{ tenant_id: string; model: string; coins: number; tokens: number }>>`
+      SELECT tenant_id,
+             COALESCE(NULLIF(btrim(meta->>'model'), ''), '(unknown)') AS model,
+             COALESCE(SUM(${LEDGER_COINS}), 0)::float8 AS coins,
+             COALESCE(SUM(GREATEST(COALESCE(tokens, 0), 0)), 0)::float8 AS tokens
+      FROM tenant_ai_ledger
+      WHERE type = 'chat_consume'
+        AND created_at >= ${start}
+        AND created_at < ${end}
+        AND tenant_id IN (${Prisma.join(tenantIds)})
+        ${modelSql}
+      GROUP BY tenant_id, 2
+    `;
+  }
+
+  private async ledgerByActor(start: Date, end: Date, tenantId: string, model: string | null) {
+    const modelSql = model ? Prisma.sql`AND meta->>'model' = ${model}` : Prisma.empty;
+    return this.prisma.$queryRaw<Array<{ actor_user_id: string | null; coins: number; tokens: number }>>`
+      SELECT actor_user_id,
+             COALESCE(SUM(${LEDGER_COINS}), 0)::float8 AS coins,
+             COALESCE(SUM(GREATEST(COALESCE(tokens, 0), 0)), 0)::float8 AS tokens
+      FROM tenant_ai_ledger
+      WHERE type = 'chat_consume'
+        AND tenant_id = ${tenantId}
+        AND created_at >= ${start}
+        AND created_at < ${end}
+        ${modelSql}
+      GROUP BY actor_user_id
+    `;
   }
 
 
