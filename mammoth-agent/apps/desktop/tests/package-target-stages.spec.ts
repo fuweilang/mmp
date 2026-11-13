@@ -12,6 +12,10 @@ vi.mock('../scripts/macos-notarization-proxy.ts', () => ({
   withMacOSNotarizationProxy: vi.fn(async (_proxy: string | undefined, action: () => Promise<void>) => action()),
 }))
 vi.mock('../scripts/notarize-macos.mjs', () => ({ notarizeMacOS: vi.fn(async () => {}) }))
+// Signed packaging asserts the embedded feed against real artifacts; this suite owns no package output.
+vi.mock('../scripts/desktop-packaged-update-config.ts', () => ({
+  assertPackagedUpdateConfig: vi.fn(async () => ({ provider: 'generic', url: 'https://updates.example.com/feed/', channel: 'nightly' })),
+}))
 vi.mock('../scripts/package-macos.ts', () => ({ packageMacOSArtifacts: vi.fn(async () => {}) }))
 // Cross-arch flock addon fetch hits the registry; this suite owns no subprocesses.
 vi.mock('../scripts/pack-registry-package.mjs', () => ({ packRegistryPackage: vi.fn(async () => {}) }))

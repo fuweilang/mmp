@@ -186,6 +186,13 @@ jobs:
           PACKAGE_SOURCE_SHA: ${{ steps.checkout.outputs.commit }}
           PACKAGE_VERSION: ${{ steps.settings.outputs.version }}
         run: node --import tsx apps/desktop/scripts/retain-desktop-ci.ts
+      - name: Assert signed package embeds its update feed
+        if: success() && inputs.signing == 'signed'
+        # The selected preset owns MMP_DESKTOP_AUTO_UPDATE_ENV, and the packaged feed must name that
+        # deployment and MMP_DESKTOP_UPDATE_CHANNEL; an unsigned package carries no feed and skips this.
+        run: |
+          node --import tsx apps/desktop/scripts/desktop-packaged-update-config.ts --target win-x64
+          exit $LASTEXITCODE
       - name: Retain packaging diagnostics
         if: always() && steps.checkout.outcome == 'success'
         uses: actions/upload-artifact@v7.0.1

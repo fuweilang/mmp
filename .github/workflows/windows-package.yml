@@ -100,6 +100,14 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ steps.signing.outputs.signed == 'true' && 'true' || 'false' }}
         run: corepack pnpm --dir apps/desktop run package:win:x64:unsigned
 
+      - name: Assert signed package embeds its update feed
+        if: ${{ steps.signing.outputs.signed == 'true' }}
+        # The signed build must carry app-update.yml naming the production origin and channel;
+        # unsigned packages have no feed and skip this check.
+        run: |
+          node --import tsx apps/desktop/scripts/desktop-packaged-update-config.ts --target win-x64
+          exit $LASTEXITCODE
+
       - name: Collect installer
         run: |
           $dir = 'apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts'
