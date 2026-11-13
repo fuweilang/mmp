@@ -10,6 +10,7 @@ import type { IncomingMessage } from 'node:http'
 import { basename, dirname, join, resolve } from 'node:path'
 import { dump, load } from 'js-yaml'
 import { desktopArtifactBaseForTarget } from '../apps/desktop/scripts/desktop-artifact-name.mjs'
+import { desktopUpdateMetadataFilename } from '../apps/desktop/scripts/desktop-auto-update-environment.mjs'
 import type { DesktopPackageTargetName } from '../apps/desktop/scripts/package-target.ts'
 
 const DOWNLOADS_ROOT = '/www/mmp-prod/downloads'
@@ -18,17 +19,24 @@ const DEFAULT_SERVER = 'root@124.223.179.250'
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u
 const SERVER_PATTERN = /^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+$/u
 
+/** electron-updater writes one feed per channel; the deployment only offers these two. */
+export type UpdateChannel = 'nightly' | 'latest'
+
 interface DownloadPlatform {
   readonly manifestKey: string
   readonly stem: string
   readonly extension: 'exe' | 'dmg'
+  /** Installer kind published beside the dmg/exe; macOS updates ship the zip, Windows reuses the exe. */
+  readonly updaterExtension: 'exe' | 'zip'
   readonly alias: string
+  /** Node platform naming used by electron-updater's channel metadata. */
+  readonly nodePlatform: 'win32' | 'darwin'
 }
 
 const DOWNLOAD_PLATFORMS: Record<DesktopPackageTargetName, DownloadPlatform> = {
-  'win-x64': { manifestKey: 'windows-amd64', stem: 'mammoth-agent-win-x64', extension: 'exe', alias: 'mammoth-agent-win.exe' },
-  'mac-arm64': { manifestKey: 'darwin-arm64', stem: 'mammoth-agent-mac-arm64', extension: 'dmg', alias: 'mammoth-agent-mac-arm64.dmg' },
-  'mac-x64': { manifestKey: 'darwin-amd64', stem: 'mammoth-agent-mac-x64', extension: 'dmg', alias: 'mammoth-agent-mac-x64.dmg' },
+  'win-x64': { manifestKey: 'windows-amd64', stem: 'mammoth-agent-win-x64', extension: 'exe', updaterExtension: 'exe', alias: 'mammoth-agent-win.exe', nodePlatform: 'win32' },
+  'mac-arm64': { manifestKey: 'darwin-arm64', stem: 'mammoth-agent-mac-arm64', extension: 'dmg', updaterExtension: 'zip', alias: 'mammoth-agent-mac-arm64.dmg', nodePlatform: 'darwin' },
+  'mac-x64': { manifestKey: 'darwin-amd64', stem: 'mammoth-agent-mac-x64', extension: 'dmg', updaterExtension: 'zip', alias: 'mammoth-agent-mac-x64.dmg', nodePlatform: 'darwin' },
 }
 
 /** One download platform entry in the user-facing manifest. */
@@ -63,23 +71,41 @@ export interface PublishCliOptions {
   readonly version: string
   readonly server: string
   readonly feed: boolean
+  readonly signed: boolean
+  /** Explicit channel; absent derives it from the version and any package record. */
+  readonly channel: UpdateChannel | undefined
   readonly execute: boolean
 }
 
-/** Update feed files published beside the manifest when `--feed` is selected. */
+/** One file published into a channel feed directory beside its metadata. */
+export interface FeedUpload {
+  readonly localPath: string
+  readonly name: string
+  readonly sha256: string
+  readonly bytes: number
+}
+
+/** Update feed published beside the manifest when `--feed` is selected. */
 export interface FeedPublication {
   readonly ymlName: string
   readonly yml: string
-  readonly blockmapPath: string
-  readonly blockmapName: string
   readonly publicUrl: string
+  readonly version: string
+  readonly channel: UpdateChannel
+  /** Update file the feed references: the Windows installer or the macOS zip. */
   readonly updaterName: string
+  readonly updaterUrl: string
+  readonly updaterSha512: string
+  readonly updaterSize: number
+  /** Files placed in the feed directory before its metadata. */
+  readonly uploads: readonly FeedUpload[]
 }
 
 /** Local artifact set validated before any remote write. */
 export interface PublishPlan {
   readonly platform: DesktopPackageTargetName
   readonly version: string
+  readonly channel: UpdateChannel
   readonly server: string
   readonly publicOrigin: string
   readonly sourcePath: string
@@ -125,6 +151,12 @@ export interface PublicDigest extends PublicProbe {
   readonly sha256: string
 }
 
+/** HTTP observation of a small public text document, such as one update feed. */
+export interface PublicText {
+  readonly status: number
+  readonly text: string
+}
+
 /** Injected remote, clock, HTTP, and logging dependencies used by one publication. */
 export interface PublishEnvironment {
   /** Absent for dry runs, which never write. */
@@ -133,6 +165,7 @@ export interface PublishEnvironment {
   readonly now: Date
   readonly head: (url: string) => Promise<PublicProbe>
   readonly fetchHash: (url: string) => Promise<PublicDigest>
+  readonly fetchText: (url: string) => Promise<PublicText>
   readonly fetchManifest: () => Promise<DesktopManifest | null>
   readonly log: (line: string) => void
 }
@@ -160,6 +193,10 @@ export interface PublishPlanOptions {
   readonly version: string
   readonly server: string
   readonly feed: boolean
+  /** Operator's signing claim for targets whose packaging records none. */
+  readonly signed: boolean
+  /** Explicit channel; absent reads the package record, then derives it from the version. */
+  readonly channel: UpdateChannel | undefined
   readonly publicOrigin: string
 }
 
@@ -202,6 +239,45 @@ function acceptedArtifactNames(platform: DesktopPackageTargetName, version: stri
   const release = `${base}.${target.extension}`
   const unsigned = `${base}-unsigned.${target.extension}`
   return [release, unsigned]
+}
+
+/**
+ * @param platform Supported release target.
+ * @param version Published version.
+ * @returns Update file names an electron-builder feed may reference for this target.
+ */
+export function acceptedUpdateFileNames(platform: DesktopPackageTargetName, version: string): readonly string[] {
+  const extension = DOWNLOAD_PLATFORMS[platform].updaterExtension
+  const base = desktopArtifactBaseForTarget(version, platform)
+  return [`${base}.${extension}`, `${base}-unsigned.${extension}`]
+}
+
+/**
+ * @param platform Supported release target.
+ * @param version Published version.
+ * @param channel Selected update channel.
+ * @returns electron-updater channel metadata filename, such as `latest-mac.yml`.
+ */
+export function resolveFeedMetadataName(
+  platform: DesktopPackageTargetName,
+  version: string,
+  channel: UpdateChannel,
+): string {
+  return desktopUpdateMetadataFilename(version, DOWNLOAD_PLATFORMS[platform].nodePlatform, channel)
+}
+
+/**
+ * @param version Published version.
+ * @param requested Channel selected on the command line or recorded by packaging.
+ * @returns The requested channel, or nightly for a prerelease and latest for a stable version.
+ */
+export function resolvePublishChannel(version: string, requested: UpdateChannel | undefined): UpdateChannel {
+  validatePublishVersion(version)
+  if (requested === undefined) return version.includes('-') ? 'nightly' : 'latest'
+  if (requested === 'latest' && version.includes('-')) {
+    throw new Error(`desktop downloads: latest requires a stable version, received ${version}`)
+  }
+  return requested
 }
 
 /**
@@ -467,11 +543,15 @@ async function inspectInstallerArchitecture(path: string, platform: DesktopPacka
   return null
 }
 
-async function readInstallerSignature(input: string): Promise<boolean> {
+/**
+ * @param input Directory holding packaged artifacts.
+ * @returns `installer.json`'s signing claim, or undefined when packaging did not write that file.
+ */
+export async function readInstallerJsonSignature(input: string): Promise<boolean | undefined> {
   let text: string
   try { text = await readFile(join(resolve(input), 'installer.json'), 'utf8') }
   catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return false
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return undefined
     throw new Error(`desktop downloads: cannot read installer.json: ${error instanceof Error ? error.message : String(error)}`)
   }
   let parsed: unknown
@@ -481,6 +561,30 @@ async function readInstallerSignature(input: string): Promise<boolean> {
   const signed = (parsed as Record<string, unknown>).signed
   if (signed !== undefined && typeof signed !== 'boolean') throw new Error('desktop downloads: installer.json signed must be a boolean')
   return signed === true
+}
+
+/**
+ * Windows packaging records its signing result in `installer.json`. macOS packaging records none, so a
+ * macOS artifact counts as signed only when the operator says so and the update zip it seals exists.
+ * @param options Packaging evidence, selected target, `--signed`, and whether the update zip is present.
+ * @returns Whether the artifact may advertise automatic updates.
+ */
+export function resolveArtifactSigned(options: {
+  readonly recorded: boolean | undefined
+  readonly platform: DesktopPackageTargetName
+  readonly signedFlag: boolean
+  readonly updateFilePresent: boolean
+}): boolean {
+  if (options.recorded !== undefined) return options.recorded
+  if (options.platform === 'win-x64') {
+    if (options.signedFlag) throw new Error('desktop downloads: --signed applies to macOS targets; Windows signing is read from installer.json')
+    return false
+  }
+  if (!options.signedFlag) return false
+  if (!options.updateFilePresent) {
+    throw new Error(`desktop downloads: --signed requires the update zip beside the ${options.platform} artifacts`)
+  }
+  return true
 }
 
 function objectField(value: unknown, label: string): Record<string, unknown> {
@@ -499,19 +603,40 @@ function numberField(value: unknown, label: string): number {
 }
 
 /**
- * Validate electron-builder update metadata against the installer and normalize its URL.
- * @param options Input directory, target, version, installer, and published installer URL.
- * @returns The feed YAML and blockmap to publish.
+ * @param input Artifacts directory.
+ * @param platform Supported release target.
+ * @param version Expected version.
+ * @returns The macOS update zip published in the feed directory, or undefined when packaging wrote none.
+ */
+export async function findUpdateArchive(input: string, platform: DesktopPackageTargetName, version: string): Promise<string | undefined> {
+  for (const name of acceptedUpdateFileNames(platform, version)) {
+    const path = join(resolve(input), name)
+    const details = await stat(path).catch(() => undefined)
+    if (details !== undefined && details.isFile() && details.size > 0) return path
+  }
+  return undefined
+}
+
+async function feedUpload(localPath: string): Promise<FeedUpload> {
+  const digest = await hashFile(localPath, 'sha256', 'hex')
+  return { localPath, name: basename(localPath), sha256: digest.digest, bytes: digest.bytes }
+}
+
+/**
+ * Validate electron-builder update metadata against the packaged artifacts and normalize its URL.
+ * @param options Input directory, target, version, channel, installer, and the URLs the feed may reference.
+ * @returns The feed metadata, its uploads, and the exact update-file digest it must advertise.
  */
 export async function createFeedPublication(options: {
   readonly input: string
   readonly platform: DesktopPackageTargetName
   readonly version: string
+  readonly channel: UpdateChannel
   readonly installer: string
   readonly publishedUrl: string
   readonly publicOrigin: string
 }): Promise<FeedPublication> {
-  const ymlName = options.platform === 'win-x64' ? 'latest.yml' : 'latest-mac.yml'
+  const ymlName = resolveFeedMetadataName(options.platform, options.version, options.channel)
   const ymlPath = join(resolve(options.input), ymlName)
   let text: string
   try { text = await readFile(ymlPath, 'utf8') }
@@ -535,6 +660,10 @@ export async function createFeedPublication(options: {
   const updater = objectField(metadata.files[0], `${ymlName}.files[0]`)
   const updaterName = basename(stringField(updater.url ?? updater.path, `${ymlName}.files[0].url`))
   // A macOS feed ships the zip updater, while the download alias is the dmg; only Windows reuses the installer.
+  const accepted = acceptedUpdateFileNames(options.platform, options.version)
+  if (!accepted.includes(updaterName)) {
+    throw new Error(`desktop downloads: ${ymlName} references ${updaterName}, expected ${accepted.join(' or ')}`)
+  }
   if (options.platform === 'win-x64' && basename(options.installer) !== updaterName) {
     throw new Error(`desktop downloads: ${ymlName} references ${updaterName}, expected installer ${basename(options.installer)}`)
   }
@@ -553,18 +682,56 @@ export async function createFeedPublication(options: {
   if (blockmap === undefined || !blockmap.isFile() || blockmap.size === 0) {
     throw new Error(`desktop downloads: missing blockmap ${blockmapPath}`)
   }
+  // Windows reuses the versioned installer already published at the download root; macOS has no such
+  // copy of the zip, so the feed directory holds the updater the metadata points at.
+  const updaterUrl = options.platform === 'win-x64'
+    ? options.publishedUrl
+    : `${options.publicOrigin}/mmp-desk/feeds/${options.platform}/${updaterName}`
   const published = {
     ...metadata,
-    files: [{ ...updater, url: options.publishedUrl }],
-    ...(metadata.path === undefined ? {} : { path: options.publishedUrl }),
+    files: [{ ...updater, url: updaterUrl }],
+    ...(metadata.path === undefined ? {} : { path: updaterUrl }),
   }
+  const uploads: FeedUpload[] = []
+  if (options.platform !== 'win-x64') uploads.push(await feedUpload(updaterPath))
+  uploads.push(await feedUpload(blockmapPath))
   return {
     ymlName,
     yml: dump(published),
-    blockmapPath,
-    blockmapName: basename(blockmapPath),
     publicUrl: `${options.publicOrigin}/mmp-desk/feeds/${options.platform}/${ymlName}`,
+    version: options.version,
+    channel: options.channel,
     updaterName,
+    updaterUrl,
+    updaterSha512: digest.digest,
+    updaterSize: digest.bytes,
+    uploads,
+  }
+}
+
+/**
+ * Compare a fetched feed with the publication it must describe.
+ * @param feed Feed written by this publication.
+ * @param publicYml Public observation of that feed.
+ * @returns Nothing; throws unless the public bytes still name this update file and its digest.
+ */
+export function verifyPublishedFeed(feed: FeedPublication, publicYml: PublicText): void {
+  if (publicYml.status !== 200) {
+    throw new Error(`public feed verification failed for ${feed.publicUrl}: status=${publicYml.status}`)
+  }
+  let parsed: unknown
+  try { parsed = load(publicYml.text) }
+  catch (error) { throw new Error(`public feed ${feed.publicUrl} is not YAML: ${error instanceof Error ? error.message : String(error)}`) }
+  const metadata = objectField(parsed, feed.publicUrl)
+  if (metadata.version !== feed.version) {
+    throw new Error(`public feed ${feed.publicUrl} serves version ${String(metadata.version)}, expected ${feed.version}`)
+  }
+  if (!Array.isArray(metadata.files) || metadata.files.length !== 1) {
+    throw new Error(`public feed ${feed.publicUrl}.files must contain exactly one update file`)
+  }
+  const updater = objectField(metadata.files[0], `${feed.publicUrl}.files[0]`)
+  if (updater.url !== feed.updaterUrl || updater.size !== feed.updaterSize || updater.sha512 !== feed.updaterSha512) {
+    throw new Error(`public feed ${feed.publicUrl} does not describe ${feed.updaterUrl} with its published sha512 and size`)
   }
 }
 
@@ -576,6 +743,46 @@ function assertPublicOrigin(origin: string): string {
     throw new Error('desktop downloads: public origin must be an HTTPS URL without a query or fragment')
   }
   return `${parsed.origin}${parsed.pathname.replace(/\/$/u, '')}`
+}
+
+/**
+ * Read the channel packaging recorded for this target, so publishing writes the feed the installer
+ * actually polls. A record of another version only warns: the artifact names still carry the version.
+ * @param input Artifacts directory.
+ * @param platform Selected release target.
+ * @param version Version being published.
+ * @param requested Channel selected on the command line, if any.
+ * @returns The channel whose metadata filename this publication writes.
+ */
+export async function resolveRecordedChannel(
+  input: string,
+  platform: DesktopPackageTargetName,
+  version: string,
+  requested: UpdateChannel | undefined,
+): Promise<UpdateChannel> {
+  const derived = resolvePublishChannel(version, requested)
+  const recordPath = join(resolve(input), `${platform}-release.json`)
+  let text: string
+  try { text = await readFile(recordPath, 'utf8') }
+  catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return derived
+    throw new Error(`desktop downloads: cannot read ${recordPath}: ${error instanceof Error ? error.message : String(error)}`)
+  }
+  let parsed: unknown
+  try { parsed = JSON.parse(text) }
+  catch (error) { throw new Error(`desktop downloads: ${recordPath} is not JSON: ${error instanceof Error ? error.message : String(error)}`) }
+  const record = objectField(parsed, recordPath)
+  const channel = record.channel
+  if (channel !== 'nightly' && channel !== 'latest') {
+    throw new Error(`desktop downloads: ${recordPath}.channel must be nightly or latest`)
+  }
+  if (requested !== undefined && requested !== channel) {
+    throw new Error(`desktop downloads: --channel ${requested} does not match the packaged ${channel} channel in ${recordPath}`)
+  }
+  if (record.version !== version) {
+    throw new Error(`desktop downloads: ${recordPath} records version ${String(record.version)}, publishing ${version}`)
+  }
+  return channel
 }
 
 /**
@@ -591,7 +798,16 @@ export async function createPublishPlan(options: PublishPlanOptions): Promise<Pu
   const architectureWarning = await inspectInstallerArchitecture(installer, options.platform, options.input)
   const installerDigest = await hashFile(installer, 'sha256', 'hex')
   const names = resolveDownloadNames(options.platform, options.version, installerDigest.digest)
-  const signed = await readInstallerSignature(options.input)
+  const channel = await resolveRecordedChannel(options.input, options.platform, options.version, options.channel)
+  const updateArchive = options.platform === 'win-x64'
+    ? installer
+    : await findUpdateArchive(options.input, options.platform, options.version)
+  const signed = resolveArtifactSigned({
+    recorded: await readInstallerJsonSignature(options.input),
+    platform: options.platform,
+    signedFlag: options.signed,
+    updateFilePresent: updateArchive !== undefined,
+  })
   const resolved = resolveManifestEntry({
     version: options.version,
     file: names.versioned,
@@ -606,6 +822,7 @@ export async function createPublishPlan(options: PublishPlanOptions): Promise<Pu
       input: options.input,
       platform: options.platform,
       version: options.version,
+      channel,
       installer,
       publishedUrl: `${publicOrigin}/${names.versioned}`,
       publicOrigin,
@@ -614,6 +831,7 @@ export async function createPublishPlan(options: PublishPlanOptions): Promise<Pu
   return {
     platform: options.platform,
     version: options.version,
+    channel,
     server: options.server,
     publicOrigin,
     sourcePath: installer,
@@ -684,7 +902,10 @@ export async function applyPublishPlan(plan: PublishPlan, environment: PublishEn
   log(`SHA256 ${plan.sha256}`)
   log(`BYTES ${plan.bytes}`)
   log(`SIGNED ${plan.signed}`)
-  log(`FEED ${plan.feedFiles === null ? 'none' : `${plan.feedFiles.ymlName} + ${plan.feedFiles.blockmapName} -> ${feedDirectory(plan.platform)}`}`)
+  log(`CHANNEL ${plan.channel}`)
+  log(`FEED ${plan.feedFiles === null
+    ? 'none'
+    : `${plan.feedFiles.ymlName} + ${plan.feedFiles.uploads.map(upload => upload.name).join(' + ')} -> ${feedDirectory(plan.platform)}`}`)
   log(`AUTOMATIC_UPDATES ${plan.manifestEntry.automatic_updates}`)
   for (const warning of plan.warnings) log(`WARN ${warning}`)
   log(`MANIFEST ${manifestPath} (backup ${manifestBackup})`)
@@ -735,10 +956,14 @@ export async function applyPublishPlan(plan: PublishPlan, environment: PublishEn
     log(`ALIAS_UPDATE ${plan.aliasName}`)
     if (plan.feedFiles !== null) {
       const directory = feedDirectory(plan.platform)
-      await remote.writeAtomic(`${directory}/${plan.feedFiles.ymlName}`, plan.feedFiles.yml)
-      if (await remote.hash(`${directory}/${plan.feedFiles.blockmapName}`) === null) {
-        await remote.upload(plan.feedFiles.blockmapPath, `${directory}/${plan.feedFiles.blockmapName}`)
+      for (const upload of plan.feedFiles.uploads) {
+        const destination = `${directory}/${upload.name}`
+        const remoteDigest = await remote.hash(destination)
+        if (remoteDigest === upload.sha256) { log(`KEEP_FEED ${upload.name}（远端字节一致）`); continue }
+        await remote.upload(upload.localPath, destination)
+        log(`${remoteDigest === null ? 'UPLOAD' : 'REPLACE'}_FEED ${upload.name} (${upload.bytes} bytes)`)
       }
+      await remote.writeAtomic(`${directory}/${plan.feedFiles.ymlName}`, plan.feedFiles.yml)
       log(`FEED_PUBLISHED ${plan.feedFiles.publicUrl}`)
     }
     publicVerification = await environment.fetchHash(versionedUrl)
@@ -750,6 +975,10 @@ export async function applyPublishPlan(plan: PublishPlan, environment: PublishEn
       throw new Error(`public alias verification failed for ${aliasUrl}: status=${aliasProbe.status} bytes=${aliasProbe.bytes ?? '?'}`)
     }
     log(`PUBLIC_VERIFIED ${versionedUrl} status=200 bytes=${publicVerification.bytes} sha256=${publicVerification.sha256}`)
+    if (plan.feedFiles !== null) {
+      verifyPublishedFeed(plan.feedFiles, await environment.fetchText(plan.feedFiles.publicUrl))
+      log(`FEED_VERIFIED ${plan.feedFiles.publicUrl} sha512=${plan.feedFiles.updaterSha512}`)
+    }
     await remote.writeAtomic(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
     log(`MANIFEST_UPDATED ${manifestPath}`)
   }
@@ -798,13 +1027,15 @@ function shellPath(path: string, mode: 'parent' | 'file'): string {
 export function parsePublishArguments(argv: readonly string[]): PublishCliOptions {
   const values = new Map<string, string>()
   let feed = false
+  let signed = false
   let dryRun = false
   let yes = false
-  const withValue = new Set(['--platform', '--input', '--version', '--server'])
+  const withValue = new Set(['--platform', '--input', '--version', '--server', '--channel'])
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]
     if (argument === undefined) break
     if (argument === '--feed') { feed = true; continue }
+    if (argument === '--signed') { signed = true; continue }
     if (argument === '--dry-run') { dryRun = true; continue }
     if (argument === '--yes') { yes = true; continue }
     if (!withValue.has(argument)) throw new Error(`desktop downloads: unknown argument ${argument}`)
@@ -819,16 +1050,22 @@ export function parsePublishArguments(argv: readonly string[]): PublishCliOption
   const version = values.get('--version')
   if (platform === undefined || input === undefined || version === undefined) {
     throw new Error('Usage: tsx scripts/publish-desktop-downloads.ts --platform win-x64|mac-arm64|mac-x64 '
-      + '--input <dir> --version <x.y.z> [--server root@host] [--feed] [--dry-run|--yes]')
+      + '--input <dir> --version <x.y.z> [--server root@host] [--feed] [--signed] [--channel nightly|latest] [--dry-run|--yes]')
   }
   const server = values.get('--server') ?? DEFAULT_SERVER
   if (!SERVER_PATTERN.test(server)) throw new Error(`desktop downloads: invalid --server ${JSON.stringify(server)}`)
+  const channel = values.get('--channel')
+  if (channel !== undefined && channel !== 'nightly' && channel !== 'latest') {
+    throw new Error(`desktop downloads: invalid --channel ${JSON.stringify(channel)} (expected nightly or latest)`)
+  }
   return {
     platform: resolveDownloadPlatform(platform),
     input: resolve(input),
     version: validatePublishVersion(version),
     server,
     feed,
+    signed,
+    channel,
     execute: yes && !dryRun,
   }
 }
@@ -935,6 +1172,15 @@ export async function publicHash(url: string): Promise<PublicDigest> {
   return { status: response.statusCode ?? 0, bytes, sha256: hash.digest('hex') }
 }
 
+/** @param url Public feed URL. @returns HTTP status and the response body as text. */
+export async function publicText(url: string): Promise<PublicText> {
+  const response = await openResponse(url, 'GET')
+  const status = response.statusCode ?? 0
+  let text = ''
+  for await (const chunk of response) text += Buffer.isBuffer(chunk) ? chunk.toString('utf8') : Buffer.from(chunk).toString('utf8')
+  return { status, text }
+}
+
 /** @param url Public manifest URL. @returns Parsed manifest, or null when the URL is not published. */
 export async function publicManifest(url: string): Promise<DesktopManifest | null> {
   const response = await openResponse(url, 'GET')
@@ -952,6 +1198,8 @@ async function runCli(argv: readonly string[]): Promise<void> {
     version: options.version,
     server: options.server,
     feed: options.feed,
+    signed: options.signed,
+    channel: options.channel,
     publicOrigin: PUBLIC_ORIGIN,
   })
   const outcome = await applyPublishPlan(plan, {
@@ -960,11 +1208,12 @@ async function runCli(argv: readonly string[]): Promise<void> {
     now: new Date(),
     head: publicHead,
     fetchHash: publicHash,
+    fetchText: publicText,
     fetchManifest: () => publicManifest(`${PUBLIC_ORIGIN}/mammoth-latest.json`),
     log: (line) => { console.log(line) },
   })
   console.log(options.execute
-    ? `PUBLISHED ${outcome.versionedName} (${outcome.bytes} bytes, signed=${outcome.signed}, automatic_updates=${outcome.automaticUpdates})`
+    ? `PUBLISHED ${outcome.versionedName} (${outcome.bytes} bytes, channel=${plan.channel}, signed=${outcome.signed}, automatic_updates=${outcome.automaticUpdates})`
     : 'DRY_RUN complete: no remote writes')
 }
 

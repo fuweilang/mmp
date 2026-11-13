@@ -996,7 +996,7 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned     # 跨架构，优先本
 
 **只认 `.desktop-build/targets/<target>/unsigned-artifacts/` 下的当次产物。** `release/desktop/` 里的旧 DMG 只能用于对比/回滚，禁止上传。
 
-### 6.2 出包后先验本地
+### 6.2 出包后先验本地（Mac）
 
 ```bash
 cd /Users/fuweilang/Documents/code/mmp/mammoth-agent
@@ -1017,7 +1017,7 @@ file "$APP/Contents/Resources/app.asar.unpacked/mmp/node_modules/@mammoth-ai/nod
 - bundle id **不能是 `com.tencent.octop`**（废弃包）。
 - `system.node` 缺失或架构不对，直接重打，不要上传。
 
-### 6.2 Windows 发布（GitHub Actions → 一条命令落盘）
+### 6.3 Windows 发布（GitHub Actions → 一条命令落盘）
 
 **不能在本机 Mac 打**（`package-target.ts:183` 要求 Windows x64 构建机）。流程：
 
@@ -1048,7 +1048,37 @@ node --experimental-strip-types scripts/publish-desktop-downloads.ts \
 - Windows 按钮由 manifest 的 `windows-amd64` 键驱动；**manifest 没写就等于页面显示「暂未提供」**。
 - 下载页 alias 是 `mammoth-agent-win.exe`（`nginx-mmai.conf` 已有精确 `no-store` location），manifest 指向版本化文件名。
 
-### 6.3 上传与三重校验
+### 6.4 应用内更新闭环（签名 → feed → 指针）
+
+> **没有签名就没有应用内更新。** 客户端 `update-coordinator.ts:71` 的判定是
+> `isPackaged && 平台支持 && resources/app-update.yml 存在`；unsigned 包不生成该文件，
+> 设置页会显示「当前构建不支持应用内更新」，连检查都不会发。
+> 老版本（0.3.3/0.3.4 这类 unsigned 包）**永远收不到更新**，必须手动装一次签名版才能闭环。
+
+| 环节 | 现状 | 触发条件 |
+|---|---|---|
+| 签名 | Windows 走 `CSC_LINK`+`CSC_KEY_PASSWORD`；mac 需 Developer ID + notarization | 配了证书 |
+| 产物 | signed 时 mac 出 `dmg`+`zip`；win 出 `exe`+`.blockmap`+`latest.yml` | `!unsigned` |
+| 内嵌更新源 | `electron-builder-config.mjs:100` 调 `resolveDesktopAutoUpdateConfig`，生成 `app-update.yml` | 非 unsigned 且 `MMP_DESKTOP_AUTO_UPDATE_ENV=production` |
+| feed 名 | mac `latest-mac.yml` / `nightly-mac.yml`；win `latest.yml` / `nightly.yml` | 由 channel 决定 |
+| 发布 | `publish-desktop-downloads.ts --feed --channel <latest\|nightly>` | 见下 |
+
+```bash
+# 签名包发布（mac 示例，zip 必须与 dmg 同目录）
+node --experimental-strip-types scripts/publish-desktop-downloads.ts \
+  --platform mac-arm64 --input <artifacts> --version 0.3.x --feed --channel latest \
+  --signed --dry-run      # 先看 diff
+# 确认后去掉 --dry-run，加 --yes
+```
+
+**规则**
+- `automatic_updates = signed && feed`；unsigned 或没 feed 一律 `false`（脚本强制）。
+- mac 的 signed 判定：有 `installer.json` 用其 `signed`；否则必须显式 `--signed` **且** 同目录有 `.zip`，缺 zip 直接报错。
+- 打包侧断言：signed 非 `--dir` 分支会校验 `app-update.yml` 已打进包（mac `Contents/Resources/`、win `win-unpacked/resources/`），provider/url/channel 不符即失败。
+- 服务端目录：`downloads/mmp-desk/feeds/<platform>/`（nginx 已配 `no-store`），`<platform>` ∈ `mac-arm64|mac-x64|win-x64`。
+- 顺序：**版本化产物 → 别名 → feed（yml 的 sha512/size 必须与产物一致）→ manifest 指针**；任一步失败回滚 manifest/别名。
+
+### 6.5 上传与三重校验
 
 ```bash
 # 1) 先传临时名，再原子改名，避免客户端下到半个文件
@@ -1067,7 +1097,7 @@ stat -f%z "/tmp/$DEST"
 
 本地、服务器、公网三处 sha256 和字节数必须完全一致；不一致就重传，不要改 manifest 去“适配”。如果服务器对、公网不对，先怀疑 CDN/EdgeOne 缓存，purge 后重试。
 
-### 6.4 `mammoth-latest.json` 最后传
+### 6.7 `mammoth-latest.json` 最后传
 
 1. 三个（或本轮实际构建的）安装包全部上传并三重校验。
 2. 备份旧 json：`mammoth-latest.prev-<ts>.json`。

@@ -2,11 +2,12 @@ import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { dump } from 'js-yaml'
+import { dump, load } from 'js-yaml'
 import { afterEach, expect, it } from 'vitest'
 import {
   applyPublishPlan,
   assertNoImmutableConflict,
+  createFeedPublication,
   createPublishPlan,
   describeManifestChange,
   formatTimestamp,
@@ -15,10 +16,17 @@ import {
   parseDesktopManifest,
   parsePeMachine,
   parsePublishArguments,
+  readInstallerJsonSignature,
+  resolveArtifactSigned,
   resolveDownloadNames,
+  resolveFeedMetadataName,
   resolveManifestEntry,
+  resolvePublishChannel,
+  resolveRecordedChannel,
   validateDesktopArtifactName,
+  verifyPublishedFeed,
   type DesktopManifestEntry,
+  type FeedPublication,
   type PublishPlan,
   type PublishRemote,
 } from './publish-desktop-downloads.ts'
@@ -73,9 +81,56 @@ async function fixture(options: { signed?: boolean; feed?: boolean } = {}): Prom
     version: '0.3.3',
     server: 'root@example.test',
     feed: options.feed ?? false,
+    signed: options.signed ?? false,
+    channel: undefined,
     publicOrigin: PUBLIC_ORIGIN,
   })
   return { directory, name, bytes, plan }
+}
+
+/**
+ * @param options Feed channel, version, and whether the update zip exists.
+ * @returns A macOS artifact directory with the dmg, zip, blockmap, and channel metadata packaging writes.
+ */
+async function macFixture(options: { channel?: 'nightly' | 'latest'; version?: string; withZip?: boolean; withMetadata?: boolean } = {}): Promise<{
+  directory: string
+  dmg: string
+  zip: string | undefined
+  metadataName: string
+  feed: FeedPublication
+}> {
+  const directory = await mkdtemp(join(tmpdir(), 'mmp-downloads-mac-'))
+  directories.push(directory)
+  const version = options.version ?? '0.3.4'
+  const channel = options.channel ?? 'latest'
+  const base = `mammoth-ai-${version}-mac-arm64`
+  const zip = options.withZip === false ? undefined : join(directory, `${base}.zip`)
+  const zipBytes = Buffer.from('mac update zip')
+  if (zip !== undefined) {
+    await writeFile(zip, zipBytes)
+    await writeFile(`${zip}.blockmap`, 'blockmap')
+  }
+  const dmg = join(directory, `${base}.dmg`)
+  await writeFile(dmg, 'dmg bytes')
+  const metadataName = resolveFeedMetadataName('mac-arm64', version, channel)
+  if (options.withMetadata !== false) {
+    await writeFile(join(directory, metadataName), dump({
+      version,
+      files: [{ url: `${base}.zip`, sha512: sha512Base64(zipBytes), size: zipBytes.length }],
+      path: `${base}.zip`,
+      sha512: sha512Base64(zipBytes),
+    }))
+  }
+  const feed = await createFeedPublication({
+    input: directory,
+    platform: 'mac-arm64',
+    version,
+    channel,
+    installer: dmg,
+    publishedUrl: `${PUBLIC_ORIGIN}/mammoth-agent-mac-arm64-${version}-deadbeef.dmg`,
+    publicOrigin: PUBLIC_ORIGIN,
+  })
+  return { directory, dmg, zip, metadataName, feed }
 }
 
 interface FakeRemote extends PublishRemote {
@@ -129,13 +184,14 @@ function manifestWith(win: DesktopManifestEntry | null): string {
   }, null, 2)
 }
 
-function environment(remote: PublishRemote | undefined, plan: PublishPlan, logs: string[]) {
+function environment(remote: PublishRemote | undefined, plan: PublishPlan, logs: string[], feedText?: string) {
   return {
     remote,
     dryRun: remote === undefined,
     now: new Date('2026-11-13T05:06:07.000Z'),
     head: async () => ({ status: 200, bytes: plan.bytes }),
     fetchHash: async () => ({ status: 200, bytes: plan.bytes, sha256: plan.sha256 }),
+    fetchText: async () => ({ status: 200, text: feedText ?? plan.feedFiles?.yml ?? '' }),
     fetchManifest: async () => null,
     log: (line: string) => { logs.push(line) },
   }
@@ -145,9 +201,14 @@ it('parses CLI arguments with dry run as the default and rejects ambiguous modes
   expect(parsePublishArguments(['--platform', 'win-x64', '--input', '/tmp/win-out', '--version', '0.3.3'])).toMatchObject({
     platform: 'win-x64', version: '0.3.3', feed: false, execute: false, server: 'root@124.223.179.250',
   })
-  expect(parsePublishArguments(['--platform', 'mac-arm64', '--input', '.', '--version', '0.3.3', '--feed', '--yes'])).toMatchObject({
-    feed: true, execute: true,
+  expect(parsePublishArguments(['--platform', 'mac-arm64', '--input', '.', '--version', '0.3.3', '--feed', '--signed', '--channel', 'nightly', '--yes'])).toMatchObject({
+    feed: true, signed: true, channel: 'nightly', execute: true,
   })
+  expect(parsePublishArguments(['--platform', 'win-x64', '--input', '.', '--version', '0.3.3'])).toMatchObject({
+    signed: false, channel: undefined,
+  })
+  expect(() => parsePublishArguments(['--platform', 'win-x64', '--input', '.', '--version', '0.3.3', '--channel', 'beta']))
+    .toThrow(/invalid --channel/u)
   expect(() => parsePublishArguments(['--platform', 'win-x64', '--input', '.', '--version', '0.3.3', '--dry-run', '--yes']))
     .toThrow(/mutually exclusive/u)
   expect(() => parsePublishArguments(['--platform', 'linux-x64', '--input', '.', '--version', '0.3.3'])).toThrow(/unsupported platform/u)
@@ -188,7 +249,7 @@ it('accepts the 32-bit NSIS stub while keeping the x64 target authoritative', as
   const stub = Buffer.concat([peImage(0x014c), Buffer.from('NullsoftInst', 'latin1')])
   await writeFile(join(directory, name), stub)
   const plan = await createPublishPlan({
-    platform: 'win-x64', input: directory, version: '0.3.3', server: 'root@example.test', feed: false, publicOrigin: PUBLIC_ORIGIN,
+    platform: 'win-x64', input: directory, version: '0.3.3', server: 'root@example.test', feed: false, signed: false, channel: undefined, publicOrigin: PUBLIC_ORIGIN,
   })
   expect(isNsisInstaller(stub)).toBe(true)
   expect(plan.warnings[0]).toMatch(/i386 stub/u)
@@ -251,7 +312,7 @@ it('validates the update feed against the installer and rewrites its URL', async
   expect(plan.manifestEntry.automatic_updates).toBe(true)
   expect(plan.feedFiles?.ymlName).toBe('latest.yml')
   expect(plan.feedFiles?.yml).toContain(`${PUBLIC_ORIGIN}/${plan.versionedName}`)
-  expect(plan.feedFiles?.blockmapName).toBe('mammoth-ai-0.3.3-win-x64-unsigned.exe.blockmap')
+  expect(plan.feedFiles?.uploads.map(upload => upload.name)).toEqual(['mammoth-ai-0.3.3-win-x64-unsigned.exe.blockmap'])
 })
 
 it('rejects a feed whose bytes do not match the installer', async () => {
@@ -265,7 +326,7 @@ it('rejects a feed whose bytes do not match the installer', async () => {
     version: '0.3.3', files: [{ url: name, sha512: sha512Base64('other bytes'), size: bytes.length }], path: name,
   }))
   await expect(createPublishPlan({
-    platform: 'win-x64', input: directory, version: '0.3.3', server: 'root@example.test', feed: true, publicOrigin: PUBLIC_ORIGIN,
+    platform: 'win-x64', input: directory, version: '0.3.3', server: 'root@example.test', feed: true, signed: false, channel: undefined, publicOrigin: PUBLIC_ORIGIN,
   })).rejects.toThrow(/bytes do not match/u)
 })
 
@@ -279,6 +340,7 @@ it('plans a dry run without touching the remote filesystem and reports an unchan
     now: new Date('2026-11-13T05:06:07.000Z'),
     head: async () => ({ status: 200, bytes: plan.bytes }),
     fetchHash: async () => { throw new Error('dry run must not read public bytes') },
+    fetchText: async () => { throw new Error('dry run must not read the public feed') },
     fetchManifest: async () => live,
     log: (line) => { logs.push(line) },
   })
@@ -314,6 +376,98 @@ it('publishes the versioned file, alias, feed, and merged manifest before verify
   expect(remote.files.get(`${MANIFEST_PATH}.prev-20261113-050607`)?.toString('utf8')).toBe(live)
   expect(remote.files.get(`${aliasPath}.prev-20261113-050607`)?.toString('utf8')).toBe('old alias')
   expect(logs).toContain(`MANIFEST_UPDATED ${MANIFEST_PATH}`)
+  expect(logs.some(line => line.startsWith('FEED_VERIFIED https://www.mmai.vip/downloads/mmp-desk/feeds/win-x64/latest.yml'))).toBe(true)
+})
+
+it('names channel metadata for the stable and nightly electron-updater channels', () => {
+  expect(resolveFeedMetadataName('mac-arm64', '0.3.4', 'latest')).toBe('latest-mac.yml')
+  expect(resolveFeedMetadataName('mac-arm64', '0.3.4', 'nightly')).toBe('nightly-mac.yml')
+  expect(resolveFeedMetadataName('mac-x64', '0.3.4-beta.1', 'nightly')).toBe('nightly-mac.yml')
+  expect(resolveFeedMetadataName('win-x64', '0.3.4', 'latest')).toBe('latest.yml')
+  expect(resolveFeedMetadataName('win-x64', '0.3.4', 'nightly')).toBe('nightly.yml')
+})
+
+it('derives the channel from version stability and refuses latest for a prerelease', () => {
+  expect(resolvePublishChannel('0.3.4', undefined)).toBe('latest')
+  expect(resolvePublishChannel('0.3.4-beta.1', undefined)).toBe('nightly')
+  expect(resolvePublishChannel('0.3.4', 'nightly')).toBe('nightly')
+  expect(() => resolvePublishChannel('0.3.4-beta.1', 'latest')).toThrow(/stable version/u)
+})
+
+it('reads the packaged channel record and rejects a channel or version mismatch', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'mmp-downloads-channel-'))
+  directories.push(directory)
+  await writeFile(join(directory, 'mac-arm64-release.json'), JSON.stringify({ schemaVersion: 1, target: 'mac-arm64', version: '0.3.4', channel: 'nightly' }))
+  expect(await resolveRecordedChannel(directory, 'mac-arm64', '0.3.4', undefined)).toBe('nightly')
+  expect(await resolveRecordedChannel(directory, 'mac-arm64', '0.3.4', 'nightly')).toBe('nightly')
+  await expect(resolveRecordedChannel(directory, 'mac-arm64', '0.3.4', 'latest')).rejects.toThrow(/does not match the packaged nightly channel/u)
+  await expect(resolveRecordedChannel(directory, 'mac-arm64', '0.3.5', undefined)).rejects.toThrow(/records version 0\.3\.4/u)
+  expect(await resolveRecordedChannel(directory, 'win-x64', '0.3.4', undefined)).toBe('latest')
+})
+
+it('derives macOS signing from packaging evidence, the operator flag, and the update zip', async () => {
+  expect(resolveArtifactSigned({ recorded: true, platform: 'mac-arm64', signedFlag: false, updateFilePresent: false })).toBe(true)
+  expect(resolveArtifactSigned({ recorded: false, platform: 'mac-arm64', signedFlag: true, updateFilePresent: true })).toBe(false)
+  expect(resolveArtifactSigned({ recorded: undefined, platform: 'mac-arm64', signedFlag: false, updateFilePresent: true })).toBe(false)
+  expect(resolveArtifactSigned({ recorded: undefined, platform: 'mac-arm64', signedFlag: true, updateFilePresent: true })).toBe(true)
+  expect(() => resolveArtifactSigned({ recorded: undefined, platform: 'mac-arm64', signedFlag: true, updateFilePresent: false }))
+    .toThrow(/requires the update zip/u)
+  expect(() => resolveArtifactSigned({ recorded: undefined, platform: 'win-x64', signedFlag: true, updateFilePresent: true }))
+    .toThrow(/applies to macOS/u)
+  expect(resolveArtifactSigned({ recorded: undefined, platform: 'win-x64', signedFlag: false, updateFilePresent: true })).toBe(false)
+  const directory = await mkdtemp(join(tmpdir(), 'mmp-downloads-signed-'))
+  directories.push(directory)
+  expect(await readInstallerJsonSignature(directory)).toBeUndefined()
+  await writeFile(join(directory, 'installer.json'), JSON.stringify({ signed: true }))
+  expect(await readInstallerJsonSignature(directory)).toBe(true)
+})
+
+it('publishes the macOS zip before its channel metadata and verifies the public feed', async () => {
+  const { dmg, feed } = await macFixture({ channel: 'nightly' })
+  const dmgBytes = await readFile(dmg)
+  const zipBytes = await readFile(feed.uploads[0]?.localPath ?? '')
+  const sha256 = createHash('sha256').update(dmgBytes).digest('hex')
+  const versionedName = 'mammoth-agent-mac-arm64-0.3.4-abcdef12.dmg'
+  expect(resolveFeedMetadataName('mac-arm64', '0.3.4', feed.channel)).toBe(feed.ymlName)
+  expect(feed.ymlName).toBe('nightly-mac.yml')
+  expect(feed.updaterName).toBe('mammoth-ai-0.3.4-mac-arm64.zip')
+  expect(feed.updaterUrl).toBe(`${PUBLIC_ORIGIN}/mmp-desk/feeds/mac-arm64/mammoth-ai-0.3.4-mac-arm64.zip`)
+  expect(feed.uploads.map(upload => upload.name)).toEqual([
+    'mammoth-ai-0.3.4-mac-arm64.zip',
+    'mammoth-ai-0.3.4-mac-arm64.zip.blockmap',
+  ])
+  const metadata = load(feed.yml) as { files: { url: string; sha512: string; size: number }[] }
+  expect(metadata.files[0]).toMatchObject({ url: feed.updaterUrl, sha512: sha512Base64(zipBytes), size: zipBytes.length })
+  verifyPublishedFeed(feed, { status: 200, text: feed.yml })
+  expect(() => verifyPublishedFeed(feed, { status: 404, text: '' })).toThrow(/status=404/u)
+  expect(() => verifyPublishedFeed(feed, { status: 200, text: feed.yml.replace(feed.updaterSha512, sha512Base64('stale')) }))
+    .toThrow(/does not describe/u)
+  const plan: PublishPlan = {
+    platform: 'mac-arm64', version: '0.3.4', channel: 'nightly', server: 'root@example.test', publicOrigin: PUBLIC_ORIGIN,
+    sourcePath: dmg, versionedName, aliasName: 'mammoth-agent-mac-arm64.dmg',
+    platformKey: 'darwin-arm64', sha256, bytes: dmgBytes.length, signed: true, feed: true, feedFiles: feed, warnings: [],
+    manifestEntry: { shell: { version: '0.3.4' }, file: versionedName, sha256, bytes: dmgBytes.length, signed: true, automatic_updates: true },
+  }
+  const feedZip = `/www/mmp-prod/downloads/mmp-desk/feeds/mac-arm64/${feed.uploads[0]?.name ?? ''}`
+  const remote = fakeRemote({ [feedZip]: 'stale zip bytes' })
+  const logs: string[] = []
+  const outcome = await applyPublishPlan(plan, environment(remote, plan, logs))
+  expect(outcome.automaticUpdates).toBe(true)
+  expect(remote.files.get(feedZip)).toEqual(zipBytes)
+  expect(remote.files.get('/www/mmp-prod/downloads/mmp-desk/feeds/mac-arm64/mammoth-ai-0.3.4-mac-arm64.zip.blockmap'))
+    .toEqual(Buffer.from('blockmap'))
+  expect(remote.files.get('/www/mmp-prod/downloads/mmp-desk/feeds/mac-arm64/nightly-mac.yml')).toEqual(Buffer.from(feed.yml))
+  expect(logs).toContain('REPLACE_FEED mammoth-ai-0.3.4-mac-arm64.zip (14 bytes)')
+  expect(logs).toContain('UPLOAD_FEED mammoth-ai-0.3.4-mac-arm64.zip.blockmap (8 bytes)')
+  expect(logs.some(line => line.startsWith('FEED_VERIFIED https://www.mmai.vip/downloads/mmp-desk/feeds/mac-arm64/nightly-mac.yml'))).toBe(true)
+})
+
+it('rejects a macOS feed whose metadata names an absent update zip', async () => {
+  await expect(macFixture({ withZip: false })).rejects.toThrow(/missing update file/u)
+})
+
+it('rejects a macOS feed when packaging wrote a different channel', async () => {
+  await expect(macFixture({ channel: 'nightly', withMetadata: false })).rejects.toThrow(/requires .*nightly-mac\.yml/u)
 })
 
 it('restores the manifest and alias from their .prev backups when the manifest write fails', async () => {

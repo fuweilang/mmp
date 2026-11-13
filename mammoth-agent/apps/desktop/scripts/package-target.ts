@@ -18,6 +18,7 @@ import { prepareWindowsSignatureCacheDirectory, resolveWindowsSignatureCacheDire
 import { withMacOSSigningKeychain } from './macos-signing-keychain.mjs'
 import { macOSDownloadEnvironment, resolveMacOSPackageSettings } from './macos-package-settings.mjs'
 import { resolveWindowsPackageSettings } from './windows-package-settings.mjs'
+import { assertPackagedUpdateConfig } from './desktop-packaged-update-config.ts'
 import { packagingErrorDetails, packagingStep } from './packaging-step.mjs'
 import { notarizeMacOS } from './notarize-macos.mjs'
 import { resolveMacOSNotarizationEnvironment, resolveNpmRegistry } from './desktop-release-environment.mjs'
@@ -586,6 +587,10 @@ export async function packageTarget(
       ...(invocation.unsigned ? ['--unsigned'] : []), ...(invocation.skipNotarization ? ['--skip-notarization'] : [])], targetEnv)
   }
   if (!invocation.directory && !invocation.unsigned && !invocation.skipNotarization) {
+    // A signed installer that cannot find its feed would still advertise automatic updates, so the
+    // packaged application must carry the feed this release environment resolves.
+    await assertPackagedUpdateConfig(artifactsRoot, { name: target.name, platform: target.platform, arch: target.arch },
+      resolveDesktopAutoUpdateConfig(environment, target.platform, target.arch))
     writeReleaseRecord(target, electronBuilderEnv, buildPaths.artifacts)
   }
   if (journal) recordPackagingEvent(journal, { type: 'artifacts', directory: artifactsRoot })
