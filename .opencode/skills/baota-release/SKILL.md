@@ -868,6 +868,52 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 | 短信 | 生产 `SMS_PROVIDER=aliyun`（与 PeecAI 同通道，签名「猛犸世纪」） |
 | 验收缺口 | 超管登录 401（凭据过期）；真实短信、真实 GUI/桌面、真 Intel 实机未验 |
 
+## 4L. 2026-11-13 三端发版复盘（3.4.1 / 桌面 0.3.4）：58 分钟、返工 26 分钟
+
+> 范围：Ground api+web、mac-arm64、mac-x64、win-x64。结果成功，`release.sh` 中途中断 2 次续跑。
+> **本轮返工全部来自「本地门禁假绿」和「配置模板没静态校验」，不是构建本身慢。**
+
+### 4L.1 时间分布
+
+| 节点 | 实测 | 性质 |
+|---|---|---|
+| 版本 bump + push | 4 min | 必要 |
+| 类型门禁修复（3 轮才发现全） | ~18 min | **返工** |
+| Windows CI 失败 2 次（同因） | 2.5 + 4.8 min | **返工** |
+| API 镜像 | 39 s | 必要 |
+| 服务器 web 镜像 | 13 min | 必要（唯一大块） |
+| web 构建失败重跑一次 | ~7 min | **返工** |
+| nginx 校验失败中断 + 续跑 | ~6 min | **返工** |
+| 部署 + 迁移 + 健康 | 4 min | 必要 |
+| smoke（含三平台真实下载） | 5 min | 必要 |
+| 三个包上传 + 公网校验 | 8 min | 必要 |
+| 桌面包 arm64 / x64（与中台并行） | 9 / 17 min | 必要（串行） |
+| **合计** | **58 min** | 其中返工 ≈ 26 min |
+
+### 4L.2 四个真问题
+
+| # | 现象 | 根因 | 损失 | 固化 |
+|---|---|---|---|---|
+| 1 | 本地 `build --profile local` 10/10 通过，CI 在 4 处类型错误失败 | 本地 `packages/*/lib` 生成物陈旧，`RemoteEndpoint` 映射缺新端点 → 门禁**假绿** | ~18 min | 预检必须「干净重生成」后再判定（见 4L.3-1） |
+| 2 | web 镜像第一次构建用旧源码失败 | `release.sh` rsync 发生在修复之前；续跑才会带上新源码 | ~7 min | 修复后必须重新同步再续跑；`--from web` 前确认快照 commit |
+| 3 | nginx 头像正则 `{0,63}` 被当成块起始，`nginx -t` 失败 | nginx 分词器对 `{}` 敏感，模板未加引号 | ~6 min | 模板正则一律加引号；预检用容器跑 `nginx -t` |
+| 4 | Windows CI 连挂两次才发现同一类型错误 | 只依赖本机 darwin 编译器 | ~7 min | 预检加一次 linux 目标 `tsc -b`（与 CI 同视角） |
+
+### 4L.3 新增门禁（排在 4K 之后，号码续 18）
+
+18. **门禁必须干净重生成**：跑 `build --profile local` 前先删生成物（`packages/*/lib`、`runtime/serve-ground-web.mjs`、typert/catalog 产物），或直接用**容器 linux 目标**跑一遍 `tsc -b tsconfig.client.json`；**只信本机带缓存的结果 = 假绿**。
+19. **双编译器交叉校验**：至少一次在 `linux/amd64` 下跑 client+host 编译（CI 视角），别等 Windows CI 才发现。
+20. **nginx 模板静态校验**：用 `docker run --rm -v $PWD/nginx-mmai.conf:/etc/nginx/conf.d/x.conf nginx:alpine nginx -t`（或本地 nginx）在排期前验证模板；正则含 `{}` `()` 一律加引号。
+21. **修复后重同步**：`release.sh` 中断后，凡改了源码，必须确认 `--from <step>` 用的是新快照（对比 rsync 目录内 `git rev-parse`/文件 mtime），否则会重复失败。
+22. **Windows 先探路**：桌面有改动时，push 后立刻触发一次 Windows CI，它是最便宜的「第二编译器」（约 12 分钟，可与中台并行），比本地反复试快。
+
+### 4L.4 已验证有效的做法（保留）
+
+- 版本 bump → **立刻 push** → 再触发 CI（CI 只认远端）。
+- 三条流水线并行：mac-arm64（先开）∥ `release.sh` ∥ Windows CI；x64 在 arm64 结束后再开。
+- 发布脚本先 `--dry-run` 看 manifest diff，再 `--yes`；三端逐个发、逐个公网校验。
+- 中台 smoke 与包上传错峰，避免抢上行。
+
 ## 5. 网络与下载（最容易吃掉几小时）
 
 > 2026-11-04 这次发版，10h47m 里至少 3h 花在“拉文件”：GitHub 0 字节、Docker Hub 超时、
