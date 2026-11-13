@@ -2,11 +2,12 @@ import { submitExpertPreviewInput } from './expert-preview-admission.ts'
 import { resolvePreviewWorkspace } from './expert-preview-workspace.ts'
 import { CompactExpertPreview, CompactExpertMessages } from './CompactExpertPreview.tsx'
 import { ExpertPreviewEntry, isEmbeddedExpertPreview, parseExpertPreview } from './ExpertPreviewEntry.tsx'
-import { installExpertPreviewBridge } from './expert-preview-bridge.ts'
+import { installExpertPreviewBridge, type PreviewProfile } from './expert-preview-bridge.ts'
+import { createSnapshotStore } from '@mammoth-ai/mmp-client-store'
 import { installTaskCatalog } from './task-catalog.tsx'
 /** Shared Mac/Web official expert + skill gallery (expert plaza). */
 import type { Context as ClientContext } from '@mammoth-ai/cordis'
-import type { SessionId } from '@mammoth-ai/mmp-session/types'
+import { SessionId } from '@mammoth-ai/mmp-session/types'
 import type { MainPanelId } from '@mammoth-ai/mmp-client-ui-layout/client'
 import type {} from '@mammoth-ai/mmp-client-locale/client'
 import type {} from '@mammoth-ai/mmp-client-ui-renderer/client'
@@ -63,8 +64,17 @@ export function apply(ctx: ClientContext): void {
   const preview=typeof window==='undefined'?null:parseExpertPreview(window.location.search)
   const embeddedPreview = typeof window !== 'undefined' && isEmbeddedExpertPreview(window.location.search)
   if (preview) {
+    const previewProfile=createSnapshotStore<PreviewProfile>({ name:'',avatarUrl:null })
     let sessionId: SessionId | undefined
-    let createdSessionId: SessionId | undefined
+    // Browser viewing state survives a plugin rebuild, scoped to this immutable preview.
+    const pageState: unknown = window.history.state
+    const retained: unknown = embeddedPreview && pageState !== null && typeof pageState === 'object'
+      && 'expertPreviewSession' in pageState ? pageState.expertPreviewSession : undefined
+    let createdSessionId: SessionId | undefined = retained !== null && typeof retained === 'object'
+      && 'agentId' in retained && retained.agentId === preview.agentId
+      && 'previewId' in retained && retained.previewId === preview.previewId
+      && 'sessionId' in retained && typeof retained.sessionId === 'string' && retained.sessionId.trim()
+      ? SessionId(retained.sessionId) : undefined
     let sessionReference: ReturnType<typeof ctx.sessions.retain> | undefined
     let launching: Promise<string | undefined> | undefined
     let active = true
@@ -73,6 +83,7 @@ export function apply(ctx: ClientContext): void {
     const admission = new AbortController()
     ctx.effect(() => {
       bridge = installExpertPreviewBridge({
+        onProfile: (profile) => { previewProfile.set(profile) },
         frame: window, target: preview, message: key => t(embeddedPreview && key === 'previewSubmitFailed' ? 'previewAdmissionFailed' : key),
         input: () => {
           const binding = sessionId === undefined ? undefined : ctx.sessions.binding(sessionId)
@@ -81,7 +92,10 @@ export function apply(ctx: ClientContext): void {
           return {
             initialize: text => ctx.conversation.input.requestDraftInitialization(binding, { prompt: text, whenDraftExists: 'keep' }),
             submit: () => embeddedPreview ? submitExpertPreviewInput(input, admission.signal) : input.submit('queue', 'click'),
-            cancel: () => binding.ctx.conversation.cancel(),
+            cancel: async () => {
+              const result=await binding.session.cancel()
+              if(!result.ok) throw new Error(`Preview cancellation failed: ${result.error.code}`)
+            },
           }
         },
       })
@@ -100,16 +114,22 @@ export function apply(ctx: ClientContext): void {
             const result = await ctx.remote.officialAgentGallery.createPreview({ ...preview, workspaceId })
             if (!result.ok) return 'previewUnavailable'
             createdSessionId = result.value
+            if (embeddedPreview) window.history.replaceState({ ...window.history.state,
+              expertPreviewSession: { ...preview, sessionId: createdSessionId },
+            }, '', window.location.href)
           }
-          // Catalog the Host-created identity before retaining its Client binding.
-          await ctx.sessions.refresh()
+          // The live catalog often announces creation before the RPC settles; avoid another full list fetch.
+          if (!ctx.sessions.list.getSnapshot().byId[createdSessionId]) await ctx.sessions.refresh()
           if (!active) return
           sessionId = createdSessionId
-          const url = new URL(window.location.href)
-          url.searchParams.delete('expertPreview')
-          url.searchParams.delete('expertId')
-          url.searchParams.delete('expertEmbed')
-          window.history.replaceState(null, '', url)
+          // Rebuilt plugins must recapture the dedicated preview instead of mounting the home shell.
+          if (!embeddedPreview) {
+            const url = new URL(window.location.href)
+            url.searchParams.delete('expertPreview')
+            url.searchParams.delete('expertId')
+            url.searchParams.delete('expertEmbed')
+            window.history.replaceState(null, '', url)
+          }
           if (embeddedPreview) sessionReference = ctx.sessions.retain(sessionId, { source: 'officialExpertPreview' })
           else { ctx.uiWorkspace.openSession(sessionId); scope.layout.selectPanel(null) }
           bridge?.start()
@@ -132,11 +152,11 @@ export function apply(ctx: ClientContext): void {
         scope.slots.inject('rootframe', () => scope.slots.register({
           name: 'rootframe', locale: NS,
           children: { 'official.expert.preview.session': { kind: 'single', scope: 'session' } },
-          inject: () => ({ target: preview, launch, getSession: () => sessionReference }),
+          inject: () => ({ target: preview, launch, getSession: () => sessionReference, reportUnavailable: () => bridge?.unavailable() }),
         }, CompactExpertPreview))
         scope.slots.inject('official.expert.preview.session', () => scope.slots.register({
           name: 'official.expert.preview.session', locale: NS,
-          inject: () => ({ chatText: ctx.locale.bind('chat'), openSource: async (id: SessionId, recordId: string, label: string) => {
+          inject: () => ({ hooks:{ previewProfile }, chatText: ctx.locale.bind('chat'), reportContent: (hasMessages: boolean, userCount: number) => bridge?.content(hasMessages, userCount), openSource: async (id: SessionId, recordId: string, label: string) => {
             const result = await ctx.remote.officialAgentGallery.openKnowledgeSource(id, recordId, label)
             if (!result.ok) throw new Error(result.error.message)
             return result.value

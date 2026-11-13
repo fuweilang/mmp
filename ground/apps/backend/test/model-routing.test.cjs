@@ -66,3 +66,15 @@ test('actual gateway provider resolution shares local URL and credential validat
  for(const bad of [{baseUrl:null},{baseUrl:'not a url'},{apiKeyEnc:'corrupt'},{apiKeyEnc:encryptApiKey('  ')}])assert.throws(()=>resolve({...valid,...bad},model));
  assert.equal(resolve(valid,model).apiKey,'fake');
 });
+
+test('official experts honor disabled thinking even with tools, while ordinary agent requests retain their policy',async()=>{
+ const original=axios.post;
+ try {
+  for(const expert of [false,true]) {
+   const f=fixture();f.service.expertRuntime={enforceModel:async()=>({model:undefined}),load:async()=>({})};
+   let thinking;axios.post=async(_url,body)=>{thinking=body.thinking;return{status:200,data,headers:{}}};
+   await f.service.proxyChatCompletions(user,null,{model:'auto',messages:[],tools:[{type:'function',function:{name:'enterprise_knowledge'}}]},f.res,expert?{agentId:'expert',previewId:'preview'}:undefined);
+   assert.deepEqual(thinking,{type:expert?'disabled':'enabled'});
+  }
+ } finally {axios.post=original;}
+});

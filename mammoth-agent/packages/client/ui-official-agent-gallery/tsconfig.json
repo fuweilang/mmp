@@ -12,6 +12,7 @@
     { "path": "../../core/session" },
     { "path": "../../preset/official-agent-gallery" },
     { "path": "../locale/tsconfig.client.json" },
+    { "path": "../store" },
     { "path": "../ui-layout" },
     { "path": "../ui-primitives" },
     { "path": "../ui-renderer" },

@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { KnowledgeInspectionService } from './inspection.service';
 import { KnowledgeHttpAdapter } from './provider';
 import { KnowledgeCoreService } from './knowledge-core.service';
+import { readExpertKnowledgeCatalog } from './editor-catalog';
 import { KnowledgeProfilesService } from './profiles.service';
 import { KnowledgeRetrievalService } from './retrieval.service';
 import { KnowledgeCoreError, safeKnowledgeError } from './errors';
@@ -117,6 +118,8 @@ export class KnowledgeAdminController {
   }
   @Get('bases')
   listBases() { return this.run(() => this.core.listBases(PLATFORM)); }
+  @Get('editor-catalog')
+  editorCatalog() { return this.run(() => readExpertKnowledgeCatalog(this.db)); }
   @Post('bases')
   createBase(
     @Body()

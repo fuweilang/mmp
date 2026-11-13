@@ -18,7 +18,7 @@
         </div>
       </el-popover>
     </div>
-    <div class="expert-capabilities-scroll" v-loading="loading">
+    <div class="expert-capabilities-scroll">
       <el-alert v-if="error" :title="error" type="error" :closable="false" />
       <el-collapse v-model="capabilitySections" class="expert-capability-sections">
         <el-collapse-item name="skills">
@@ -28,12 +28,11 @@
         <el-collapse-item name="knowledge">
           <template #title><span>知识库</span><el-tooltip content="添加已有知识库，或创建知识库并上传资料。"><CircleHelp :size="13" class="expert-help-icon" /></el-tooltip></template>
           <template v-if="modelValue.route === 'KNOWLEDGE_CORE'">
-            <ExpertKnowledgePanel :model-value="modelValue.releaseIds" :expert-id="expertId" :expert-name="expertName" :disabled="disabled" @update:model-value="selectKnowledge" @changed="load" @blockers="knowledgeOperations=$event" />
+            <ExpertKnowledgePanel :model-value="modelValue.releaseIds" :expert-id="expertId" :expert-name="expertName" :disabled="disabled" @update:model-value="selectKnowledge" @changed="knowledgeChanged" @blockers="knowledgeOperations=$event" />
             <p v-if="modelValue.releaseIds.length && modelValue.retrievalPolicy === 'OFF'" class="muted">已绑定知识库，但资料检索已关闭，试聊不会使用库中资料。</p>
 
           </template>
           <template v-else>
-            <el-alert title="当前保留旧知识配置，切换后可选择平台知识库。" type="warning" :closable="false" />
             <el-button class="expert-add-button" :disabled="disabled" @click="routeChanged('KNOWLEDGE_CORE')">使用平台知识库</el-button>
           </template>
         </el-collapse-item>
@@ -48,11 +47,13 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, inject, onMounted, ref, watch } from 'vue';
+import { createExpertEditorResources, expertEditorResourcesKey } from './expert-editor-resources';
 import { Check, ChevronDown, CircleHelp, Sparkles } from 'lucide-vue-next';
 import ExpertKnowledgePanel from './ExpertKnowledgePanel.vue';
 import { expertDependencyBlockers } from '../../utils/knowledge-admin';
-import { adminKnowledgeCoreApi as api, adminLlmProviderApi, type ExpertExecutionConfig, type KnowledgeProfile, type KnowledgeRelease, type AdminLlmModelRow } from '../../api/admin';
+import { type ExpertExecutionConfig, type KnowledgeProfile, type KnowledgeRelease, type AdminLlmModelRow } from '../../api/admin';
+const resources=inject(expertEditorResourcesKey,undefined) ?? createExpertEditorResources();
 const props = defineProps<{
     modelValue: ExpertExecutionConfig;
     disabled?: boolean;
@@ -65,6 +66,7 @@ const props = defineProps<{
     }>;
 }>();
 const emit = defineEmits<{
+    knowledgeChanged: [];
     'update:modelValue': [
         ExpertExecutionConfig
     ];
@@ -91,8 +93,17 @@ const selectedModelName = computed(() => {
 });
 const reranks = computed(() => profiles.value.filter(p => p.enabled && p.task === 'RERANK'));
 const readyIndexProfiles = ref<Record<string, string>>({});
+function applyResources(data:Awaited<ReturnType<typeof resources.load>>) {
+    profiles.value=data.profiles;health.value=data.health;
+    models.value=data.providers.flatMap(provider=>provider.models.map(m=>({...m,providerName:provider.displayName,providerEnabled:provider.enabled,providerConfigured:provider.hasApiKey})));
+    releases.value=data.catalog.filter(entry=>entry.base.enabled).flatMap(x=>x.releases.map(r=>({...r,baseName:x.base.name})));
+    readyIndexProfiles.value=Object.fromEntries(data.catalog.filter(entry=>entry.base.enabled).flatMap(x=>x.documents.filter(d=>d.enabled).flatMap(d=>d.revisions.flatMap(r=>r.indexes.filter(i=>i.status==='READY' && data.health[i.profileId]).map(i=>[i.id,i.profileId])))));
+    loaded.value=true;
+}
+const initialResources=resources.peek();
+if(initialResources) applyResources(initialResources);
 const blockers = computed(() => [...expertDependencyBlockers(props.modelValue, {
-    loaded: loaded.value, error: error.value, releaseIndexIds: Object.fromEntries(releases.value.map(r => [r.id, r.items.map(i => i.indexRevisionId)])),
+    loaded: loaded.value && !error.value, error: error.value, releaseIndexIds: Object.fromEntries(releases.value.map(r => [r.id, r.items.map(i => i.indexRevisionId)])),
     readyIndexProfiles: readyIndexProfiles.value, availableReranks: reranks.value.filter(p => health.value[p.id]).map(p => p.id),
     models: models.value, skills: props.skills, toolScope: props.toolScope,
 }), ...knowledgeOperations.value]);
@@ -106,34 +117,30 @@ function set(value: Partial<ExpertExecutionConfig>) { emit('update:modelValue', 
 function selectKnowledge(releaseIds:string[]) {
     set({releaseIds,retrievalPolicy:releaseIds.length ? props.modelValue.retrievalPolicy==='OFF'?'REQUIRED':props.modelValue.retrievalPolicy : 'OFF'});
 }
+function knowledgeChanged() {
+    resources.invalidate();
+    emit('knowledgeChanged');
+    void load(true);
+}
 function routeChanged(route: 'LEGACY' | 'KNOWLEDGE_CORE') {
     knowledgeOperations.value=[];
     set({ route, releaseIds: [], retrievalPolicy: 'OFF', rerankProfileId: undefined });
 }
-async function load() {
+let loadRequest=0;
+async function load(force=false) {
+    const request=++loadRequest;
     loading.value = true;
     error.value = '';
-    loaded.value = false;
     try {
-        const [p, providers, bases] = await Promise.all([api.profiles(), adminLlmProviderApi.list(), api.bases()]);
-        profiles.value = p;
-        models.value = providers.flatMap(provider => provider.models.map(m => ({ ...m, providerName: provider.displayName, providerEnabled: provider.enabled, providerConfigured: provider.hasApiKey })));
-        const healthEntries = await Promise.all(p.filter(p => p.enabled).map(async (p) => [p.id, (await api.health(p.id)).configured] as const));
-        health.value = Object.fromEntries(healthEntries);
-        // Disabled bases are visible in the platform catalog, but their content endpoints reject reads.
-        const entries = await Promise.all(bases.map(async (b) => b.enabled
-          ? { base:b, releases:await api.releases(b.id), documents:await api.documents(b.id) }
-          : { base:b, releases:[], documents:[] }));
-        releases.value = entries.filter(entry=>entry.base.enabled).flatMap(x => x.releases.map(r => ({ ...r, baseName: x.base.name })));
-        readyIndexProfiles.value = Object.fromEntries(entries.filter(entry=>entry.base.enabled).flatMap(x => x.documents.filter(d => d.enabled).flatMap(d => d.revisions.flatMap(r => r.indexes.filter(i => i.status === 'READY' && health.value[i.profileId]).map(i => [i.id, i.profileId])))));
-        loaded.value = true;
+        const data=await resources.load(force);
+        if(request===loadRequest) applyResources(data);
     }
     catch (e) {
-        error.value = e instanceof Error ? e.message : '发布依赖加载失败';
+        if(request===loadRequest) error.value = e instanceof Error ? e.message : '发布依赖加载失败';
     }
     finally {
-        loading.value = false;
+        if(request===loadRequest) loading.value = false;
     }
 }
-onMounted(load);
+onMounted(()=>load());
 </script>

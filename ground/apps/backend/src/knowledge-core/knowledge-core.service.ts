@@ -24,6 +24,15 @@ export interface KnowledgeUploadInput {
   mediaType?: string;
   indexConfig?: KnowledgeIndexConfiguration;
 }
+/** Only immutable identities and live flags needed by retrieval, never document bodies. */
+export interface RetrievalInventoryIndex {
+  id: string;
+  profileId: string;
+  indexConfigHash: string;
+  status: string;
+  profile: { enabled: boolean };
+  revision: { id: string; document: { id: string; baseId: string; enabled: boolean } };
+}
 export function assertKnowledgeScope(
   base: Pick<KnowledgeBase, 'scope' | 'tenantId'>,
   scope: KnowledgeScope,
@@ -503,6 +512,32 @@ export class KnowledgeCoreService {
       where: { releaseItems: { some: { releaseId: id } } },
       include: { revision: { include: { document: true } }, profile: true },
     });
+  }
+  /** A fresh, single-statement inventory snapshot avoids ORM relation-query fanout on every revalidation. */
+  async getRetrievalInventory(id: string, scope: KnowledgeScope): Promise<RetrievalInventoryIndex[]> {
+    const [snapshot] = await this.prisma.$queryRaw<Array<{
+      sealed: boolean; scope: string; tenantId: string | null; enabled: boolean; inventory: RetrievalInventoryIndex[];
+    }>>`
+      SELECT r.sealed, b.scope, b.tenant_id AS "tenantId", b.enabled,
+        COALESCE(jsonb_agg(jsonb_build_object(
+          'id', i.id, 'profileId', i.profile_id, 'indexConfigHash', i.index_config_hash, 'status', i.status,
+          'profile', jsonb_build_object('enabled', p.enabled),
+          'revision', jsonb_build_object('id', v.id, 'document', jsonb_build_object(
+            'id', d.id, 'baseId', d.base_id, 'enabled', d.enabled))
+        ) ORDER BY i.id) FILTER (WHERE i.id IS NOT NULL), '[]'::jsonb) AS inventory
+      FROM kc_release r JOIN kc_base b ON b.id = r.base_id
+      LEFT JOIN kc_release_item ri ON ri.release_id = r.id
+      LEFT JOIN kc_index_revision i ON i.id = ri.index_revision_id
+      LEFT JOIN kc_document_revision v ON v.id = i.revision_id
+      LEFT JOIN kc_document d ON d.id = v.document_id
+      LEFT JOIN kc_profile p ON p.id = i.profile_id
+      WHERE r.id = ${id}
+      GROUP BY r.id, b.id
+    `;
+    if (!snapshot?.sealed) throw new KnowledgeCoreError('KNOWLEDGE_RELEASE_NOT_FOUND');
+    assertKnowledgeScope(snapshot, scope);
+    if (!snapshot.enabled) throw new KnowledgeCoreError('KNOWLEDGE_DISABLED');
+    return snapshot.inventory;
   }
   async readChunks(
     indexRevisionIds: string[],

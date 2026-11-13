@@ -110,7 +110,7 @@ export class AdminOfficialAgentsService {
       // Canonical recommended questions live in discoveryDetail.starters[].text.
       // Mirror into openingQuestions so publish/cards stay consistent; explicit [] disables fallback.
       const starterTexts=Array.isArray((discoveryDetail as {starters?: Array<{text?: string}>}).starters)
-        ? (discoveryDetail as {starters: Array<{text: string}>}).starters.map((item)=>String(item.text||'').trim()).filter(Boolean).slice(0,3)
+        ? (discoveryDetail as {starters: Array<{text: string}>}).starters.map((item)=>String(item.text||'').trim()).filter(Boolean).slice(0,4)
         : [];
       const result=await tx.officialAgent.updateMany({
         where:{id,updatedAt:row.updatedAt},

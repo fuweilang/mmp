@@ -174,7 +174,8 @@ export class KnowledgeHttpAdapter {
             model: profile.model,
             input: batch,
             encoding_format: 'float',
-            dimensions: profile.dimension,
+            // BGE-M3 has a fixed output size and rejects the dimensions parameter.
+            ...(profile.model === 'BAAI/bge-m3' ? {} : { dimensions: profile.dimension }),
           },
           options,
         );

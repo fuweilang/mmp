@@ -52,6 +52,7 @@
     "@mammoth-ai/mmp-api-remotes": "workspace:*",
     "@mammoth-ai/mmp-api-workspace-controller": "workspace:*",
     "@mammoth-ai/mmp-client-locale": "workspace:*",
+    "@mammoth-ai/mmp-client-store": "workspace:*",
     "@mammoth-ai/mmp-client-test-runtime": "workspace:*",
     "@mammoth-ai/mmp-client-ui-chat": "workspace:*",
     "@mammoth-ai/mmp-client-ui-commands": "workspace:*",

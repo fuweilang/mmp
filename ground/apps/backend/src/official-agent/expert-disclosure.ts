@@ -22,9 +22,11 @@ export async function authorizeExpertDisclosure(
 /** All historical bindings and tuples share the same terminal statement snapshot. */
 export async function authorizeExpertHistoryDisclosure(
   db: PrismaService, actorUserId: string, tenantId: string | null,
-  entries: Array<{binding: ExpertRuntimeBinding; sources: KnowledgeSourceReference[]}>,
+  entries: Array<{binding: ExpertRuntimeBinding; sources: Array<KnowledgeSourceReference & {text?:string}>}>,
+  verifyContent = false,
+  requireCurrentRelease = false,
 ): Promise<boolean> {
-  const requested = entries.map(({binding, sources}) => ({...binding, sources: sources.map(({knowledgeReleaseId,indexRevisionId,revisionId,documentId,chunkId})=>({knowledgeReleaseId,indexRevisionId,revisionId,documentId,chunkId}))}));
+  const requested = entries.map(({binding, sources}) => ({...binding, sources: sources.map(({knowledgeReleaseId,indexRevisionId,revisionId,documentId,chunkId,text})=>({knowledgeReleaseId,indexRevisionId,revisionId,documentId,chunkId,...verifyContent?{text:text??null}:{}}))}));
   const rows = await db.$queryRaw<Array<{allowed:boolean}>>`
     /* expert_terminal_disclosure_v1 */
     WITH requested AS (SELECT value AS entry, ordinality AS ordinal FROM jsonb_array_elements(${JSON.stringify(requested)}::jsonb) WITH ORDINALITY), principal AS (
@@ -75,7 +77,20 @@ export async function authorizeExpertHistoryDisclosure(
               AND base.scope = 'PLATFORM' AND base.tenant_id IS NULL AND base.enabled
               AND idx.id = ref ->> 'indexRevisionId' AND idx.status = 'READY' AND profile.enabled
               AND revision.id = ref ->> 'revisionId' AND doc.id = ref ->> 'documentId' AND doc.enabled
+              AND (NOT ${requireCurrentRelease}::boolean OR CASE WHEN base.auto_update THEN
+                base.current_release_id = release.id AND doc.deleted_at IS NULL
+              ELSE (bound.entry ->> 'previewId') IS NOT NULL OR (
+                grants ->> 'route' = 'KNOWLEDGE_CORE' AND grants ->> 'retrievalPolicy' IN ('REQUIRED','AUTO')
+                AND EXISTS (
+                  SELECT 1 FROM jsonb_array_elements(COALESCE(grants -> 'knowledge', '[]'::jsonb)) current_choice
+                  WHERE current_choice ->> 'baseId' = base.id AND current_choice ->> 'releaseId' = release.id
+                )
+              ) END)
               AND chunk.id = ref ->> 'chunkId'
+              AND (NOT ${verifyContent}::boolean OR (
+                jsonb_typeof(ref -> 'text') = 'string'
+                AND left(chunk.text, char_length(ref ->> 'text')) = ref ->> 'text'
+              ))
               AND (
                 (base.auto_update AND (
                   base.owner_agent_id = bound.entry ->> 'agentId'

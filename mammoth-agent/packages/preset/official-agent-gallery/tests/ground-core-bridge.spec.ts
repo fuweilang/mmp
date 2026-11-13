@@ -130,21 +130,22 @@ it.skipIf(!process.env.RAG_TEST_DATABASE_URL)('real Ground upload/worker/release
       {agentId:ground.agentId,versionId:pair.versionId,executionProtocol:2,sources:pairSources},
     ]};
     expect(await ground.request(historyPath,'POST',batch)).toEqual({authorized:true});
-    // No instant permits both sources: A+/B- -> first source read -> one DB transaction -> A-/B+.
+    // The corpus permits A+/B- only: one atomic text+authority proof must reject
+    // the set without attempting separate source reads or exporting either body.
     const beforeAlternating=ground.wires.length;
     await ground.alternate(docs); await ask(pairAgent,'继续这些资料');
-    expect(ground.sourceReads).toEqual(docs);
+    expect(ground.sourceReads).toEqual([]);
     expect(ground.historyDecisions.at(-1)?.allowed).toBe(false);
     expect(ground.wires).toHaveLength(beforeAlternating);
     expect(pairAgent.session.snapshotEvents().findLast(e=>e.type==='turn/end')).toMatchObject({data:{reason:{kind:'error'}}});
     const summarizer=new BridgeCompaction(ctx,{auto:false,maxTokens:8192,summarizationProvider:'mammoth-ground',summarizationModel:ground.helperModelRef});
     await ground.alternate(docs);
     await expect(summarizer.summarizeConversation([createUserMessage({content:[{type:'text',text:'Historical visible answer'}],source:{kind:'user'}})],pairAgent)).rejects.toThrow();
-    expect(ground.sourceReads).toEqual(docs);expect(ground.wires).toHaveLength(beforeAlternating);
+    expect(ground.sourceReads).toEqual([]);expect(ground.wires).toHaveLength(beforeAlternating);
     await ground.restoreSources();
     const replay=await ctx.agents.create({sessionId:SessionId('bridge-history-replay'),seed:pairAgent.session.snapshotEvents(),agentOptions:{provider:'mammoth-ground',model:ground.modelRef},setup:async c=>{await ctx.agentPresets.mount(c,'standard');}});
     await ground.alternate(docs); await ask(replay.agent,'重放后的追问');
-    expect(ground.sourceReads).toEqual(docs);expect(ground.wires).toHaveLength(beforeAlternating);
+    expect(ground.sourceReads).toEqual([]);expect(ground.wires).toHaveLength(beforeAlternating);
     await ground.restoreSources();
 
     const preview=await ground.expiringPreview();

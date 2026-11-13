@@ -1350,6 +1350,7 @@ export type KnowledgeTestResult = {
 const kc = '/knowledge-core';
 const kcPost = <T>(path: string, body?: unknown, signal?: AbortSignal) => adminHttp<T>(`${kc}/${path}`, { method: 'POST', ...(body ? { body: JSON.stringify(body) } : {}), signal });
 export const adminKnowledgeCoreApi = {
+    editorCatalog: () => adminHttp<Array<{base:KnowledgeBase;documents:KnowledgeDocument[];releases:KnowledgeRelease[]}>>(`${kc}/editor-catalog`),
   providers: () => adminHttp<AdminLlmProviderRow[]>('/knowledge-core/providers'),
   createProvider: (body: Omit<AdminLlmProviderCreate, 'models'>) => adminHttp<AdminLlmProviderRow>('/knowledge-core/providers', { method: 'POST', body: JSON.stringify(body) }),
   updateProvider: (id: string, body: AdminLlmProviderUpdate & { clearApiKey?: boolean }) => adminHttp<AdminLlmProviderRow>(`/knowledge-core/providers/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),

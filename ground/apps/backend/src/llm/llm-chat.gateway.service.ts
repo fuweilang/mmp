@@ -314,7 +314,7 @@ export class LlmChatGatewayService {
           try{if(attribution?.helperOrigin)await this.expertRuntime!.load(user,tenantId,attribution.helperOrigin);if(attribution?.previewOrigin)await this.expertRuntime!.load(user,tenantId,attribution.previewOrigin);const current=binding?await this.expertRuntime!.enforceModel(user,tenantId,binding):undefined;if(current?.model && current.model!==resolved.modelRef)throw new ForbiddenException('FIXED_GENERATION_MODEL_CHANGED');}
           catch(error){await releaseFrozen('runtime-authorization-revoked');throw error;}
         }
-        const upstreamBody:Record<string,unknown>={...body,model:resolved.modelId,stream,thinking:{type:resolved.thinkingEnabled||requestHasTools(body)?'enabled':'disabled'}};
+        const upstreamBody:Record<string,unknown>={...body,model:resolved.modelId,stream,thinking:{type:resolved.thinkingEnabled||(!binding && requestHasTools(body))?'enabled':'disabled'}};
         if(stream)upstreamBody.stream_options={...(typeof body.stream_options==='object'&&body.stream_options?body.stream_options:{}),include_usage:true};
         const started=Date.now();
         this.operationLog.event('info','model.request',{userId:user.id,tenantId,model:resolved.modelRef,automatic,attempt:attempt+1,stream});
@@ -457,7 +457,7 @@ export class LlmChatGatewayService {
           ...body,
           model: resolved.modelId,
           stream: false,
-          thinking: { type: resolved.thinkingEnabled || requestHasTools(body) ? 'enabled' : 'disabled' },
+          thinking: { type: resolved.thinkingEnabled || (!binding && requestHasTools(body)) ? 'enabled' : 'disabled' },
         };
         const started = Date.now();
         let upstream: AxiosResponse;
@@ -701,7 +701,7 @@ export class LlmChatGatewayService {
   }
 }
 
-/** Agent 带 tools 的请求强制开 thinking；闲聊跟模型 Admin 默认。 */
+/** Ordinary Agent tools retain their thinking policy; official experts honor the model's Admin setting. */
 function requestHasTools(body: Record<string, unknown>): boolean {
   const tools = body.tools;
   return Array.isArray(tools) && tools.length > 0;

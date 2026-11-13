@@ -61,7 +61,7 @@ export class KnowledgeRetrievalService {
     for (const selectedRelease of selected) {
       if (selectedRelease.scope.type === 'TENANT' && selectedRelease.scope.tenantId !== access.tenantId)
         throw new KnowledgeCoreError('KNOWLEDGE_FORBIDDEN');
-      const inventory = await this.core.getReleaseInventory(selectedRelease.releaseId, selectedRelease.scope);
+      const inventory = await this.core.getRetrievalInventory(selectedRelease.releaseId, selectedRelease.scope);
       const groups = new Map<string, string[]>();
       for (const i of inventory) {
         if (selectedRelease.documentIds !== undefined && !selectedRelease.documentIds.includes(i.revision.document.id)) continue;
@@ -194,6 +194,9 @@ export class KnowledgeRetrievalService {
       const budget = input.budgetTokens ?? 8000;
       if (!Number.isSafeInteger(budget) || budget < 0 || budget > 8000)
         throw new KnowledgeCoreError('INVALID_EVIDENCE_BUDGET');
+      // Internal candidate SQL checks live material flags itself. Use one request-local
+      // corpus identity set for ranking; reauthorize before rerank export and final disclosure.
+      // This is never reused by another request or by the public source-open endpoint.
       const initial = await this.retrievalScopes(access);
       this.abort(input.signal);
       await this.reserve(access, retrievalId);
@@ -215,8 +218,9 @@ export class KnowledgeRetrievalService {
       const lexicalRankings: Candidate[][] = [], profileRankings: Candidate[][] = [];
       const denseFailures: string[] = [];
       // One lexical ranking per subquery over every authorized release, never per-release voters.
+      const lexicalSearch = async () => {
       for (const [queryIndex, query] of plan.queries.entries()) {
-        const current = await this.retrievalScopes(access);
+        const current = initial;
         this.abort(input.signal);
         const from = performance.now();
         const rows = (await this.candidates.lexical(current, query)).slice(0, 30);
@@ -229,7 +233,9 @@ export class KnowledgeRetrievalService {
           diagnostics.counts.lexicalRawCandidates += rows.length;
         }
       }
+      };
       // Compatible profiles reuse one batch of original/context queries across all of their release scopes.
+      const denseSearch = async () => {
       for (const profileId of profileIds) {
         try {
           const before = performance.now();
@@ -242,7 +248,7 @@ export class KnowledgeRetrievalService {
           addTiming('embeddingMs', before);
           const queryRankings: Candidate[][] = [];
           for (const [queryIndex, vector] of embedded.vectors.entries()) {
-            const current = (await this.retrievalScopes(access)).filter(scope => scope.profileId === profileId);
+            const current = initial.filter(scope => scope.profileId === profileId);
             this.abort(input.signal);
             if (!current.length)
               throw new KnowledgeCoreError('KNOWLEDGE_FORBIDDEN');
@@ -268,6 +274,10 @@ export class KnowledgeRetrievalService {
           result.degradation.push(code, 'DENSE_UNAVAILABLE_LEXICAL_ONLY');
         }
       }
+      };
+      // These routes are independent; settle both before returning even when one fails.
+      const routes = await Promise.allSettled([lexicalSearch(), denseSearch()]);
+      for (const route of routes) if (route.status === 'rejected') throw route.reason;
       const fusionStarted = performance.now();
       // Ranks are fused across incompatible models, never raw cosine values. Retained routes remain dense40+lexical30 total.
       const dense = reciprocalRankFusion(profileRankings).slice(0, 40);
@@ -356,30 +366,29 @@ export class KnowledgeRetrievalService {
               item.reason = 'DIVERSITY_LIMIT';
             continue;
           }
-          const fresh = await this.openSource(access, row);
-          this.abort(input.signal);
-          final.push({
-            ...row, ...fresh
-          });
+          final.push(row);
           seen.add(row.chunkId);
           seenContent.add(row.contentHash ?? row.text);
           perDocument.set(row.documentId, (perDocument.get(row.documentId) ?? 0) + 1);
         }
-      const adjacent: Candidate[] = [];
-      for (const row of final) {
-        const current = (await this.retrievalScopes(access)).find(scope => scope.releaseId === row.knowledgeReleaseId && scope.indexIds.includes(row.indexRevisionId));
+      const fresh = await this.openScopedSources(initial, final);
+      this.abort(input.signal);
+      final.forEach((row,index)=>Object.assign(row,fresh[index]));
+      const neighborScopes=initial;
+      const adjacent=(await Promise.all(final.map(async row => {
+        const current = neighborScopes.find(scope => scope.releaseId === row.knowledgeReleaseId && scope.indexIds.includes(row.indexRevisionId));
         this.abort(input.signal);
         if (!current)
           throw new KnowledgeCoreError('KNOWLEDGE_FORBIDDEN');
-        adjacent.push(...await this.candidates.neighbors(current, row.indexRevisionId, row.ordinal));
-        this.abort(input.signal);
-      }
+        return this.candidates.neighbors(current, row.indexRevisionId, row.ordinal);
+      }))).flat();
+      this.abort(input.signal);
       let rows = selectEvidenceWithNeighbors(final, adjacent);
       // An explicitly named section is a bounded parent context, not six unrelated matches.
       const named = namedHeadingTerms(input.query).length === 1 ? final.find(row => namedHeadingScore(row, input.query) > 0) : undefined;
 
       if (named?.locator.headingPath?.length) {
-        const current = (await this.retrievalScopes(access)).find(scope => scope.releaseId === named.knowledgeReleaseId && scope.indexIds.includes(named.indexRevisionId));
+        const current = initial.find(scope => scope.releaseId === named.knowledgeReleaseId && scope.indexIds.includes(named.indexRevisionId));
         this.abort(input.signal);
         if (!current) throw new KnowledgeCoreError('KNOWLEDGE_FORBIDDEN');
         const section = await this.candidates.section(current, named.indexRevisionId, named.locator.headingPath);
@@ -496,7 +505,17 @@ export class KnowledgeRetrievalService {
     sourceStart: number;
     sourceEnd: number;
   }> {
-    const selected = (await this.scopes(access)).find(s => s.releaseId === ref.knowledgeReleaseId && s.indexIds.includes(ref.indexRevisionId));
+    return (await this.openSources(access,[ref]))[0];
+  }
+  /** One fresh authority inventory per batch; exact reads still check every immutable tuple. */
+  async openSources(access: KnowledgeAccess, refs: readonly KnowledgeSourceReference[]): Promise<Array<RetrievalEvidence & {sourceStart:number;sourceEnd:number}>> {
+    if(!refs.length) return [];
+    const scopes=await this.scopes(access);
+    return this.openScopedSources(scopes,refs);
+  }
+  private async openScopedSources(scopes: CandidateScope[], refs: readonly KnowledgeSourceReference[]): Promise<Array<RetrievalEvidence & {sourceStart:number;sourceEnd:number}>> {
+    return Promise.all(refs.map(async ref=>{
+    const selected = scopes.find(s => s.releaseId === ref.knowledgeReleaseId && s.indexIds.includes(ref.indexRevisionId));
     if (!selected)
       throw new KnowledgeCoreError('KNOWLEDGE_FORBIDDEN');
     const row = (await this.candidates.exact(selected, ref.chunkId))[0];
@@ -505,5 +524,6 @@ export class KnowledgeRetrievalService {
     return {
       ...this.evidence(row), sourceStart: row.sourceStart, sourceEnd: row.sourceEnd
     };
+    }));
   }
 }

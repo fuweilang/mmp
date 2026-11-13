@@ -79,11 +79,15 @@ class SourceDto extends ExactSourceDto {
     @IsOptional() @IsString() @MinLength(1) @MaxLength(128) versionId?: string;
     @IsOptional() @IsString() @MinLength(1) @MaxLength(128) previewId?: string;
 }
+class HistorySourceDto extends ExactSourceDto {
+    @IsOptional() @IsString() @MaxLength(32000) text?: string;
+}
 class HistoryEntryDto extends BindingDto {
     @IsString() @MinLength(1) @MaxLength(128) agentId!: string;
-    @IsArray() @ArrayMaxSize(1024) @ValidateNested({each:true}) @Type(()=>ExactSourceDto) sources!: ExactSourceDto[];
+    @IsArray() @ArrayMaxSize(1024) @ValidateNested({each:true}) @Type(()=>HistorySourceDto) sources!: HistorySourceDto[];
 }
 class HistoryDto {
+    @IsOptional() @Equals(true) verifyContent?: boolean;
     @IsString() @MinLength(1) @MaxLength(128) userId!: string;
     @IsString() @MinLength(1) @MaxLength(256) scope!: string;
     @IsArray() @ArrayMaxSize(1024) @ValidateNested({each:true}) @Type(()=>HistoryEntryDto) entries!: HistoryEntryDto[];

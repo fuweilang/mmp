@@ -181,7 +181,7 @@
     >
       <template #header="{ titleId }">
         <div class="expert-workspace-header">
-          <el-button class="expert-back-button" text aria-label="返回专家列表" :disabled="editorBusy" @click="requestEditorClose()"><ArrowLeft :size="20" /></el-button>
+          <el-button class="expert-back-button" text aria-label="返回专家列表" :disabled="editorBusy || editorPreviewBusy" @click="requestEditorClose()"><ArrowLeft :size="20" /></el-button>
           <div class="expert-header-avatar" aria-hidden="true"><img v-if="editorAvatarUrl" :src="editorAvatarUrl" alt="" /><UserRound v-else :size="22" /></div>
           <div class="expert-workspace-identity">
             <h1 :id="titleId" class="expert-sr-only">{{ editingId ? '编辑专家' : '新建官方专家' }}</h1>
@@ -191,8 +191,8 @@
           <div class="expert-workspace-save">
             <span role="status">{{ editorDirty ? '有未保存修改' : editingId ? '草稿已保存' : '尚未保存草稿' }}</span>
             <el-button class="expert-document-button" :disabled="editorBusy || !editingId" @click="discoveryId = editingId"><FileText :size="14" />专家介绍</el-button>
-            <el-button class="expert-save-button" type="primary" aria-label="保存草稿" :loading="saving && !editorPreviewBusy" :disabled="editorBusy || iconValidating" @click="onSave">保存</el-button>
-            <el-dropdown trigger="click" :disabled="editorBusy" @command="onEditorCommand">
+            <el-button class="expert-save-button" type="primary" aria-label="保存草稿" :loading="saving && !editorPreviewBusy" :disabled="editorBusy || editorPreviewBusy || iconValidating" @click="onSave">保存</el-button>
+            <el-dropdown trigger="click" :disabled="editorBusy || editorPreviewBusy" @command="onEditorCommand">
               <el-button text class="expert-more-button" aria-label="更多专家操作" :disabled="editorBusy"><EllipsisVertical :size="20" /></el-button>
               <template #dropdown><el-dropdown-menu><el-dropdown-item command="details">编辑专家信息</el-dropdown-item><el-dropdown-item v-if="editingId" command="publish" :disabled="editorBusy || iconValidating || !!executionBlockers.length">保存并发布</el-dropdown-item></el-dropdown-menu></template>
             </el-dropdown>
@@ -203,11 +203,11 @@
         <section class="expert-personalization-panel" aria-label="个性化配置">
           <div class="expert-panel-heading"><h2>个性化</h2><el-tooltip content="描述专家的角色、工作方式和回答要求。"><CircleHelp :size="13" class="expert-help-icon" /></el-tooltip></div>
           <el-form-item label="专家指令" prop="systemPrompt" class="expert-prompt-field">
-            <el-input v-model="form.systemPrompt" aria-label="专家指令" type="textarea" :rows="18" resize="none" maxlength="50000" show-word-limit placeholder="描述智能体的设定以及工作方式。" />
+            <el-input v-model="form.systemPrompt" aria-label="专家指令" type="textarea" :rows="18" resize="none" maxlength="60000" show-word-limit placeholder="描述智能体的设定以及工作方式。" />
           </el-form-item>
           <el-dialog v-model="metadataOpen" title="编辑专家" width="388px" class="expert-metadata-dialog" align-center append-to-body :close-on-click-modal="false" :close-on-press-escape="!editorBusy" :show-close="!editorBusy">
         <el-form-item label="专家头像" class="expert-metadata-avatar">
-          <CatalogIconEditor profile="expert" v-model="pendingIcon" v-model:removed="removeIcon" :current-url="formAvatarUrl" :disabled="editorBusy" @validating="iconValidating=$event" @preview-change="draftAvatarUrl=$event" />
+          <CatalogIconEditor profile="expert" v-model="pendingIcon" v-model:removed="removeIcon" :current-url="formAvatarUrl" :disabled="editorBusy || editorPreviewBusy" @validating="iconValidating=$event" @preview-change="draftAvatarUrl=$event" />
         </el-form-item>
         <el-form-item label="名称" prop="name" required>
           <el-input v-model="form.name" aria-label="专家名称" maxlength="80" show-word-limit />
@@ -251,7 +251,7 @@
             </el-collapse-item>
             <el-collapse-item title="角色、流程与交付要求" name="workflow">
         <el-form-item label="类型" prop="kind">
-          <el-radio-group v-model="form.kind" :disabled="editorBusy || Boolean(editingId)">
+          <el-radio-group v-model="form.kind" :disabled="editorBusy || editorPreviewBusy || Boolean(editingId)">
             <el-radio value="GENERAL">通用型</el-radio>
             <el-radio value="KNOWLEDGE">资料型</el-radio>
           </el-radio-group>
@@ -271,7 +271,7 @@
           </el-collapse>
           <el-collapse v-model="advancedOpen">
             <el-collapse-item title="高级：自动标识" name="advanced">
-              <el-form-item label="标识" prop="key"><el-input v-model="form.key" :disabled="editorBusy || Boolean(editingId)" maxlength="64" placeholder="可留空自动生成；创建后只读" /></el-form-item>
+              <el-form-item label="标识" prop="key"><el-input v-model="form.key" :disabled="editorBusy || editorPreviewBusy || Boolean(editingId)" maxlength="64" placeholder="可留空自动生成；创建后只读" /></el-form-item>
               <el-form-item v-if="form.toolScope.length" label="已有工具权限" prop="toolScope">
                 <p class="form-hint">保留历史配置；取消勾选可移除已有权限。</p>
                 <el-checkbox-group v-model="form.toolScope" class="expert-tool-options">
@@ -286,7 +286,7 @@
           </el-dialog>
         </section>
         <section class="expert-capabilities-panel" aria-label="专家能力配置">
-          <ExpertExecutionEditor v-if="editorOpen" ref="executionEditor" v-model="form.executionConfig" :expert-id="editingId" :expert-name="form.name" :disabled="editorBusy" :tool-scope="form.toolScope" :skills="executionSkillDependencies" @blockers="executionBlockers=$event">
+          <ExpertExecutionEditor v-if="editorOpen" ref="executionEditor" v-model="form.executionConfig" :expert-id="editingId" :expert-name="form.name" :disabled="editorBusy" :tool-scope="form.toolScope" :skills="executionSkillDependencies" @blockers="executionBlockers=$event" @knowledge-changed="editorKnowledgeRevision++">
             <template #skills>
               <div v-for="skill in selectedSkillPreviews" :key="skill.id" class="expert-selected-skill">
                 <span class="expert-skill-glyph"><Box :size="14" /></span><span class="expert-skill-name">{{ skill.name }}</span>
@@ -304,7 +304,7 @@
             </template>
           </ExpertExecutionEditor>
         </section>
-        <ExpertDraftPreview :name="form.name" :summary="form.summary" :starters="splitLines(form.openingQuestionsText)" :avatar-url="editorAvatarUrl" :launch-url="editorPreviewPath" :expires-at="editorPreviewExpiresAt" :approved-request-id="editorPreviewApprovedRequest" :rejected-request-id="editorPreviewRejectedRequest" :busy="editorPreviewBusy" :disabled="editorBusy || iconValidating || !!executionBlockers.length" :stale="editorPreviewStale" :error="editorPreviewError" @preview="onEditorPreview" />
+        <ExpertDraftPreview :name="form.name" :summary="form.summary" :starters="splitLines(form.openingQuestionsText)" :avatar-url="editorAvatarUrl" :launch-url="editorPreviewPath" :expires-at="editorPreviewExpiresAt" :approved-request-id="editorPreviewApprovedRequest" :rejected-request-id="editorPreviewRejectedRequest" :busy="editorPreviewBusy" :disabled="editorBusy || iconValidating || !!executionBlockers.length" :stale="editorPreviewStale" :error="editorPreviewError" @preview="onEditorPreview" @invalidate="invalidateEditorPreview" />
       </el-form>
     </el-dialog>
 
@@ -560,7 +560,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, h, nextTick, onBeforeUnmount, onMounted, provide, reactive, ref } from 'vue';
+import { createExpertEditorResources, expertEditorResourcesKey } from '../../components/admin/expert-editor-resources';
+const editorResources=createExpertEditorResources();
+provide(expertEditorResourcesKey,editorResources);
 import CatalogDiscoveryEditor from '../../components/CatalogDiscoveryEditor.vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type TagProps } from 'element-plus';
@@ -655,18 +658,34 @@ function onEditorCommand(command: string) {
 const editorPreviewBusy=ref(false), editorPreviewPath=ref(''), editorPreviewExpiresAt=ref(''), editorPreviewError=ref(''), editorPreviewBaseline=ref('');
 const editorPreviewApprovedRequest=ref('');
 const editorPreviewRejectedRequest=ref('');
-const editorBusy=computed(()=>saving.value || publishingFromEditor.value || editorPreviewBusy.value);
+let editorPreviewEpoch=0;
+const editorKnowledgeRevision=ref(0);
+function editorPreviewFields(){return JSON.stringify([editorFields(),editorKnowledgeRevision.value]);}
+function invalidateEditorPreview() {
+  editorPreviewEpoch++;
+  editorPreviewPath.value='';editorPreviewExpiresAt.value='';editorPreviewBaseline.value='';editorPreviewApprovedRequest.value='';
+}
+const editorBusy=computed(()=>saving.value || publishingFromEditor.value);
+let queuedEditorPreview: {question:string;requestId:string} | undefined;
 const editorDirty=computed(()=>editorFields()!==editorBaseline.value || !!pendingIcon.value || removeIcon.value);
-const editorPreviewStale=computed(()=>!!editorPreviewPath.value && (editorFields()!==editorPreviewBaseline.value || !!pendingIcon.value || removeIcon.value));
+const editorPreviewStale=computed(()=>!!editorPreviewPath.value && (editorPreviewFields()!==editorPreviewBaseline.value || !!pendingIcon.value || removeIcon.value));
 async function requestEditorClose(done?: () => void) {
-  if (editorBusy.value || iconValidating.value) return;
+  if (editorBusy.value || editorPreviewBusy.value || iconValidating.value) return;
   if (editorDirty.value) {
     try { await ElMessageBox.confirm('当前修改尚未保存，离开会丢弃这些修改。', '离开专家编辑', {confirmButtonText:'放弃修改并离开',cancelButtonText:'继续编辑',type:'warning'}); } catch { return; }
   }
   if (done) done(); else editorOpen.value=false;
 }
 async function onEditorPreview(question?: string, requestId?: string) {
+  if(question===undefined) {
+    queuedEditorPreview=undefined;invalidateEditorPreview();editorPreviewError.value='';editorPreviewRejectedRequest.value='';return;
+  }
   if(editorBusy.value || iconValidating.value || executionBlockers.value.length) return;
+  if (editorPreviewBusy.value) {
+    if (question && requestId) queuedEditorPreview={question,requestId};
+    return;
+  }
+  const epoch=editorPreviewEpoch;
   editorPreviewError.value='';
   editorPreviewApprovedRequest.value='';
   editorPreviewRejectedRequest.value='';
@@ -684,19 +703,30 @@ async function onEditorPreview(question?: string, requestId?: string) {
       return;
     }
     const saved=await persistEditorDraft();
+    if(epoch!==editorPreviewEpoch) return;
     if(!saved) return;
-    const baseline=editorFields();
+    if (editorDirty.value) {
+      editorPreviewError.value='配置在准备试聊时发生了变化，请重新发送以使用最新配置。';
+      return;
+    }
+    const baseline=editorPreviewFields();
     const preview=await adminOfficialAgentApi.preview(saved.id);
+    if(epoch!==editorPreviewEpoch) return;
     const path=new URL(previewHostLaunchUrl(preview,agentWebUrl));
     path.searchParams.set('expertEmbed','1');
     editorPreviewPath.value=path.href; editorPreviewExpiresAt.value=preview.expiresAt; editorPreviewBaseline.value=baseline;
-    if (editorFields()!==baseline || pendingIcon.value || removeIcon.value) {
+    if (editorPreviewFields()!==baseline || pendingIcon.value || removeIcon.value) {
       editorPreviewError.value='配置在准备试聊时发生了变化，请重新发送以使用最新配置。';
       return;
     }
     editorPreviewApprovedRequest.value=requestId ?? '';
-  } catch(error) {editorPreviewError.value=apiErrorMessage(error,'试聊创建失败，请重试');}
-  finally { if(requestId && editorPreviewApprovedRequest.value!==requestId) editorPreviewRejectedRequest.value=requestId; editorPreviewBusy.value=false; }
+  } catch(error) {if(epoch===editorPreviewEpoch) editorPreviewError.value=apiErrorMessage(error,'试聊创建失败，请重试');}
+  finally {
+    if(requestId && editorPreviewApprovedRequest.value!==requestId) editorPreviewRejectedRequest.value=requestId;
+    editorPreviewBusy.value=false;
+    const queued=queuedEditorPreview;queuedEditorPreview=undefined;
+    if (queued) void onEditorPreview(queued.question,queued.requestId);
+  }
 }
 function warnUnsavedEditor(event: BeforeUnloadEvent) {if(editorOpen.value && editorDirty.value){event.preventDefault();event.returnValue='';}}
 function clearIconDraft(){draftAvatarUrl.value=null;pendingIcon.value=null;removeIcon.value=false;iconValidating.value=false;}
@@ -799,7 +829,7 @@ const rules: FormRules = {
   name: [{ required: true, message: '请输入专家名称', trigger: 'blur' }],
   openingQuestionsText: [{ validator: (_rule, value, callback) => {
     const lines=splitLines(String(value ?? ''));
-    if (lines.length > 3) callback(new Error('开场白最多填写3条'));
+    if (lines.length > 4) callback(new Error('开场白最多填写4条'));
     else if (lines.some(line=>line.length > 500)) callback(new Error('每条开场白最多500字'));
     else callback();
   }, trigger:'blur' }],
@@ -1153,6 +1183,7 @@ async function validateEditorForm(): Promise<boolean> {
 async function persistEditorDraft(): Promise<OfficialAgentRow | null> {
   const valid = await validateEditorForm();
   if (!valid) return null;
+  const submittedFields=editorFields();
   const openingQuestions=splitLines(form.openingQuestionsText);
   const previousDiscovery=baseDefinition.value.discoveryDetail;
   const discovery=previousDiscovery && typeof previousDiscovery==='object' && !Array.isArray(previousDiscovery) ? previousDiscovery as Record<string,unknown> : {};
@@ -1186,7 +1217,7 @@ async function persistEditorDraft(): Promise<OfficialAgentRow | null> {
           kind: form.kind,
         });
     editingId.value = next.id;
-    editorBaseline.value = editorFields();
+    editorBaseline.value = submittedFields;
     replaceRow(next);
   }
   if (pendingIcon.value) {
@@ -1208,8 +1239,9 @@ async function persistEditorDraft(): Promise<OfficialAgentRow | null> {
     next = rows.value.find((row) => row.id === next!.id) ?? next;
   }
   const current = next ?? rows.value.find((row) => row.id === editingId.value) ?? null;
-  if (current) form.openingQuestionsText = (current.draft.openingQuestions ?? []).join('\n');
-  editorBaseline.value=editorFields();
+  const unchanged=editorFields()===submittedFields;
+  if (unchanged && current) form.openingQuestionsText = (current.draft.openingQuestions ?? []).join('\n');
+  editorBaseline.value=unchanged ? editorFields() : submittedFields;
   return current;
 }
 
@@ -1256,7 +1288,7 @@ function apiErrorMessage(error: unknown, fallback: string): string {
 }
 
 async function onSave() {
-  if (saving.value || publishingFromEditor.value || iconValidating.value) return;
+  if (saving.value || publishingFromEditor.value || editorPreviewBusy.value || iconValidating.value) return;
   saving.value = true;
   try {
     const wasNew = !editingId.value;
@@ -1281,7 +1313,7 @@ async function onSaveAndPublish() {
     ElMessage.warning('请先保存新建专家，再发布');
     return;
   }
-  if (saving.value || publishingFromEditor.value || iconValidating.value) return;
+  if (saving.value || publishingFromEditor.value || editorPreviewBusy.value || iconValidating.value) return;
   const missing = collectPublishMissing();
   if (missing.length) {
     ElMessage.error(formatPublishMissingToast(missing));
@@ -1565,7 +1597,7 @@ async function openViewer(row: OfficialAgentRow) {
   }
 }
 
-onMounted(()=>{void load();window.addEventListener('beforeunload',warnUnsavedEditor);});
+onMounted(()=>{void editorResources.load().catch(()=>{});void load();window.addEventListener('beforeunload',warnUnsavedEditor);});
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload',warnUnsavedEditor);
   window.clearTimeout(searchTimer);
