@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-file-reference",
   "description": "File-reference discovery contract and shared @file grammar",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publishConfig": {
     "access": "public"
   },

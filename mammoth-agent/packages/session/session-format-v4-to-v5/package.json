@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-session-format-v4-to-v5",
   "description": "Identity-preserving Session V4 to V5 migration and required-event admission",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publishConfig": {
     "access": "public"
   },

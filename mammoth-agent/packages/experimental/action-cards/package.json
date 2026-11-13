@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-action-cards",
   "description": "Optional action cards below answers: one shared proposal tool, card state, user actions and status notices",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publishConfig": {
     "access": "public"
   },

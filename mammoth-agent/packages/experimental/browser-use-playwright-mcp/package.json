@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-experimental-browser-use-playwright-mcp",
   "description": "Experimental per-Session Chromium browser tools through @playwright/mcp",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publishConfig": {
     "access": "public"
   },

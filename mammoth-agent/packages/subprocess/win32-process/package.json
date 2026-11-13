@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-win32-process",
   "description": "Shared low-level Win32 process, stdio, and Job Object primitives",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publishConfig": {
     "access": "public"
   },

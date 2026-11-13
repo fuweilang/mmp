@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-experimental-worktree",
   "description": "Creates a named Git worktree and changes the calling Session working directory",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publishConfig": {
     "access": "public"
   },

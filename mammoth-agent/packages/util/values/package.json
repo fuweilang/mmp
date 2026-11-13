@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-util-values",
   "description": "Duplicate-install-safe value primitives for the DeepSeek Harness",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publishConfig": {
     "access": "public"
   },

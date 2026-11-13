@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-plugin-manager",
   "description": "Current-profile plugin and bundle management shared by mmp CLI, Web and agent tools",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-plugin-detail",
   "description": "Plugin detail documents: meta.detail or README selection, image paths, and local and npm CDN file sources",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-base",
   "description": "The shared mmp core as a profile bundle: the first patch layer of base-backed profiles, inserting core rows over the empty profile root",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publishConfig": {
     "access": "public"
   },

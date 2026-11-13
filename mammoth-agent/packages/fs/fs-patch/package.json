@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-fs-patch",
   "description": "Pure Codex-style patch parser and LF text updater with structured match failures",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publishConfig": {
     "access": "public"
   },

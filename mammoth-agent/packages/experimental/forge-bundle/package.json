@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-experimental-forge-bundle",
   "description": "Experimental change request panel and worktree option for Sessions in Git repositories",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "icon": "./icon.svg",
   "publishConfig": {
     "access": "public"
