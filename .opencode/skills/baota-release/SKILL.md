@@ -86,6 +86,12 @@ GitHub代码备份已完成；CI路线仍需另行批准并补齐单仓workflow�
 9. **仓库不得有数据导出**：`git ls-files | grep -E '\.(sql|dump)$'` 必须为空（3.1 曾把 2.2MB 的 `_backups/*.sql` 连同 `public."user"` 推到 GitHub）。
 10. **API 产物路径**：构建后 `test -f ground/apps/backend/dist/main.js`。新增 `apps/backend/scripts/` 后 Nest 共同根会上移，输出变成 `dist/src/main.js`，容器直接 `MODULE_NOT_FOUND`。
 11. **签名能力**：`security find-identity -v -p codesigning` 为 0 时只能出 unsigned，manifest 必须保持 `signed:false`、`automatic_updates:false`，并在验收里写明"首次打开需右键"。
+12. **版本同步**：改完 `ground/config/version.json` 必须跑 `pnpm --dir ground run version:sync`，并核对 `packages/shared/src/version.ts` 已变；否则接口/前端仍是旧版本（4K 坑 5）。
+13. **环境文件**：业务键只写 `/www/mmp-prod/production.env`（compose `env_file`）；`.env` 只放镜像 tag 与 `POSTGRES_PASSWORD`（4K 坑 4）。
+14. **短信通道对齐**：`node ground/infra/production/check-sms-env.mjs <production.env> --runtime` 必须通过；provider 必须是代码支持的那个（tencent/aliyun），不许 mock 回落（4K 坑 6）。
+15. **基础镜像在位**：`docker images | grep -E 'node:24-bookworm|docker:28-cli'`，缺则本机 `save|ssh load` + `docker tag hub.rat.dev/library/...`；**不要 `docker image prune -af`**（4K 坑 1/2/3）。
+16. **镜像导出可信**：`docker save` 后必须验证 tar（本地 `docker load -i` 试一次，或对端 load 无 `unpack layer` 报错）；多架构镜像优先 digest 精确拉取（4K 坑 2）。
+17. **校验脚本化**：公网 size/sha 校验用 `python3` 或显式变量，禁止 `set -- $var` 靠 zsh 拆分（4K 坑 8）。
 
 **本次结果基线**：`3.0.0-20261108-1930`；api `mmp-api:3.0.0-20261108-1930`、web `mmp-web:3.0.0-20261108-r6`；迁移 45/45（发布前 30/45）；arm64 `532040d0…93b000` 268030061B、x64 `2557015f…1e90c9` 289439357B；`state.json` 落在 `release/3.0.0-20261108-1930/`。验收缺口只有"登录后业务验收"（凭据过期）与"真 Intel 实机"。
 
@@ -831,6 +837,37 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 | 验收 | 登录 `13800000001` super_admin/22 权限；`/console/api/version` 200；`official-agents` 200；资料库 context/items/search/config 全 200 |
 | 磁盘 | 发布后 54G 可用；镜像只留当前+上一版 |
 
+## 4K. 2026-11-13 全栈 + 三平台发版复盘（3.4.0 / 桌面 0.3.3 含 Windows）
+
+> 范围：Ground api+web+pg、mac-arm64、mac-x64、win-x64（unsigned）。结果上线成功，但返工集中在**镜像、版本号、环境文件、短信通道**四处。
+
+### 4K.1 本轮 11 个坑（已固化为门禁）
+
+| # | 现象 | 根因 | 损失 | 固化动作 |
+|---|---|---|---|---|
+| 1 | 服务器拉 `node:24-bookworm` 19MB 层 9 分钟 | 镜像源限速 + 预检清空了构建缓存 | ~15 min | 预检只 `builder prune --filter until=72h`；**不要 `image prune -af`**，会删掉基础镜像 |
+| 2 | 本机 `docker save` 产出残缺包，服务器 `load` 报 `unpack layer ... not found` | 本机对多架构镜像存储缺 blob，`save` 静默返回 0 | ~20 min | 取镜像用 digest（`docker buildx imagetools inspect` 拿 amd64 digest → `docker pull node@sha256:…`）；或 `buildx build --load` 重落盘；**save 后必须验证 tar 可 load**（本地 `docker load -i` 试一次或看 size 合理） |
+| 3 | web 构建卡在拉 `node:24-bookworm{,-slim}` + `docker:28-cli` | 三个基础镜像服务器都没缓存 | 同上 | 预检先 `docker images | grep` 三件；缺就本机 `save|ssh load` 并 `docker tag hub.rat.dev/library/...` |
+| 4 | `.env` 写了短信键，api 仍 crash-loop | compose 用 `env_file: production.env`；`.env` 只做变量替换 | 一轮重启 | **业务键只写 `production.env`**；`.env` 只放 `MMP_API_IMAGE`/`MMP_WEB_IMAGE`/`POSTGRES_PASSWORD` |
+| 5 | 上线后 `/api/version` 仍旧版 | 手改 `config/version.json` 没跑 `version:sync`，`packages/shared/src/version.ts` 里是硬编码 | 前端+api 各重打一次 ~8 min | 版本只走 `pnpm --dir ground run version:sync`；门禁断言 `/api/version` == 目标版本 |
+| 6 | 代码只支持 tencent，生产实际 aliyun | 需求假设错 | ~25 min | 预检断言「`SMS_PROVIDER` ∈ 代码支持集合」，且 provider 对应键齐全 |
+| 7 | 磁盘 30G（门禁 ≥40G） | 历史镜像 + 构建缓存 | 5 min | 预检硬拦；只留当前+上一版 |
+| 8 | 公网下载校验「假通过」 | zsh 不做单词分割，`sha`/`size` 比的是空值 | 险漏检 | 校验一律用 `python3` 脚本或显式变量，禁止 `set -- $var` 靠 shell 拆分 |
+| 9 | 超管登录 401 | `release-private/admin-credentials.txt` 过期 | 登录后业务验收全缺 | 门禁 3 前移；凭据过期先更新再排期 |
+| 10 | server 端 `tar` 刷 xattr 警告 | macOS BSD tar 写入 `LIBARCHIVE.xattr.*` | 噪音 | 打包用 `tar --no-xattrs -czf` |
+| 11 | Windows 按钮点不了 | 前端靠 manifest 有无 `windows-amd64` 判断 | 0 | 发布脚本自动写三平台条目（见 6.2） |
+
+### 4K.2 本轮基线（`3.4.0-20261112-2334`）
+
+| 项 | 值 |
+|---|---|
+| 源码 | base `725c2c65`（origin/5.0）+ `ce7e89b7`(桌面 0.3.3) + `fecb4aa0`(Ground 3.4.0) + `33130519`(aliyun sms) |
+| 镜像 | api `mmp-api:3.4.0-20261112-2334`、web `mmp-web:3.4.0-20261112-2334`；上一版 `3.3.0-20261112-0119` |
+| DB | 备份 `backups/20261112-234255/mammoth_core.dump`（92M）；演练 59 表/10 用户；迁移 56 → 59（`user_avatar`、`sms_verification_code`、`sms_code_hardening`） |
+| 桌面 | arm64 268,548,608B `4e6184f8…`；x64 290,051,731B `bb0ba424…`；win 314,369,394B `cb39f292…`；全部 unsigned |
+| 短信 | 生产 `SMS_PROVIDER=aliyun`（与 PeecAI 同通道，签名「猛犸世纪」） |
+| 验收缺口 | 超管登录 401（凭据过期）；真实短信、真实 GUI/桌面、真 Intel 实机未验 |
+
 ## 5. 网络与下载（最容易吃掉几小时）
 
 > 2026-11-04 这次发版，10h47m 里至少 3h 花在“拉文件”：GitHub 0 字节、Docker Hub 超时、
@@ -945,7 +982,8 @@ export PATH="$HOME/.nvm/versions/node/v24.22.2/bin:$PATH"
 pnpm --dir apps/desktop run package:mac:arm64:unsigned   # 本机架构，本地编译原生模块
 pnpm --dir apps/desktop run package:mac:x64:unsigned     # 跨架构，优先本地 cross-compiled darwin-x64，缺了才回退 registry
 # win-x64 不能在 macOS 上打：package-target.ts 要求 Windows x64 构建机
-# 走 .github/workflows/windows-package.yml（发布必须 signed；unsigned 仅内部调试）
+# 走 .github/workflows/windows-package.yml（条件签名；发布见 6.2）
+# 未配 CSC_LINK/CSC_KEY_PASSWORD 时为 unsigned，只能手工下载、无自动更新
 ```
 
 ### 6.1 三 target 对照表
@@ -978,6 +1016,37 @@ file "$APP/Contents/Resources/app.asar.unpacked/mmp/node_modules/@mammoth-ai/nod
 - 架构必须匹配：x64 包主程序和 `system.node` 都应是 `x86_64`，arm64 包都应是 `arm64`。
 - bundle id **不能是 `com.tencent.octop`**（废弃包）。
 - `system.node` 缺失或架构不对，直接重打，不要上传。
+
+### 6.2 Windows 发布（GitHub Actions → 一条命令落盘）
+
+**不能在本机 Mac 打**（`package-target.ts:183` 要求 Windows x64 构建机）。流程：
+
+```bash
+# 1) 触发（源码必须在远端，CI 按 source_ref checkout）
+gh workflow run windows-package.yml -f source_ref=5.0
+gh run watch
+
+# 2) 取产物（含 exe / blockmap / latest.yml(签名时) / installer.json）
+gh run download <run-id> -n mammoth-agent-win-x64-unsigned -D /tmp/win-out   # 签名时有 secret 则 artifact 名为 -signed
+```
+
+**签名**：配置 `secrets.CSC_LINK`（PFX base64）与 `secrets.CSC_KEY_PASSWORD` 后自动走签名分支，并用 `Get-AuthenticodeSignature` 校验必须 `Valid`；未配置则维持 unsigned 并输出 `SIGNED=false`。**unsigned 包 `automatic_updates` 强制 false**（脚本会拦）。
+
+```bash
+# 3) 发布（默认 dry-run，用 --yes 才写远端）
+cd mammoth-agent
+node --experimental-strip-types scripts/publish-desktop-downloads.ts \
+  --platform win-x64 --input /tmp/win-out --version 0.3.3 --dry-run   # 先看 diff
+node --experimental-strip-types scripts/publish-desktop-downloads.ts \
+  --platform win-x64 --input /tmp/win-out --version 0.3.3 --yes
+```
+
+脚本做的事：命名/架构校验 → sha256+bytes → 版本化文件名 → 固定别名 `mammoth-agent-win.exe` → `latest.yml`+`.blockmap` 上传到 `downloads/mmp-desk/feeds/win-x64/`（仅签名时）→ 原子更新 `mammoth-latest.json` 的 `windows-amd64` → 公网 GET 校验 size+sha → 失败回滚 manifest/别名（保留 `.prev-<UTC>`）。
+
+**别踩**：
+- NSIS 安装器是 32 位 stub（PE=0x14c）属正常，架构以 electron-builder target 为准，不是 PE 机器字段。
+- Windows 按钮由 manifest 的 `windows-amd64` 键驱动；**manifest 没写就等于页面显示「暂未提供」**。
+- 下载页 alias 是 `mammoth-agent-win.exe`（`nginx-mmai.conf` 已有精确 `no-store` location），manifest 指向版本化文件名。
 
 ### 6.3 上传与三重校验
 

@@ -1,9 +1,12 @@
-# 猛犸桌面客户端 · Windows x64 安装包（未签名）
+# 猛犸桌面客户端 · Windows x64 安装包（条件签名 · 宝塔下载页）
 #
 # 仓库根目录的 workflow 是 GitHub Actions 唯一识别的入口；mammoth-agent/.github
-# 下的同名流水线依赖自托管 runner，本文件只用于在 GitHub 托管 runner 上产出一份
-# 未签名 Windows 安装包，供宝塔下载页分发（不生成更新 feed、不签名、不发布到 COS）。
-name: Package Desktop · Windows x64 (unsigned, Baota)
+# 下的同名流水线依赖自托管 runner，本文件只用于在 GitHub 托管 runner 上产出
+# Windows 安装包，供宝塔下载页分发（不上传 COS、不推 tag）。
+# 未配置证书 → unsigned（仅手工下载）；配置 secrets.CSC_LINK + CSC_KEY_PASSWORD →
+# electron-builder PFX 签名，且 Get-AuthenticodeSignature 必须 Valid 才上传。
+# 上线前需提供：PFX（含私钥）+ 密码，分别存 CSC_LINK / CSC_KEY_PASSWORD。
+name: Package Desktop · Windows x64 (conditional signing, Baota)
 
 on:
   workflow_dispatch:
@@ -80,30 +83,73 @@ jobs:
           ) -join "`n"
           [System.IO.File]::WriteAllText('apps/desktop/.env.windows', $content + "`n", [System.Text.UTF8Encoding]::new($false))
 
-      - name: Package Windows x64 (unsigned)
+      - name: Resolve signing mode
+        id: signing
+        env:
+          CSC_LINK_SECRET: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD_SECRET: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          $signed = -not [string]::IsNullOrWhiteSpace($env:CSC_LINK_SECRET) -and -not [string]::IsNullOrWhiteSpace($env:CSC_KEY_PASSWORD_SECRET)
+          if ($signed) { 'signed=true' >> $env:GITHUB_OUTPUT; 'mode=signed' >> $env:GITHUB_OUTPUT }
+          else { 'signed=false' >> $env:GITHUB_OUTPUT; 'mode=unsigned' >> $env:GITHUB_OUTPUT; Write-Host 'SIGNED=false: unsigned build' }
+
+      - name: Package Windows x64
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ steps.signing.outputs.signed == 'true' && 'true' || 'false' }}
         run: corepack pnpm --dir apps/desktop run package:win:x64:unsigned
 
       - name: Collect installer
         run: |
           $dir = 'apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts'
-          Get-ChildItem -Recurse $dir | Select-Object FullName,Length
-          $exe = Get-ChildItem -Path $dir -Filter '*-win-x64-unsigned.exe' -Recurse | Select-Object -First 1
-          if (-not $exe) { throw "no unsigned win-x64 installer in $dir" }
-          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
-          "INSTALLER=$($exe.FullName)"
-          "BYTES=$($exe.Length)"
-          "SHA256=$hash"
+          $exe = Get-ChildItem -Path $dir -Filter '*-win-x64*.exe' -File -Recurse |
+            Where-Object { $_.Name -notlike '*.blockmap' } | Select-Object -First 1
+          if (-not $exe) { throw "no win-x64 installer in $dir" }
+          $match = [regex]::Match($exe.BaseName, '^mammoth-ai-(.+)-win-x64(?:-unsigned)?$')
+          if (-not $match.Success) { throw "unexpected installer name $($exe.Name)" }
+          $version = $match.Groups[1].Value
+          $signed = '${{ steps.signing.outputs.signed }}' -eq 'true'
+          if ($signed) {
+            $signature = Get-AuthenticodeSignature -LiteralPath $exe.FullName
+            if ($signature.Status -ne 'Valid') { throw "Authenticode status $($signature.Status): $($signature.StatusMessage)" }
+            Write-Host "AUTHENTICODE=Valid SUBJECT=$($signature.SignerCertificate.Subject)"
+          } else { Write-Host 'SIGNED=false (unsigned branch: Authenticode check skipped)' }
+          $hash = (Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash.ToLower()
           $out = Join-Path $env:GITHUB_WORKSPACE 'windows-artifact'
           New-Item -ItemType Directory -Force -Path $out | Out-Null
-          Copy-Item $exe.FullName (Join-Path $out $exe.Name)
-          Copy-Item "$dir/*.blockmap" $out -ErrorAction SilentlyContinue
-          Copy-Item "$dir/latest.yml" $out -ErrorAction SilentlyContinue
+          Copy-Item -LiteralPath $exe.FullName -Destination (Join-Path $out $exe.Name)
+          if (Test-Path -LiteralPath "$($exe.FullName).blockmap") {
+            Copy-Item -LiteralPath "$($exe.FullName).blockmap" -Destination (Join-Path $out "$($exe.Name).blockmap")
+          }
+          $feedYml = Join-Path $dir 'latest.yml'
+          if (Test-Path -LiteralPath $feedYml) { Copy-Item -LiteralPath $feedYml -Destination (Join-Path $out 'latest.yml'); $feed = $true }
+          elseif ($signed) {
+            $sha512 = [Convert]::ToBase64String([Convert]::FromHexString((Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA512).Hash))
+            $yml = @(
+              "version: $version"
+              'files:'
+              "  - url: $($exe.Name)"
+              "    sha512: $sha512"
+              "    size: $($exe.Length)"
+              "path: $($exe.Name)"
+              "sha512: $sha512"
+              "releaseDate: '$((Get-Date).ToUniversalTime().ToString('o'))'"
+            ) -join "`n"
+            [System.IO.File]::WriteAllText((Join-Path $out 'latest.yml'), $yml + "`n", [System.Text.UTF8Encoding]::new($false))
+            $feed = $true
+          } else { Write-Host 'FEED=absent (unsigned)'; $feed = $false }
+          $metadata = [ordered]@{ product='mammoth-agent'; platform='win-x64'; version=$version; file=$exe.Name
+            sha256=$hash; bytes=$exe.Length; signed=$signed; feed=$feed }
+          [System.IO.File]::WriteAllText((Join-Path $out 'installer.json'), ($metadata | ConvertTo-Json -Depth 5) + "`n",
+            [System.Text.UTF8Encoding]::new($false))
+          "SIGNED=$($signed.ToString().ToLower())"; "FEED=$($feed.ToString().ToLower())"
           Get-ChildItem $out | Select-Object Name,Length
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mammoth-agent-win-x64-unsigned
+          name: mammoth-agent-win-x64-${{ steps.signing.outputs.mode }}
           path: windows-artifact/*
           if-no-files-found: error
           retention-days: 14
