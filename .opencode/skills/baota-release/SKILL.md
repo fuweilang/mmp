@@ -965,6 +965,62 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 | 验收 | 官网 200、`/agent/` 登录后 200（`<title>猛犸AI</title>`、assets 200）、console/admin 200、`/admin/api/users` 5 用户、`/console/api/version` 3.5.0、gzip 生效 |
 | 回滚 | nginx `mammoth.conf.bak-20261114-010237`；`.env.bak-20261114-005953`；`middle-web.bak-20261114-005953`；`website.bak-20261114-005953` |
 
+## 4N. 2026-11-14 官网进根复盘：耗时、返工与固化
+
+### 4N.1 实际时间分布
+
+| 阶段 | 实测 | 性质 |
+|---|---|---|
+| 准备：读代码 → 改 6 个文件 → 本地门禁 → 首个 commit | ~55 min | 必要（架构级变更，不是换包） |
+| **发版窗口** `00:45:50 → 01:14:03` | **28m13s** | 含 7m28s 返工 + 两次 smoke |
+| preflight | 7 s | 必要 |
+| 前端 5 s / 官网 4 s | 9 s | 必要 |
+| api 镜像（冷缓存） | 46 s | 必要 |
+| rsync + 服务器 web 镜像 | **11m52s**（构建 680 s） | 关键路径 |
+| 上传发布包 / 载入 api 镜像 / compose up | 68 s / 73 s / 23 s | 必要 |
+| nginx 两次失败 + 修复 + 第二次 smoke 前的排障 | **7m28s** | 返工 |
+| smoke（含 872 MB 真实下载 + sha） | **5m02s** | 必要但可裁剪 |
+| 收尾加固（次日 `09:11 → 09:29`）：浏览器验收、官网补丁、二次静态部署、清理 | 18 min | 新增质量项 |
+
+### 4N.2 本轮 3 个返工点
+
+| # | 现象 | 根因 | 损失 | 固化 |
+|---|---|---|---|---|
+| 1 | `nginx: [emerg] "root" directive is duplicate` | 宝塔 server 已声明 `root`，include 里再写 server 级 `root` | ~2 min + 一次切换失败 | include 只在 `location` 内写 `root`；预检容器必须带父 `root` |
+| 2 | 修完模板重跑 nginx 仍报同一错 | `step_nginx` 复制的是 `$PROD_DIR/nginx-mmai.conf`（deploy 时上传的旧副本） | ~1 min + 信心损耗 | ✅ `step_nginx` 先 rsync 仓库模板再切 |
+| 3 | 官网 JS/HTML 无 gzip | 全局 `gzip on` 在别的 server 块，本 server 未继承 | ~2 min 定位 + 5 min 重跑 smoke | ✅ 模板内显式 `gzip on` + `gzip_types` |
+| 4 | 两次 smoke 各 5 分钟 | 三个包 872 MB 全量 GET + sha256 | 10 min | 重复验收用 `MMP_SMOKE_SKIP_DOWNLOAD_HASH=1`；客户端没改就别做全量下载 |
+
+### 4N.3 困难清单
+
+| # | 困难 | 处理 |
+|---|---|---|
+| 1 | 超管凭据再次过期（文件里的 `Mm2026#…` 是错的） | 阻塞登录验收；向业主取当前密码（本轮 `12345678`），并把凭据门禁放到窗口前 |
+| 2 | 根路径换主 + agent 换挂载是架构级变更 | 拆成 4 处同改：路由 `next`、worker `--public-url`、中台 `VITE_AGENT_WEB_URL`、nginx 路由；漏一处就登录回官网 |
+| 3 | 宝塔 vhost 是黑盒（root/location/gzip 都可能已存在） | 切流前用容器带上父 `root` 跑 `nginx -t`；改完 `curl -H 'Accept-Encoding: gzip'` 验压缩 |
+| 4 | `state.rollback.nginx_backup` 记的是 deploy 时间戳，不是 nginx 备份 | ✅ 脚本改为 nginx 步骤成功后只写首次真实时间戳；旧发布需手工对齐 |
+| 5 | `ground-web-router.spec` 两次失败、account-platform 40 个失败 | 用 `git stash` 对照 HEAD 证明是既有时序 flake/既有失败；禁止在窗口里"顺手修测试" |
+| 6 | 笔记本合盖导致本地轮询中断 | 服务器构建不受影响（`setsid`），恢复后继续轮询即可；长任务前 `caffeinate -dimsu` |
+| 7 | 用 `--only` 分段发版（deploy 与 smoke 不同轮）导致 `release/last-release.json` 不写 | 手工补写基线；脚本待补"任一步骤完成都刷新基线" |
+| 8 | 官网下载按钮要读 manifest，但静态导出先渲染兜底别名 | 客户端组件 + `useEffect` 读 `/downloads/mammoth-latest.json`；无 JS 时退回别名（smoke 仍校验别名=manifest） |
+| 9 | macOS `tar` 写 xattr，Linux 解包刷警告 | ✅ 官网打包加 `--no-xattrs` + `COPYFILE_DISABLE=1` |
+| 10 | 旧链接查询参数（`?expertId=`）登录后丢失 | 未修：路由登录 `next` 不带原 query；修它要重建 web 镜像（约 11 min） |
+
+### 4N.4 架构类变更的固定清单（下次直接套）
+
+1. **入口地址**：`website/lib/site.ts`、Ground `.env.production(.example)`、`release.sh`/`build-local.sh` 的 `VITE_AGENT_WEB_URL`。
+2. **agent 挂载**：`MMP_WEB_PUBLIC_PATH` → 路由 `next`、worker `--public-url`、`web-sso.ts` 回跳。
+3. **nginx**：新路径白名单（`/plugins/`、`/auth/`）、`/api/` 用普通前缀、静态站 `try_files $uri $uri.html`、图标/404、gzip。
+4. **脚本**：`website` 步骤、deploy 备份/还原、smoke 断言、rollback `--restore-web`。
+5. **验收**：浏览器跑一遍（Playwright + 系统 Chrome，`executablePath` 指 `/Applications/Google Chrome.app`），看 `pageerror`、下载 href、登录后回跳。
+
+### 4N.5 仍未闭环
+
+- `smoke.sh --quick`（30 s 版）仍未实现；当前重复验收只能靠 `MMP_SMOKE_SKIP_DOWNLOAD_HASH=1`。
+- `--only` 分段发版刷新 `last-release.json`。
+- 旧链接 query 保留（需重建 web 镜像）。
+- 双账号隔离、桌面客户端真机、真实短信/支付仍未验。
+
 ## 5. 网络与下载（最容易吃掉几小时）
 
 > 2026-11-04 这次发版，10h47m 里至少 3h 花在“拉文件”：GitHub 0 字节、Docker Hub 超时、
