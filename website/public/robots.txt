@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /agent/
+Disallow: /console/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /downloads/
+
+Sitemap: https://www.mmai.vip/sitemap.xml

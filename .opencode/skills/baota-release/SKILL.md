@@ -941,10 +941,10 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 
 | # | 现象 | 根因 | 处理 / 固化 |
 |---|---|---|---|
-| 1 | `nginx: [emerg] "root" directive is duplicate ... mammoth.conf:7` | 宝塔 server 块已有 `root`；include 里再写 server 级 `root` 必冲突 | include 只在 `location` 内写 `root`；预检容器要**带一个父 root** 再 `nginx -t` |
-| 2 | 修完模板重跑 `--only nginx,smoke` 仍报同样的 duplicate | nginx 步骤复制的是 `$PROD_DIR/nginx-mmai.conf`，那是 deploy 时上传的旧模板 | 先 `scp nginx-mmai.conf $HOST:/www/mmp-prod/`，再跑 nginx 步骤；或重跑 deploy |
-| 3 | 官网 JS 无 gzip | 全局 `gzip on` 在别的 server 块里，本 server 没继承 | 模板显式写 `gzip on` + `gzip_types`；改完 `curl -H 'Accept-Encoding: gzip' -D -` 验 `content-encoding` |
-| 4 | 匿名访问 `/agent/` 登录后回官网首页 | 路由 `next` 恒为 `${origin}/`；中台 `trustedAgentReturn` 只比 origin，不拦路径 | 加 `MMP_WEB_PUBLIC_PATH`；smoke 断言 `location` 含 `login?next=` 且 `next` 带 `/agent/` |
+| 1 | `nginx: [emerg] "root" directive is duplicate ... mammoth.conf:7` | 宝塔 server 块已有 `root`；include 里再写 server 级 `root` 必冲突 | ✅已修：include 只在 `location` 内写 `root`；预检容器要**带一个父 root** 再 `nginx -t` |
+| 2 | 修完模板重跑 `--only nginx,smoke` 仍报同样的 duplicate | nginx 步骤复制的是 `$PROD_DIR/nginx-mmai.conf`，那是 deploy 时上传的旧模板 | ✅已修：`step_nginx` 先用 rsync 把仓库模板推到 `$PROD_DIR` 再切；`state.rollback.nginx_backup` 只写首次真实时间戳 |
+| 3 | 官网 JS 无 gzip | 全局 `gzip on` 在别的 server 块里，本 server 没继承 | ✅已修：模板显式写 `gzip on` + `gzip_types`；改完 `curl -H 'Accept-Encoding: gzip' -D -` 验 `content-encoding` |
+| 4 | 匿名访问 `/agent/` 登录后回官网首页 | 路由 `next` 恒为 `${origin}/`；中台 `trustedAgentReturn` 只比 origin，不拦路径 | ✅已修：加 `MMP_WEB_PUBLIC_PATH`；smoke 断言 `location` 含 `login?next=` 且 `next` 带 `/agent/` |
 
 ### 4M.4 门禁与 smoke 增量
 

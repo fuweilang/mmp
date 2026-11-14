@@ -357,8 +357,17 @@ step_website() {
   if (( DRY_RUN )); then
     printf '  [dry] tar -C %s -czf %s/website.tar.gz .\n' "$out" "$RELEASE_DIR"
   else
-    COPYFILE_DISABLE=1 tar -C "$out" -czf "$RELEASE_DIR/website.tar.gz" .
+    COPYFILE_DISABLE=1 tar --no-xattrs -C "$out" -czf "$RELEASE_DIR/website.tar.gz" .
     [[ -s "$RELEASE_DIR/website.tar.gz" ]] || die 'website.tar.gz 为空'
+  fi
+  if (( ! DRY_RUN )) && [[ -f "$STATE_FILE" ]]; then
+    node - "$STATE_FILE" "$(node -p "require('$site/package.json').version")" <<'JS'
+const fs = require('fs');
+const [file, version] = process.argv.slice(2);
+const s = JSON.parse(fs.readFileSync(file, 'utf8'));
+s.website = { version, artifact: 'website.tar.gz' };
+fs.writeFileSync(file, JSON.stringify(s, null, 2) + '\n');
+JS
   fi
   log "官网完成：$( ((DRY_RUN)) || du -h "$RELEASE_DIR/website.tar.gz" | awk '{print $1}' )"
 }
@@ -623,7 +632,10 @@ step_nginx() {
     return 0
   fi
   log '切换 nginx（只 reload）'
-  rsh_script 'set -e
+  # 以仓库里的模板为准：nginx 步骤以前读的是 deploy 时上传的旧副本，改模板后会静默沿用旧配置。
+  run rsync -az -e "ssh ${SSH_OPTS[*]}" "$INFRA_DIR/nginx-mmai.conf" "$HOST:$PROD_DIR/nginx-mmai.conf"
+  local out ts
+  out="$(rsh_script 'set -e
 cd "$1"
 VH=/www/server/panel/vhost/nginx/www.mmai.vip.conf
 EXT=/www/server/panel/vhost/nginx/extension/www.mmai.vip/mammoth.conf
@@ -641,7 +653,20 @@ else
 fi
 grep -q "location \^~ /console/api/" "$EXT"
 grep -q "location \^~ /admin/api/" "$EXT"
-echo "nginx_ts=$TS"' "$PROD_DIR"
+echo "nginx_ts=$TS"' "$PROD_DIR")"
+  printf '%s\n' "$out"
+  ts="$(printf '%s\n' "$out" | sed -n 's/^nginx_ts=//p' | tail -1)"
+  # 这里的时间戳是“被替换配置”的备份，正是回滚要用的那一个；只写第一次，不覆盖。
+  if [[ -n "$ts" && -f "$STATE_FILE" ]]; then
+    node - "$STATE_FILE" "$ts" <<'JS'
+const fs = require('fs');
+const [file, ts] = process.argv.slice(2);
+const s = JSON.parse(fs.readFileSync(file, 'utf8'));
+s.rollback = s.rollback || {};
+if (!s.rollback.nginx_backup) s.rollback.nginx_backup = ts;
+fs.writeFileSync(file, JSON.stringify(s, null, 2) + '\n');
+JS
+  fi
   log 'nginx 已 reload'
 }
 
