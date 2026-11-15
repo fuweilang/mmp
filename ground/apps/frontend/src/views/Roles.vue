@@ -312,10 +312,16 @@ import { useAdminTable, useDebouncedCallback } from '../composables/useAdminTabl
 import {
   tenantRoleApi,
   type PermissionCatalogGroup,
-  type PermissionCatalogPage,
   type TenantRoleRow,
 } from '../api/console';
 import { useAuthStore } from '../stores/auth';
+import {
+  grantedCatalogGroups,
+  groupPages,
+  groupSelectedCount as catalogGroupSelectedCount,
+  knownPermissionKeys,
+  pageSelectedCount as catalogPageSelectedCount,
+} from '@/components/admin/roles/roleDisplay';
 
 const auth = useAuthStore();
 /** 写操作仅企业管理员（或平台管理员代运营）。 */
@@ -419,24 +425,10 @@ const permKeyLabel = computed(() => {
   return map;
 });
 
-function groupPages(group: PermissionCatalogGroup): PermissionCatalogPage[] {
-  if (group.pages?.length) return group.pages;
-  return [{ page: null, pageZh: '', pageEn: '', items: group.items }];
-}
-
 const viewSelected = computed(() => new Set(viewing.value?.permKeys ?? []));
+const selectedPermSet = computed(() => new Set(form.permKeys));
 
-const viewGroups = computed(() => {
-  const granted = viewSelected.value;
-  return catalog.value
-    .map((group) => ({
-      ...group,
-      pages: groupPages(group)
-        .map((page) => ({ ...page, items: page.items.filter((item) => granted.has(item.key)) }))
-        .filter((page) => page.items.length > 0),
-    }))
-    .filter((group) => group.pages.length > 0);
-});
+const viewGroups = computed(() => grantedCatalogGroups(catalog.value, viewSelected.value));
 
 function roleColor(index: number) {
   return ROLE_COLORS[index % ROLE_COLORS.length];
@@ -451,14 +443,11 @@ function permLabel(key: string) {
 }
 
 function groupSelectedCount(group: PermissionCatalogGroup) {
-  const items = groupPages(group).flatMap((page) => page.items);
-  const on = items.filter((item) => form.permKeys.includes(item.key)).length;
-  return `${on}/${items.length}`;
+  return catalogGroupSelectedCount(group, selectedPermSet.value);
 }
 
-function pageSelectedCount(page: PermissionCatalogPage) {
-  const on = page.items.filter((item) => form.permKeys.includes(item.key)).length;
-  return `${on}/${page.items.length}`;
+function pageSelectedCount(page: PermissionCatalogGroup['pages'][number]) {
+  return catalogPageSelectedCount(page, selectedPermSet.value);
 }
 
 function togglePerm(key: string) {
@@ -492,19 +481,8 @@ function resetForm() {
 }
 
 
-function catalogKeySet() {
-  const keys = new Set<string>();
-  for (const group of catalog.value) {
-    for (const page of groupPages(group)) {
-      for (const item of page.items) keys.add(item.key);
-    }
-  }
-  return keys;
-}
-
 function knownPermKeys(perms: Iterable<string>) {
-  const known = catalogKeySet();
-  return [...new Set([...perms].filter((k) => known.has(k)))];
+  return knownPermissionKeys(catalog.value, perms);
 }
 
 async function openViewer(row: TenantRoleRow) {

@@ -276,7 +276,8 @@ import TenantRolesPane from '@/components/admin/roles/TenantRolesPane.vue';
 import PermCatalogPicker from '@/components/admin/roles/PermCatalogPicker.vue';
 import type { RoleRow } from '@/components/admin/roles/roleTypes';
 import {
-  groupPages,
+  grantedCatalogGroups,
+  knownPermissionKeys,
   scopeLabel,
   tenantColor,
 } from '@/components/admin/roles/roleDisplay';
@@ -396,17 +397,7 @@ const {
 
 const viewSelected = computed(() => new Set(viewing.value?.permissions ?? []));
 
-const viewGroups = computed(() => {
-  const granted = viewSelected.value;
-  return catalog.value
-    .map((group) => ({
-      ...group,
-      pages: groupPages(group)
-        .map((page) => ({ ...page, items: page.items.filter((item) => granted.has(item.key)) }))
-        .filter((page) => page.items.length > 0),
-    }))
-    .filter((group) => group.pages.length > 0);
-});
+const viewGroups = computed(() => grantedCatalogGroups(catalog.value, viewSelected.value));
 
 function syncTabQuery(tab: 'platform' | 'tenant') {
   const nextQuery = { ...route.query, tab };
@@ -463,20 +454,9 @@ function onTabChange() {
 }
 
 
-function catalogKeySet() {
-  const keys = new Set<string>();
-  for (const group of catalog.value) {
-    for (const page of groupPages(group)) {
-      for (const item of page.items) keys.add(item.key);
-    }
-  }
-  return keys;
-}
-
 /** 只保留当前目录中的权限键，避免回传已下线的 portal.console.agents 等陈旧键。 */
 function knownPerms(perms: Iterable<string>) {
-  const known = catalogKeySet();
-  return [...new Set([...perms].filter((k) => known.has(k)))].sort();
+  return knownPermissionKeys(catalog.value, perms, true);
 }
 
 async function openViewer(row: RoleRow) {

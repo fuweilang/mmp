@@ -11,6 +11,7 @@ import { TenantService } from '../tenant/tenant.service';
 import { CreateFolderDto, PatchDocumentDto } from './dto/knowledge.dto';
 import { chunkText, embedText, extractText, vectorLiteral } from './index-text';
 import { lexicalQueryVariants, snippetOf } from './lexical-query';
+import { storedUploadedName, uploadedName } from '../common/uploaded-name';
 import { absoluteUploadPath, removeStoredFile, saveTenantFile } from './storage';
 
 type UploadedFile = {
@@ -86,9 +87,10 @@ export class KnowledgeService {
     this.assertSelectedGrants(vis, userIds);
     if (folderId) await this.requireFolder(id, folderId);
 
+    const originalName = uploadedName(file.originalname);
     let storagePath: string;
     try {
-      storagePath = await saveTenantFile(id, file.originalname, file.buffer);
+      storagePath = await saveTenantFile(id, originalName, file.buffer);
     } catch (e) {
       throw new BadRequestException(e instanceof Error ? e.message : '上传失败');
     }
@@ -97,8 +99,8 @@ export class KnowledgeService {
       data: {
         tenantId: id,
         folderId: folderId || null,
-        name: file.originalname,
-        originalName: file.originalname,
+        name: originalName,
+        originalName,
         mimeType: file.mimetype || 'application/octet-stream',
         sizeBytes: file.size,
         storagePath,
@@ -203,7 +205,7 @@ export class KnowledgeService {
     for (const row of lexical) {
       scored.set(row.id, {
         documentId: row.document.id,
-        documentName: row.document.name,
+        documentName: storedUploadedName(row.document.name),
         ordinal: row.ordinal,
         folderName: row.document.folder?.name ?? null,
         snippet: snippetOf(row.content, q),
@@ -244,7 +246,7 @@ export class KnowledgeService {
     if (!existsSync(abs)) throw new NotFoundException('文件已丢失');
     return {
       abs,
-      name: current.originalName,
+      name: storedUploadedName(current.originalName),
       mime: current.mimeType,
     };
   }
@@ -297,8 +299,8 @@ export class KnowledgeService {
       tenantId: row.tenantId,
       folderId: row.folderId,
       folderName: row.folder?.name ?? null,
-      name: row.name,
-      originalName: row.originalName,
+      name: storedUploadedName(row.name),
+      originalName: storedUploadedName(row.originalName),
       mimeType: row.mimeType,
       sizeBytes: row.sizeBytes,
       status: row.status,
@@ -407,7 +409,7 @@ export class KnowledgeService {
           score: row.score,
           row: {
             documentId: row.documentId,
-            documentName: row.documentName,
+            documentName: storedUploadedName(row.documentName),
             ordinal: row.ordinal,
             folderName: row.folderName,
             snippet: snippetOf(row.content, query),

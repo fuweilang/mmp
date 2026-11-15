@@ -46,6 +46,34 @@ export function groupPages(group: PermissionCatalogGroup): PermissionCatalogPage
   return [{ page: null, pageZh: '', pageEn: '', items: group.items }];
 }
 
+export function catalogPermissionKeys(groups: readonly PermissionCatalogGroup[]) {
+  const keys = new Set<string>();
+  for (const group of groups) {
+    for (const page of groupPages(group)) {
+      for (const item of page.items) keys.add(item.key);
+    }
+  }
+  return keys;
+}
+
+/** Drop permission keys that are no longer in the catalog. Admin role saves sort; console saves keep order. */
+export function knownPermissionKeys(groups: readonly PermissionCatalogGroup[], perms: Iterable<string>, sort = false) {
+  const known = catalogPermissionKeys(groups);
+  const values = [...new Set([...perms].filter((key) => known.has(key)))];
+  return sort ? values.sort() : values;
+}
+
+export function grantedCatalogGroups(groups: readonly PermissionCatalogGroup[], granted: ReadonlySet<string>) {
+  return groups
+    .map((group) => ({
+      ...group,
+      pages: groupPages(group)
+        .map((page) => ({ ...page, items: page.items.filter((item) => granted.has(item.key)) }))
+        .filter((page) => page.items.length > 0),
+    }))
+    .filter((group) => group.pages.length > 0);
+}
+
 export function pageSelectedCount(page: PermissionCatalogPage, set: Set<string>) {
   const on = page.items.filter((item) => set.has(item.key)).length;
   return `${on}/${page.items.length}`;

@@ -190,7 +190,7 @@ export class EnterpriseTokenStatsService {
     };
     if (modelFilter) where.model = modelFilter;
 
-    const [turnTotals, turnByTenant, turnByModel, turnMembers] = await Promise.all([
+    const [turnTotals, turnByTenant, turnByModel, turnMembers, tenants, modelRows] = await Promise.all([
       this.prisma.tokenUsageTurn.aggregate({
         where,
         _sum: { inputTokens: true, outputTokens: true, totalTokens: true, modelCalls: true },
@@ -212,19 +212,24 @@ export class EnterpriseTokenStatsService {
         by: ['tenantId', 'userId'],
         where,
       }),
+      this.prisma.tenant.findMany({
+        where: { type: { not: 'PLATFORM' } },
+        select: { id: true, name: true, slug: true, type: true, status: true },
+        orderBy: { name: 'asc' },
+        take: 500,
+      }),
+      this.prisma.tokenUsageTurn.findMany({
+        where: {
+          occurredAt: { gte: range.start, lt: range.end },
+          tenantId: { not: null },
+          tenant: { type: { not: 'PLATFORM' } },
+        },
+        distinct: ['model'],
+        select: { model: true },
+        orderBy: { model: 'asc' },
+        take: 200,
+      }),
     ]);
-
-    const modelRows = await this.prisma.tokenUsageTurn.findMany({
-      where: {
-        occurredAt: { gte: range.start, lt: range.end },
-        tenantId: { not: null },
-        tenant: { type: { not: 'PLATFORM' } },
-      },
-      distinct: ['model'],
-      select: { model: true },
-      orderBy: { model: 'asc' },
-      take: 200,
-    });
     const modelFilterOptions = this.support.buildModelFilterOptions(modelRows.map((m) => m.model || '(unknown)'));
 
     type EntAcc = {
@@ -257,14 +262,7 @@ export class EnterpriseTokenStatsService {
       if (!pair.tenantId) continue;
       memberCountByTenant.set(pair.tenantId, (memberCountByTenant.get(pair.tenantId) ?? 0) + 1);
     }
-    const usageTenantIds = turnByTenant.flatMap(row => row.tenantId ? [row.tenantId] : []);
-    const usageTenants = usageTenantIds.length
-      ? await this.prisma.tenant.findMany({
-          where: { id: { in: usageTenantIds }, type: { not: 'PLATFORM' } },
-          select: { id: true, name: true, slug: true, type: true, status: true },
-        })
-      : [];
-    const usageTenantInfo = new Map(usageTenants.map(row => [row.id, row]));
+    const usageTenantInfo = new Map(tenants.map(row => [row.id, row]));
     for (const row of turnByTenant) {
       if (!row.tenantId) continue;
       const info = usageTenantInfo.get(row.tenantId);
@@ -299,12 +297,6 @@ export class EnterpriseTokenStatsService {
       byModelMap.set(modelName, current);
     }
 
-    const tenants = await this.prisma.tenant.findMany({
-      where: { type: { not: 'PLATFORM' } },
-      select: { id: true, name: true, slug: true, type: true, status: true },
-      orderBy: { name: 'asc' },
-      take: 500,
-    });
     const enterprisesBase = tenants.map((t) => {
       const e = entMap.get(t.id);
       return (
