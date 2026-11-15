@@ -31,4 +31,4 @@ The native Web/Desktop plugin adds chosen versions to the current draft and reau
 
 Use `infra/production/backup-library.sh` and `restore-library-local.sh` together with `scripts/verify-library-backup.mjs`; see the [operational instructions](../../../../infra/production/README.md#资料库配套备份与本地恢复). All originals, including historical/recycled versions, must match PostgreSQL. This is a Ground database plus library-originals backup, not a Harness Session or whole-system backup. Restore is deliberately restricted to a fresh dedicated local database and directory.
 
-The [P0 acceptance handoff](../../../../docs/LIBRARY-P0-ACCEPTANCE.md) owns executed checks and remaining manual cells. Do not mark unexecuted four-surface, identity-expiry or codec checks passed, and do not present the standalone `/ask` API as native chat acceptance.
+Do not mark unexecuted four-surface, identity-expiry or codec checks passed, and do not present the standalone `/ask` API as native chat acceptance.

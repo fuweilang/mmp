@@ -1,72 +1,37 @@
 # 猛犸中台（ground）
 
-pnpm monorepo：`apps/backend`（Nest）、`apps/frontend`（Vue）、`packages/shared`。
+pnpm 工作区：`apps/backend`（Nest）、`apps/frontend`（Vue）、`packages/shared`。
 
-**Octop 已废弃。** 对话终端改为 sibling 仓库 **DeepSeek Harness**（`../mammoth-agent`，勿在本仓改）。本仓库只保留中台业务。
-
-## 保留的业务
-
-- Admin / Console
-- SSO（OIDC）与统一 `/login`
-- 角色、用户、权限（RBAC）
-- Token 流水、AI 币钱包
-- 支付 / 充值
+功能：企业控制台、总后台、统一登录（OIDC）、角色与权限、AI 币钱包、支付充值。
 
 ## 前置
 
 - Node.js >= 22.2.0（`.nvmrc` 为 `22`）
-- pnpm `10.32.1`（`packageManager`）
-- Docker / Colima：Postgres 见 `infra/docker-compose.yml`，宿主机 **5433**
-- 无 `apps/backend/.env` 时：`cp apps/backend/.env.example apps/backend/.env`
+- pnpm 10.32.1
+- Docker / Colima。Postgres 见 `infra/docker-compose.yml`，本机端口 5433
+- 没有 `apps/backend/.env` 时：`cp apps/backend/.env.example apps/backend/.env`
 
-## 本地端口（已定）
+## 本地
 
-| 端口 | 是什么 |
-|---|---|
-| **5201** | **网关（浏览器只开这个）**：同源转发 `/login` `/console` `/admin` 与 API，SSO Cookie 才稳 |
-| 5202 | 前端 Vite 直连（一般不用开） |
-| 3100 | 后端 Nest API 直连（一般不用开） |
+浏览器只开 **http://127.0.0.1:5201**。网关把 `/login`、`/console`、`/admin` 和 API 转到同一来源。5202 是 Vite，3100 是 Nest，平时不用直接开。
 
-`pnpm dev` = api + web + gateway。开发期保留网关；不要只开 5202。
-
-## 日常
+登录后默认进入智能体。地址带 `next` 时进入对应的控制台或总后台；平台管理员没有企业时进入 `/admin`。
 
 ```bash
 cd ~/Documents/code/mmp/ground
-pnpm install          # 可选：手动安装/更新依赖
-pnpm db:up && pnpm db:migrate && pnpm db:seed   # 库未就绪时
-pnpm run dev          # 同步依赖 → 检查数据库 → api → web → gateway，入口 5201
+pnpm install
+pnpm db:up && pnpm db:migrate && pnpm db:seed
+pnpm run dev
 ```
 
-浏览器只开 **http://127.0.0.1:5201**。登录后默认进 **`/console`**（平台管理员无租户时进 `/admin`）。
+`pnpm run dev` 和 `pnpm dev:prepare` 会先按锁文件安装依赖。改了依赖清单后，先单独运行 `pnpm install` 更新锁文件。`pnpm db:seed` 会打印本地账号，例如平台管理员 `13800000001` / `12345678`。
 
-`pnpm run dev`（含上级 `mmp` 目录的同名入口）和 `pnpm dev:prepare` 每次先执行 `pnpm install --frozen-lockfile --prefer-offline`，按锁文件同步工作区依赖，优先使用本地缓存。拉取代码或切换分支后无需额外手动安装；缓存缺包时仍需网络。安装失败或超过 180 秒会立即退出并显示原因，此时不会清理现有开发服务端口。若主动修改了依赖清单，请先运行 `pnpm install` 更新锁文件。单独运行 `dev:api` / `dev:web` / `dev:gateway` 不执行此准备步骤。
-
-| URL | 含义 |
+| 命令 | 作用 |
 |---|---|
-| `/login` | 统一登录 |
-| `/console/` | 企业控制台 |
-| `/admin` | 平台管理 |
-
-`pnpm db:seed` 会打印本地账号，例如平台管理员 `13800000001` / `12345678`。
-
-可选：`pnpm build`、`pnpm verify`（`verify-web` + `verify-api`）。排障：`pnpm dev:api` / `dev:web` / `dev:gateway`。
-
-一键编排：`pnpm setup`（deps → db → build），然后 `pnpm run dev`。
-
-## 脚本
-
-| 脚本 | 作用 |
-|---|---|
-| `pnpm setup` | 装依赖 → 起库/迁移/seed → build |
-| `pnpm setup:deps` / `pnpm install` | 装依赖 |
-| `pnpm setup:db` | 起 Postgres + migrate deploy + seed |
+| `pnpm setup` | 装依赖、起库、迁移、seed、编译 |
+| `pnpm dev` | 同步依赖、检查数据库，并启动 API、前端和网关 |
+| `pnpm dev:prepare` | 只做同步和数据库准备 |
+| `pnpm dev:api` / `dev:web` / `dev:gateway` | 分开启动，用来排障 |
 | `pnpm db:up` / `db:down` / `db:migrate` / `db:deploy` / `db:seed` | 数据库 |
-| `pnpm dev` | 同步依赖 → 检查数据库 → **前后端+网关一起跑**（入口 http://127.0.0.1:5201） |
-| `pnpm dev:prepare` | 同步依赖并准备数据库，不启动或重启开发服务 |
-| `pnpm dev:api` / `dev:web` / `dev:gateway` | 排障时拆开跑 |
 | `pnpm build` / `pnpm verify` | 编译 / 校验 |
-| `pnpm version:*` | 版本号同步（发版用） |
-
-Octop / desktop / dashboard 相关脚本已删除。
-
+| `pnpm version:*` | 发版时同步版本号 |

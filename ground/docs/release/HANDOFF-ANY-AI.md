@@ -63,4 +63,3 @@ pnpm --dir ground run version:check
 - 检查清单：[`BAOTA-RELEASE-CHECKLIST.md`](./BAOTA-RELEASE-CHECKLIST.md)
 - 给 Kimi/ChatGPT 的提示词：[`AI-PROMPT.md`](./AI-PROMPT.md)
 - 脚本说明：[`../../infra/production/README.md`](../../infra/production/README.md)
-- 2026-11-04 复盘：[`../reports/2026-11-04-baota-release-retrospective.md`](../reports/2026-11-04-baota-release-retrospective.md)

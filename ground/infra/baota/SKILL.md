@@ -117,7 +117,6 @@ cd ~/Documents/code/mmPlatform/ground/infra/baota
 - `publish-desktop-baota.sh` — **T1** Actions→宝塔（默认 dry-run；覆盖前 bak）
 - `assert-latest-json.sh` — mammoth-latest shell/portable 分裂警告
 
-复盘：`docs/reports/2026-11-02-release-retrospective.md`  
 索引：`docs/release/README.md` · 并行快发：`docs/release/fast-parallel.md` · **换 AI 粘贴**：`docs/release/HANDOFF-ANY-AI.md`  
 契约：`ground/openspec/changes/baota-prod-hardening/`
 
@@ -298,8 +297,6 @@ scripts/check-dashboard-gate.sh
 6. **smoke 必跑**；分层优先于大包；T1 覆盖前 bak；**单主操**。
 
 ## 踩坑附录（K1–K7、C1–C8 压缩）
-
-来源：`docs/reports/2026-11-02-release-retrospective.md`。
 
 | ID | 坑 | 规避 |
 |----|----|------|

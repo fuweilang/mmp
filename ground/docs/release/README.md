@@ -13,7 +13,6 @@
 | 状态文件模板 | [`RELEASE-STATE.template.json`](./RELEASE-STATE.template.json) |
 | 构建/部署脚本 | `ground/infra/production/`（见其 [README](../../infra/production/README.md)） |
 | 版本单一源 | [`VERSION-SINGLE-SOURCE.md`](./VERSION-SINGLE-SOURCE.md) |
-| 2026-11-04 复盘 | [`../reports/2026-11-04-baota-release-retrospective.md`](../reports/2026-11-04-baota-release-retrospective.md) |
 
 ## 最短流程
 
@@ -41,5 +40,3 @@ cd /Users/fuweilang/Documents/code/mmp
 - `ground/infra/baota/`（旧快发脚本，已 `exit 1` 停用）
 - `docs/release/fast-parallel.md`
 - Octop 桌面端相关 workflow / 文档
-
-旧复盘：`docs/reports/2026-11-02-release-retrospective.md`

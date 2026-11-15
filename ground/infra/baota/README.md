@@ -5,7 +5,6 @@
 生产部署模板与**中台快发**脚本。发版前给人/AI 粘贴 [`docs/release/HANDOFF-ANY-AI.md`](../../../docs/release/HANDOFF-ANY-AI.md)（换模型时本地文件不会自动加载）。规程全文见仓库技能：
 
 - [`.opencode/skills/baota-release/SKILL.md`](../../../.opencode/skills/baota-release/SKILL.md)
-- 复盘报告：[`docs/reports/2026-11-02-release-retrospective.md`](../../../docs/reports/2026-11-02-release-retrospective.md)
 - 发版索引：[`docs/release/README.md`](../../../docs/release/README.md)
 
 ## 密保（强制）
