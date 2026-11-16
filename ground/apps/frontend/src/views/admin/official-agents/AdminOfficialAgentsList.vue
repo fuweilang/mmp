@@ -62,8 +62,6 @@
             </div>
             <div class="agent-identity-text">
               <div class="agent-name">{{ row.draft.name }}</div>
-              <div class="agent-key">{{ row.key }}</div>
-              <div class="agent-id">{{ row.id }}</div>
             </div>
           </div>
         </template>
@@ -98,14 +96,12 @@
       <el-table-column label="更新时间" min-width="170">
         <template #default="{ row }">{{ formatDate(row.updatedAt) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="410" fixed="right" align="center" class-name="agent-ops-col" label-class-name="agent-ops-col">
+      <el-table-column label="操作" width="330" fixed="right" align="center" class-name="agent-ops-col" label-class-name="agent-ops-col">
         <template #default="{ row }">
           <div class="operation-buttons">
             <el-button text type="primary" @click="emit('viewer', row)">查看</el-button>
-            <el-button v-if="canAuthor" text type="primary" @click="emit('discovery', row)">专家介绍</el-button>
             <el-button v-if="canAuthor" text type="primary" @click="emit('edit', row)">编辑</el-button>
             <el-button text type="primary" @click="emit('publish-records', row)">发布记录</el-button>
-            <el-button v-if="canAuthor" text type="primary" :loading="previewingId===row.id" @click="emit('preview', row)">不可变预览</el-button>
             <el-button
               text
               type="primary"
@@ -180,7 +176,6 @@ const props = defineProps<{
   selectedCount: number;
   bulkOfflineLoading: boolean;
   publishingId: string;
-  previewingId: string;
   offlineId: string;
   deletingId: string;
 }>();
@@ -194,10 +189,8 @@ const emit = defineEmits<{
   create: [];
   'bulk-offline': [];
   viewer: [row: OfficialAgentRow];
-  discovery: [row: OfficialAgentRow];
   edit: [row: OfficialAgentRow];
   'publish-records': [row: OfficialAgentRow];
-  preview: [row: OfficialAgentRow];
   publish: [row: OfficialAgentRow];
   offline: [row: OfficialAgentRow];
   delete: [row: OfficialAgentRow];
@@ -290,13 +283,6 @@ defineExpose({
   margin: 12px 0 14px;
 }
 
-.agent-id {
-  color: #98a2b3;
-  font-size: 12px;
-  line-height: 16px;
-  word-break: break-all;
-}
-
 :deep(.agent-row-highlight > td.el-table__cell) {
   background: #f3efff !important;
 }
@@ -350,12 +336,6 @@ defineExpose({
 .agent-name {
   color: #333946;
   font-weight: 600;
-}
-
-.agent-key,
-.muted {
-  color: #98a2b3;
-  font-size: 12px;
 }
 
 /* 操作列：表头与按钮组始终水平居中；按钮数量变化/换行时每行仍居中 */

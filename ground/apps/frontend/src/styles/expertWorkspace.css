@@ -86,18 +86,9 @@
 .expert-workspace-save > span { color: #333337; font-size: 12px; }
 .expert-workspace-save .el-button + .el-button { margin-left: 0; }
 .expert-workspace-save .el-button { height: 32px; font-size: 14px; font-weight: 500; }
-.expert-document-button.el-button {
-  gap: 6px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 12px;
-  background: #e0e0e5;
-  color: #25252a;
-}
 .expert-save-button.el-button { --el-button-bg-color:var(--app-primary-color); --el-button-hover-bg-color:var(--app-primary-hover-color); --el-button-active-bg-color:var(--app-primary-hover-color); min-width: 52px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--app-primary-color); }
 .expert-save-button.el-button:hover,.expert-save-button.el-button:active { background:var(--app-primary-hover-color); }
-.expert-workspace .expert-save-button.el-button,
-.expert-workspace .expert-document-button.el-button { border-radius: 12px !important; }
+.expert-workspace .expert-save-button.el-button { border-radius: 12px !important; }
 .expert-more-button.el-button { width: 32px; padding: 0; color: #686871; }
 .expert-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .el-dialog.expert-workspace .expert-workspace-grid {
@@ -282,7 +273,6 @@
   .expert-workspace-identity p { max-width: 140px; font-size: 12px; }
   .expert-name-button { font-size: 14px; }
   .expert-workspace-save { gap: 5px; }
-  .expert-workspace-save .expert-document-button { display: none; }
   .expert-workspace.official-agent-editor .el-dialog__body { padding: 0 8px 8px; }
   .el-dialog.expert-workspace .expert-workspace-grid { display: flex; flex-direction: column; min-width: 0; height: auto; gap: 12px; }
   .expert-personalization-panel, .expert-capabilities-panel, .expert-preview-panel { flex-shrink: 0; min-height: 650px; border-radius: 20px; }

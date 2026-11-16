@@ -154,6 +154,40 @@ export class KnowledgeCoreService {
     });
     return { id: documentId, deleted: true };
   }
+  /** Hard-deletes an unreferenced base with all files, revisions, indexes and releases.
+   *  Refuses while any expert draft or online version still references the base or its releases.
+   *  Content-addressed blobs stay on disk: they are deduplicated and carry no reference count. */
+  async deleteBase(baseId: string) {
+    // getBase would reject disabled bases; deletion must work for those too.
+    const base = await this.prisma.knowledgeBase.findUnique({ where: { id: baseId } });
+    if (!base) throw new KnowledgeCoreError('KNOWLEDGE_NOT_FOUND');
+    assertKnowledgeScope(base, { type: 'PLATFORM' });
+    return this.prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM kc_base WHERE id=${baseId} FOR UPDATE`;
+      const releaseIds = (await tx.knowledgeRelease.findMany({ where: { baseId }, select: { id: true } })).map(release => release.id);
+      if (releaseIds.length) {
+        const agents = await tx.officialAgent.findMany({ select: { executionConfig: true, onlineVersion: { select: { executionConfig: true } } } });
+        const referenced = agents.some(agent => [agent.executionConfig, agent.onlineVersion?.executionConfig].some(value => {
+          const config = value as { releaseIds?: unknown; knowledge?: unknown } | null;
+          return (Array.isArray(config?.releaseIds) && config.releaseIds.some((id: unknown) => typeof id === 'string' && releaseIds.includes(id)))
+            || (Array.isArray(config?.knowledge) && (config.knowledge as Array<{ baseId?: unknown }>).some(entry => entry?.baseId === baseId));
+        }));
+        if (referenced) throw new KnowledgeCoreError('KNOWLEDGE_BASE_IN_USE');
+      }
+      const indexIds = (await tx.knowledgeIndexRevision.findMany({ where: { revision: { document: { baseId } } }, select: { id: true } })).map(index => index.id);
+      await tx.knowledgeEmbedding.deleteMany({ where: { chunk: { indexRevisionId: { in: indexIds } } } });
+      await tx.knowledgeChunk.deleteMany({ where: { indexRevisionId: { in: indexIds } } });
+      await tx.knowledgeReleaseItem.deleteMany({ where: { releaseId: { in: releaseIds } } });
+      await tx.knowledgeIngestionRequest.deleteMany({ where: { baseId } });
+      await tx.knowledgeIngestionJob.deleteMany({ where: { baseId } });
+      await tx.knowledgeIndexRevision.deleteMany({ where: { id: { in: indexIds } } });
+      await tx.knowledgeDocumentRevision.deleteMany({ where: { document: { baseId } } });
+      await tx.knowledgeDocument.deleteMany({ where: { baseId } });
+      await tx.knowledgeRelease.deleteMany({ where: { baseId } });
+      await tx.knowledgeBase.delete({ where: { id: baseId } });
+      return { id: baseId, deleted: true as const };
+  });
+  }
   async fileUsage(documentId: string) {
     const document = await this.prisma.knowledgeDocument.findUnique({ where: { id: documentId }, include: { base: true } });
     if (!document || document.base.scope !== 'PLATFORM' || document.base.tenantId !== null) throw new KnowledgeCoreError('KNOWLEDGE_DOCUMENT_NOT_FOUND');

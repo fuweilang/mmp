@@ -144,6 +144,7 @@ export const adminKnowledgeCoreApi = {
         name?: string;
         enabled?: boolean;
     }) => adminHttp<KnowledgeBase>(`${kc}/bases/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    deleteBase: (id: string) => adminHttp<{ id: string; deleted: true }>(`${kc}/bases/${id}`, { method: 'DELETE' }),
     documents: (id: string) => adminHttp<KnowledgeDocument[]>(`${kc}/bases/${id}/documents`),
     upload: (id: string, body: FormData) => adminHttp<KnowledgeJob>(`${kc}/bases/${id}/documents`, { method: 'POST', body }),
     enableDocument: (id: string, enabled: boolean) => adminHttp<KnowledgeDocument>(`${kc}/documents/${id}`, { method: 'PATCH', body: JSON.stringify({ enabled }) }),

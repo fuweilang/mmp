@@ -610,13 +610,10 @@ it('multiple embedding services keep upload actionable and explain the required 
   await click('添加知识库',root);await vi.waitFor(()=>expect(document.querySelector('.expert-knowledge-picker')?.textContent).toContain('新建空库'));
   await click('查看新建空库资料');const docs=document.querySelector('.expert-knowledge-documents')!;
   await vi.waitFor(()=>expect(docs.textContent).toContain('暂无资料'));
-  const select=docs.querySelector<HTMLSelectElement>('select')!;
-  expect(select.value).toBe('');expect(select.options[0].textContent).toBe('请选择语义服务');
+  expect(docs.querySelector('select')).toBeNull();
   const upload=[...docs.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.textContent?.trim()==='上传文件')!;
   expect(upload.disabled).toBe(false);await click('上传文件',docs);
-  expect(docs.textContent).toContain('请选择语义服务，再上传文件');expect(document.activeElement).toBe(select);expect(fixture.upload).not.toHaveBeenCalled();
-  select.value='second';select.dispatchEvent(new Event('change',{bubbles:true}));await nextTick();
-  expect(docs.textContent).not.toContain('请选择语义服务，再上传文件');expect(upload.disabled).toBe(false);
+  expect(docs.textContent).toContain('请选择语义服务，再上传文件');expect(fixture.upload).not.toHaveBeenCalled();
 });
 
 it('a new library inherits the expert bound embedding profile when several services exist', async () => {
@@ -629,9 +626,16 @@ it('a new library inherits the expert bound embedding profile when several servi
   await click('创建知识库');const name=document.querySelector<HTMLInputElement>('#expert-knowledge-base-name')!;name.value='新建知识库';name.dispatchEvent(new Event('input',{bubbles:true}));await nextTick();
   document.querySelector<HTMLFormElement>('.expert-knowledge-create form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
   await vi.waitFor(()=>expect(document.querySelector('.expert-knowledge-documents h2')?.textContent).toBe('新建知识库'));
+  fixture.upload.mockResolvedValue({id:'job'});fixture.job.mockResolvedValue({status:'SUCCEEDED',index:{id:'unlisted-index',status:'READY'}});
   const docs=document.querySelector('.expert-knowledge-documents')!;
-  expect(docs.querySelector<HTMLSelectElement>('select')!.value).toBe('bound-profile');
-  expect([...docs.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.textContent?.trim()==='上传文件')!.disabled).toBe(false);
+  expect(docs.querySelector('select')).toBeNull();
+  const upload=[...docs.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.textContent?.trim()==='上传文件')!;
+  expect(upload.disabled).toBe(false);await click('上传文件',docs);
+  const fileInput=docs.querySelector<HTMLInputElement>('input[type="file"]')!;
+  Object.defineProperty(fileInput,'files',{configurable:true,value:[new File(['内容'],'新建资料.md',{type:'text/markdown'})]});
+  fileInput.dispatchEvent(new Event('change',{bubbles:true}));
+  await vi.waitFor(()=>expect(fixture.upload).toHaveBeenCalledTimes(1));
+  expect((fixture.upload.mock.calls[0]![1] as FormData).get('profileId')).toBe('bound-profile');
 });
 
 it('new knowledge uploads retry the same request and bind only after the latest document is ready and released', async () => {

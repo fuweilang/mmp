@@ -256,7 +256,6 @@ describe('admin 列表公共层 · 页面挂载', () => {
       selectedCount: 0,
       bulkOfflineLoading: false,
       publishingId: '',
-      previewingId: '',
       offlineId: '',
       deletingId: '',
       onPageChange: pageChange,

@@ -27,7 +27,6 @@
       :selected-count="selectedRows.length"
       :bulk-offline-loading="bulkOfflineLoading"
       :publishing-id="publishingId"
-      :previewing-id="previewingId"
       :offline-id="offlineId"
       :deleting-id="deletingId"
       @search-input="onSearchInput"
@@ -36,10 +35,8 @@
       @create="openCreate"
       @bulk-offline="onBulkOffline"
       @viewer="openViewer"
-      @discovery="openDiscovery"
       @edit="openEdit"
       @publish-records="openPublishRecords"
-      @preview="preview"
       @publish="onPublish"
       @offline="offline"
       @delete="remove"
@@ -56,7 +53,6 @@
       @saved="onEditorSaved"
       @created="onEditorCreated"
       @published="onEditorPublished"
-      @discovery="openDiscovery"
     />
 
     <AgentVersionDialog
@@ -67,13 +63,6 @@
       :can-author="canAuthor"
       :rollback-id="rollbackId"
       @rollback="rollback"
-    />
-
-    <AgentPreviewDialog
-      v-model="previewOpen"
-      :path="previewPath"
-      :expires-at="previewExpiresAt"
-      :error="previewError"
     />
 
     <AgentViewerDialog
@@ -90,8 +79,6 @@
       @refresh="loadAudit"
       @full-audit="goFullAudit"
     />
-
-    <CatalogDiscoveryEditor v-if="canAuthor && discoveryId" kind="expert" :resource-id="discoveryId" :agent-status="discoveryAgentStatus" @close="discoveryId=''" @saved="onDiscoverySaved" @published="onDiscoveryPublished" />
   </section>
 </template>
 
@@ -102,11 +89,9 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { createExpertEditorResources, expertEditorResourcesKey } from '../../components/admin/expert-editor-resources';
 const editorResources = createExpertEditorResources();
 provide(expertEditorResourcesKey, editorResources);
-import CatalogDiscoveryEditor from '../../components/CatalogDiscoveryEditor.vue';
 import AdminOfficialAgentsList from './official-agents/AdminOfficialAgentsList.vue';
 import AgentEditorDrawer from '../../components/admin/official-agents/AgentEditorDrawer.vue';
 import AgentVersionDialog from '../../components/admin/official-agents/AgentVersionDialog.vue';
-import AgentPreviewDialog from '../../components/admin/official-agents/AgentPreviewDialog.vue';
 import AgentViewerDialog from '../../components/admin/official-agents/AgentViewerDialog.vue';
 import AgentAuditDrawer from '../../components/admin/official-agents/AgentAuditDrawer.vue';
 import { formatPublishMissingToast } from '../../utils/admin-official-agent-form-errors';
@@ -126,8 +111,6 @@ const {
   keyword,
   statusFilter,
   highlightedId,
-  discoveryId,
-  discoveryAgentStatus,
   hasFilters,
   loading,
   currentPage,
@@ -140,7 +123,6 @@ const {
   focusCreatedAgent,
   editorOpen,
   editorAgent,
-  editingId,
   openCreate,
   openEdit,
   onEditorSaved,
@@ -153,12 +135,6 @@ const {
   publish,
   offline,
   remove,
-  previewingId,
-  previewOpen,
-  previewPath,
-  previewExpiresAt,
-  previewError,
-  preview,
   viewerOpen,
   viewerLoading,
   viewerAgent,
@@ -180,10 +156,6 @@ const {
 
 const listRef = ref<InstanceType<typeof AdminOfficialAgentsList> | null>(null);
 const editorRef = ref<InstanceType<typeof AgentEditorDrawer> | null>(null);
-
-function openDiscovery(target: string | OfficialAgentRow) {
-  discoveryId.value = typeof target === 'string' ? target : target.id;
-}
 
 function onSelectionChange(selected: OfficialAgentRow[]) {
   selectedRows.value = selected;
@@ -229,17 +201,6 @@ async function onBulkOffline() {
   } finally {
     bulkOfflineLoading.value = false;
   }
-}
-
-async function onDiscoverySaved() {
-  await load();
-  if (!editingId.value) return;
-  const row = rows.value.find((item) => item.id === editingId.value);
-  if (row) editorRef.value?.applyOpeningQuestions((row.draft.openingQuestions ?? []).join('\n'));
-}
-
-async function onDiscoveryPublished() {
-  await onDiscoverySaved();
 }
 
 const auditOpen = ref(false);

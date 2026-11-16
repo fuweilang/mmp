@@ -13,7 +13,17 @@
         <el-table-column label="文件夹名称" min-width="240"><template #default="{row}"><span class="folder-name"><Folder :size="19"/><span>{{ row.name }}</span></span></template></el-table-column>
         <el-table-column label="文件数量" width="110"><template #default="{row}">{{ row._count?.documents ?? '—' }} 个文件</template></el-table-column>
         <el-table-column label="所属专家" min-width="160"><template #default="{row}"><span :class="{muted:!row.ownerAgentId}">{{ row.ownerAgent?.name || (row.ownerAgentName ? `${row.ownerAgentName}（已删除）` : '已有资料') }}</span></template></el-table-column>
-        <el-table-column width="70"><template #default="{row}"><el-button text aria-label="进入文件夹" @click.stop="openBase(row)"><ChevronRight :size="17"/></el-button></template></el-table-column>
+        <el-table-column width="60" align="right"><template #default="{row}">
+          <el-dropdown trigger="click" @command="(command:string)=>onFolderCommand(command,row)">
+            <el-button text aria-label="文件夹操作" @click.stop><MoreHorizontal :size="17"/></el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="rename">重命名</el-dropdown-item>
+                <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </template></el-table-column>
       </el-table>
       <p class="folder-help">在专家配置里创建知识库后，这里会出现所属文件夹。删除专家不会删除文件。</p>
     </template>
@@ -35,7 +45,7 @@
 </template>
 <script setup lang="ts">
 import {computed,onBeforeUnmount,onMounted,ref} from 'vue';
-import {ArrowLeft,ChevronRight,FileText,Folder,Upload} from 'lucide-vue-next';
+import {ArrowLeft,FileText,Folder,MoreHorizontal,Upload} from 'lucide-vue-next';
 import {ElMessage,ElMessageBox} from 'element-plus';
 import {adminKnowledgeCoreApi as api,type KnowledgeBase,type KnowledgeDocument} from '../../api/admin';
 import {availableKnowledgeFile,knowledgeFileStatus,latestKnowledgeIndex,latestKnowledgeRevision} from '../../utils/knowledge-files';
@@ -49,7 +59,7 @@ const selectedBase=computed(()=>bases.value.find(b=>b.id===baseId.value));
 const filteredBases=computed(()=>bases.value.filter(b=>`${b.name} ${b.ownerAgent?.name||b.ownerAgentName||''}`.toLowerCase().includes(folderSearch.value.toLowerCase())));
 const filteredDocuments=computed(()=>documents.value.filter(d=>`${d.title} ${latestKnowledgeRevision(d)?.originalName||''}`.toLowerCase().includes(fileSearch.value.toLowerCase())));
 let alive=true,request=0,timer:ReturnType<typeof setTimeout>|undefined;
-function reason(code:string){return ({EMBEDDING_SERVICE_UNCONFIGURED:'尚未配置可用语义服务，请到高级设置配置',PROFILE_DISABLED:'语义服务已停用',PROVIDER_CREDENTIALS_MISSING:'语义服务凭据尚未配置',PDF_TEXT_UNAVAILABLE:'PDF 未提取到文字，请转换后重新上传'} as Record<string,string>)[code]||code;}
+function reason(code:string){return ({EMBEDDING_SERVICE_UNCONFIGURED:'尚未配置可用语义服务，请到高级设置配置',PROFILE_DISABLED:'语义服务已停用',PROVIDER_CREDENTIALS_MISSING:'语义服务凭据尚未配置',PDF_TEXT_UNAVAILABLE:'PDF 未提取到文字，请转换后重新上传',KNOWLEDGE_BASE_IN_USE:'仍有专家引用此文件夹，请先在专家配置中改用其他知识库或关闭知识检索，再删除'} as Record<string,string>)[code]||code;}
 function message(e:unknown){return reason(e instanceof Error?e.message:'操作失败，请重试');}
 function date(value?:string){return value?new Date(value).toLocaleDateString('zh-CN'):'—';}
 function preview(document:KnowledgeDocument){previewDocument.value=document;previewOpen.value=true;}
@@ -59,6 +69,9 @@ async function loadDocuments(showLoading=true){const id=baseId.value;if(!id)retu
 async function reload(){loading.value=true;error.value='';try{bases.value=await api.bases();if(baseId.value)await loadDocuments();}catch(e){error.value=message(e);}finally{if(alive)loading.value=false;}}
 async function openBase(base:KnowledgeBase){baseId.value=base.id;documents.value=[];fileSearch.value='';error.value='';if(base.enabled)await loadDocuments();}
 function showFolders(){request++;stopPoll();baseId.value='';documents.value=[];error.value='';void reload();}
+function onFolderCommand(command:string,base:KnowledgeBase){if(command==='rename')void renameFolder(base);else if(command==='delete')void removeFolder(base);}
+async function renameFolder(base:KnowledgeBase){try{const {value}=await ElMessageBox.prompt('文件夹名称','重命名',{inputValue:base.name,inputValidator:v=>!!v.trim()||'请填写名称'});await api.updateBase(base.id,{name:value.trim()});await reload();emit('changed');ElMessage.success('已重命名');}catch(e){if(e!=='cancel'&&e!=='close')error.value=message(e);}}
+async function removeFolder(base:KnowledgeBase){const count=base._count?.documents??0;try{await ElMessageBox.confirm(`将永久删除文件夹「${base.name}」及其中 ${count} 个文件、分段和索引，此操作不可恢复。仍有专家引用该文件夹时会删除失败。`,`删除“${base.name}”？`,{type:'warning',confirmButtonText:'删除文件夹',cancelButtonText:'取消',confirmButtonClass:'el-button--danger'});await api.deleteBase(base.id);if(baseId.value===base.id)showFolders();else await reload();emit('changed');ElMessage.success('文件夹已删除');}catch(e){if(e!=='cancel'&&e!=='close')error.value=message(e);}}
 function beginUpload(){fileInput.value?.click();}
 function beginReplace(document:KnowledgeDocument){replaceTarget.value=document;replaceInput.value?.click();}
 async function sendFiles(files:File[],documentId?:string){if(uploading.value||!baseId.value)return;const id=baseId.value;uploading.value=true;error.value='';try{for(const file of files){if(file.size>20*1024*1024)throw new Error(`${file.name} 超过 20 MiB`);if(!/\.(md|markdown|txt|pdf|docx|pptx|xlsx|csv)$/i.test(file.name))throw new Error(`${file.name} 的格式暂不支持`);const body=new FormData();body.set('file',file);body.set('idempotencyKey',crypto.randomUUID());if(documentId)body.set('documentId',documentId);await api.upload(id,body);}ElMessage.success('文件已上传，系统正在自动处理');if(alive&&id===baseId.value)await loadDocuments(false);emit('changed');}catch(e){error.value=message(e);}finally{if(alive)uploading.value=false;}}

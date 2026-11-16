@@ -24,7 +24,6 @@
         </div>
         <div class="expert-workspace-save">
           <span role="status">{{ editorDirty ? '有未保存修改' : editingId ? '草稿已保存' : '尚未保存草稿' }}</span>
-          <el-button class="expert-document-button" :disabled="editorBusy || !editingId" @click="emit('discovery', editingId)"><FileText :size="14" />专家介绍</el-button>
           <el-button class="expert-save-button" type="primary" aria-label="保存草稿" :loading="saving && !editorPreviewBusy" :disabled="editorBusy || editorPreviewBusy || iconValidating" @click="onSave">保存</el-button>
           <el-dropdown trigger="click" :disabled="editorBusy || editorPreviewBusy" @command="onEditorCommand">
             <el-button text class="expert-more-button" aria-label="更多专家操作" :disabled="editorBusy"><EllipsisVertical :size="20" /></el-button>
@@ -191,7 +190,6 @@ const emit = defineEmits<{
   saved: [row: OfficialAgentRow];
   created: [id: string];
   published: [row: OfficialAgentRow];
-  discovery: [id: string];
 }>();
 
 const open = computed(() => props.modelValue);
@@ -677,13 +675,8 @@ function onDialogModelValue(value: boolean) {
   emit('update:modelValue', value);
 }
 
-function applyOpeningQuestions(text: string) {
-  form.openingQuestionsText = text;
-}
-
 defineExpose({
   focusMissingField: (missing: string[]) => focusPublishMissingField(missing),
-  applyOpeningQuestions,
   /** 供列表操作守卫使用（原页面级 `saving`）。 */
   isSaving: () => saving.value,
 });

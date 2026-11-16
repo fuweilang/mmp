@@ -9,8 +9,6 @@ import {
 } from '../api/admin';
 import { useAdminSearch, useAdminTable } from './useAdminTable';
 import { collectPublishMissing } from '../components/admin/official-agents/agent-display';
-import { previewHostLaunchUrl } from '../utils/knowledge-admin';
-import { agentWebUrl } from '../utils/agent';
 
 export type PublishRowResult =
   | { status: 'missing'; missing: string[] }
@@ -18,7 +16,7 @@ export type PublishRowResult =
   | { status: 'done' };
 
 export interface OfficialAgentsOptions {
-  /** 列表操作的前端守卫（原实现：预览/回滚/发布）。默认放行。 */
+  /** 列表操作的前端守卫（原实现：回滚/发布）。默认放行。 */
   canAuthor?: () => boolean;
   /** 编辑器保存中时拒绝列表操作（原 `publishingId || saving`）。 */
   saving?: () => boolean;
@@ -26,9 +24,9 @@ export interface OfficialAgentsOptions {
 
 /**
  * 官方专家列表的数据面：加载、筛选分页、发布/下架/删除、发布记录与回滚、
- * 不可变预览、查看弹窗、专家介绍（discovery）与高亮。
+ * 查看弹窗与高亮。
  *
- * `discoveryId` / `highlightedId` 等跨区状态集中在此，不用全局 store。
+ * `highlightedId` 等跨区状态集中在此，不用全局 store。
  */
 export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
   const canAuthor = options.canAuthor ?? (() => true);
@@ -39,7 +37,6 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
   const keyword = ref('');
   const statusFilter = ref<OfficialAgentStatus | 'ALL'>('ALL');
   const highlightedId = ref('');
-  const discoveryId = ref('');
   let highlightTimer = 0;
 
   const hasFilters = computed(() => Boolean(keyword.value.trim() || statusFilter.value !== 'ALL'));
@@ -99,8 +96,6 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
       if (highlightedId.value === id) highlightedId.value = '';
     }, 4500);
   }
-
-  const discoveryAgentStatus = computed(() => rows.value.find((row) => row.id === discoveryId.value)?.status ?? '');
 
   // ── 编辑器开合（列表侧只负责“打开哪一行”） ──
   const editorOpen = ref(false);
@@ -227,40 +222,12 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
         viewerAgent.value = null;
       }
       if (editingId.value === row.id) editorOpen.value = false;
-      if (discoveryId.value === row.id) discoveryId.value = '';
       await load();
       ElMessage.success('已删除');
     } catch (error) {
       ElMessage.error(error instanceof Error ? error.message : '删除失败');
     } finally {
       deletingId.value = '';
-    }
-  }
-
-  // ── 列表级“不可变预览” ──
-  const previewingId = ref('');
-  const previewOpen = ref(false);
-  const previewPath = ref('');
-  const previewExpiresAt = ref('');
-  const previewError = ref('');
-  async function preview(row: OfficialAgentRow) {
-    if (!canAuthor()) return;
-    previewingId.value = row.id;
-    try {
-      const created = await adminOfficialAgentApi.preview(row.id);
-      previewPath.value = '';
-      previewError.value = '';
-      try {
-        previewPath.value = previewHostLaunchUrl(created, agentWebUrl);
-      } catch (e) {
-        previewError.value = e instanceof Error ? e.message : '预览启动地址无效';
-      }
-      previewExpiresAt.value = created.expiresAt;
-      previewOpen.value = true;
-    } catch (e) {
-      ElMessage.error(e instanceof Error ? e.message : '预览创建失败');
-    } finally {
-      previewingId.value = '';
     }
   }
 
@@ -372,8 +339,6 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
     keyword,
     statusFilter,
     highlightedId,
-    discoveryId,
-    discoveryAgentStatus,
     hasFilters,
     loading,
     currentPage,
@@ -402,12 +367,6 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
     publish,
     offline,
     remove,
-    previewingId,
-    previewOpen,
-    previewPath,
-    previewExpiresAt,
-    previewError,
-    preview,
     viewerOpen,
     viewerLoading,
     viewerAgent,

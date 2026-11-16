@@ -162,6 +162,11 @@ export class KnowledgeAdminController {
       });
     });
   }
+  /** Hard delete; refuses with KNOWLEDGE_BASE_IN_USE while any expert still references the base or its releases. */
+  @Delete('bases/:id')
+  deleteBase(
+    @Param('id')
+    id: string) { return this.run(() => this.core.deleteBase(id)); }
   @Get('bases/:id/documents')
   listDocuments(
     @Param('id')
