@@ -494,6 +494,7 @@ it('places exact citation and creative-claim rules in the system role without sp
     await run(f);
     const system = (f.wires.at(-1)!.body.messages as {role:string;content?:string|null}[]).filter(message=>message.role==='system').map(message=>message.content??'').join('\n');
     expect(system).toContain('Cite document facts and methods with their exact returned labels in square brackets');
+    expect(system).toContain('Put citation labels only in the chat reply, never inside files written for the user');
     expect(system).toContain('File names, headings and guessed URLs are not citations');
     expect(system).toContain('Never quote or reconstruct a passage absent from the returned evidence');
 });

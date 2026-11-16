@@ -353,10 +353,10 @@ function shutdown() {
 
 
 async function main(args = process.argv.slice(2)) {
-  console.log('[boot] 0/4 checking dependencies...');
+  console.log('[boot] 0/5 checking dependencies...');
   await ensureDependencies();
 
-  console.log('[boot] 1/4 checking database...');
+  console.log('[boot] 1/5 checking database...');
   if (!(await ensureDatabase())) {
     process.exit(1);
   }
@@ -366,17 +366,20 @@ async function main(args = process.argv.slice(2)) {
   console.log('[boot] reclaiming api/web/gateway ports if stale...');
   await ensureDevPortsFree();
 
-  console.log('[boot] 2/4 starting api...');
+  console.log('[boot] 2/5 starting api...');
   run('api', 'pnpm run dev:api');
   await waitPort(3100, 'api');
 
-  console.log('[boot] 3/4 starting web...');
+  console.log('[boot] 3/5 starting web...');
   run('web', 'pnpm run dev:web');
   await waitPort(5202, 'web');
 
-  console.log('[boot] 4/4 starting gateway...');
+  console.log('[boot] 4/5 starting gateway...');
   run('gw', 'pnpm run dev:gateway');
   await waitPort(5201, 'gateway');
+
+  console.log('[boot] 5/5 starting knowledge worker...');
+  run('knowledge', 'pnpm run dev:knowledge');
 
   console.log('[boot] stack up. Ctrl-C to stop all.');
 }

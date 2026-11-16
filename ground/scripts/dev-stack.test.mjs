@@ -59,5 +59,5 @@ test('real child command argv and nonzero/timeout statuses are preserved',()=>{
 test('root and ground package entries form one nonrecursive dev chain',()=>{
  const g=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')),m=JSON.parse(fs.readFileSync(path.join(root,'../package.json'),'utf8'));
  assert.equal(m.scripts.dev,'pnpm --dir ground run dev');assert.equal(g.scripts.dev,'node scripts/dev-stack.mjs');assert.match(g.scripts['dev:prepare'],/--prepare-only$/);
- const script=fs.readFileSync(new URL('./dev-stack.mjs',import.meta.url),'utf8');assert.ok(script.indexOf('await ensureDatabase()')<script.indexOf("run('api', 'pnpm run dev:api')"));assert.match(script,/process.exit\(err.exitCode \?\? 1\)/);
+ const script=fs.readFileSync(new URL('./dev-stack.mjs',import.meta.url),'utf8');assert.ok(script.indexOf('await ensureDatabase()')<script.indexOf("run('api', 'pnpm run dev:api')"));assert.ok(script.indexOf("run('gw', 'pnpm run dev:gateway')")<script.indexOf("run('knowledge', 'pnpm run dev:knowledge')"));assert.match(script,/process.exit\(err.exitCode \?\? 1\)/);
 });

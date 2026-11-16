@@ -35,6 +35,22 @@ services:
     depends_on:
       pg:
         condition: service_healthy
+  knowledge:
+    image: ${MMP_API_IMAGE:?set MMP_API_IMAGE}
+    restart: unless-stopped
+    env_file: production.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://mammoth:${POSTGRES_PASSWORD}@pg:5432/mammoth_core
+      LIBRARY_DIR: /app/library-data
+    volumes:
+      - ./data/uploads:/app/apps/backend/uploads
+      - ./data/library:/app/library-data
+      - ./secrets:/app/secrets:ro
+    depends_on:
+      pg:
+        condition: service_healthy
+    command: [node, dist/knowledge-core/worker-main.js]
   web:
     image: ${MMP_WEB_IMAGE:?set MMP_WEB_IMAGE}
     restart: unless-stopped

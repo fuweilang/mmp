@@ -28,7 +28,8 @@ async function main() {
     await app.close();
   }
 }
-void main().catch(() => {
-  process.stderr.write('KNOWLEDGE_WORKER_FAILED\n');
+void main().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message.split('\n')[0] : 'KNOWLEDGE_WORKER_FAILED';
+  process.stderr.write(`${message || 'KNOWLEDGE_WORKER_FAILED'}\n`);
   process.exitCode = 1;
 });

@@ -12,10 +12,10 @@ test('queue keeps actual progress, continues partial failures, retries failed on
   assert.equal(await runLibraryUploads(rows,limits,transport),1);assert.deepEqual(calls,['a.md','b.md','c.md','b.md']);
 });
 test('new and replacement upload entrypoints retain their original auth/API contracts, not avatars/imports',()=>{
-  for(const name of ['../src/views/Library.vue','../src/views/Knowledge.vue','../src/views/admin/AdminOfficialKnowledge.vue']) {
+  for(const name of ['../src/views/Library.vue','../src/views/Knowledge.vue']) {
     const source=readFileSync(new URL(name,import.meta.url),'utf8');assert.match(source,/<LibraryUploadDialog/);assert.doesNotMatch(source,/<input[^>]*type="file"/);
   }
   const kb=readFileSync(new URL('../src/views/Knowledge.vue',import.meta.url),'utf8');assert.match(kb,/form.append\('visibility', context.visibility\)/);assert.match(kb,/form.append\('userIds'/);
-  const official=readFileSync(new URL('../src/views/admin/AdminOfficialKnowledge.vue',import.meta.url),'utf8');assert.match(official,/body.append\('agentId', context.agentId\)/);assert.match(official,/adminOfficialKnowledgeApi.replace\(context.replacementId, body\)/);
+  const official=readFileSync(new URL('../src/views/admin/AdminOfficialKnowledge.vue',import.meta.url),'utf8');assert.match(official,/KnowledgeFolderManager/);assert.doesNotMatch(official,/查看旧资料|adminOfficialKnowledgeApi/);
   const admin=readFileSync(new URL('../src/views/admin/AdminLibrary.vue',import.meta.url),'utf8');assert.match(admin,/<LibraryUploadDialog/);assert.doesNotMatch(admin,/<input[^>]*type="file"/);
 });

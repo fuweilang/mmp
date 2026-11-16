@@ -103,8 +103,19 @@ GitHub代码备份已完成；CI路线仍需另行批准并补齐单仓workflow�
 
 **一键入口**：`ground/infra/production/release.sh --yes`（详见第 4 节方式 A）。
 
-默认范围：**中台 api + web + pg**，只替换 `https://www.mmai.vip`。
+默认范围：**中台 api + web + pg + knowledge**，只替换 `https://www.mmai.vip`。
 默认不做：Octop、客户端 dmg、GitHub PR、commit/push。
+
+### 知识库处理容器（发版必须带上）
+
+知识库分段不在 API 进程里跑，`worker-main.ts` 也不会被 HTTP 服务引用。`compose.yml` 若只有 pg、api、web，上传的文件会一直停在「处理中」。发版时在同一 compose 增加服务 `knowledge`：
+
+- 镜像与 `api` 相同（`${MMP_API_IMAGE}`），`env_file`、`DATABASE_URL`、uploads / library / secrets 卷与 `api` 相同，`depends_on` pg 健康后再起，`restart: unless-stopped`。
+- 工作目录已是 `/app/apps/backend`。命令只跑 `node dist/knowledge-core/worker-main.js`。
+- 不要在这个容器里跑 `prisma migrate deploy`。迁移仍只由 `api` 的启动命令做。
+- 不要在总后台加按钮来触发分段。
+
+发版后 `docker compose ps` 必须看到 `knowledge` 在跑。再上传一份小文件，状态应从「处理中」变为处理完成。
 
 只有用户明确说“发客户端 / 发 dmg / 发安装包”才处理客户端。
 

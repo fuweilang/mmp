@@ -1,7 +1,7 @@
 # 猛犸生产发版脚本（ground/infra/production）
 
-面向 `https://www.mmai.vip` 的新栈：**api + web + pg**，只部署到 `/www/mmp-prod`。
-发版入口见 [`baota-release` Skill](../../../.opencode/skills/baota-release/SKILL.md)。
+面向 `https://www.mmai.vip` 的新栈：**api + web + pg + knowledge**，只部署到 `/www/mmp-prod`。
+发版入口见 [`baota-release` Skill](../../../.opencode/skills/baota-release/SKILL.md)。`knowledge` 与 `api` 同镜像，命令为 `node dist/knowledge-core/worker-main.js`，不跑迁移。没有它，知识库上传会停在「处理中」。详见该 Skill「知识库处理容器」。
 
 ## 脚本
 
