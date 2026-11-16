@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-cua",
   "description": "Shared Computer Use application objects, authorization, and logged tool execution",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "publishConfig": {
     "access": "public"
   },

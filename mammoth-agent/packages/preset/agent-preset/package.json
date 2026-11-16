@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-agent-preset",
   "description": "Declare an Agent capability composition in Cordis YAML",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "publishConfig": {
     "access": "public"
   },

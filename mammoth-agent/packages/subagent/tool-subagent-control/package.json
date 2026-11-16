@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-tool-subagent-control",
   "description": "Shared messaging, interruption, and child discovery tools for subagents",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "publishConfig": {
     "access": "public"
   },
