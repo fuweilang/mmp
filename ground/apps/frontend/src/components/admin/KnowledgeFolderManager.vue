@@ -79,7 +79,7 @@ watch(fileSearch,()=>{filePage.value=1;});
 watch(folderPageSize,()=>{folderPage.value=1;});
 watch(filePageSize,()=>{filePage.value=1;});
 let alive=true,request=0,timer:ReturnType<typeof setTimeout>|undefined;
-function reason(code:string){return ({EMBEDDING_SERVICE_UNCONFIGURED:'尚未配置可用语义服务，请到高级设置配置',PROFILE_DISABLED:'语义服务已停用',PROVIDER_CREDENTIALS_MISSING:'语义服务凭据尚未配置',PDF_TEXT_UNAVAILABLE:'PDF 未提取到文字，请转换后重新上传',KNOWLEDGE_BASE_IN_USE:'仍有专家引用此文件夹，请先在专家配置中改用其他知识库或关闭知识检索，再删除'} as Record<string,string>)[code]||code;}
+function reason(code:string){return ({EMBEDDING_SERVICE_UNCONFIGURED:'尚未配置可用语义服务，请到高级设置配置',PROFILE_DISABLED:'语义服务已停用',PROVIDER_CREDENTIALS_MISSING:'语义服务凭据尚未配置',PDF_TEXT_UNAVAILABLE:'PDF 未提取到文字，请转换后重新上传',KNOWLEDGE_BASE_IN_USE:'仍有专家引用此文件夹，请先在专家配置中改用其他知识库或关闭知识检索，再删除',KNOWLEDGE_BASE_IMMUTABLE:'此文件夹已有文档版本（版本不可变），不能彻底删除；请改为停用'} as Record<string,string>)[code]||code;}
 function message(e:unknown){return reason(e instanceof Error?e.message:'操作失败，请重试');}
 function date(value?:string){return value?new Date(value).toLocaleDateString('zh-CN'):'—';}
 function preview(document:KnowledgeDocument){previewDocument.value=document;previewOpen.value=true;}

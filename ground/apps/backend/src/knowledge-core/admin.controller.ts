@@ -162,7 +162,7 @@ export class KnowledgeAdminController {
       });
     });
   }
-  /** Hard delete; refuses with KNOWLEDGE_BASE_IN_USE while any expert still references the base or its releases. */
+  /** Hard delete; refuses with KNOWLEDGE_BASE_IMMUTABLE once any document exists, and with KNOWLEDGE_BASE_IN_USE while an expert references the base or its releases. */
   @Delete('bases/:id')
   deleteBase(
     @Param('id')
