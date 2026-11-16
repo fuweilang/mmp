@@ -1,10 +1,10 @@
 import type {} from '@mammoth-ai/mmp-working-directory'
-import { expertRoleContext } from './expert-role-context.ts'
+import { answerClose, expertRoleContext } from './expert-role-context.ts'
 import { COMPLETE_SKILL_LIMITS, type SkillPackageLimits } from './skill-package-format.ts'
 import { ExpertKnowledgeRuntime, knowledgeProjection, type KnowledgeState } from './knowledge-runtime.ts'
 import { exactSource, type OpenedSource, type RuntimeBinding } from './knowledge-protocol.ts'
 import { skillStepAccess } from './skill-availability.ts'
-import { parseSelection, catalogHash, compositionHashOf, selectionSkills, skillMarksOf, attemptForMessage, attemptForRequest, type CatalogAttempt } from './task-composition.ts'
+import { parseSelection, catalogHash, compositionHashOf, selectionExperts, selectionSkills, skillMarksOf, attemptForMessage, attemptForRequest, type CatalogAttempt } from './task-composition.ts'
 import type { AgentHandle } from '@mammoth-ai/mmp-agent'
 import {ManagedDocuments,managedRuntimeProjection,compositionOf,sha,type ManagedComposition,type GalleryReceipt} from './managed-runtime.ts'
 import type {} from '@mammoth-ai/mmp-agent-preset-registry'
@@ -159,6 +159,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     modelBeforeFixed:Readonly<ModelSelection>|undefined
     fixedModel:Readonly<ModelSelection>|undefined
   }>()
+  private readonly expertTeams=new Map<string,{requestId:string;notes:Promise<string>}>()
+  private readonly expertTeamText=new Map<string,string>()
   private readonly packageLimits: SkillPackageLimits
   private knowledgeProjection!: ProjectionHandle<KnowledgeState>
   private readonly knowledge = new Map<string, ExpertKnowledgeRuntime>()
@@ -548,7 +550,50 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     turn:number
   }):string|undefined {
     const bodies=[...runtime.bodies.values()].map(body=>body.body).join('\n\n')
-    return runtime.active ? `${runtime.marker}\n${expertRoleContext(this.answerProjection.stateOf(runtime.agent.session).byTurn,runtime.active.expert?.name??MAMMOTH_AI_ANSWER.name,runtime.turn)}\n${runtime.active.expert?.systemPrompt??''}\n${bodies}` : bodies||undefined
+    const team=this.expertTeamText.get(runtime.agent.id)
+    const name=runtime.active?.expert?.name??MAMMOTH_AI_ANSWER.name
+    const helpers=runtime.active?.experts?.slice(1).map(expert=>expert.name)??[]
+    const close=runtime.active?`\n\n${answerClose(name,helpers)}`:''
+    return runtime.active ? `${runtime.marker}\n${expertRoleContext(this.answerProjection.stateOf(runtime.agent.session).byTurn,name,runtime.turn)}\n${runtime.active.expert?.systemPrompt??''}\n${bodies}${team?`\n\n${team}`:''}${close}` : bodies||undefined
+  }
+  private async expertTeamNotes(agent:Agent,active:CatalogAttempt,signal?:AbortSignal):Promise<string>{
+    const helpers=active.experts?.slice(1)??[]
+    if(helpers.length===0)return ''
+    const cached=this.expertTeams.get(agent.id)
+    if(cached?.requestId===active.requestId)return cached.notes
+    const runner=this.teamRunner()
+    if(!runner)throw new Error('TASK_EXPERT_TEAM_UNAVAILABLE')
+    const notes=(async()=>{
+      signal?.throwIfAborted()
+      const question=this.userQuestion(agent,active.messageId)
+      const parts=await Promise.all(helpers.map(async helper=>{
+        let run:Awaited<ReturnType<typeof runner.startActivation>>|undefined
+        try{
+          run=await runner.startActivation({
+            provider:'spawn',label:`专家协作·${helper.name}`.slice(0,80),delivery:'caller',signal:signal??new AbortController().signal,
+            request:{parent:agent,maxDepth:1,prompt:[{type:'text',text:`你是「${helper.name}」。只完成你负责的部分，不要代替其他专家发言。\n\n${helper.systemPrompt}\n\n用户的问题：\n${question||'（没有附带文字）'}`}]},
+          })
+          const result=await run.result
+          const text=result.output.flatMap(block=>block.type==='text'?[block.text]:[]).join('\n').trim()
+          return `## ${helper.name}\n${(text||`（没有写出结果：${result.stopReason}）`).slice(0,8000)}`
+        }catch(error){
+          return `## ${helper.name}\n（没有完成：${error instanceof Error?(error.message.split(':')[0]??'FAILED'):'FAILED'}）`
+        }finally{await run?.dispose().catch(()=>undefined)}
+      }))
+      const lead=active.expert?.name??'当前专家'
+      return `本轮由「${lead}」汇总。${helpers.map(helper=>helper.name).join('、')}已经同时做完，材料在下面。用「${lead}」的身份写成一条回复。不要说这一轮只能派一个专家，也不要改用其他专家的身份。不要逐段转发原文。\n\n${parts.join('\n\n')}`
+    })()
+    this.expertTeams.set(agent.id,{requestId:active.requestId,notes})
+    return notes
+  }
+  private teamRunner():{startActivation(spec:{provider:string;label:string;delivery:'caller';signal:AbortSignal;request:{parent:Agent;maxDepth:number;prompt:readonly {type:'text';text:string}[]}}):Promise<{result:Promise<{output:readonly {type:string;text?:string}[];stopReason:string}>;dispose():Promise<void>}>}|undefined{
+    const service=this.ctx.get('subagents') as {startActivation?:unknown}|undefined
+    return typeof service?.startActivation==='function'?service as never:undefined
+  }
+  private userQuestion(agent:Agent,messageId:string):string{
+    const event=agent.session.snapshotEvents().findLast(item=>item.type==='user/message'&&item.data.id===messageId)
+    if(event?.type!=='user/message')return ''
+    return event.data.content.flatMap(block=>block.type==='text'?[block.text]:[]).join('\n').trim()
   }
   private async prepareTaskPrompt(agent:Agent,raw:unknown,message?:import('@mammoth-ai/mmp-llm').UserMessage):Promise<'handled'|undefined>{
     if(!raw||typeof raw!=='object')return undefined
@@ -567,10 +612,11 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     const currentScope=await this.ground.currentScope()
     const authScope=previous?.authScope??currentScope
     if(currentScope.userId!==authScope.userId||currentScope.scope!==authScope.scope)throw new Error('TASK_AUTH_SCOPE_CHANGED')
-    let expert:OfficialAgentBinding|null=null,skills:OfficialSkillBinding[]=[],skillHashes:string[]=[]
-    if(previous){expert=previous.expert;skills=Array.isArray(previous.skills)?[...previous.skills]:previous.skill?[previous.skill]:[];skillHashes=Array.isArray(previous.skillHashes)?[...previous.skillHashes]:previous.skillHash?[previous.skillHash]:[]}
+    let expert:OfficialAgentBinding|null=null,experts:OfficialAgentBinding[]=[],skills:OfficialSkillBinding[]=[],skillHashes:string[]=[]
+    if(previous){expert=previous.expert;experts=Array.isArray(previous.experts)?[...previous.experts]:previous.expert?[previous.expert]:[];skills=Array.isArray(previous.skills)?[...previous.skills]:previous.skill?[previous.skill]:[];skillHashes=Array.isArray(previous.skillHashes)?[...previous.skillHashes]:previous.skillHash?[previous.skillHash]:[]}
     else {
-      if(selection.expertRef){const card=await this.ground.getCard(selection.expertRef.id);if(!card.executionGranted)throw new Error('TASK_EXPERT_ACCESS_CHANGED');const execution=await this.ground.resolve(selection.expertRef.id,selection.expertRef.versionId);if(execution.agentId!==selection.expertRef.id||execution.versionId!==selection.expertRef.versionId)throw new Error('TASK_EXPERT_REVISION_CHANGED');expert={ agentId:execution.agentId,versionId:execution.versionId,kind:execution.kind,name:card.name,...this.executionFields(execution),systemPrompt:execution.systemPrompt,toolScope:execution.toolScope,...execution.linkedSkills?{ linkedSkills:execution.linkedSkills }:{} }}
+      for(const ref of selectionExperts(selection)){const card=await this.ground.getCard(ref.id);if(!card.executionGranted)throw new Error('TASK_EXPERT_ACCESS_CHANGED');const execution=await this.ground.resolve(ref.id,ref.versionId);if(execution.agentId!==ref.id||execution.versionId!==ref.versionId)throw new Error('TASK_EXPERT_REVISION_CHANGED');experts.push({ agentId:execution.agentId,versionId:execution.versionId,kind:execution.kind,name:card.name,...this.executionFields(execution),systemPrompt:execution.systemPrompt,toolScope:execution.toolScope,...execution.linkedSkills?{ linkedSkills:execution.linkedSkills }:{} })}
+      expert=experts[0]??null
       for(const ref of selectionSkills(selection)){const skill=await this.ground.beginSkillSession(ref.id,ref.revision);if(skill.sessionSource.id!==ref.id||skill.sessionSource.packageRevision!==ref.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');if(skills.some(existing=>existing.sessionSource.key===skill.sessionSource.key))throw new Error('TASK_SELECTION_DUPLICATE_SKILL');const content=await this.ground.fetchSkillContent(skill.sessionSource.id,skill.sessionSource.packageRevision);if(content.id!==ref.id||content.key!==skill.sessionSource.key||content.packageRevision!==ref.revision)throw new Error('TASK_SKILL_REVISION_CHANGED');skills.push(skill);skillHashes.push(sha(content.instruction))}
     }
     if(expert)await this.resolveBinding(expert)
@@ -581,7 +627,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     if(!this.runtimes.has(agent.id))this.installCatalogRuntime(agent)
     const skill=skills[0]??null,skillHash=skillHashes[0]??null,listed=previous?Array.isArray(previous.skills):true
     const skillMarks=skillMarksOf(request.catalogSelection,skills.length)
-    const snapshot:CatalogAttempt={protocol:1,requestId:request.requestId,messageId:message.id,selection,selectionHash,inputHash,authScope,expert,skill,skillHash,...listed?{skills,skillHashes}:{},...skillMarks===undefined?{}:{skillMarks},compositionHash:compositionHashOf({expert,skill,skillHash,...listed?{skills,skillHashes}:{},selectionHash,authScope})}
+    const team=experts.length>1?experts:undefined
+    const snapshot:CatalogAttempt={protocol:1,requestId:request.requestId,messageId:message.id,selection,selectionHash,inputHash,authScope,expert,skill,skillHash,...listed?{skills,skillHashes}:{},...team?{experts:team}:{},...skillMarks===undefined?{}:{skillMarks},compositionHash:compositionHashOf({expert,skill,skillHash,...listed?{skills,skillHashes}:{},...team?{experts:team}:{},selectionHash,authScope})}
     agent.session.append('official-gallery/attempt',snapshot)
     return 'handled'
   }
@@ -677,6 +724,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       if(start?.type==='turn/start'&&start.data.turn!==runtime.turn){runtime.turn=start.data.turn;runtime.step=1;runtime.attempt=runtime.active?.requestId??randomUUID();this.receipt(agent,'preparing')}
       try{
         runtime.marker=runtime.active?`ACTIVE_CATALOG_COMPOSITION:${runtime.active.compositionHash}:${randomUUID()}`:''
+        if(runtime.active?.experts&&runtime.active.experts.length>1)this.expertTeamText.set(agent.id,await this.expertTeamNotes(agent,runtime.active,context.signal))
+        else this.expertTeamText.delete(agent.id)
         const keys=new Set(this.activeSkills(agent.session).map(skill=>skill.sessionSource.key))
         const associated=this.bindingFor(agent.session)?.linkedSkills??[]
         // Previously loaded associated methods are revalidated on resume/compression,
@@ -925,8 +974,22 @@ export default class OfficialAgentGallery extends TypertRemoteService {
 
 }
 
-declare module '@mammoth-ai/cordis' { interface Events { 'task/dispose-owned'(sessionId: SessionId): Promise<void> } }
-
-declare module '@mammoth-ai/cordis' { interface Events { 'task/check-queue-steer'(agent: Agent, message: import('@mammoth-ai/mmp-llm').UserMessage): Promise<void> } }
+declare module '@mammoth-ai/cordis' {
+  interface Events {
+    /**
+     * A Session is being deleted, and each listener releases only the task handles it created.
+     * @mode parallel
+     * @param sessionId - Session whose owned task handles must be released.
+     */
+    'task/dispose-owned'(sessionId: SessionId): Promise<void>
+    /**
+     * Let a task owner reject steering a message that belongs to a frozen selection.
+     * @mode parallel
+     * @param agent - Agent whose queue is being steered.
+     * @param message - user message offered to the steer path.
+     */
+    'task/check-queue-steer'(agent: Agent, message: import('@mammoth-ai/mmp-llm').UserMessage): Promise<void>
+  }
+}
 
 

@@ -237,19 +237,29 @@ export class SessionInputShell implements SessionInput {
    */
   setDraft(text: DraftInput): void {
     const draft = resolveDraftInput(text)
+    const structured = typeof text !== 'string'
     this.placingSkill = true
     try {
-      if (typeof text !== 'string') { this.catalogSelection = draft.catalogSelection; this.draftSnapshotCache = undefined; this.updateEnterpriseKnowledge(draft.enterpriseKnowledge === true) }
+      if (structured) {
+        this.catalogSelection = draft.catalogSelection
+        this.draftSnapshotCache = undefined
+        this.updateEnterpriseKnowledge(draft.enterpriseKnowledge === true)
+      }
       this.cancelCommandRestore()
       if (draft.references.length === 0 && (draft.quotes?.length ?? 0) === 0) this.draftEditor.setDraft(draft.text)
       else this.draftEditor.restoreDraft(draft.text, draft.references, draft.quotes, { remove: this.deps.quoteRemoveLabel?.() ?? '' })
       this.placeSkillChip()
-      if (draft.command === undefined) return
-      this.pendingCommand = { token: draft.command.token, rev: this.rev }
-      this.restoreCommand()
+      if (draft.command !== undefined) {
+        this.pendingCommand = { token: draft.command.token, rev: this.rev }
+        this.restoreCommand()
+      }
     } finally {
       this.placingSkill = false
     }
+    // An unchanged empty editor does not publish on its own. The restored
+    // selection has to be visible before the next keystroke, or removal
+    // writes an older version and the plaza origin paints over a cleared draft.
+    if (structured) this.publish()
   }
 
   /** @param text - selected transcript text. @returns whether the editable draft accepted the quote. */
@@ -333,14 +343,18 @@ export class SessionInputShell implements SessionInput {
     if (this.disposed) return
     const current = this.catalogSelection
     const published = this.state.getSnapshot().catalogSelection
-    const empty = current !== undefined && current.expertRef === null && current.skillRefs.length === 0
-    const publishedEmpty = published !== undefined && published.expertRef === null && published.skillRefs.length === 0
-    if (empty && publishedEmpty) return
-    if (!empty) {
+    const vacant = (value: CatalogDraftSelection | undefined): boolean => {
+      if (value === undefined) return false
+      const experts = value.expertRefs ?? (value.expertRef ? [value.expertRef] : [])
+      return value.expertRef === null && experts.length === 0 && value.skillRefs.length === 0
+    }
+    if (vacant(current) && vacant(published)) return
+    if (!vacant(current)) {
       this.catalogSelection = {
         protocol: 1,
         selectionVersion: (current?.selectionVersion ?? 0) + 1,
         expertRef: null,
+        expertRefs: [],
         skillRefs: [],
       }
       this.draftSnapshotCache = undefined

@@ -761,6 +761,28 @@ describe('header / drilled descent', () => {
     spy.mockRestore()
   })
 
+  it('keeps an unlisted source out of the menu and still serializes its chips', async () => {
+    const hidden: InputTriggerSource = {
+      trigger: '@',
+      name: 'reference',
+      menu: false,
+      candidates: () => Promise.resolve([{ name: 'README.md' }]),
+      onPick: () => undefined,
+      codec: { clipboardText: ref => ref, serialize: ref => Promise.resolve(ref) },
+    }
+    const shown: InputTriggerSource = {
+      trigger: '@',
+      name: 'library',
+      candidates: () => Promise.resolve([{ name: '资料' }]),
+      onPick: () => undefined,
+    }
+    const { controller } = controllerBench([hidden, shown])
+    controller.track('@', 1, { tier: 'plain' }, 1)
+    await tick()
+    expect(controller.menu.getSnapshot().groups.map(group => group.source)).toEqual(['library'])
+    await expect(controller.serializeReference('reference', '@readme', new AbortController().signal)).resolves.toBe('@readme')
+  })
+
   it('tells candidate fetches how the menu was reached', async () => {
     const seen: boolean[] = []
     const source: InputTriggerSource = {

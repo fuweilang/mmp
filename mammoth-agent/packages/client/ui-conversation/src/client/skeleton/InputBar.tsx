@@ -481,6 +481,9 @@ export const InputBar = memo(function InputBar({
           hint={hint}
           showPlaceholder={draft === '' && attachments.length === 0 && !claimActive}
         />
+        {sessionId !== undefined && input !== undefined ? (
+          <div className={css.picks}>{renderSlot('conversation.input.left', {})}</div>
+        ) : null}
         <div ref={rowRef} className={css.row}>
           <div className={css.tools} hidden={activity}>
             <Tooltip label={t('input.commands')} side="top" delayMs={500}>
@@ -523,9 +526,6 @@ export const InputBar = memo(function InputBar({
                 </span>
               )}
             </div>
-            {input === undefined || sessionId === undefined
-              ? null
-              : renderSlot('conversation.input.left', {})}
           </div>
           <div className={clsx(css.trailing, activity && css.trailingActive)}>
             <div className={css.standardControls} hidden={activity}>

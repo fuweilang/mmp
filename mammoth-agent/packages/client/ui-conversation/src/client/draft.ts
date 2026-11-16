@@ -25,7 +25,13 @@ const quoteSchema = z.object({
 })
 
 const skillDraftSchema=z.object({id:z.string(),revision:z.number().int().positive(),name:z.string(),key:z.string(),icon:z.string().nullable().optional(),offset:z.number().int().nonnegative().optional()})
-const catalogSelectionSchema=z.object({protocol:z.literal(1),selectionVersion:z.number().int().nonnegative(),expertRef:z.object({id:z.string(),versionId:z.string(),name:z.string(),icon:z.string().nullable().optional()}).nullable(),skillRef:skillDraftSchema.nullable().optional(),skillRefs:z.array(skillDraftSchema).max(5).optional()}).transform(value=>({protocol:1 as const,selectionVersion:value.selectionVersion,expertRef:value.expertRef,skillRefs:value.skillRefs??(value.skillRef?[value.skillRef]:[])}))
+const expertDraftSchema=z.object({id:z.string(),versionId:z.string(),name:z.string(),icon:z.string().nullable().optional()})
+const catalogSelectionSchema=z.object({protocol:z.literal(1),selectionVersion:z.number().int().nonnegative(),expertRef:expertDraftSchema.nullable(),expertRefs:z.array(expertDraftSchema).max(3).optional(),skillRef:skillDraftSchema.nullable().optional(),skillRefs:z.array(skillDraftSchema).max(5).optional()}).transform(value=>{
+  const skillRefs=value.skillRefs??(value.skillRef?[value.skillRef]:[])
+  if(!value.expertRefs)return {protocol:1 as const,selectionVersion:value.selectionVersion,expertRef:value.expertRef,skillRefs}
+  const seen=new Set<string>(),expertRefs=value.expertRefs.filter(expert=>expert.id!==''&&!seen.has(expert.id)&&(seen.add(expert.id),true))
+  return {protocol:1 as const,selectionVersion:value.selectionVersion,expertRef:expertRefs[0]??null,expertRefs,skillRefs}
+})
 const snapshotSchema = z.object({
   catalogSelection: catalogSelectionSchema.optional(),
   text: z.string(),

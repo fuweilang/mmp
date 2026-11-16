@@ -672,6 +672,23 @@ function hasPromptRequest(agent: Agent, requestId: SessionRequestId): boolean {
   })
 }
 
-declare module '@mammoth-ai/cordis' { interface Events { 'task/prepare-prompt'(agent: Agent, request: unknown, message?: UserMessage): Promise<'handled' | undefined> } }
-
-declare module '@mammoth-ai/cordis' { interface Events { 'task/check-queue-steer'(agent: Agent, message: UserMessage): Promise<void> } }
+declare module '@mammoth-ai/cordis' {
+  interface Events {
+    /**
+     * Let a task owner prepare one queued prompt before ordinary admission.
+     * @mode serial
+     * @param agent - Agent that will receive the prompt.
+     * @param request - admission request carrying the task selection.
+     * @param message - queued user message when admission already built one.
+     * @returns `handled` when the listener owns the prompt, otherwise undefined.
+     */
+    'task/prepare-prompt'(agent: Agent, request: unknown, message?: UserMessage): Promise<'handled' | undefined>
+    /**
+     * Let a task owner reject steering a message that belongs to a frozen selection.
+     * @mode parallel
+     * @param agent - Agent whose queue is being steered.
+     * @param message - user message offered to the steer path.
+     */
+    'task/check-queue-steer'(agent: Agent, message: UserMessage): Promise<void>
+  }
+}

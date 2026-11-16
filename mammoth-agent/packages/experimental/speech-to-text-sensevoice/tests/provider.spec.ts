@@ -39,6 +39,22 @@ it('refuses relative runtime, model and cache paths before registration', () => 
       .toThrow('absolute')
   }
   expect(() => Provider.Config({ dataRoot: process.cwd(), threads: 0 })).toThrow()
+  expect(Provider.Config({ dataRoot: process.cwd() }).prepareOnStart).toBe(false)
+})
+
+it('prepares a missing model on activation only when prepareOnStart is set', async () => {
+  const prepareIfMissing = vi.spyOn(SenseVoiceWorker.prototype, 'prepareIfMissing').mockImplementation(() => {})
+  const inspect = vi.spyOn(SenseVoiceWorker.prototype, 'inspect').mockImplementation(() => {})
+  const ctx = new Context()
+  try {
+    await ctx.plugin(LocalSubprocess)
+    await ctx.plugin(SpeechToText, { defaultProvider: 'sensevoice-local', language: 'auto' })
+    const fiber = ctx.plugin(Provider, { dataRoot: process.cwd(), prepareOnStart: true })
+    await fiber
+    expect(prepareIfMissing).toHaveBeenCalledOnce()
+    expect(inspect).not.toHaveBeenCalled()
+    await fiber.dispose()
+  } finally { await ctx.fiber.dispose() }
 })
 
 it.each([

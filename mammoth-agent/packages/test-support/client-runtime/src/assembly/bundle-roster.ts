@@ -27,7 +27,9 @@ import { ClientRoster, type ClientRosterRow } from './roster.ts'
  * The `web` profile's bundle layers, in the order `mmp --profile web` applies them
  * (`PROFILE_TEMPLATES.web` in `@mammoth-ai/mmp-official-bundles`).
  */
-export const WEB_PROFILE_BUNDLES: readonly string[] = ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app']
+export const WEB_PROFILE_BUNDLES: readonly string[] = [
+  '@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app', '@mammoth-ai/mmp-experimental-voice-input-bundle',
+]
 
 interface PackageManifest {
   name?: unknown

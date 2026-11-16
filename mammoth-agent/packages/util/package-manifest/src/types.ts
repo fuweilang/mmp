@@ -81,6 +81,11 @@ export interface MmpBundleManifest {
 export interface MmpProfileManifest {
   /** Ordered bundle layer list, using installed package names. */
   bundles?: string[]
+  /**
+   * Installation-owned bundle rewrites already applied.
+   * A recorded id keeps a later removal of that rewrite from being applied again.
+   */
+  bundleMigrations?: string[]
 }
 
 /** Client module declaration read by client-modules and the client build. */
