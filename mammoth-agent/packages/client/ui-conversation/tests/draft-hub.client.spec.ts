@@ -199,13 +199,22 @@ it('drops a restored expert that the published selection has not caught up with'
       protocol: 1,
       selectionVersion: 4,
       expertRef: { id: 'expert-b', versionId: 'v2', name: 'B专家' },
+      expertRefs: [
+        { id: 'expert-b', versionId: 'v2', name: 'B专家' },
+        { id: 'expert-c', versionId: 'v3', name: 'C专家' },
+      ],
       skillRefs: [],
     },
   })
-  expect(b.shell.snapshot.catalogSelection).toBeUndefined()
+  expect(b.shell.snapshot.catalogSelection).toMatchObject({
+    expertRef: { id: 'expert-b', versionId: 'v2', name: 'B专家' },
+    selectionVersion: 4,
+  })
+  expect(b.shell.snapshot.catalogSelection?.expertRefs?.map(expert => expert.id)).toEqual(['expert-b', 'expert-c'])
   b.hub.clearCatalogSelection(b.binding)
-  expect(b.shell.snapshot.catalogSelection).toMatchObject({ expertRef: null, skillRefs: [], selectionVersion: 5 })
+  expect(b.shell.snapshot.catalogSelection).toMatchObject({ expertRef: null, expertRefs: [], skillRefs: [], selectionVersion: 5 })
   expect(readConversationDraft(b.id).catalogSelection?.expertRef).toBeNull()
+  expect(readConversationDraft(b.id).catalogSelection?.expertRefs).toEqual([])
 })
 
 it('drops a restored expert when New Task opens and keeps the typed text', async () => {
@@ -233,6 +242,8 @@ it('drops a restored expert when New Task opens and keeps the typed text', async
   const again = new InputHub(b.ctx, makeTranslate(zh, {}))
   const restored = again.shellFor(b.binding)
   expect(restored.draftSnapshot.catalogSelection?.expertRef).toBeNull()
+  expect(restored.snapshot.catalogSelection?.expertRef).toBeNull()
+  expect(restored.snapshot.catalogSelection?.expertRefs).toEqual([])
   expect(restored.draftSnapshot.text).toBe('还没发出去')
 })
 

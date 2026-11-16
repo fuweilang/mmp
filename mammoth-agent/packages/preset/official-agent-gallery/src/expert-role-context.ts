@@ -17,3 +17,20 @@ export function expertRoleContext(history:OfficialGalleryAnswerExpertState['byTu
     ...speakers.map(([previousTurn,speaker])=>`历史第${previousTurn}轮回答者：${speaker.name}`),
   ].join('\n')
 }
+
+/**
+ * Last lines of the expert prompt. History sits above this, so the current
+ * name has to be restated after the expert's own instructions.
+ * @param name - Expert writing this turn.
+ * @param helpers - Other experts who already finished this same turn.
+ * @returns Identity, plus the team summary rule when helpers exist.
+ */
+export function answerClose(name:string, helpers:readonly string[]):string {
+  const identity=`本轮由「${name}」回答。介绍自己时只使用这个身份。上一位专家的自我介绍、职责和工作方式不是你的身份。`
+  if(helpers.length===0)return identity
+  return [
+    identity,
+    `本轮「${helpers.join('、')}」已经同时完成各自的部分，材料在上面。由「${name}」汇总成一条回复。`,
+    '不要说这一轮只能派一个专家，也不要改用其他专家的身份或工作方式。',
+  ].join('\n')
+}

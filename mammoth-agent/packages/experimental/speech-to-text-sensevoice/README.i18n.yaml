@@ -5,33 +5,33 @@
 /:
   en: 2c603fb20d2332f0
   zh: 2efd7f2811fe18bb
-/deepseek-ai-mmp-experimental-speech-to-text-sensevoice:
-  en: 636635d9dabcf16d
-  zh: e331bf5314446b3e
-/deepseek-ai-mmp-experimental-speech-to-text-sensevoice/summary:
+/mammoth-ai-mmp-experimental-speech-to-text-sensevoice:
+  en: 1c445c55d2812090
+  zh: 412481e0a6e39180
+/mammoth-ai-mmp-experimental-speech-to-text-sensevoice/summary:
   en: 3d96e31f42eec217
   zh: 9738184df0d5c781
-/deepseek-ai-mmp-experimental-speech-to-text-sensevoice/table-of-contents:
+/mammoth-ai-mmp-experimental-speech-to-text-sensevoice/table-of-contents:
   en: d152484eb41ac6b4
   zh: 364c80ee00a374ff
-/deepseek-ai-mmp-experimental-speech-to-text-sensevoice/use-this-package:
-  en: 5205fc2456b2c2c2
-  zh: ed9dbcb71d48eb98
-/deepseek-ai-mmp-experimental-speech-to-text-sensevoice/understand-the-implementation:
+/mammoth-ai-mmp-experimental-speech-to-text-sensevoice/use-this-package:
+  en: 8cf85ae783c2f74b
+  zh: 268aa5ecf1c4d209
+/mammoth-ai-mmp-experimental-speech-to-text-sensevoice/understand-the-implementation:
   en: d014ffd7d400cb04
   zh: bc1a23e8bb3bdcca
-/deepseek-ai-mmp-experimental-speech-to-text-sensevoice/further-exploration:
-  en: 5c64426add9d79d6
-  zh: 4e06aa2ead8d2ccd
-/deepseek-ai-mmp-experimental-speech-to-text-sensevoice/model-experience:
+/mammoth-ai-mmp-experimental-speech-to-text-sensevoice/further-exploration:
+  en: 6621246268306268
+  zh: db0930797b30e892
+/mammoth-ai-mmp-experimental-speech-to-text-sensevoice/model-experience:
   en: 3c5a85f8b7129ce8
   zh: d5f491ca88d9a810
-/deepseek-ai-mmp-experimental-speech-to-text-sensevoice/model-experience/kv-cache-effect:
+/mammoth-ai-mmp-experimental-speech-to-text-sensevoice/model-experience/kv-cache-effect:
   en: b5ec79db2e1d0dbc
   zh: e5aff567ae5ee6fc
-/deepseek-ai-mmp-experimental-speech-to-text-sensevoice/known-limitations-and-deferred-work:
+/mammoth-ai-mmp-experimental-speech-to-text-sensevoice/known-limitations-and-deferred-work:
   en: c9a41fba4d25fe72
   zh: 9453cca1d6806549
-/deepseek-ai-mmp-experimental-speech-to-text-sensevoice/known-limitations-and-deferred-work/dev-note:
+/mammoth-ai-mmp-experimental-speech-to-text-sensevoice/known-limitations-and-deferred-work/dev-note:
   en: 0225ba087c5266f3
   zh: 4e706f1b2b984e63

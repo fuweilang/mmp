@@ -205,7 +205,7 @@ export interface Config {
 ## `@mammoth-ai/mmp-api-gateway`
 
 - `inject`: `typert` · `remoteAccess`
-- `source`: [`packages/api/gateway/src/index.ts:158`](../packages/api/gateway/src/index.ts)
+- `source`: [`packages/api/gateway/src/index.ts:159`](../packages/api/gateway/src/index.ts)
 
 ```ts config-catalog
 /** Gateway transport configuration. */
@@ -617,7 +617,7 @@ export interface ContactConfig {
   bonusAckRetryMaxDelayMs: number
 }
 
-/** Persisted steps; a native top-up page leaves the durable step at credit. */
+/** Persisted steps. */
 export type OnboardingStep = 'welcome' | 'credit' | 'purpose' | 'process' | 'done'
 
 /** Work scenarios offered by the desktop introduction. */
@@ -846,7 +846,7 @@ export interface Config {
 ## `@mammoth-ai/mmp-deepseek-account-platform`
 
 - `inject`: `credentials` · `authorization`
-- `source`: [`packages/credentials/deepseek-account-platform/src/index.ts:32`](../packages/credentials/deepseek-account-platform/src/index.ts)
+- `source`: [`packages/credentials/deepseek-account-platform/src/index.ts:78`](../packages/credentials/deepseek-account-platform/src/index.ts)
 
 ```ts config-catalog
 /** Deployment-specific platform and request deadlines. */
@@ -1426,6 +1426,8 @@ export interface Config {
   maxResponseBytes: number
   /** Minimum interval between intermediate download progress notifications. */
   progressIntervalMs: number
+  /** When true, activation downloads and loads a missing model. False only inspects disk. */
+  prepareOnStart: boolean
 }
 ```
 <!-- END GENERATED config-catalog:@mammoth-ai/mmp-experimental-speech-to-text-sensevoice -->
@@ -2572,7 +2574,7 @@ export interface Config {
 ## `@mammoth-ai/mmp-official-agent-gallery`
 
 - `inject`: `agents` · `sessionProjections` · `systemPrompt` · `tools` · `skills` · `workspaceRegistry` · `deepseekAccount` · `groundRequestAttribution` · `attachments` · `agentPresets`
-- `source`: [`packages/preset/official-agent-gallery/src/index.ts:78`](../packages/preset/official-agent-gallery/src/index.ts)
+- `source`: [`packages/preset/official-agent-gallery/src/index.ts:88`](../packages/preset/official-agent-gallery/src/index.ts)
 
 ```ts config-catalog
 /** Ground connection shared by gallery reads and trusted execution checks. */
@@ -3120,7 +3122,7 @@ export type SessionLogCompressionLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
 ## `@mammoth-ai/mmp-session-persistence-jsonl`
 
-- `source`: [`packages/session/session-persistence-jsonl/src/index.ts:95`](../packages/session/session-persistence-jsonl/src/index.ts)
+- `source`: [`packages/session/session-persistence-jsonl/src/index.ts:116`](../packages/session/session-persistence-jsonl/src/index.ts)
 
 ```ts config-catalog
 /** Plugin config for the JSONL backend's root, physical encoding, and listing concurrency. */
@@ -3297,7 +3299,7 @@ export enum SessionTelemetryMode {
 ## `@mammoth-ai/mmp-session-title`
 
 - `inject`: `sessions` · `sessionProjections` · `agents`
-- `source`: [`packages/session/session-title/src/index.ts:56`](../packages/session/session-title/src/index.ts)
+- `source`: [`packages/session/session-title/src/index.ts:57`](../packages/session/session-title/src/index.ts)
 
 ```ts config-catalog
 /** Required deterministic fallback and accepted-title limits. */

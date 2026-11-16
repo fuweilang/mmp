@@ -173,7 +173,7 @@ describe('apply', () => {
     await installTextSlots(ctx, sessions)
     const ownFiber = ctx.plugin({ inject: [...inject], apply })
     await ownFiber.await()
-    expect(registered).toMatchObject({ trigger: '@', name: 'reference', showGroupTitle: false })
+    expect(registered).toMatchObject({ trigger: '@', name: 'reference', showGroupTitle: false, menu: false })
     expect(ctx.uiConversation.userText.entries().map(rule => rule.id)).toEqual(['file', 'folder'])
     expect(ctx.slots.entries('conversation.user.text.node')).toMatchObject([
       { options: { key: 'file' }, component: FileReference },

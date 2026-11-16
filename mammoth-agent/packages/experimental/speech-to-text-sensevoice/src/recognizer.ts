@@ -165,15 +165,38 @@ export class SenseVoiceWorker {
   /** Inspect disk caches on activation; valid resources enter standby without starting a worker. */
   inspect(): void {
     this.runPreparation(async (signal) => {
-      using inspection = deadline(signal, this.config.prepareTimeoutMs, 'SPEECH_PREPARE_TIMEOUT')
-      this.publish({ phase: 'checking', step: 'check', startedAt: Date.now() })
-      const runtime = await inspectRuntime(this.config, inspection.signal)
-      inspection.signal.throwIfAborted()
-      this.runtime = runtime
-      this.publish({ phase: runtime ? 'standby' : 'unprepared', steps: this.state.steps.map(({ kind }) => ({ kind,
-        status: kind === 'check' || runtime && kind !== 'load' ? 'complete' : 'pending',
-      })) })
+      const runtime = await this.readCaches(signal)
+      if (signal.aborted) return
+      this.publishChecked(runtime)
     })
+  }
+
+  /**
+   * Inspect caches and, when they are missing, download and load them in the same preparation task.
+   * Verified caches stay at standby so activation does not load the model.
+   */
+  prepareIfMissing(): void {
+    this.runPreparation(async (signal) => {
+      const runtime = await this.readCaches(signal)
+      if (signal.aborted) return
+      if (runtime) { this.publishChecked(runtime); return }
+      await this.start(signal, this.config)
+    })
+  }
+
+  private async readCaches(signal: AbortSignal): Promise<RuntimePaths | undefined> {
+    using inspection = deadline(signal, this.config.prepareTimeoutMs, 'SPEECH_PREPARE_TIMEOUT')
+    this.publish({ phase: 'checking', step: 'check', startedAt: Date.now() })
+    const runtime = await inspectRuntime(this.config, inspection.signal)
+    inspection.signal.throwIfAborted()
+    this.runtime = runtime
+    return runtime
+  }
+
+  private publishChecked(runtime: RuntimePaths | undefined): void {
+    this.publish({ phase: runtime ? 'standby' : 'unprepared', steps: this.state.steps.map(({ kind }) => ({ kind,
+      status: kind === 'check' || runtime && kind !== 'load' ? 'complete' : 'pending',
+    })) })
   }
 
   /**

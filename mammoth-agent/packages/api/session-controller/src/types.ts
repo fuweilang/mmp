@@ -330,6 +330,8 @@ export interface TaskCatalogSelection {
   readonly protocol: 1
   readonly selectionVersion: number
   readonly expertRef: { readonly id: string; readonly versionId: string } | null
+  /** Chip order for this send. Absent on older requests, which carry only `expertRef`. The first entry is the lead. */
+  readonly expertRefs?: readonly { readonly id: string; readonly versionId: string }[]
   readonly skillRef: { readonly id: string; readonly revision: number } | null
   /** Chip order for this send. Absent on older requests, which carry only `skillRef`. */
   readonly skillRefs?: readonly { readonly id: string; readonly revision: number }[]

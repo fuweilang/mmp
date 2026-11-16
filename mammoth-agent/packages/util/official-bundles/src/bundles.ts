@@ -12,7 +12,7 @@ export const PROFILE_TEMPLATES: Record<string, ProfileTemplate> = {
     bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-acp-app'],
   },
   web: {
-    bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app'],
+    bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app', '@mammoth-ai/mmp-experimental-voice-input-bundle'],
   },
   headless: {
     bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-headless'],
@@ -31,6 +31,7 @@ export const PROFILE_TEMPLATES: Record<string, ProfileTemplate> = {
  */
 export const INSTALLATION_OWNED_PROFILE_TUPLES: Readonly<Record<string, readonly string[]>> = {
   headless: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app', '@mammoth-ai/mmp-headless'],
+  web: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app'],
 }
 
 /** Bundles an earlier release shipped and the installation no longer carries; app-boot removes them from profiles. */
@@ -47,7 +48,7 @@ export const DEFAULT_PROFILE_BUNDLES: readonly string[] = ['@mammoth-ai/mmp-base
  * The bundles the mmp installation ships for a person to switch on: each a
  * runtime dependency of the installation that declares `mmp.bundle.patch`,
  * an `icon`, and `./locale/*.json` display metadata, selected by no shipped
- * template, and offered switched off by the plugin manager except persistent
+ * template except voice input on `web`, and offered switched off by the plugin manager except persistent
  * terminals, which have no page switch
  * ([rationale](../../../../.agents/notes/implemented/process/2026-09-15-shipped-optional-bundles.md),
  * [admission](../../../../.agents/notes/implemented/architecture/2026-09-21-experimental-capabilities-as-optional-bundles.md)).

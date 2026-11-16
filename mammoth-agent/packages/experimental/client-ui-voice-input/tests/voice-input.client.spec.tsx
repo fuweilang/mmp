@@ -336,7 +336,7 @@ it.each<SpeechPreparationState>([
   expect(b.props.openSettings).toHaveBeenCalledOnce()
 })
 
-it('offers no plugin details from setup guidance while the Plugins page navigation is absent', () => {
+it('prepares the local model from setup guidance while the Plugins page navigation is absent', () => {
   const b = fixture(undefined, false), state = b.readiness.getSnapshot()
   act(() => { b.readiness.set({ ...state, catalog: { ...state.catalog!, providers: [
     { ...state.catalog!.providers[0]!, preparation: { phase: 'unprepared' } },
@@ -345,7 +345,10 @@ it('offers no plugin details from setup guidance while the Plugins page navigati
   const dialog = within(screen.getByRole('dialog'))
   expect(dialog.queryByRole('button', { name: zh['setupPrompt.open'] })).toBeNull()
   expect(dialog.getByRole('button', { name: zh['setupPrompt.later'] })).toBeTruthy()
+  fireEvent.click(dialog.getByRole('button', { name: zh.prepare }))
+  expect(b.props.prepare).toHaveBeenCalledWith(id)
   expect(b.props.openSettings).not.toHaveBeenCalled()
+  expect(b.capture.start).not.toHaveBeenCalled()
 })
 
 it('moves focus into setup guidance, contains Tab traversal, and restores the draft focus on dismissal', () => {

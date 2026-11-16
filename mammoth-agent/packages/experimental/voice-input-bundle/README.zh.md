@@ -1,5 +1,5 @@
 ---
-description: "从插件管理页启用实验性语音输入。"
+description: "网页 profile 的语音输入；首次使用时宿主下载 SenseVoice。"
 kind: "package-bundle"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-bundle"
 
 ## 概述
 
-此可选 Bundle 组合语音服务定义、本地 SenseVoice Provider、带认证的 Remote 与浏览器麦克风控件。随包配置默认禁用。
+此 Bundle 组合语音服务定义、本地 SenseVoice Provider、带认证的 Remote 与浏览器麦克风控件。网页 profile 会选中它。其他随附 profile 不选中。
 
 ## 目录
 
@@ -25,7 +25,7 @@ kind: "package-bundle"
 <a id="use-this-package"></a>
 ## 使用此包
 
-打开 Web 侧栏的插件管理页并启用带蓝色声波图标的“语音输入”。模型需要准备时，弹窗提供“前往安装”和“稍后”选项；“前往安装”打开 Bundle 详情。缓存完整时不会提示安装。在详情中选择“下载并准备”；默认折叠的当前步骤摘要可展开为完整步骤列表。下载报告真实字节，校验和加载显示等待时间。就绪后点击模型选择器与发送按钮之间的麦克风，再点击停止以插入转写文字。Bundle 详情通过 Settings 服务保存识别器和语言。禁用 Bundle 会取消当前任务；缓存资源保留在磁盘上。
+在默认网页 profile 中，麦克风已经位于模型选择器和发送按钮之间。此 Bundle 设置 `prepareOnStart`，本地模型缺失时在启用时开始下载。下载未完成时点击麦克风仍会看到进度。缓存完整时保持待唤醒，首次录音再唤醒工作进程。准备尚未开始时，插件页被隐藏则弹窗提供“下载并准备”，插件导航存在则提供“前往安装”。“前往安装”打开 Bundle 详情。“下载并准备”会显示硬盘、内存和时间估计；默认折叠的当前步骤摘要可展开为完整步骤列表。下载报告真实字节，校验和加载显示等待时间。就绪后点击模型选择器与发送按钮之间的麦克风，再点击停止以插入转写文字。Bundle 详情通过 Settings 服务保存识别器和语言。禁用 Bundle 会取消当前任务；缓存资源保留在磁盘上。
 
 -----
 
@@ -35,7 +35,7 @@ kind: "package-bundle"
 <details>
 <summary>维护者信息 — 点击展开</summary>
 
-静态 `cordis.patch.yml` 添加四个语音条目，选择 `sensevoice-local` 作为默认识别器，并通过 `mmpHomePath` 提供 Provider 缓存目录。可选 Bundle 安装使插件管理器能够发现此包，但不会在默认配置中选择它。浏览器贡献拥有其生成 Remote 的挂载；稳定 API Remotes 不导入实验性代码。
+静态 `cordis.patch.yml` 添加四个语音条目，选择 `sensevoice-local` 作为默认识别器，通过 `mmpHomePath` 提供 Provider 缓存目录，并设置 `prepareOnStart`，使缺失的缓存在 Bundle 启用时开始下载。网页模板选中此 Bundle，其他随附模板不选中。浏览器贡献拥有其生成 Remote 的挂载；稳定 API Remotes 不导入实验性代码。
 
 </details>
 

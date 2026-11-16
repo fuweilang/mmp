@@ -262,6 +262,18 @@
 
 /* Toolbar: attach + Plan + Read-only on the left; model + send on the right
    (figma Input_Bottom chrome). */
+.picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.picks:empty {
+  display: none;
+}
+
 .row {
   display: flex;
   flex-wrap: wrap;

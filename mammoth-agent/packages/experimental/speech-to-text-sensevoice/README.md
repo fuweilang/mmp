@@ -33,7 +33,7 @@ An explicit `modelOrigin` uses only that origin, without probing or public fallb
 
 Download failures identify the asset and source origin, with a classified cause and HTTP status or diagnostic code when available. The public state omits URL credentials, query strings and raw cause messages. Retry reuses verified files; partial downloads restart.
 
-Every activation checks the selected model, tokens and VAD on disk. Complete verified caches restore readiness immediately after inspection; the first recording wakes the worker. Missing files or mismatched managed checksums require explicit preparation, while unreadable paths report an error. Explicit deployment paths are checked for accessibility; their contents remain the deployer's responsibility. Disabling the plugin or restarting the Host does not require downloading intact caches again.
+Every activation checks the selected model, tokens and VAD on disk. Complete verified caches restore standby after inspection; the first recording wakes the worker. With `prepareOnStart`, that same activation downloads and loads missing files or files whose managed checksums do not match. Without it, those files stay unprepared until an explicit preparation. Unreadable paths report an error. Explicit deployment paths are checked for accessibility; their contents remain the deployer's responsibility. Disabling the plugin or restarting the Host does not require downloading intact caches again.
 
 -----
 

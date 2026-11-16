@@ -3,35 +3,35 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/experimental/voice-input-bundle/README.md
 /:
-  en: a610a36da32c92ad
-  zh: 19434bfe1701828d
-/deepseek-ai-mmp-experimental-voice-input-bundle:
-  en: 338585d3575a8f90
-  zh: 22a493cbeefec8f0
-/deepseek-ai-mmp-experimental-voice-input-bundle/summary:
-  en: e84cf8d1493e2a08
-  zh: f0549f75a5234388
-/deepseek-ai-mmp-experimental-voice-input-bundle/table-of-contents:
+  en: ad2db50cda753344
+  zh: 84fb997f11ffa7f1
+/mammoth-ai-mmp-experimental-voice-input-bundle:
+  en: 96bb9871847cc37e
+  zh: 0a412a45fadd4328
+/mammoth-ai-mmp-experimental-voice-input-bundle/summary:
+  en: 52d9a31405cbe293
+  zh: 0bcd5bede2cf942c
+/mammoth-ai-mmp-experimental-voice-input-bundle/table-of-contents:
   en: d152484eb41ac6b4
   zh: 364c80ee00a374ff
-/deepseek-ai-mmp-experimental-voice-input-bundle/use-this-package:
-  en: 9151bf11e64b4f1c
-  zh: 7c9638c16ac6a0db
-/deepseek-ai-mmp-experimental-voice-input-bundle/understand-the-implementation:
-  en: 45c5f442f85483a8
-  zh: 1e6d54bcaef39b89
-/deepseek-ai-mmp-experimental-voice-input-bundle/further-exploration:
-  en: 5c64426add9d79d6
-  zh: 4e06aa2ead8d2ccd
-/deepseek-ai-mmp-experimental-voice-input-bundle/model-experience:
+/mammoth-ai-mmp-experimental-voice-input-bundle/use-this-package:
+  en: fd4d750a5fdf016e
+  zh: d0acda46085da0a3
+/mammoth-ai-mmp-experimental-voice-input-bundle/understand-the-implementation:
+  en: 723404eefb50fcb3
+  zh: b68854da249a868c
+/mammoth-ai-mmp-experimental-voice-input-bundle/further-exploration:
+  en: 6621246268306268
+  zh: db0930797b30e892
+/mammoth-ai-mmp-experimental-voice-input-bundle/model-experience:
   en: 3c5a85f8b7129ce8
   zh: d5f491ca88d9a810
-/deepseek-ai-mmp-experimental-voice-input-bundle/model-experience/kv-cache-effect:
+/mammoth-ai-mmp-experimental-voice-input-bundle/model-experience/kv-cache-effect:
   en: b5ec79db2e1d0dbc
   zh: e5aff567ae5ee6fc
-/deepseek-ai-mmp-experimental-voice-input-bundle/known-limitations-and-deferred-work:
-  en: 72323eaeec1b0dae
-  zh: becc003f1da53c51
-/deepseek-ai-mmp-experimental-voice-input-bundle/known-limitations-and-deferred-work/dev-note:
+/mammoth-ai-mmp-experimental-voice-input-bundle/known-limitations-and-deferred-work:
+  en: e8ba6e8640180486
+  zh: 02748dd40781e98f
+/mammoth-ai-mmp-experimental-voice-input-bundle/known-limitations-and-deferred-work/dev-note:
   en: 0225ba087c5266f3
   zh: 4e706f1b2b984e63

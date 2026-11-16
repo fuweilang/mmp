@@ -131,6 +131,23 @@ it('keeps absent caches unprepared and reports unreadable caches as retryable fa
   expect(prepareRuntime).toHaveBeenCalledOnce()
 })
 
+it('prepares a missing cache in one task and leaves a verified cache on standby', async () => {
+  const missing = await fixture()
+  vi.mocked(inspectRuntime).mockResolvedValueOnce(undefined)
+  missing.worker.prepareIfMissing()
+  await vi.waitFor(() => { expect(missing.worker.snapshot().phase).toBe('ready') })
+  expect(prepareRuntime).toHaveBeenCalledOnce()
+  expect(missing.spawn).toHaveBeenCalledOnce()
+  vi.mocked(prepareRuntime).mockClear()
+  const present = await fixture()
+  vi.mocked(inspectRuntime).mockResolvedValueOnce({ tokens: present.root, model: present.root, vad: present.root,
+    worker: fileURLToPath(new URL('./worker.fixture.mjs', import.meta.url)) })
+  present.worker.prepareIfMissing()
+  await vi.waitFor(() => { expect(present.worker.snapshot().phase).toBe('standby') })
+  expect(prepareRuntime).not.toHaveBeenCalled()
+  expect(present.spawn).not.toHaveBeenCalled()
+})
+
 it('cancels cache inspection and joins it without late notifications when the provider unloads', async () => {
   const { worker } = await fixture(), entered = Promise.withResolvers<undefined>(), released = Promise.withResolvers<undefined>()
   vi.mocked(inspectRuntime).mockImplementationOnce(async (_config, signal) => {
