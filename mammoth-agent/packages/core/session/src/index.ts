@@ -42,6 +42,12 @@ declare module '@mammoth-ai/cordis' {
 
   interface Events {
     /**
+     * Allow a Session owner to exclude an existing blank from ordinary creation reuse.
+     * @param events - committed events from the live or stored blank Session.
+     * @mode bail
+     */
+    'session/skip-blank-reuse'(events: readonly SessionEvent[]): true | undefined
+    /**
      * Read-only creation announcement after store entry.
      * New events reject until every synchronous listener has returned successfully.
      * A synchronous throw vetoes creation and rolls back with a paired disposal;

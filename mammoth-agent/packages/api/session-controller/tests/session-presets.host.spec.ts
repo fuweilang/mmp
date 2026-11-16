@@ -240,6 +240,20 @@ describe('session.create Agent preset identity', () => {
 })
 
 describe('session.create reuse of a live blank Session', () => {
+  it('creates an ordinary Session when a plugin excludes the live blank from reuse', async () => {
+    const { ctx, remote } = await harness({ presets: ['standard', 'minimal'] })
+    const draft = SessionId('excluded-live-draft')
+    await remote.create({ sessionId: draft, agentPreset: 'minimal' })
+    ctx.sessions.get(draft)?.append('agent-preset/selected', { agentPreset: 'minimal' })
+    ctx.on('session/skip-blank-reuse', events => events.some(
+      event => event.type === 'agent-preset/selected' && event.data.agentPreset === 'minimal',
+    ) ? true : undefined)
+
+    const created = await remote.create({ sessionId: draft, agentPreset: 'standard' })
+
+    expect(created).toMatchObject({ ok: true, value: { sessionId: expect.not.stringMatching(/^excluded-live-draft$/), agentPreset: 'standard' } })
+  })
+
   it('recomposes a blank Session under the default when the caller names no preset', async () => {
     const { remote, selections, presetOf } = await harness({ presets: ['standard', 'minimal'] })
     await remote.create({ sessionId: SessionId('draft'), agentPreset: 'minimal' })
@@ -450,6 +464,24 @@ describe('session.create reuse of a live blank Session', () => {
 })
 
 describe('session.create reuse of a stored blank Session', () => {
+  it('creates an ordinary Session without resuming a stored blank excluded by a plugin', async () => {
+    const draft = SessionId('excluded-stored-draft')
+    const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'mmp-session-preset-stored-')))
+    tempDirs.push(cwd)
+    const { ctx, remote, resumed } = await harness({
+      presets: ['standard', 'minimal'],
+      stored: new Map([[draft, { header: storedHeader(draft, cwd), events: [presetSelection(0, 'minimal')] }]]),
+    })
+    ctx.on('session/skip-blank-reuse', events => events.some(
+      event => event.type === 'agent-preset/selected' && event.data.agentPreset === 'minimal',
+    ) ? true : undefined)
+
+    const created = await remote.create({ sessionId: draft, cwd, agentPreset: 'standard' })
+
+    expect(created).toMatchObject({ ok: true, value: { sessionId: expect.not.stringMatching(/^excluded-stored-draft$/), agentPreset: 'standard' } })
+    expect(resumed).toEqual([])
+  })
+
   it('resumes a blank Session whose recorded preset is no longer declared under the default', async () => {
     const draft = SessionId('stale-draft')
     const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'mmp-session-preset-stored-')))

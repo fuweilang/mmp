@@ -200,6 +200,11 @@ export default class OfficialAgentGallery extends TypertRemoteService {
       yield* next()
     })
     this.projection = await this.ctx.sessionProjections.register(officialAgentBindingProjection)
+    this.ctx.on('session/skip-blank-reuse', (events) => {
+      const preview = events.findLast(event => event.type === 'official-agent/bound')?.data.preview
+      if (preview !== undefined && Date.parse(preview.expiresAt) <= Date.now()) return true
+      return undefined
+    })
     this.skillProjection = await this.ctx.sessionProjections.register(officialSkillBindingProjection)
     await this.ctx.sessionProjections.register(officialGallerySourceProjection)
     await this.ctx.sessionProjections.register(officialGallerySentSkillsProjection)

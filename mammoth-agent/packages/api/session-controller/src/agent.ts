@@ -50,8 +50,8 @@ export class ApiSessionPresetConflict extends Error {
   }
 }
 
-/** A blank Session chosen for reuse started a turn before this Host acquired its writer. */
-class ApiSessionStartedSinceObserved extends Error {}
+/** An observed blank stopped qualifying for reuse before this Host acquired its writer. */
+class ApiSessionNoLongerReusable extends Error {}
 
 /** Placement and Agent preset for one Session created for a new conversation. */
 export interface ApiSessionCreateRequest {
@@ -382,6 +382,7 @@ export class ApiSessionAgentController {
         throw new ApiSessionCwdConflict(sessionId, request.cwd, observed.header.cwd)
       }
       reusable = request.reusable(sessionId) && !observed.events.some(event => event.type === 'turn/start')
+        && this.ctx.bail('session/skip-blank-reuse', observed.events) !== true
     }
     const composition = await this.composeAgent(request.agentPreset)
     if (!reusable) return this.createMinted(request.cwd, composition)
@@ -393,7 +394,7 @@ export class ApiSessionAgentController {
         setup: this.reuseSetup(composition),
       }))
     } catch (error: unknown) {
-      if (error instanceof ApiSessionStartedSinceObserved) return this.createMinted(request.cwd, composition)
+      if (error instanceof ApiSessionNoLongerReusable) return this.createMinted(request.cwd, composition)
       if (!(error instanceof Error) || error.name !== 'SessionAlreadyOwnedError') throw error
       // Another resume in this process may hold the writer for the Agent it published.
       return this.ctx.agents.get(sessionId) === undefined
@@ -409,6 +410,7 @@ export class ApiSessionAgentController {
     composition: ApiSessionComposition,
   ): Promise<Agent | undefined> {
     if (!request.reusable(live.id) || !this.isBlank(live.session)) return undefined
+    if (this.ctx.bail('session/skip-blank-reuse', live.session.snapshotEvents()) === true) return undefined
     this.assertPresetApplicable(live.id, request.agentPreset)
     const current = this.presetForSession(live.session)
     const presets = this.ctx.get('agentPresets')
@@ -423,10 +425,13 @@ export class ApiSessionAgentController {
     return live
   }
 
-  /** Setup that re-checks blankness under the acquired writer, then records a preset change before publication. */
+  /** Re-check reuse eligibility under the acquired writer before composing the Agent. */
   private reuseSetup(composition: ApiSessionComposition): AgentSetup {
     return async (agentCtx, agent) => {
-      if (!this.isBlank(agent.session)) throw new ApiSessionStartedSinceObserved()
+      if (!this.isBlank(agent.session)
+        || this.ctx.bail('session/skip-blank-reuse', agent.session.snapshotEvents()) === true) {
+        throw new ApiSessionNoLongerReusable()
+      }
       const commit = await composition.setup(agentCtx, agent)
       const target = composition.agentPreset
       if (target !== undefined && this.presetForSession(agent.session) !== target) {

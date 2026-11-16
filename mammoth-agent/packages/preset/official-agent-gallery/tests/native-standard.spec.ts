@@ -91,6 +91,30 @@ async function nativeFixture(script:ConstructorParameters<typeof MockAdapter>[0]
 }
 
 describe('t174 actual native standard execution',()=>{
+ it('excludes only expired Expert previews from blank Session reuse', async () => {
+  const { ctx } = await nativeFixture([])
+  const session = ctx.sessions.create(SessionId('preview-draft'))
+  const binding = {
+    agentId: 'preview-expert', versionId: 'published-version', kind: 'GENERAL',
+    name: 'Preview Expert', systemPrompt: '', toolScope: [],
+  } as const
+  session.append('official-agent/bound', binding)
+  expect(ctx.bail('session/skip-blank-reuse', session.snapshotEvents())).toBeUndefined()
+
+  const preview = { id: 'preview', actorUserId: 'creator', usagePurpose: 'PLATFORM_OPERATIONAL_PREVIEW' } as const
+  session.append('official-agent/bound', {
+    ...binding, versionId: null,
+    preview: { ...preview, expiresAt: new Date(Date.now() + 60_000).toISOString() },
+  })
+  expect(ctx.bail('session/skip-blank-reuse', session.snapshotEvents())).toBeUndefined()
+
+  session.append('official-agent/bound', {
+    ...binding, versionId: null,
+    preview: { ...preview, expiresAt: new Date(Date.now() - 60_000).toISOString() },
+  })
+  expect(ctx.bail('session/skip-blank-reuse', session.snapshotEvents())).toBe(true)
+ })
+
  it.skipIf(!process.env.MMP_REAL_SKILL_HANDOFF)('loads the user-supplied poster Skill with every file and runs its own Python helpers without external effects',async()=>{
   const fixturePath=process.env.MMP_REAL_SKILL_HANDOFF!
   const packet=z.object({content:z.record(z.string(),z.unknown()),data:z.record(z.string(),z.string()),report:z.object({archiveSha256:z.string(),archiveBytes:z.number(),packageDigest:z.string()}).passthrough()}).parse(JSON.parse(await readFile(fixturePath,'utf8')))
