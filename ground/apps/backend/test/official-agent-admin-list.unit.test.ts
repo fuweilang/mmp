@@ -11,6 +11,7 @@ type AgentSeed = {
   name: string;
   summary: string;
   status: OfficialAgentStatus;
+  kind?: 'GENERAL' | 'KNOWLEDGE';
   createdAt: Date;
 };
 
@@ -23,6 +24,7 @@ function createListService(agents: AgentSeed[]) {
       findMany: async (args: {
         where?: {
           status?: OfficialAgentStatus;
+          kind?: 'GENERAL' | 'KNOWLEDGE';
           OR?: Array<Record<string, { contains: string; mode?: string }>>;
         };
         orderBy?: Array<Record<string, 'asc' | 'desc'>> | Record<string, 'asc' | 'desc'>;
@@ -30,6 +32,8 @@ function createListService(agents: AgentSeed[]) {
         let rows = [...agents];
         const status = args.where?.status;
         if (status) rows = rows.filter((row) => row.status === status);
+        const kind = args.where?.kind;
+        if (kind) rows = rows.filter((row) => (row.kind ?? 'GENERAL') === kind);
         const or = args.where?.OR;
         if (or?.length) {
           const keyword = Object.values(or[0])[0]?.contains?.toLowerCase() ?? '';
@@ -59,7 +63,7 @@ function createListService(agents: AgentSeed[]) {
         });
         return rows.map((row) => ({
           ...row,
-          kind: 'GENERAL',
+          kind: row.kind ?? 'GENERAL',
           category: null,
           capabilities: [],
           openingQuestions: [],
@@ -76,10 +80,13 @@ function createListService(agents: AgentSeed[]) {
       },
       groupBy: async (args: {
         where?: {
+          kind?: 'GENERAL' | 'KNOWLEDGE';
           OR?: Array<Record<string, { contains: string; mode?: string }>>;
         };
       }) => {
         let rows = [...agents];
+        const kind = args.where?.kind;
+        if (kind) rows = rows.filter((row) => (row.kind ?? 'GENERAL') === kind);
         const or = args.where?.OR;
         if (or?.length) {
           const keyword = Object.values(or[0])[0]?.contains?.toLowerCase() ?? '';
@@ -188,6 +195,17 @@ describe('admin official agent list ordering and filters', () => {
     const byId = await service.list(actor, { keyword: 'expert-01526387' });
     assert.equal(byId.items.length, 1);
     assert.equal(byId.items[0]?.id, 'expert-01526387-d75');
+  });
+
+  it('filters by kind and keeps status counts inside that kind', async () => {
+    const service = createListService(seed.map((row) => row.id === 'agent-old' ? { ...row, kind: 'KNOWLEDGE' as const } : row));
+    const knowledge = await service.list(actor, { kind: 'KNOWLEDGE' });
+    assert.deepEqual(knowledge.items.map((row) => row.id), ['agent-old']);
+    assert.equal(knowledge.items[0]?.kind, 'KNOWLEDGE');
+    assert.deepEqual(knowledge.statusCounts, { all: 1, DRAFT: 0, PUBLISHED: 1, OFFLINE: 0 });
+    const drafts = await service.list(actor, { kind: 'GENERAL', status: 'DRAFT' });
+    assert.deepEqual(drafts.items.map((row) => row.id), ['expert-01526387-d75', 'agent-same-time-b']);
+    assert.deepEqual(drafts.statusCounts, { all: 3, DRAFT: 2, PUBLISHED: 0, OFFLINE: 1 });
   });
 
   it('keeps non-draft newest agents first under createdAt desc', async () => {

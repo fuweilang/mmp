@@ -7,7 +7,7 @@
       </div>
       <div class="header-actions">
         <el-button @click="openAuditDrawer">运营审计</el-button>
-        <el-button v-if="canAuthor" type="primary" @click="openCreate">新建专家</el-button>
+        <el-button v-if="canAuthor" type="primary" @click="goCreate">新建专家</el-button>
       </div>
     </div>
 
@@ -15,6 +15,7 @@
       ref="listRef"
       v-model:keyword="keyword"
       v-model:status-filter="statusFilter"
+      v-model:kind-filter="kindFilter"
       :rows="pagedRows"
       :total="rows.length"
       :loading="loading"
@@ -32,14 +33,14 @@
       @search-input="onSearchInput"
       @search="onSearchNow"
       @reset="onReset"
-      @create="openCreate"
+      @create="goCreate"
       @bulk-offline="onBulkOffline"
       @viewer="openViewer"
-      @edit="openEdit"
+      @edit="goEdit"
       @publish-records="openPublishRecords"
       @publish="onPublish"
       @offline="offline"
-      @delete="remove"
+      @delete="onDelete"
       @selection-change="onSelectionChange"
       @page-change="onPageChange"
       @page-size-change="onPageSizeChange"
@@ -48,9 +49,10 @@
     <AgentEditorDrawer
       v-if="canAuthor"
       ref="editorRef"
-      v-model="editorOpen"
+      :model-value="editorOpen"
       :agent="editorAgent"
-      @saved="onEditorSaved"
+      @update:model-value="onEditorVisibility"
+      @saved="onSaved"
       @created="onEditorCreated"
       @published="onEditorPublished"
     />
@@ -83,8 +85,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, provide, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, nextTick, onMounted, provide, ref, watch } from 'vue';
+import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { createExpertEditorResources, expertEditorResourcesKey } from '../../components/admin/expert-editor-resources';
 const editorResources = createExpertEditorResources();
@@ -102,6 +104,7 @@ import { canAuthorExperts } from '../../utils/knowledge-admin';
 import { useOfficialAgents } from '../../composables/useOfficialAgents';
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
 const canAuthor = computed(() => canAuthorExperts(auth.session));
 
@@ -110,6 +113,7 @@ const {
   statusCounts,
   keyword,
   statusFilter,
+  kindFilter,
   highlightedId,
   hasFilters,
   loading,
@@ -156,23 +160,114 @@ const {
 
 const listRef = ref<InstanceType<typeof AdminOfficialAgentsList> | null>(null);
 const editorRef = ref<InstanceType<typeof AgentEditorDrawer> | null>(null);
+let bypassLeaveGuard = false;
+
+function editorTarget(): { kind: 'new' } | { kind: 'edit'; id: string } | null {
+  if (route.name === 'admin-official-agents-new') return { kind: 'new' };
+  if (route.name === 'admin-official-agents-edit' && typeof route.params.id === 'string' && route.params.id) {
+    return { kind: 'edit', id: route.params.id };
+  }
+  return null;
+}
+
+function goCreate() {
+  void router.push({ name: 'admin-official-agents-new' });
+}
+
+function goEdit(row: OfficialAgentRow) {
+  openEdit(row);
+  void router.push({ name: 'admin-official-agents-edit', params: { id: row.id } });
+}
+
+async function leaveToList() {
+  const back = router.options.history.state.back;
+  const backPath = typeof back === 'string' ? back.split('?')[0].replace(/\/$/, '') : '';
+  if (backPath === '/admin/official-agents') await router.back();
+  else await router.replace({ name: 'admin-official-agents' });
+}
+
+function onEditorVisibility(open: boolean) {
+  editorOpen.value = open;
+  if (open || !editorTarget()) return;
+  bypassLeaveGuard = true;
+  void leaveToList().finally(() => { bypassLeaveGuard = false; });
+}
+
+async function syncEditorRoute() {
+  const target = editorTarget();
+  if (!target) {
+    editorOpen.value = false;
+    return;
+  }
+  if (!canAuthor.value) {
+    await router.replace({ name: 'admin-official-agents' });
+    return;
+  }
+  if (target.kind === 'new') {
+    openCreate();
+    return;
+  }
+  const cached = rows.value.find((item) => item.id === target.id) ?? (editorAgent.value?.id === target.id ? editorAgent.value : null);
+  if (cached) {
+    const switching = editorOpen.value && editorAgent.value?.id !== cached.id;
+    openEdit(cached);
+    if (switching) editorRef.value?.reload?.();
+    return;
+  }
+  try {
+    const detail = await adminOfficialAgentApi.detail(target.id);
+    if (editorTarget()?.kind !== 'edit' || editorTarget()?.id !== target.id) return;
+    openEdit(detail);
+  } catch (error) {
+    if (editorTarget()?.id !== target.id) return;
+    ElMessage.error(error instanceof Error ? error.message : '找不到这个专家');
+    await router.replace({ name: 'admin-official-agents' });
+  }
+}
+
+onBeforeRouteUpdate(async (to, from) => {
+  const fromEdit = from.name === 'admin-official-agents-new' || from.name === 'admin-official-agents-edit';
+  const same = from.name === to.name && from.params.id === to.params.id;
+  if (!fromEdit || same || bypassLeaveGuard) return true;
+  return await editorRef.value?.confirmDiscard?.() ?? true;
+});
 
 function onSelectionChange(selected: OfficialAgentRow[]) {
   selectedRows.value = selected;
 }
 
+function onSaved(row: OfficialAgentRow) {
+  onEditorSaved(row);
+  editorAgent.value = row;
+  if (!rows.value.some((item) => item.id === row.id)) rows.value = [row, ...rows.value];
+}
+
 function onEditorCreated(id: string) {
   focusCreatedAgent(id);
   void load();
+  if (route.name !== 'admin-official-agents-new') return;
+  bypassLeaveGuard = true;
+  void router.replace({ name: 'admin-official-agents-edit', params: { id } }).finally(() => { bypassLeaveGuard = false; });
 }
 
 async function onPublish(row: OfficialAgentRow) {
   const result = await publish(row);
   if (result.status !== 'missing') return;
   ElMessage.error(formatPublishMissingToast(result.missing));
-  openEdit(row);
+  goEdit(row);
   await nextTick();
   editorRef.value?.focusMissingField(result.missing);
+}
+
+async function onDelete(row: OfficialAgentRow) {
+  const deleted = await remove(row);
+  if (!deleted || route.name !== 'admin-official-agents-edit' || route.params.id !== row.id) return;
+  bypassLeaveGuard = true;
+  try {
+    await router.replace({ name: 'admin-official-agents' });
+  } finally {
+    bypassLeaveGuard = false;
+  }
 }
 
 async function onBulkOffline() {
@@ -233,7 +328,8 @@ function goFullAudit() {
   void router.push({ path: '/admin/audit', query: { actionPrefix: 'admin_' } });
 }
 
-onMounted(() => { void editorResources.load().catch(() => {}); void load(); });
+watch(() => [route.name, route.params.id], () => { void syncEditorRoute(); });
+onMounted(() => { void editorResources.load().catch(() => {}); void load().finally(() => { void syncEditorRoute(); }); });
 </script>
 
 <style scoped>

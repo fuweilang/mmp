@@ -69,21 +69,24 @@ export class AdminOfficialAgentsService {
   async list(actor: User, query: ListOfficialAgentsDto) {
     await this.support.adminScope(actor);
     const keyword = query.keyword?.trim();
-    const keywordWhere: Prisma.OfficialAgentWhereInput = keyword
-      ? {
-          OR: [
-            { id: { contains: keyword, mode: 'insensitive' } },
-            { name: { contains: keyword, mode: 'insensitive' } },
-            { key: { contains: keyword, mode: 'insensitive' } },
-            { summary: { contains: keyword, mode: 'insensitive' } },
-          ],
-        }
-      : {};
+    const scopeWhere: Prisma.OfficialAgentWhereInput = {
+      ...(query.kind ? { kind: query.kind } : {}),
+      ...(keyword
+        ? {
+            OR: [
+              { id: { contains: keyword, mode: 'insensitive' } },
+              { name: { contains: keyword, mode: 'insensitive' } },
+              { key: { contains: keyword, mode: 'insensitive' } },
+              { summary: { contains: keyword, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
     const [rows, grouped] = await Promise.all([
       this.prisma.officialAgent.findMany({
         where: {
           ...(query.status ? { status: query.status } : {}),
-          ...keywordWhere,
+          ...scopeWhere,
         },
         include: officialAgentInclude,
         // Newest first so freshly created drafts surface on page 1; id break ties.
@@ -91,7 +94,7 @@ export class AdminOfficialAgentsService {
       }),
       this.prisma.officialAgent.groupBy({
         by: ['status'],
-        where: keywordWhere,
+        where: scopeWhere,
         _count: { _all: true },
       }),
     ]);

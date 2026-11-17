@@ -36,12 +36,6 @@
       </div>
 
       <el-alert
-        class="viewer-source-tip"
-        type="info"
-        :closable="false"
-        title="只读查看当前已保存草稿内容（不是线上版本）；本弹窗不会改动任何配置。"
-      />
-      <el-alert
         v-if="agent.hasUnpublishedChanges"
         class="viewer-source-tip"
         type="warning"

@@ -55,6 +55,11 @@ const router = createRouter({
           path: 'official-agents',
           meta: { title: '专家配置' },
           component: () => import('../views/admin/AdminOfficialAgents.vue'),
+          children: [
+            { path: '', name: 'admin-official-agents' },
+            { path: 'new', name: 'admin-official-agents-new', meta: { title: '新建专家' } },
+            { path: ':id', name: 'admin-official-agents-edit', meta: { title: '编辑专家' } },
+          ],
         },
         {
           path: 'official-skills',

@@ -248,6 +248,7 @@ describe('admin 列表公共层 · 页面挂载', () => {
       statusCounts: { all: 12, DRAFT: 12, PUBLISHED: 0, OFFLINE: 0 },
       keyword: '',
       statusFilter: 'ALL',
+      kindFilter: '',
       hasFilters: false,
       currentPage: 1,
       pageSize: 10,
@@ -264,6 +265,7 @@ describe('admin 列表公共层 · 页面挂载', () => {
     mount(() => h(AdminOfficialAgentsList, baseProps));
     await flush();
     expect(rowsOf('.agent-table')).toHaveLength(3);
+    expect(document.body.textContent).toContain('全部类型');
 
     document.querySelector<HTMLButtonElement>('.pagination-row .btn-next')!.click();
     await flush();
