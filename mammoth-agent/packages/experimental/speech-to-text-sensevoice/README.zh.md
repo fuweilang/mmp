@@ -27,7 +27,7 @@ kind: "package-reference"
 
 [Bundle](../voice-input-bundle/README.zh.md) 在 MMP 主目录下提供绝对 `dataRoot`。准备会下载固定修订的模型文件，校验大小与 SHA-256，再加载模型。`precision` 默认为 `int8`，`fp32` 选择较大的参考权重。`modelDirectory` 提供包含所选 ONNX 文件和 `tokens.txt` 的已有绝对目录，`vadModelPath` 选择已有 Silero ONNX 文件。取消或失败后复用已完成并通过校验的文件。
 
-下载每个缺失文件前，Host 会比较兼容 Hugging Face 的 `modelOrigins`，默认为 `https://huggingface.co` 和 [HF-Mirror](https://hf-mirror.com)。并发 HEAD 请求沿用固定文件路径，通过 Host 的 fetch 代理跟随重定向，先返回 2xx 的源优先下载。`modelProbeTimeoutMs` 默认为 3000 毫秒；所有探测均失败时按配置顺序下载。网络、HTTP、证书或完整性校验失败会尝试其他源；取消、存储错误和未分类错误会停止准备。所有源都必须符合固定修订、大小和 SHA-256 校验值。响应延迟不代表下载吞吐量，完整下载仍受准备阶段的总超时约束。
+下载每个缺失文件前，Host 会比较兼容 Hugging Face 的 `modelOrigins`，默认为 `https://www.mmai.vip`、[HF-Mirror](https://hf-mirror.com) 和 `https://huggingface.co`。并发 HEAD 请求沿用固定文件路径，通过 Host 的 fetch 代理跟随重定向，先返回 2xx 的源优先下载。`modelProbeTimeoutMs` 默认为 3000 毫秒；所有探测均失败时按配置顺序下载。网络、HTTP、证书或完整性校验失败会尝试其他源；取消、存储错误和未分类错误会停止准备。所有源都必须符合固定修订、大小和 SHA-256 校验值。响应延迟不代表下载吞吐量，完整下载仍受准备阶段的总超时约束。
 
 显式 `modelOrigin` 仅使用指定源，不探测也不回退到公共源。只有一个地址的 `modelOrigins` 同样跳过探测。已校验的缓存和显式离线路径无需请求下载源。语音 UI 在准备或重试前提供已公布的下载源。手动选择仅覆盖本次任务，只使用指定源而不回退，且不能替换进行中任务的源。Host 拒绝配置之外的源；完全离线部署不公布下载源。
 
