@@ -90,7 +90,7 @@ it('renders embedded expert messages and citations while the ordinary session li
     stream.push({ type: 'baseline', value: { items: [{ workspaceId, path: '/tmp', title: 'Preview workspace', sessionIds: [sessionId], createdAt: '2026-11-10T00:00:00Z', updatedAt: '2026-11-10T00:00:00Z' }], archivedSessionIds: [], pinnedSessionIds: [] } })
   })
   mock.stream('session/follow', (_request, stream) => {
-    stream.push({ type: 'snapshot', header: { version: SESSION_FORMAT_VERSION, id: sessionId, createdAt: 1, isSeeded: false }, cursor: 6, records: [
+    stream.push({ type: 'snapshot', header: { version: SESSION_FORMAT_VERSION, id: sessionId, createdAt: 1, isSeeded: false }, cursor: 9, records: [
       { type: 'event', event: { type: 'turn/start', seq: 0, time: 1, data: { turn: 1 } } },
       { type: 'event', event: { type: 'step/start', seq: 1, time: 2, data: { turn: 1, step: 1 } } },
       { type: 'event', event: { type: 'user/message', seq: 2, time: 3, surfaceOp: 'append', data: { id: 'compact-user', role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: '仅此预览会话的问题' }] } } },
@@ -98,7 +98,10 @@ it('renders embedded expert messages and citations while the ordinary session li
       { type: 'event', event: { type: 'step/start', seq: 4, time: 5, data: { turn: 1, step: 2 } } },
       { type: 'event', event: { type: 'assistant/message', seq: 5, time: 6, surfaceOp: 'append', data: { turn: 1, step: 2, message: { id: 'empty-tool-assistant', role: 'assistant', source: { kind: 'model', provider: 'test', model: 'test' }, content: [] }, stream: [] } } },
       { type: 'event', event: { type: 'turn/end', seq: 6, time: 7, data: { turn: 1, reason: { kind: 'error', error: { code: 'EXPERT_KNOWLEDGE_NO_EVIDENCE', message: '已启用必需检索，但此次没有可用的知识证据。' } } } } },
-    ], hasMore: false, projections: { asOfSeq: 6, values: { officialExpertKnowledge: [{ recordId: 'old-record', turn: 1, messageId: 'm1', label: 'T1L1S1', title: '知识文档完整标题', locator: '第 2 页' }], officialGalleryRuntime: { phase: 'completed', attemptId: 'attempt-1', turn: 1, generation: 0, loaded: true, artifactCount: 1, lastArtifact: { id: 'artifact-1', name: '姓名手机号.xlsx' } } } as SessionProjectionValues }, assistantStream: { revision: 0 } } satisfies SessionFollowFrame)
+      { type: 'event', event: { type: 'turn/start', seq: 7, time: 9, data: { turn: 2 } } },
+      { type: 'event', event: { type: 'step/start', seq: 8, time: 10, data: { turn: 2, step: 1 } } },
+      { type: 'event', event: { type: 'user/message', seq: 9, time: Date.now() - 4000, surfaceOp: 'append', data: { id: 'compact-user-2', role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: '第二轮问题' }] } } },
+    ], hasMore: false, projections: { asOfSeq: 9, values: { officialExpertKnowledge: [{ recordId: 'old-record', turn: 1, messageId: 'm1', label: 'T1L1S1', title: '知识文档完整标题', locator: '第 2 页' }], officialGalleryRuntime: { phase: 'completed', attemptId: 'attempt-1', turn: 1, generation: 0, loaded: true, artifactCount: 1, lastArtifact: { id: 'artifact-1', name: '姓名手机号.xlsx' } } } as SessionProjectionValues }, assistantStream: { revision: 0 } } satisfies SessionFollowFrame)
   })
   const client = await start()
   await waitFor(() => expect(mock.remote.officialAgentGallery.createPreview).toHaveBeenCalledTimes(1))
@@ -121,6 +124,16 @@ it('renders embedded expert messages and citations while the ordinary session li
   mock.remote.officialAgentGallery.downloadArtifact.mockResolvedValue(ok({ name: '姓名手机号.xlsx', data: Buffer.from('hello').toString('base64'), sha256: createHash('sha256').update('hello').digest('hex') }))
   fireEvent.click(artifactBar.querySelector('button')!)
   await waitFor(() => expect(mock.remote.officialAgentGallery.downloadArtifact).toHaveBeenCalledWith(sessionId, 'artifact-1'))
+  // 首字之前的等待行：与主页一致的“深度思考中，用时 N 秒 ···”实时计时。
+  mock.streams.push('$events', { type: 'emit', event: 'api-session/status', args: [sessionId, true] })
+  await mock.streams.drained('$events')
+  await waitFor(() => expect(compact.querySelector('[data-role="assistant-waiting"]')?.textContent).toContain('深度思考中'))
+  const waitingRow = compact.querySelector('[data-role="assistant-waiting"]')!
+  expect(waitingRow.textContent).toMatch(/用时\s*\d+\s*秒/)
+  expect(waitingRow.querySelector('svg')).toBeTruthy()
+  mock.streams.push('$events', { type: 'emit', event: 'api-session/status', args: [sessionId, false] })
+  await mock.streams.drained('$events')
+
   expect(document.querySelector('[data-sidebar-drawer]')).toBeNull()
   expect(document.querySelector('[data-shell-leading]')).toBeNull()
   expect(document.querySelector('[data-shell-bottom]')).toBeNull()

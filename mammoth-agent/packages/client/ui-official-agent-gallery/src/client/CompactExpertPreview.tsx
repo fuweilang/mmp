@@ -3,7 +3,9 @@ import type { HostObservable, InjectFace, PropsLocale, PropsRenderSlots, PropsRu
 import type { ExpertKnowledgeSource } from '@mammoth-ai/mmp-official-agent-gallery/types'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import type {} from '@mammoth-ai/mmp-client-ui-chat/client'
-import { IconUsersOutlineRegular, MarkdownText } from '@mammoth-ai/mmp-client-ui-primitives'
+import { formatRunDuration, LIVE_RUN_CLOCK_INTERVAL_MS } from '@mammoth-ai/mmp-client-ui-chat/src/client/chat/message-chrome.ts'
+import { RunningWhaleTail } from '@mammoth-ai/mmp-client-ui-chat/src/client/chat/RunningWhaleTail.tsx'
+import { IconUsersOutlineRegular, MarkdownText, TextShimmer } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { PreviewProfile } from './expert-preview-bridge.ts'
 import { ExpertPreviewEntry, type PreviewTarget } from './ExpertPreviewEntry.tsx'
 import { KnowledgeSources } from './KnowledgeSources.tsx'
@@ -147,7 +149,7 @@ export function CompactExpertMessages({
       <div data-expert-preview-answer="">{blocks(chat.partial.blocks, true)}</div>
       {citations(sources?.filter(source => source.turn === chat.partial?.turn))}
     </article> : null}
-    {waiting ? <article className={css.assistant} data-role="assistant-waiting" aria-busy="true">{byline()}<span className={css.waiting} aria-hidden="true"><i/><i/><i/></span></article> : null}
+    {waiting ? <article className={css.assistant} data-role="assistant-waiting" aria-busy="true">{byline()}<ThinkingLine startTime={latestUser >= 0 ? chat.nodes[latestUser]!.time : undefined} chatText={chatText} /></article> : null}
     {error ? <p role="alert">{failureText(error.error.message, error.error.code, chatText)} <code>({error.error.code})</code></p> : null}
     {artifact ? <p className={css.artifactBar} data-expert-preview-artifact="">
       <button type="button" className={css.artifactButton} onClick={() => void saveArtifact()} disabled={artifactBusy || !download}>{artifactBusy ? t('artifactBusy') : t('artifactDownload', { name: artifact.name })}</button>
@@ -159,4 +161,22 @@ export function CompactExpertMessages({
 function PreviewByline({ name,avatarUrl }: PreviewProfile) {
   const [failedUrl,setFailedUrl]=useState<string|null>(null)
   return <header className={css.byline} data-expert-preview-byline=""><span className={css.avatar} aria-hidden="true">{avatarUrl && failedUrl!==avatarUrl ? <img src={avatarUrl} alt="" onError={()=>{setFailedUrl(avatarUrl)}} /> : <IconUsersOutlineRegular size={18}/>}</span><strong>{name}</strong></header>
+}
+
+/** Home-parity pre-first-token indicator: whale tail + live “深度思考中，用时 N 秒 ···” clock. */
+function ThinkingLine({ startTime, chatText }: { startTime: number | undefined; chatText: MessagesProps['chatText'] }) {
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    if (startTime === undefined) return
+    setNow(Date.now())
+    const timer = setInterval(() => { setNow(Date.now()) }, LIVE_RUN_CLOCK_INTERVAL_MS)
+    return () => { clearInterval(timer) }
+  }, [startTime])
+  const label = startTime === undefined ? chatText('chat.deepDiving') : chatText('chat.deepDivingFor', {
+    duration: formatRunDuration(Math.max(1000, now - startTime), chatText).map(part => part.text).join(''),
+  })
+  return <div className={css.thinking} role="status" aria-live="polite" aria-atomic="true">
+    <RunningWhaleTail />
+    <TextShimmer active className={css.thinkingText}>{label}</TextShimmer>
+  </div>
 }

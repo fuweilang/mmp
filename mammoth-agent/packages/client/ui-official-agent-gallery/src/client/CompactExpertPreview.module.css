@@ -17,3 +17,5 @@
 .artifactButton:hover:not(:disabled) { background:var(--dsw-bg-secondary); }
 .artifactButton:disabled { cursor:default; opacity:.55; }
 .artifactError { color:var(--dsw-text-secondary); font-size:12px; }
+.thinking { display:flex; align-items:center; gap:8px; margin:2px 0 6px; color:var(--dsw-text-secondary); font-size:13px; }
+.thinkingText { white-space:nowrap; }
