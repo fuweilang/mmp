@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-reference",
   "description": "Unified Web @file and @session reference source",
-  "version": "0.3.5",
+  "version": "0.3.8",
   "publishConfig": {
     "access": "public"
   },

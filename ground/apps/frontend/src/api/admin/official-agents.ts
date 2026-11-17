@@ -192,10 +192,11 @@ export type OfficialAgentBulkRevokeResult = {
 export const adminOfficialAgentApi = {
   preview: (id:string) => adminHttp<{agentId:string;previewId:string;expiresAt:string;launch:{path:string}}>(`/official-agents/${id}/preview`,{method:'POST'}),
   rollback: (id:string,versionId:string) => adminHttp<OfficialAgentRow>(`/official-agents/${id}/rollback/${versionId}`,{method:'POST'}),
-  list: (params: { keyword?: string; status?: OfficialAgentStatus | '' } = {}) => {
+  list: (params: { keyword?: string; status?: OfficialAgentStatus | ''; kind?: OfficialAgentKind | '' } = {}) => {
     const query = new URLSearchParams();
     if (params.keyword) query.set('keyword', params.keyword);
     if (params.status) query.set('status', params.status);
+    if (params.kind) query.set('kind', params.kind);
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return adminHttp<OfficialAgentListResult>(`/official-agents${suffix}`);
   },

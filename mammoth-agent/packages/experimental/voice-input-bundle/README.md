@@ -1,5 +1,5 @@
 ---
-description: "Speech input for the web profile; the host downloads SenseVoice on first use."
+description: "Speech input for the web and desktop profiles; the host downloads SenseVoice on first use."
 kind: "package-bundle"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This bundle composes a speech Service Definition, local SenseVoice provider, authenticated Remote and browser microphone control. The web profile selects it. Other shipped profiles leave it off.
+This bundle composes a speech Service Definition, local SenseVoice provider, authenticated Remote and browser microphone control. The web profile selects it, and a stock desktop profile selects the same list. Other shipped profiles leave it off.
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ This bundle composes a speech Service Definition, local SenseVoice provider, aut
 <a id="use-this-package"></a>
 ## Use this package
 
-On a stock web profile the microphone is already between the model selector and Send. The bundle sets `prepareOnStart`, so a missing local model starts downloading when the bundle activates. A click while that work is unfinished still shows its progress. Complete caches stay on standby until the first recording wakes the worker. If preparation has not started, the dialog offers Download and prepare when the Plugins page is hidden, and Go to setup when plugin navigation is present. Go to setup opens the bundle details. Download and prepare shows disk, memory, and time estimates; the collapsed current-step summary expands to the complete step list. Downloads report actual bytes; verification and loading show elapsed time. Once ready, click the microphone between the model selector and Send, then Stop to insert a transcript. Bundle details store the recognizer and language through the Settings service. Disabling the bundle cancels active work; cached assets remain on disk.
+On a stock web or desktop profile the microphone is already between the model selector and Send. The bundle sets `prepareOnStart`, so a missing local model starts downloading when the bundle activates. While that work is unfinished, the microphone shows one status line and does not open a dialog. Complete caches stay on standby until the first recording wakes the worker. If preparation has not started, clicking the microphone starts it when the Plugins page is hidden, and the activation dialog still offers Go to setup when plugin navigation is present. Go to setup opens the bundle details. Download and prepare shows disk, memory, and time estimates; the collapsed current-step summary expands to the complete step list. Downloads report actual bytes; verification and loading show elapsed time. Once ready, click the microphone between the model selector and Send, then Stop to insert a transcript. Bundle details store the recognizer and language through the Settings service. Disabling the bundle cancels active work; cached assets remain on disk.
 
 -----
 
@@ -35,7 +35,7 @@ On a stock web profile the microphone is already between the model selector and 
 <details>
 <summary>Maintainer details — click to expand</summary>
 
-The static `cordis.patch.yml` adds the four voice rows, selects `sensevoice-local` as the default recognizer, supplies the provider cache directory with `mmpHomePath`, and sets `prepareOnStart` so a missing cache downloads when the bundle activates. The web template selects the bundle; other shipped templates do not. The browser contribution owns its generated Remote mount; stable API Remotes do not import experimental code.
+The static `cordis.patch.yml` adds the four voice rows, selects `sensevoice-local` as the default recognizer, supplies the provider cache directory with `mmpHomePath`, and sets `prepareOnStart` so a missing cache downloads when the bundle activates. The web template selects the bundle; other shipped templates do not. Desktop copies that list and records `desktop-voice-input` when its bundle list is exactly the older pair or already matches the template. The browser contribution owns its generated Remote mount; stable API Remotes do not import experimental code.
 
 </details>
 

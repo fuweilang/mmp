@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-tool-cordis",
   "description": "Read-only runtime API inspection for Harness plugin development",
-  "version": "0.3.5",
+  "version": "0.3.8",
   "publishConfig": {
     "access": "public"
   },

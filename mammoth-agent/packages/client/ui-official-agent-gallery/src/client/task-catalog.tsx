@@ -65,7 +65,7 @@ export function installTaskCatalog(ctx:Context):void {
    return result.value.items.flatMap(card=>{
     const item=fromCard(card)
     if(!item.versionId)return []
-    return [{name:item.id,label:item.name,description:item.summary,section:t('selectorExpertSection'),value:JSON.stringify(item)}]
+    return [{name:item.name,section:t('selectorExpertSection'),value:JSON.stringify(item)}]
    })
   },
   onPick(pick:{action?:string;candidate:{value?:unknown};session:{sessionId:SessionId}}){

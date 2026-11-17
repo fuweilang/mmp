@@ -170,8 +170,8 @@ it.each(['http', 'network', 'integrity'] as const)('falls back after a %s failur
   const paths = await prepareRuntime(new Context(), Config({ dataRoot: root }), new AbortController().signal)
   expect(await readFile(paths.model)).toEqual(bytes)
   const downloads = fetcher.mock.calls.filter(([, init]) => init?.method !== 'HEAD').map(([url]) => new URL(url).origin)
-  expect(downloads).toEqual(['https://hf-mirror.com', 'https://huggingface.co',
-    'https://hf-mirror.com', 'https://huggingface.co', 'https://hf-mirror.com', 'https://huggingface.co'])
+  expect(downloads).toEqual(['https://hf-mirror.com', 'https://www.mmai.vip',
+    'https://hf-mirror.com', 'https://www.mmai.vip', 'https://hf-mirror.com', 'https://www.mmai.vip'])
 })
 
 it.each(['EACCES', 'unclassified'])('does not switch sources for a local publication failure (%s)', async (code) => {
@@ -197,7 +197,7 @@ it('reports the final source when every download fails', async () => {
   const { root, fetcher } = await fixture()
   fetcher.mockResolvedValue(new Response(null, { status: 503 }))
   await expect(prepareRuntime(new Context(), Config({ dataRoot: root }), new AbortController().signal)).rejects.toMatchObject({
-    download: { source: 'https://hf-mirror.com', reason: 'http', status: 503 },
+    download: { source: 'https://huggingface.co', reason: 'http', status: 503 },
   })
-  expect(fetcher.mock.calls.filter(([, init]) => init?.method !== 'HEAD')).toHaveLength(2)
+  expect(fetcher.mock.calls.filter(([, init]) => init?.method !== 'HEAD')).toHaveLength(3)
 })

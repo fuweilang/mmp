@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-plugin-package-inventory-deepseek",
   "description": "Active Loader-backed plugin package inventory for official DeepSeek LLM API requests",
-  "version": "0.3.5",
+  "version": "0.3.8",
   "publishConfig": {
     "access": "public"
   },

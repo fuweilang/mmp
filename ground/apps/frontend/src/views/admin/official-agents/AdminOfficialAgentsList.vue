@@ -12,6 +12,17 @@
         @clear="emit('search')"
         @keyup.enter="emit('search')"
       />
+      <el-select
+        :model-value="kindFilter"
+        class="kind-filter"
+        clearable
+        placeholder="全部类型"
+        aria-label="类型"
+        @update:model-value="onKindChange"
+      >
+        <el-option label="通用型" value="GENERAL" />
+        <el-option label="资料型" value="KNOWLEDGE" />
+      </el-select>
       <el-button type="primary" @click="emit('search')">搜索</el-button>
       <el-button @click="emit('reset')">重置</el-button>
       <el-button
@@ -158,7 +169,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
 import { Search, UserRound } from 'lucide-vue-next';
-import type { OfficialAgentRow, OfficialAgentStatus, OfficialAgentStatusCounts } from '../../../api/admin';
+import type { OfficialAgentKind, OfficialAgentRow, OfficialAgentStatus, OfficialAgentStatusCounts } from '../../../api/admin';
 import { formatDate, kindLabel, statusLabel, statusType } from '../../../components/admin/official-agents/agent-display';
 
 const props = defineProps<{
@@ -168,6 +179,7 @@ const props = defineProps<{
   statusCounts: OfficialAgentStatusCounts;
   keyword: string;
   statusFilter: OfficialAgentStatus | 'ALL';
+  kindFilter: OfficialAgentKind | '';
   hasFilters: boolean;
   currentPage: number;
   pageSize: number;
@@ -183,6 +195,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:keyword': [value: string];
   'update:statusFilter': [value: OfficialAgentStatus | 'ALL'];
+  'update:kindFilter': [value: OfficialAgentKind | ''];
   'search-input': [];
   search: [];
   reset: [];
@@ -213,6 +226,11 @@ function isAvatarBroken(row: OfficialAgentRow) {
 
 function onStatusChange(value: OfficialAgentStatus | 'ALL') {
   emit('update:statusFilter', value);
+  emit('search');
+}
+
+function onKindChange(value: OfficialAgentKind | '' | undefined) {
+  emit('update:kindFilter', value || '');
   emit('search');
 }
 
@@ -275,6 +293,10 @@ defineExpose({
 
 .keyword-input {
   width: 260px;
+}
+
+.kind-filter {
+  width: 140px;
 }
 
 .status-tabs {
@@ -390,7 +412,8 @@ defineExpose({
     flex-direction: column;
   }
 
-  .keyword-input {
+  .keyword-input,
+  .kind-filter {
     width: 100%;
   }
 

@@ -2,6 +2,7 @@ import { computed, h, onBeforeUnmount, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   adminOfficialAgentApi,
+  type OfficialAgentKind,
   type OfficialAgentRow,
   type OfficialAgentStatus,
   type OfficialAgentStatusCounts,
@@ -36,10 +37,11 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
   const statusCounts = ref<OfficialAgentStatusCounts>({ all: 0, DRAFT: 0, PUBLISHED: 0, OFFLINE: 0 });
   const keyword = ref('');
   const statusFilter = ref<OfficialAgentStatus | 'ALL'>('ALL');
+  const kindFilter = ref<OfficialAgentKind | ''>('');
   const highlightedId = ref('');
   let highlightTimer = 0;
 
-  const hasFilters = computed(() => Boolean(keyword.value.trim() || statusFilter.value !== 'ALL'));
+  const hasFilters = computed(() => Boolean(keyword.value.trim() || statusFilter.value !== 'ALL' || kindFilter.value));
 
   const table = useAdminTable<OfficialAgentRow>({
     rows: () => rows.value,
@@ -59,6 +61,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
     clearFilters: () => {
       keyword.value = '';
       statusFilter.value = 'ALL';
+      kindFilter.value = '';
     },
   });
   const { loading } = search;
@@ -69,6 +72,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
         const result = await adminOfficialAgentApi.list({
           keyword: keyword.value.trim(),
           status: statusFilter.value === 'ALL' ? '' : statusFilter.value,
+          kind: kindFilter.value,
         });
         if (!isCurrent()) return;
         rows.value = result.items;
@@ -89,6 +93,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
   function focusCreatedAgent(id: string) {
     keyword.value = '';
     statusFilter.value = 'ALL';
+    kindFilter.value = '';
     currentPage.value = 1;
     highlightedId.value = id;
     window.clearTimeout(highlightTimer);
@@ -211,7 +216,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
         },
       );
     } catch {
-      return;
+      return false;
     }
     deletingId.value = row.id;
     try {
@@ -221,11 +226,12 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
         viewerOpen.value = false;
         viewerAgent.value = null;
       }
-      if (editingId.value === row.id) editorOpen.value = false;
       await load();
       ElMessage.success('已删除');
+      return true;
     } catch (error) {
       ElMessage.error(error instanceof Error ? error.message : '删除失败');
+      return false;
     } finally {
       deletingId.value = '';
     }
@@ -338,6 +344,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
     statusCounts,
     keyword,
     statusFilter,
+    kindFilter,
     highlightedId,
     hasFilters,
     loading,

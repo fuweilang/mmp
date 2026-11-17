@@ -82,7 +82,12 @@ async function click(text: string, where: ParentNode = document) {
 function dialog() { return document.querySelector<HTMLElement>('.official-agent-editor')!; }
 async function mount(create = false) {
   root = document.createElement('div'); document.body.append(root);
-  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: { template: '<div />' } }] });
+  const router = createRouter({ history: createMemoryHistory(), routes: [
+    { path: '/', component: { template: '<div />' } },
+    { path: '/admin/official-agents', name: 'admin-official-agents', component: { template: '<div />' } },
+    { path: '/admin/official-agents/new', name: 'admin-official-agents-new', component: { template: '<div />' } },
+    { path: '/admin/official-agents/:id', name: 'admin-official-agents-edit', component: { template: '<div />' } },
+  ] });
   await router.push('/'); await router.isReady();
   app = createApp({ render: () => h(AdminOfficialAgents) }); app.use(ElementPlus); app.use(router); app.mount(root);
   await vi.waitFor(() => expect(root!.textContent).toContain('测试专家'));

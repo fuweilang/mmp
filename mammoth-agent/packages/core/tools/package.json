@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-tools",
   "description": "Tool registry and execution pipeline for the DeepSeek Harness",
-  "version": "0.3.5",
+  "version": "0.3.8",
   "publishConfig": {
     "access": "public"
   },

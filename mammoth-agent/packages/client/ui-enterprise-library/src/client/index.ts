@@ -201,23 +201,26 @@ export function apply(ctx: ClientContext): void {
       return items.flatMap((item) => {
         if (choiceBlock(item).disabled || item.versionId == null) return []
         return [{
-          name: libraryRef({ nodeId: item.nodeId, versionId: item.versionId }),
-          label: item.name,
+          name: item.name,
+          section: t('panel'),
           icon: 'file' as const,
-          value: item.nodeId,
+          value: libraryRef({ nodeId: item.nodeId, versionId: item.versionId }),
         }]
       })
     },
     onPick(pick) {
       if (pick.action === 'drill') return undefined
-      const value = typeof pick.candidate.value === 'string' ? pick.candidate.value : pick.candidate.name
-      const parsed = parseLibraryRef(pick.candidate.name) ?? { nodeId: value, versionId: pick.candidate.name }
+      const raw = typeof pick.candidate.value === 'string' ? pick.candidate.value : undefined
+      const parsed = (raw === undefined ? null : parseLibraryRef(raw))
+        ?? parseLibraryRef(pick.candidate.name)
+        ?? { nodeId: raw ?? pick.candidate.name, versionId: pick.candidate.name }
+      const label = pick.candidate.label ?? pick.candidate.name
       const insert = {
         source: 'library',
         ref: libraryRef({ nodeId: parsed.nodeId, versionId: parsed.versionId }),
-        label: pick.candidate.label ?? pick.candidate.name,
+        label,
         appearance: 'file' as const,
-        clipboardText: pick.candidate.label ?? pick.candidate.name,
+        clipboardText: label,
       }
       const binding = ctx.sessions.binding(pick.session.sessionId)
       if (!binding) return undefined

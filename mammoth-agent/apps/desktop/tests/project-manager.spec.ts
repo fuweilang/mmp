@@ -4,7 +4,8 @@ import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resolveDesktopPaths } from '../src/paths.ts'
 import { DesktopProjectManager } from '../src/project-manager.ts'
-import { readProfilePlugins } from '@mammoth-ai/mmp-app-boot'
+import { readProfileManifest, readProfilePlugins, writeProfileManifest } from '@mammoth-ai/mmp-app-boot'
+import { INSTALLATION_OWNED_PROFILE_TUPLES, PROFILE_TEMPLATES } from '@mammoth-ai/mmp-official-bundles'
 import { runtimeFixture } from './runtime-fixture.ts'
 
 const roots: string[] = []
@@ -40,6 +41,51 @@ function setup(): { root: string; manager: DesktopProjectManager } {
 }
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })
+})
+
+describe('desktop voice input profile', () => {
+  const voice = '@mammoth-ai/mmp-experimental-voice-input-bundle'
+
+  it('adds voice input to stock and customised desktop profiles once, and respects a later removal', async () => {
+    const { manager } = setup()
+    await manager.applyRelease()
+    const dir = manager.paths.profile
+    const created = readProfileManifest('mmp', dir)
+    expect(created.mmp?.profile).toEqual({
+      bundles: [...PROFILE_TEMPLATES.web!.bundles],
+      bundleMigrations: ['desktop-voice-input'],
+    })
+
+    writeProfileManifest(dir, {
+      ...created,
+      mmp: { ...created.mmp, profile: { bundles: [...INSTALLATION_OWNED_PROFILE_TUPLES.web!] } },
+    })
+    await manager.applyRelease()
+    expect(readProfileManifest('mmp', dir).mmp?.profile?.bundles).toContain(voice)
+    expect(readProfileManifest('mmp', dir).mmp?.profile?.bundleMigrations).toEqual(['desktop-voice-input'])
+
+    const removed = readProfileManifest('mmp', dir)
+    writeProfileManifest(dir, {
+      ...removed,
+      mmp: { ...removed.mmp, profile: { ...removed.mmp?.profile, bundles: [...INSTALLATION_OWNED_PROFILE_TUPLES.web!] } },
+    })
+    await manager.applyRelease()
+    expect(readProfileManifest('mmp', dir).mmp?.profile?.bundles).toEqual([...INSTALLATION_OWNED_PROFILE_TUPLES.web!])
+
+    const custom = readProfileManifest('mmp', dir)
+    writeProfileManifest(dir, {
+      ...custom,
+      mmp: {
+        ...custom.mmp,
+        profile: { bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app', 'custom-bundle'] },
+      },
+    })
+    await manager.applyRelease()
+    expect(readProfileManifest('mmp', dir).mmp?.profile).toEqual({
+      bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app', voice, 'custom-bundle'],
+      bundleMigrations: ['desktop-voice-input'],
+    })
+  })
 })
 
 describe('desktop external plugin profile', () => {

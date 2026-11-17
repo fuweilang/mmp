@@ -26,7 +26,15 @@ function fixture() {
       if ('text' in result) shell.insertText(result.text, span)
     }
   }
-  return { shell, pick }
+  const pickNamed = (name: string, ref: string) => {
+    const before = shell.actions.captureInsertion()
+    expect(shell.insertText('@doc', before)).toBe(true)
+    const span = { start: before.start, end: before.start + 4, draftRev: shell.snapshot.draftRev }
+    const result = source!.onPick({ session: { sessionId: 's1' as never }, action: 'pick', via: 'menu', position: 'inline', span,
+      candidate: { name, value: ref, section: 'panel', icon: 'file' } })
+    if (result && typeof result === 'object' && 'insert' in result) shell.insertReference(result.insert, span)
+  }
+  return { shell, pick, pickNamed }
 }
 
 it('deduplicates repeated @ picks and replaces an explicitly selected newer version', () => {
@@ -41,6 +49,15 @@ it('deduplicates repeated @ picks and replaces an explicitly selected newer vers
   pick('n2', 'v3')
   expect(shell.snapshot.occurrences.map(ref => ref.ref)).toEqual(['n1@v2', 'n2@v3'])
   expect(shell.draftSnapshot.text).toContain('请分析')
+})
+
+it('inserts a name-only row from the ref stored in value', () => {
+  const { shell, pickNamed } = fixture()
+  shell.setDraft('请看 ')
+  pickNamed('泡泡玛特商业模式-3页.pdf', 'd0a4c1d0@ce14')
+  expect(shell.snapshot.occurrences.map(ref => ({ ref: ref.ref, label: ref.label }))).toEqual([
+    { ref: 'd0a4c1d0@ce14', label: '泡泡玛特商业模式-3页.pdf' },
+  ])
 })
 
 it('uses the same identity when a picker or panel reference is followed by an @ pick', () => {

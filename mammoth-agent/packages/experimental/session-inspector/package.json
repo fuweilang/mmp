@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-experimental-session-inspector",
   "description": "Experimental virtualized Session log and live Chat group/node inspectors",
-  "version": "0.3.5",
+  "version": "0.3.8",
   "publishConfig": {
     "access": "public"
   },

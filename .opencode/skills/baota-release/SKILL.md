@@ -448,11 +448,11 @@ ssh "$HOST" 'rm -rf /tmp/mmp-web-build /tmp/mmp-web-build.log /tmp/mmp-release; 
 
 ### 流水线 B（客户端三包）的打法
 
-- 三个 target 的产物目录互相隔离（`.desktop-build/targets/<name>/`），但**不要三开**；本机建议只开一个 desktop target 与 `release.sh` 并行。
+- 三个 target 的产物目录互相隔离（`mammoth-agent/apps/desktop/.desktop-build/targets/<name>/`——**注意在 `apps/desktop/` 下，不是 `mammoth-agent/.desktop-build`**），但**不要三开**；本机建议只开一个 desktop target 与 `release.sh` 并行。
 - 打包是 CPU 密集型；本机核心数不多时：**客户端串行打包、中台并行**——出一个包校验一个，传的同时打下一个。
 - **Windows 包不能在 macOS 上打**：`package-target.ts` 明确要求 `win-x64` 使用 Windows x64 构建机；走 `.github/workflows/windows-package.yml`（发布必须 signed），本轮不打就在下载页显示“暂未提供”。
 - flock 平台包已内建进打包流程（`package-target.ts` 优先本地 cross-compiled 平台包，缺失才回退 registry），缺失会直接在 `prepare:packages` 报错，不会出坏包。
-- **别清 `.desktop-build/`**（Electron/pnpm store 缓存）和服务器 docker 层缓存，重复打包提速主要靠这两处。
+- **别清 `apps/desktop/.desktop-build/`**（Electron/pnpm store 缓存，实测 11G：targets 7.9G + development 1.4G + pnpm-store 885M + downloads 863M）和服务器 docker 层缓存，重复打包提速主要靠这两处。要腾磁盘只删 `targets/*/unsigned-artifacts`（旧安装包，5.6G），保留 `electron/`、`runtime/`、`mmp/`。
 
 ### 顺序总原则
 
@@ -1133,6 +1133,105 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 | 验收 | 4 容器 Up/0 重启；`/api/version` 5.3.1；console/admin 200；`/admin/api/users` 200 JSON；头像 200；知识库上传端到端通过；空库删除 200、有版本删除 400 |
 
 > 客户端无需重打时：本次 5.3.1 只改 Ground，`--reuse-web` 直接把中台热修压到 8 分钟，桌面保持 0.3.5 不动。
+
+## 4P. 2026-11-17 5.3.2 全栈 + 三平台：35 分钟、零返工、10 个可优化点
+
+> 范围：Ground `5.3.1→5.3.2`、桌面家族 `0.3.5→0.3.6`；中台 api+web+pg+knowledge、官网、mac-arm64 / mac-x64 / win-x64（全部 unsigned）。
+> 结果：11:27:07 → 12:02:12 **35 分钟**全绿，`release.sh` 一次跑通、无中断续跑、无版本/类型返工。返工为 0，但仍有约 15 分钟可压。
+
+### 4P.1 实测时间线（并行后的关键路径）
+
+| 时刻 | 事件 | 耗时 | 性质 |
+|---|---|---|---|
+| 11:27:07 | `--only preflight` | 13 s | 必要 |
+| 11:27:21 | 触发 Windows CI（`source_ref=5.3`） | 13.6 min（后台） | 并行 |
+| 11:27:3x | mac-arm64 打包（缓存热） | ~4 min | 并行 |
+| 11:27:42→11:28:46 | 前端 8 s + 官网 5 s + api 镜像 51 s | 64 s | 必要 |
+| 11:28:46→11:29:07 | rsync 源码到服务器 | 21 s | 必要 |
+| 11:29:10→11:41:02 | **服务器 web 镜像** | **710 s** | **关键路径** |
+| 11:37:0x→11:41:0x | mac-x64 打包（arm64 结束后串行） | ~8 min | 并行 |
+| 11:41:04→11:42:11 | 上传发布包（middle-web/website/api tar） | 67 s | 必要 |
+| 11:42:12→11:43:15 | 备份落位 + 载入 api 镜像 | 63 s | 必要 |
+| 11:43:15→11:43:42 | compose up + 健康 + nginx reload | 27 s | 必要 |
+| 11:43:42→11:48:19 | 首发 smoke（含三平台 872MB 全量下载） | 277 s | **可裁剪** |
+| 11:49→11:56 | 三客户端上传（arm64→x64→win，逐个公网校验） | ~7 min | 必要 |
+| 11:57:17→12:02:11 | 客户端后的全量 smoke（重跑） | 294 s | 必要 |
+
+结论：**web 镜像 710 s 仍是唯一瓶颈**；`mammoth-agent/` 有改动，`--reuse-web` 用不上。桌面两包合计 12 分钟，被 web 构建完全吸收，没上关键路径。
+
+### 4P.2 本轮真踩到的坑（均未造成返工，但都浪费了分钟级时间）
+
+| # | 现象 | 根因 | 损失 | 固化 |
+|---|---|---|---|---|
+| 1 | 按旧文档找 `mammoth-agent/.desktop-build` 不存在，误判“缓存被清空” | 实际在 **`mammoth-agent/apps/desktop/.desktop-build`**（11G）；旧文档写的是仓库根 | 差点清缓存重打（10–15 min） | ✅ 4P.6 路径勘误 + 修正 4C/4F 表述 |
+| 2 | 本机磁盘 15 GiB（门禁 ≥18 GiB），清了三轮才够 | 没有一次性清理清单；最大可回收项是 `targets/*/unsigned-artifacts` 5.6G | ~6 min | ✅ 门禁 32 + 4P.3 清单 |
+| 3 | 手拼登录 JSON 连续两次 401，差点误判“凭据过期” | `release-private/admin-credentials.txt` 是中文行格式（`超管账号 138…` / `密码 xxx（…实测 200）`），正则按 `password:` 取不到 | ~4 min | ✅ 门禁 33：固定 helper + `pwlen` 自检 |
+| 4 | api 日志一堆 `status:401 UnauthorizedException` 看着像故障 | smoke 的匿名探测、以及未带 cookie 的接口本来就 401 | 0（虚警） | ✅ 只统计 5xx / `MODULE_NOT_FOUND` / `Cannot find module` |
+| 5 | 首发 smoke 全量下载三平台 872MB，当时还是旧的 0.3.5 | 默认做完整 GET+sha | **4.5 min** | ✅ 门禁 31 |
+| 6 | `docker compose exec pg psql -U postgres` 报 `role "postgres" does not exist` | 实际 `POSTGRES_USER=mammoth`、`POSTGRES_DB=mammoth_core` | ~2 min | ✅ 门禁 34 + 模板命令 |
+| 7 | 知识库验收测试库清理要手敲 10 条 DELETE | `kc_*` 有不可变触发器，只能 `session_replication_role=replica` 单事务 | ~5 min | ✅ 门禁 35：脚本化 |
+| 8 | 日志仍出现 `date: invalid argument 's' for -I` | macOS BSD `date` 不支持 `-Is`；4E-10 只改了部分调用点 | 0（走 fallback） | 待修（4P.4 P2-9） |
+| 9 | 大文件下载期间 web 出现 7 次 `fetch failed (10.5s)` | web SSR 走公网回环拉 `/api/*`，下载把带宽占满；平时 0.13 s | 0（首屏偶发慢） | 观察项（4P.4 P2-8） |
+| 10 | 本地 `5.4` 落后 `origin/5.3` 两个 bump commit | bump 只落在 `release/5.3.2` 并 push 到 `5.3` | 0 | 收尾必须提示同步主开发分支 |
+| 11 | 用户装完 0.3.6 客户端**没有麦克风/语音识别** | 语音 bundle 靠 `migrateDesktopVoiceInput` 注入，而它只做**精确匹配**（等于旧两项或新模板）才注入；实例 profile 是 `[mmp-base, mmp-web-app, @local/sidebar-demo]`，多了本地插件 → 永不注入 | 0（但影响所有装过插件的用户） | ✅ 0.3.7 已修：只要含 `mmp-base`+`mmp-web-app` 就在 `web-app` 后插入 voice bundle，其它插件保持顺序；`bundleMigrations` 仍尊重“用户主动删掉” |
+
+### 4P.3 本轮验证有效的做法（照抄）
+
+1. **预检与主流程共用 RELEASE_ID**：先 `release.sh --only preflight --yes`（13 s 拿到 `5.3.2-20261117-1127`），再 `release.sh --release-id 5.3.2-20261117-1127 --from frontend --yes`。避免跑出两个 release 目录和两套镜像 tag。
+2. **bump 在 worktree 的 `release/x.y.z` 分支做，push `HEAD:主分支`**：`git checkout -B release/5.3.2 <tip>` → bump → `git push origin HEAD:5.3`；`5.4`/本地工作树零污染。桌面家族 `pnpm exec tsx scripts/release/bump.ts --family mmp patch` 一条命令搞定 384 个 manifest + lockfile + commit。
+3. **客户端先 `--dry-run` 再 `--yes`**：`publish-desktop-downloads.ts` 自带 sha256/字节数/别名/公网校验，dry-run 的 DIFF 只动本平台条目，另两个平台保持不变。三次上传零手工。
+4. **客户端上传放在中台 smoke 通过之后**（4O.2-3 的竞态这次彻底没发生），全部传完再跑一次全量 smoke 收尾。
+5. **arm64 先开、x64 串行、Windows CI 与中台并行**：三条线互不抢 CPU/上行（上传在构建结束后才开始）。
+6. **worktree 补 `native/system/packages/darwin-x64/bin/system.node`**（`file` 确认 `Mach-O ... x86_64`）后 x64 一次出包，没有回退 registry 的 404。
+
+### 4P.4 下一轮优化（按收益排序，预计再省 15–20 分钟）
+
+| 优先级 | 优化 | 预计收益 | 落地 |
+|---|---|---|---|
+| P0 | **首发 smoke 跳过下载 hash**：中台刚上线时用 `MMP_SMOKE_SKIP_DOWNLOAD_HASH=1`（只验路由/健康/版本/别名长度），客户端传完再跑一次全量 | **4.5 min** | 流程（门禁 31） |
+| P0 | **一次性磁盘清理清单**（别分三轮）：旧 `mmp-api`/`mmp-web` 镜像、worktree 里旧 `release/x.y.z-*`、`apps/desktop/.desktop-build/targets/*/unsigned-artifacts` | 4–6 min | 门禁 32 |
+| P0 | **登录 helper**：从凭据文件解析 phone/password（不打印密码），返回 `login/me/admin-users/console-version` 四行结论 | 3–4 min | 门禁 33 |
+| P1 | **知识库验收脚本化**：建库→上传→轮询 `SUCCEEDED/READY`→`session_replication_role=replica` 清理，一条命令出结论 | 4 min | 门禁 35 |
+| P1 | `--only`/`--from` 分段发布也刷新 `release/last-release.json`（4N.5 遗留，本轮是整轮跑完才自然刷新） | 0（正确性） | `release.sh` |
+| P1 | Windows workflow 的 `source_ref` 默认值改成 `${{ github.ref_name }}`，别再写死 `5.0` | 0（防呆） | `.github/workflows/windows-package.yml` |
+| P2 | `scripts/preflight-release.mjs` 一键门禁（4H.2 已提未做）：git 冻结/家族版本/磁盘/锁/凭据/nginx 模板/`dist/main.js`/`.sql` 扫描 | 10–30 min | 新脚本 |
+| P2 | web SSR 拉自家 `/api/*` 的超时与重试（现在 10.5 s 直接失败），或 smoke 下载限速错峰 | 体验 | `apps/web` |
+| P2 | 修掉 `date -Is` 的 macOS 分支（state 时间戳统一 ISO） | 0（噪音） | `release.sh` |
+| P2 | 客户端上传与中台 smoke 的间隔压缩：smoke 一过就立刻起长传，别等收尾汇报 | 1–2 min | 流程 |
+
+### 4P.5 本轮基线
+
+| 项 | 值 |
+|---|---|
+| 源码 | `7b8cac34` = `1a6efa0d`（5.3 尖端，语音输入）+ `f9e163d8`（桌面 0.3.6）+ `7b8cac34`（Ground 5.3.2）；`origin/5.3` 已推送 |
+| 镜像 | api `mmp-api:5.3.2-20261117-1127`、web `mmp-web:5.3.2-20261117-1127` |
+| 上一版 | api `mmp-api:5.3.1-20261117-0109`、web `mmp-web:5.3.0-20261117-0023` |
+| DB | 迁移 59/59，无新迁移；`kc_base` 67 库（验收临时库已清理回 67） |
+| 桌面 | 0.3.6 unsigned：arm64 `91291577…` 268,523,756B；x64 `ee6fe453…` 290,038,371B；win `cf0b804c…` 314,457,967B；二进制 `lipo/file` 已核（arm64 / x86_64 / PE32） |
+| Windows CI | run `44010328585` 成功，artifact `mammoth-agent-win-x64-unsigned` |
+| 回滚 | `.env.bak-20261117-114211`、`middle-web.bak-20261117-114211`、`website.bak-20261117-114211`、nginx `mammoth.conf.bak-20261117-114211` |
+| 磁盘 | 本机 20G 可用（清旧镜像+旧 release+旧 unsigned-artifacts）；服务器 48G 可用（6 个 mmp 镜像待清） |
+| 验收 | 4 容器 Up/0 重启；`/api/version` 5.3.2；登录 200；`/admin/api/users` 200 JSON（5 用户）；知识库端到端 READY；有版本删除 400 不可变 |
+
+### 4P.6 路径勘误（重要，别再找错）
+
+| 项目 | 正确路径 |
+|---|---|
+| 桌面缓存与产物根 | `mammoth-agent/apps/desktop/.desktop-build/` |
+| 各 target 产物 | `mammoth-agent/apps/desktop/.desktop-build/targets/<target>/unsigned-artifacts/` |
+| 打包日志内 DMG 名 | 以目录扫描为准，与日志打印名可能不同 |
+| PG 角色 / 库 | `POSTGRES_USER=mammoth`、`POSTGRES_DB=mammoth_core` |
+
+### 4P.7 新增门禁（续 4O.3，编号 31–36）
+
+31. **首发 smoke 不做全量下载 hash**：中台刚切流时 `MMP_SMOKE_SKIP_DOWNLOAD_HASH=1`；客户端全部上传后再跑一次全量 sha，省 4.5 min。
+32. **磁盘一次清到位**：顺序 `docker rmi` 旧 api/web → 删 worktree `release/*-*`（保留 `last-release.json`）→ 删 `targets/*/unsigned-artifacts`；跑完必须 ≥18 GiB 再开工，别边跑边清。
+33. **凭据只用 helper**：解析 `admin-credentials.txt` 的“密码”行，登录前先打印 `pwlen`；连续 401 先怀疑解析，别直接判定密码过期。
+34. **PG 模板命令**：`cd /www/mmp-prod && docker compose exec -T pg sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'`，不要写死 `postgres`。
+35. **知识库验收=5 步脚本**：建库 → 上传（`file`+`idempotencyKey`）→ 轮询 `jobs/:id` 到 `SUCCEEDED/READY` → 有版本删除应 400 → `replica` 事务清理并核对 `kc_base` 回到原值。
+36. **收尾提示主分支**：bump 落在 `release/x.y.z` 后，主开发分支会落后；结束时明确告知是否需要 `git merge --ff-only`。
+37. **客户端功能“发了但没出现”先查 profile**：桌面功能很多是靠 `mmp.profile.bundles` 注入的（语音= `@mammoth-ai/mmp-experimental-voice-input-bundle`）。先看 `~/.dsh/profiles/<name>/package.json` 的 bundles 与 `bundleMigrations`，再怀疑安装包。任何“只在干净 profile 生效”的迁移都要问一句：带第三方插件的实例会不会被漏掉。
+38. **纯客户端发布不复用 release.sh**：中台不动时只走 `bump → push → Windows CI → 双 Mac 打包 → publish-desktop-downloads.ts --version x.y.z`，最后 `MMP_SMOKE_SKIP_DOWNLOAD_HASH=1 smoke.sh` 验 manifest/别名，约 25 分钟。
 
 ## 5. 网络与下载（最容易吃掉几小时）
 

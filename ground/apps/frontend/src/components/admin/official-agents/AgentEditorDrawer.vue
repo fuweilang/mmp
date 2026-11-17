@@ -332,11 +332,19 @@ function invalidateEditorPreview() {
   editorPreviewApprovedRequest.value = '';
 }
 
-async function requestEditorClose(done?: () => void) {
-  if (editorBusy.value || editorPreviewBusy.value || iconValidating.value) return;
-  if (editorDirty.value) {
-    try { await ElMessageBox.confirm('当前修改尚未保存，离开会丢弃这些修改。', '离开专家编辑', { confirmButtonText: '放弃修改并离开', cancelButtonText: '继续编辑', type: 'warning' }); } catch { return; }
+async function confirmDiscard() {
+  if (editorBusy.value || editorPreviewBusy.value || iconValidating.value) return false;
+  if (!editorDirty.value) return true;
+  try {
+    await ElMessageBox.confirm('当前修改尚未保存，离开会丢弃这些修改。', '离开专家编辑', { confirmButtonText: '放弃修改并离开', cancelButtonText: '继续编辑', type: 'warning' });
+    return true;
+  } catch {
+    return false;
   }
+}
+
+async function requestEditorClose(done?: () => void) {
+  if (!(await confirmDiscard())) return;
   if (done) done(); else emit('update:modelValue', false);
 }
 
@@ -679,6 +687,8 @@ defineExpose({
   focusMissingField: (missing: string[]) => focusPublishMissingField(missing),
   /** 供列表操作守卫使用（原页面级 `saving`）。 */
   isSaving: () => saving.value,
+  confirmDiscard,
+  reload: () => initEditor(),
 });
 
 watch(() => props.modelValue, (isOpen) => {

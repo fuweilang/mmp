@@ -147,6 +147,10 @@ export class ListOfficialAgentsDto {
   @IsOptional()
   @IsIn(['DRAFT', 'PUBLISHED', 'OFFLINE'])
   status?: 'DRAFT' | 'PUBLISHED' | 'OFFLINE';
+
+  @IsOptional()
+  @IsIn(['GENERAL', 'KNOWLEDGE'])
+  kind?: 'GENERAL' | 'KNOWLEDGE';
 }
 
 export class BulkOfflineOfficialAgentsDto {

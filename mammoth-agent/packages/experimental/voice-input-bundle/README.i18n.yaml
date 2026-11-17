@@ -3,23 +3,23 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/experimental/voice-input-bundle/README.md
 /:
-  en: ad2db50cda753344
-  zh: 84fb997f11ffa7f1
+  en: 8a0ee3354e416566
+  zh: c0d597db54e23c28
 /mammoth-ai-mmp-experimental-voice-input-bundle:
   en: 96bb9871847cc37e
   zh: 0a412a45fadd4328
 /mammoth-ai-mmp-experimental-voice-input-bundle/summary:
-  en: 52d9a31405cbe293
-  zh: 0bcd5bede2cf942c
+  en: ec1aae8b731ff1b7
+  zh: 3f59a203f0984d45
 /mammoth-ai-mmp-experimental-voice-input-bundle/table-of-contents:
   en: d152484eb41ac6b4
   zh: 364c80ee00a374ff
 /mammoth-ai-mmp-experimental-voice-input-bundle/use-this-package:
-  en: fd4d750a5fdf016e
-  zh: d0acda46085da0a3
+  en: 6ee4f738f8708f00
+  zh: de46a8aa0b9978ef
 /mammoth-ai-mmp-experimental-voice-input-bundle/understand-the-implementation:
-  en: 723404eefb50fcb3
-  zh: b68854da249a868c
+  en: f7f1890fdd242fd2
+  zh: 0b01559520348994
 /mammoth-ai-mmp-experimental-voice-input-bundle/further-exploration:
   en: 6621246268306268
   zh: db0930797b30e892
