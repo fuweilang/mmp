@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-experimental-api-speech-to-text",
   "description": "Authenticated experimental speech transcription for browser clients",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "publishConfig": {
     "access": "public"
   },

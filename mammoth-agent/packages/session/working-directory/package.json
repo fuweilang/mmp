@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-working-directory",
   "description": "Session working directories with durable changes and model context",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "publishConfig": {
     "access": "public"
   },
