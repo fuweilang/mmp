@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@mammoth-ai/mmp-client-ui-primitives';
 import css from './KnowledgeSources.module.css';
 import type { Translate } from '@mammoth-ai/mmp-client-ui-slots';
 import type { OfficialAgentGalleryLocaleKey } from './locales.ts';
@@ -20,6 +19,24 @@ function sourceLocation(locator: unknown, t: Translate<OfficialAgentGalleryLocal
     if (!parts.length && typeof value.sectionId === 'string') parts.push(value.sectionId);
     return parts.join(' › ');
 }
+function sourceKey(source: ExpertKnowledgeSource) {
+    return source.recordId + source.label;
+}
+function groupSources(sources: readonly ExpertKnowledgeSource[]) {
+    const groups: { title: string; items: ExpertKnowledgeSource[] }[] = [];
+    const index = new Map<string, number>();
+    for (const source of sources) {
+        const title = source.title || source.label;
+        const group = groups[index.get(title) ?? -1];
+        if (!group) {
+            index.set(title, groups.length);
+            groups.push({ title, items: [source] });
+        }
+        else
+            group.items.push(source);
+    }
+    return groups;
+}
 /** Source buttons exist only for admitted evidence and keep their original turn/lookup identity. */
 export function KnowledgeSources({ sources, open, t, embedded = false }: {
     embedded?: boolean;
@@ -31,6 +48,7 @@ export function KnowledgeSources({ sources, open, t, embedded = false }: {
     t: Translate<OfficialAgentGalleryLocaleKey>;
 }) {
     const [opened, setOpened] = useState<{
+        key: string;
         text: string;
         locator: unknown;
     } | null>(null), [failed, setFailed] = useState(false), [busy, setBusy] = useState(false), generation = useRef(0);
@@ -38,7 +56,7 @@ export function KnowledgeSources({ sources, open, t, embedded = false }: {
     const show = async (source: ExpertKnowledgeSource) => { const request = ++generation.current; setBusy(true); setFailed(false); setOpened(null); try {
         const result = await open(source.recordId, source.label);
         if (request === generation.current)
-            setOpened(result);
+            setOpened({ key: sourceKey(source), ...result });
     }
     catch {
         if (request === generation.current)
@@ -51,12 +69,22 @@ export function KnowledgeSources({ sources, open, t, embedded = false }: {
     if (!sources.length)
         return null;
     return <details className={embedded ? css.embedded : css.sources}>
-        <summary>{t('knowledgeSources')}</summary>
-        {sources.map(source => <Button className={embedded ? css.source : undefined} key={source.recordId + source.label} variant="ghost" disabled={busy} onClick={() => void show(source)}>
-            <span>{`[${source.label}] ${source.title}`}</span>
-            <span className={css.location}>{sourceLocation(source.locator, t)}</span>
-        </Button>)}
-        {failed ? <p role="alert">{t('knowledgeSourceUnavailable')}</p> : null}
-        {opened ? <div className={css.opened}><div className={css.location}>{sourceLocation(opened.locator, t)}</div><pre>{opened.text}</pre><Button onClick={() => setOpened(null)}>{t('closeDetails')}</Button></div> : null}
+        <summary>{`${t('knowledgeSources')} · ${sources.length}`}</summary>
+        {groupSources(sources).map(group => <section className={css.file} key={group.title}>
+            <div className={css.title}>{group.title}</div>
+            <div className={css.chips}>
+                {group.items.map(source => {
+                    const location = sourceLocation(source.locator, t);
+                    return <button type="button" className={css.chip} key={sourceKey(source)} disabled={busy} onClick={() => void show(source)}>
+                        <span className={css.tag}>{source.label}</span>
+                        {location ? <span className={css.location}>{location}</span> : null}
+                    </button>;
+                })}
+            </div>
+            {group.items.some(source => opened?.key === sourceKey(source)) && opened
+                ? <div className={css.opened}><div className={css.location}>{sourceLocation(opened.locator, t)}</div><pre>{opened.text}</pre><button type="button" className={css.close} onClick={() => setOpened(null)}>{t('closeDetails')}</button></div>
+                : null}
+        </section>)}
+        {failed ? <p className={css.alert} role="alert">{t('knowledgeSourceUnavailable')}</p> : null}
     </details>;
 }

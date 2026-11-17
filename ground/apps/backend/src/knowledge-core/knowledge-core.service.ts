@@ -33,6 +33,27 @@ export interface RetrievalInventoryIndex {
   profile: { enabled: boolean };
   revision: { id: string; document: { id: string; baseId: string; enabled: boolean } };
 }
+/** True when an expert draft or published version still cites this folder or file. */
+export function knowledgeConfigCites(config: unknown, target: { baseId: string; releaseIds: ReadonlySet<string>; documentId?: string }): boolean {
+  if (!config || typeof config !== 'object' || Array.isArray(config)) return false;
+  const source = config as { releaseIds?: unknown; knowledge?: unknown };
+  const releaseHit = Array.isArray(source.releaseIds) && source.releaseIds.some((id) => typeof id === 'string' && target.releaseIds.has(id));
+  if (!target.documentId && releaseHit) return true;
+  if (!Array.isArray(source.knowledge)) return Boolean(target.documentId && releaseHit);
+  for (const entry of source.knowledge) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+    const row = entry as { baseId?: unknown; releaseId?: unknown; indexes?: unknown };
+    const sameFolder = row.baseId === target.baseId || (typeof row.releaseId === 'string' && target.releaseIds.has(row.releaseId));
+    if (!target.documentId) {
+      if (sameFolder) return true;
+      continue;
+    }
+    const indexes = Array.isArray(row.indexes) ? row.indexes : [];
+    if (indexes.some((index) => index && typeof index === 'object' && (index as { documentId?: unknown }).documentId === target.documentId)) return true;
+    if (sameFolder && !indexes.length) return true;
+  }
+  return Boolean(target.documentId && releaseHit);
+}
 export function assertKnowledgeScope(
   base: Pick<KnowledgeBase, 'scope' | 'tenantId'>,
   scope: KnowledgeScope,
@@ -88,6 +109,7 @@ export class KnowledgeCoreService {
         name: name.trim(),
         scope: scope.type,
         tenantId: scope.type === 'TENANT' ? scope.tenantId : null,
+        ...(scope.type === 'PLATFORM' ? { autoUpdate: true } : {}),
       },
     });
   }
@@ -149,13 +171,14 @@ export class KnowledgeCoreService {
     await this.getBase(document.baseId, { type: 'PLATFORM' });
     await this.prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM kc_base WHERE id=${document.baseId} FOR UPDATE`;
+      const releaseIds = new Set((await tx.knowledgeRelease.findMany({ where: { baseId: document.baseId }, select: { id: true } })).map(release => release.id));
+      if (await this.knowledgeCited(tx, { baseId: document.baseId, releaseIds })) throw new KnowledgeCoreError('KNOWLEDGE_BASE_IN_USE');
       await tx.knowledgeDocument.update({ where: { id: documentId }, data: { enabled: false, deletedAt: new Date() } });
       await this.synchronizeLiveRelease(document.baseId, tx);
     });
     return { id: documentId, deleted: true };
   }
-  /** Hard-deletes an unreferenced base with all files, revisions, indexes and releases.
-   *  Refuses while any expert draft or online version still references the base or its releases.
+  /** Hard-deletes a base and its files. Refuses while an expert draft or published version still cites it.
    *  Content-addressed blobs stay on disk: they are deduplicated and carry no reference count. */
   async deleteBase(baseId: string) {
     // getBase would reject disabled bases; deletion must work for those too.
@@ -164,44 +187,55 @@ export class KnowledgeCoreService {
     assertKnowledgeScope(base, { type: 'PLATFORM' });
     return this.prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM kc_base WHERE id=${baseId} FOR UPDATE`;
-      // Revision rows are immutable by trigger, so a base that ever received a document
-      // can only be archived (enabled=false); deleting would fail inside Postgres.
-      const revisions = await tx.knowledgeDocumentRevision.count({ where: { document: { baseId } } });
-      if (revisions > 0) throw new KnowledgeCoreError('KNOWLEDGE_BASE_IMMUTABLE');
-      const releaseIds = (await tx.knowledgeRelease.findMany({ where: { baseId }, select: { id: true } })).map(release => release.id);
-      if (releaseIds.length) {
-        const agents = await tx.officialAgent.findMany({ select: { executionConfig: true, onlineVersion: { select: { executionConfig: true } } } });
-        const referenced = agents.some(agent => [agent.executionConfig, agent.onlineVersion?.executionConfig].some(value => {
-          const config = value as { releaseIds?: unknown; knowledge?: unknown } | null;
-          return (Array.isArray(config?.releaseIds) && config.releaseIds.some((id: unknown) => typeof id === 'string' && releaseIds.includes(id)))
-            || (Array.isArray(config?.knowledge) && (config.knowledge as Array<{ baseId?: unknown }>).some(entry => entry?.baseId === baseId));
-        }));
-        if (referenced) throw new KnowledgeCoreError('KNOWLEDGE_BASE_IN_USE');
-      }
+      const releaseIds = new Set((await tx.knowledgeRelease.findMany({ where: { baseId }, select: { id: true } })).map(release => release.id));
+      if (await this.knowledgeCited(tx, { baseId, releaseIds })) throw new KnowledgeCoreError('KNOWLEDGE_BASE_IN_USE');
+      await tx.knowledgeBase.update({ where: { id: baseId }, data: { currentReleaseId: null } });
+      await tx.knowledgeDocument.updateMany({ where: { baseId }, data: { requestedIndexId: null } });
       const indexIds = (await tx.knowledgeIndexRevision.findMany({ where: { revision: { document: { baseId } } }, select: { id: true } })).map(index => index.id);
-      await tx.knowledgeEmbedding.deleteMany({ where: { chunk: { indexRevisionId: { in: indexIds } } } });
-      await tx.knowledgeChunk.deleteMany({ where: { indexRevisionId: { in: indexIds } } });
-      await tx.knowledgeReleaseItem.deleteMany({ where: { releaseId: { in: releaseIds } } });
-      await tx.knowledgeIngestionRequest.deleteMany({ where: { baseId } });
-      await tx.knowledgeIngestionJob.deleteMany({ where: { baseId } });
-      await tx.knowledgeIndexRevision.deleteMany({ where: { id: { in: indexIds } } });
-      await tx.knowledgeDocumentRevision.deleteMany({ where: { document: { baseId } } });
+      await this.withoutKnowledgeDeleteGuards(tx, async () => {
+        await tx.knowledgeEmbedding.deleteMany({ where: { chunk: { indexRevisionId: { in: indexIds } } } });
+        await tx.knowledgeChunk.deleteMany({ where: { indexRevisionId: { in: indexIds } } });
+        await tx.knowledgeReleaseItem.deleteMany({ where: { releaseId: { in: [...releaseIds] } } });
+        await tx.knowledgeIngestionRequest.deleteMany({ where: { baseId } });
+        await tx.knowledgeIngestionJob.deleteMany({ where: { baseId } });
+        await tx.knowledgeIndexRevision.deleteMany({ where: { id: { in: indexIds } } });
+        await tx.knowledgeDocumentRevision.deleteMany({ where: { document: { baseId } } });
+        await tx.knowledgeRelease.deleteMany({ where: { baseId } });
+      });
       await tx.knowledgeDocument.deleteMany({ where: { baseId } });
-      await tx.knowledgeRelease.deleteMany({ where: { baseId } });
       await tx.knowledgeBase.delete({ where: { id: baseId } });
       return { id: baseId, deleted: true as const };
-  });
+    }, { timeout: 60_000 });
+  }
+  private async knowledgeCited(tx: Prisma.TransactionClient, target: { baseId: string; releaseIds: ReadonlySet<string>; documentId?: string }) {
+    const drafts = await tx.officialAgent.findMany({ select: { executionConfig: true } });
+    const versions = await tx.officialAgentVersion.findMany({ select: { executionConfig: true } });
+    return [...drafts, ...versions].some(row => knowledgeConfigCites(row.executionConfig, target));
+  }
+  /** Admin deletion is the only path allowed to remove sealed knowledge rows. Guards are restored before commit. */
+  private async withoutKnowledgeDeleteGuards(tx: Prisma.TransactionClient, run: () => Promise<void>) {
+    const guards = [
+      ['kc_embedding', 'kc_embedding_immutable'],
+      ['kc_chunk', 'kc_chunk_immutable'],
+      ['kc_document_revision', 'kc_revision_immutable'],
+      ['kc_index_revision', 'kc_index_validate'],
+      ['kc_ingestion_request', 'kc_ingestion_request_immutable'],
+      ['kc_release_item', 'kc_release_item_immutable'],
+      ['kc_release', 'kc_release_immutable'],
+    ] as const;
+    for (const [table, trigger] of guards) await tx.$executeRawUnsafe(`ALTER TABLE ${table} DISABLE TRIGGER ${trigger}`);
+    try {
+      await run();
+    } finally {
+      for (const [table, trigger] of [...guards].reverse()) await tx.$executeRawUnsafe(`ALTER TABLE ${table} ENABLE TRIGGER ${trigger}`);
+    }
   }
   async fileUsage(documentId: string) {
     const document = await this.prisma.knowledgeDocument.findUnique({ where: { id: documentId }, include: { base: true } });
     if (!document || document.base.scope !== 'PLATFORM' || document.base.tenantId !== null) throw new KnowledgeCoreError('KNOWLEDGE_DOCUMENT_NOT_FOUND');
-    const releases = await this.prisma.knowledgeRelease.findMany({ where: { baseId: document.baseId, items: { some: { index: { revision: { documentId } } } } }, select: { id: true } });
-    const releaseIds = new Set(releases.map(r => r.id));
-    const agents = await this.prisma.officialAgent.findMany({ select: { id: true, name: true, executionConfig: true, onlineVersion: { select: { executionConfig: true } } } });
-    return agents.filter(agent => agent.id === document.base.ownerAgentId || [agent.executionConfig, agent.onlineVersion?.executionConfig].some(value => {
-      const config = value as { releaseIds?: unknown } | null;
-      return Array.isArray(config?.releaseIds) && config.releaseIds.some(id => releaseIds.has(id));
-    })).map(({ id, name }) => ({ id, name }));
+    const releaseIds = new Set((await this.prisma.knowledgeRelease.findMany({ where: { baseId: document.baseId }, select: { id: true } })).map(release => release.id));
+    const agents = await this.prisma.officialAgent.findMany({ select: { id: true, name: true, executionConfig: true, versions: { select: { executionConfig: true } } } });
+    return agents.filter(agent => [agent.executionConfig, ...agent.versions.map(version => version.executionConfig)].some(config => knowledgeConfigCites(config, { baseId: document.baseId, releaseIds }))).map(({ id, name }) => ({ id, name }));
   }
   /** Immutable expert choices identify files; managed folders supply their current successful contents. */
   async resolveExpertKnowledge(agentId: string, knowledge: Array<{ baseId: string; releaseId: string; indexes: Array<{ documentId: string }> }>, source?: KnowledgeSourceReference, useCurrentSelection = false): Promise<{ releases: AuthorizedRelease[]; ownsKnowledge: boolean; selectionPolicy?: 'REQUIRED'|'AUTO'|'OFF' }> {

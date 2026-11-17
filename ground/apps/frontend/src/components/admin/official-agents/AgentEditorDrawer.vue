@@ -25,7 +25,7 @@
         <div class="expert-workspace-save">
           <span role="status">{{ editorDirty ? '有未保存修改' : editingId ? '草稿已保存' : '尚未保存草稿' }}</span>
           <el-button class="expert-save-button" type="primary" aria-label="保存草稿" :loading="saving && !editorPreviewBusy" :disabled="editorBusy || editorPreviewBusy || iconValidating" @click="onSave">保存</el-button>
-          <el-dropdown trigger="click" :disabled="editorBusy || editorPreviewBusy" @command="onEditorCommand">
+          <el-dropdown trigger="click" popper-class="expert-more-menu" :disabled="editorBusy || editorPreviewBusy" @command="onEditorCommand">
             <el-button text class="expert-more-button" aria-label="更多专家操作" :disabled="editorBusy"><EllipsisVertical :size="20" /></el-button>
             <template #dropdown><el-dropdown-menu><el-dropdown-item command="details">编辑专家信息</el-dropdown-item><el-dropdown-item v-if="editingId" command="publish" :disabled="editorBusy || iconValidating || !!executionBlockers.length">保存并发布</el-dropdown-item></el-dropdown-menu></template>
           </el-dropdown>
@@ -56,10 +56,8 @@
           placeholder="用于广场卡片与详情首屏"
         />
       </el-form-item>
-        <el-collapse v-model="metadataSections" class="expert-metadata-more">
-          <el-collapse-item title="更多设置" name="more">
-        <el-collapse v-model="identityOpen">
-          <el-collapse-item title="分类与能力标签" name="identity">
+        <el-collapse v-model="metadataSections" class="expert-metadata-sections">
+          <el-collapse-item title="分类" name="category">
       <el-form-item label="分类" prop="category">
         <el-select v-model="form.category" clearable placeholder="未设置" style="width: 100%">
           <el-option label="常用" value="common" />
@@ -82,7 +80,7 @@
 
 
           </el-collapse-item>
-          <el-collapse-item title="角色、流程与交付要求" name="workflow">
+          <el-collapse-item title="角色" name="role">
       <el-form-item label="类型" prop="kind">
         <el-radio-group v-model="form.kind" :disabled="editorBusy || editorPreviewBusy || Boolean(editingId)">
           <el-radio value="GENERAL">通用型</el-radio>
@@ -101,9 +99,7 @@
       </el-form-item>
 
           </el-collapse-item>
-        </el-collapse>
-        <el-collapse v-model="advancedOpen">
-          <el-collapse-item title="高级：自动标识" name="advanced">
+          <el-collapse-item title="标识" name="identifier">
             <el-form-item label="标识" prop="key"><el-input v-model="form.key" :disabled="editorBusy || editorPreviewBusy || Boolean(editingId)" maxlength="64" placeholder="可留空自动生成；创建后只读" /></el-form-item>
             <el-form-item v-if="form.toolScope.length" label="已有工具权限" prop="toolScope">
               <p class="form-hint">保留历史配置；取消勾选可移除已有权限。</p>
@@ -113,8 +109,6 @@
             </el-form-item>
           </el-collapse-item>
         </el-collapse>
-          </el-collapse-item>
-        </el-collapse>
         <template #footer><el-button type="primary" :disabled="editorBusy || iconValidating" @click="metadataOpen=false">确认</el-button></template>
         </el-dialog>
       </section>
@@ -122,7 +116,7 @@
         <ExpertExecutionEditor v-if="open" ref="executionEditor" v-model="form.executionConfig" :expert-id="editingId" :expert-name="form.name" :disabled="editorBusy" :tool-scope="form.toolScope" :skills="executionSkillDependencies" @blockers="executionBlockers=$event" @knowledge-changed="editorKnowledgeRevision++">
           <template #skills>
             <div v-for="skill in selectedSkillPreviews" :key="skill.id" class="expert-selected-skill">
-              <span class="expert-skill-glyph"><Box :size="14" /></span><span class="expert-skill-name">{{ skill.name }}</span>
+              <span class="expert-skill-glyph"><img v-if="skill.avatarUrl && brokenSkillAvatars[skill.id] !== skill.avatarUrl" :src="skill.avatarUrl" alt="" @error="brokenSkillAvatars[skill.id] = skill.avatarUrl!" /><Box v-else :size="14" /></span><span class="expert-skill-name">{{ skill.name }}</span>
               <el-button text :aria-label="`查看技能 ${skill.name}`" :disabled="editorBusy" @click="inspectSkill(skill.id)"><FileText :size="15" /></el-button>
               <el-button text :aria-label="`移除技能 ${skill.name}`" :disabled="editorBusy" @click="form.linkedSkillIds=form.linkedSkillIds.filter(id=>id!==skill.id)"><Trash2 :size="15" /></el-button>
             </div>
@@ -205,10 +199,8 @@ const editorAvatarUrl = computed(() => removeIcon.value ? null : draftAvatarUrl.
 const removeIcon = ref(false);
 const iconValidating = ref(false);
 const editorBaseline = ref('');
-const identityOpen = ref<string[]>([]);
 const metadataOpen = ref(false);
 const metadataSections = ref<string[]>([]);
-const advancedOpen = ref<string[]>([]);
 const executionBlockers = ref<string[]>([]);
 const editorPreviewBusy = ref(false);
 const editorPreviewPath = ref('');
@@ -256,12 +248,14 @@ const editorPreviewStale = computed(() => !!editorPreviewPath.value && (editorPr
 
 const selectableSkillOptions = computed(() => [...enabledSkillOptions.value, ...retainedSkillOptions.value.filter(skill => !enabledSkillOptions.value.some(item => item.id === skill.id))]);
 const selectedSkillPreviews = computed(() => selectableSkillOptions.value.filter(skill => form.linkedSkillIds.includes(skill.id)));
+const brokenSkillAvatars = reactive<Record<string, string>>({});
 const skillResources = computed(() => selectableSkillOptions.value.map(skill => ({
   id: skill.id,
   name: skill.name,
   summary: skill.summary,
   status: skill.enabledAt ? '已启用' : '未启用',
   selectable: !!skill.enabledAt && skill.packageRevision > 0,
+  avatarUrl: skill.avatarUrl ?? null,
 })));
 const executionSkillDependencies = computed(() => form.linkedSkillIds.map(id => {
   const s = selectableSkillOptions.value.find(s => s.id === id);
@@ -315,7 +309,6 @@ function editorPreviewFields() {
 
 function openMetadata() {
   metadataSections.value = [];
-  identityOpen.value = [];
   metadataOpen.value = true;
 }
 
@@ -440,10 +433,8 @@ async function loadEnabledSkills() {
 
 function resetEditor() {
   form.executionConfig = editableExecutionConfig({ route: 'KNOWLEDGE_CORE' });
-  identityOpen.value = [];
   metadataSections.value = [];
   metadataOpen.value = false;
-  advancedOpen.value = [];
   editorPreviewPath.value = ''; editorPreviewExpiresAt.value = ''; editorPreviewError.value = ''; editorPreviewBaseline.value = ''; editorPreviewApprovedRequest.value = '';
   executionBlockers.value = [];
   editingId.value = '';
@@ -499,12 +490,10 @@ function initEditor() {
 async function revealEditorField(prop: string | null) {
   if (prop === 'openingQuestionsText') executionEditor.value?.revealOpening();
   if (prop && !['systemPrompt', 'openingQuestionsText'].includes(prop)) metadataOpen.value = true;
-  if (prop && !['name', 'summary', 'systemPrompt', 'openingQuestionsText'].includes(prop)) metadataSections.value = ['more'];
-  if (['category', 'capabilitiesText'].includes(prop ?? '') && !identityOpen.value.includes('identity')) identityOpen.value.push('identity');
-  if (['kind', 'expertRole'].includes(prop ?? '') && !identityOpen.value.includes('workflow')) identityOpen.value.push('workflow');
-  if (['key', 'toolScope'].includes(prop ?? '') && !advancedOpen.value.includes('advanced')) {
-    advancedOpen.value = [...advancedOpen.value, 'advanced'];
-  }
+  const section = ['category', 'capabilitiesText'].includes(prop ?? '') ? 'category'
+    : ['kind', 'expertRole'].includes(prop ?? '') ? 'role'
+    : ['key', 'toolScope'].includes(prop ?? '') ? 'identifier' : '';
+  if (section && !metadataSections.value.includes(section)) metadataSections.value = [...metadataSections.value, section];
   await nextTick();
   if (prop) formRef.value?.scrollToField?.(prop);
   await nextTick();

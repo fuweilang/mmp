@@ -6,7 +6,7 @@ import {
 import { loadOfficialAgentAssets } from '../official-agent/official-agent-assets';
 import { ExpertRuntimeService, executionDraftProjection } from '../official-agent/expert-runtime.service';
 import { normalizeExpertDefinition } from '../official-agent/expert-definition';
-import { resolvePresentedOfficialAvatarUrl } from '../official-agent/gallery-avatars';
+import { resolvePresentedOfficialAvatarUrl, uploadedCatalogIconUrl } from '../official-agent/gallery-avatars';
 import { OfficialKbService } from '../official-agent/official-kb.service';
 import { OfficialSkillService } from '../official-skill/official-skill.service';
 import { legacySkillCategory } from '../official-skill/skill-package';
@@ -51,6 +51,7 @@ export const officialAgentInclude = {
           categories: true,
           enabledAt: true,
           currentRevision: true,
+          customAvatarPath: true,
         },
       },
     },
@@ -239,7 +240,7 @@ export class AdminOfficialAgentPresenter {
         row.customAvatarPath ?? null,
       ),
       linkedSkillIds: row.skillLinks.map(link => link.skillId),
-      linkedSkills: row.skillLinks.map(({ skill }) => ({ id: skill.id, key: skill.key, name: skill.name, summary: skill.summary, category: legacySkillCategory(skill.categories[0] ?? null), enabledAt: skill.enabledAt?.toISOString() ?? null, packageRevision: skill.currentRevision, enabled: skill.enabledAt !== null })),
+      linkedSkills: row.skillLinks.map(({ skill }) => ({ id: skill.id, key: skill.key, name: skill.name, summary: skill.summary, category: legacySkillCategory(skill.categories[0] ?? null), enabledAt: skill.enabledAt?.toISOString() ?? null, packageRevision: skill.currentRevision, enabled: skill.enabledAt !== null, avatarUrl: uploadedCatalogIconUrl(skill.customAvatarPath) })),
       draft: {
         name: row.name,
         summary: row.summary,
