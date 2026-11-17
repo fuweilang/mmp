@@ -232,6 +232,16 @@ it('new expert preview first creates a draft and uses the returned identity', as
   expect(fixture.create.mock.calls[0][0].executionConfig.route).toBe('KNOWLEDGE_CORE');
 });
 
+it('the pre-first-token wait clock counts up while the question is in flight', async () => {
+  await mount(); await prompt('计时验证指令');
+  await click('保存并试聊', dialog());
+  await vi.waitFor(() => expect(dialog().querySelector('.expert-preview-assistant-wait')?.textContent).toContain('深度思考中'));
+  const waitText = () => dialog().querySelector('.expert-preview-assistant-wait')?.textContent ?? '';
+  expect(waitText()).toContain('用时 0 秒');
+  await new Promise(resolve => { setTimeout(resolve, 2300); });
+  const seconds = Number(waitText().split('用时 ')[1]?.split(' 秒')[0] ?? '-1');
+  expect(seconds, waitText()).toBeGreaterThanOrEqual(2);
+});
 it('sending shows the question immediately without dimming the form and preserves edits made during preparation', async () => {
   await mount(); await prompt('请求中的指令');
   let finish!: (value: any) => void;

@@ -26,7 +26,7 @@
       <div class="expert-preview-user-bubble">{{ outgoing.text }}</div>
       <div v-if="!stopped" class="expert-preview-assistant-wait" role="status" aria-label="正在回复">
         <div class="expert-preview-byline"><span class="expert-preview-reply-avatar"><img v-if="avatarUrl" :src="avatarUrl" alt="" /><UserRound v-else :size="18" /></span><strong>{{ name || '未命名专家' }}</strong></div>
-        <span class="expert-preview-waiting" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="expert-preview-thinking">深度思考中，用时 {{ waitSeconds }} 秒 ···</span>
       </div>
     </div>
     </div>
@@ -67,16 +67,28 @@ const rebindWaiters = new Map<string, (accepted: boolean) => void>();
 const outgoing = ref<{text:string;afterUserCount:number}|null>(null);
 const pending = ref<{requestId:string;text:string;dispatched:boolean} | null>(null);
 let initializationTimer: ReturnType<typeof setTimeout> | undefined;
+/** 发出后到首字前的等待计时：iframe 接管前由本地等待块显示“深度思考中，用时 N 秒”。 */
+const waitSeconds = ref(0);
+let waitTimer: ReturnType<typeof setInterval> | undefined;
+let waitStartedAt = 0;
+function startWaitClock() {
+  waitStartedAt = Date.now();
+  waitSeconds.value = 0;
+  if (waitTimer) clearInterval(waitTimer);
+  waitTimer = setInterval(() => { waitSeconds.value = Math.floor((Date.now() - waitStartedAt) / 1000); }, 1000);
+}
+function stopWaitClock() { if (waitTimer) { clearInterval(waitTimer); waitTimer = undefined; } }
 function clearInitializationTimer() { if (initializationTimer) clearTimeout(initializationTimer); }
 function releasePending() {
   clearInitializationTimer();
+  stopWaitClock();
   if (pending.value && !question.value) question.value=pending.value.text;
   pending.value=null;outgoing.value=null;
 }
 async function restart() {
   if(resetting.value) return;
   const stopping=requestStop();resetting.value=true;stopped.value=true;running.value=false;
-  clearInitializationTimer();question.value='';pending.value=null;outgoing.value=null;
+  clearInitializationTimer();stopWaitClock();question.value='';pending.value=null;outgoing.value=null;
   hasTranscript.value=false;userCount.value=0;bridgeError.value='';
   // Reset switches session identity even if the old transport never acknowledges cancellation.
   cancelTimer=setTimeout(()=>finishStop(),1500);
@@ -102,6 +114,7 @@ function submitQuestion() {
   outgoing.value={text:question.value,afterUserCount:userCount.value};
   const text=question.value;question.value='';
   clearInitializationTimer();
+  startWaitClock();
   initializationTimer=setTimeout(()=>{
     if (!pending.value) return;
     releasePending();
@@ -140,7 +153,7 @@ function requestStop():Promise<void> {
 function stopGeneration() {
   if(!canStop.value || cancelRequestId.value) return;
   void requestStop();
-  stopped.value=true;running.value=false;clearInitializationTimer();pending.value=null;
+  stopped.value=true;running.value=false;clearInitializationTimer();stopWaitClock();pending.value=null;
 }
 function onPreviewMessage(event: MessageEvent) {
   if (!props.launchUrl || event.source!==previewFrame.value?.contentWindow) return;
