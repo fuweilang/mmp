@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-home-paths",
   "description": "Shared filesystem path helpers for the DeepSeek Harness",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "publishConfig": {
     "access": "public"
   },

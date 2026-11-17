@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-host-product-telemetry-otel",
   "description": "Explicit product usage events exported through OpenTelemetry HTTP logs",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-tool-present",
   "description": "Explicit workspace file delivery declarations for the DeepSeek Harness",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "publishConfig": {
     "access": "public"
   },

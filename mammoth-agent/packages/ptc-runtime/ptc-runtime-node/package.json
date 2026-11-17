@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-ptc-runtime-node",
   "description": "Node PTC execution with async function, REPL and VM Script evaluators and optional retained state",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "publishConfig": {
     "access": "public"
   },

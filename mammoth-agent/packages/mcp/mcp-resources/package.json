@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-mcp-resources",
   "description": "Scoped MCP resource discovery and reading through shared model tools",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "publishConfig": {
     "access": "public"
   },

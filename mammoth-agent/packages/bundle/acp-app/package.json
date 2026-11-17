@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-acp-app",
   "description": "The mmp ACP profile bundle: automation-only JSON-RPC stdio and process lifecycle over mmp-base",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "publishConfig": {
     "access": "public"
   },
