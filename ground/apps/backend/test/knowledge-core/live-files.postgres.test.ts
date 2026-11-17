@@ -81,10 +81,8 @@ test('shared files switch only after successful processing, restrict B to select
   await db.officialAgent.delete({where:{id:a.id}});
   assert.equal((await core.getBase(base.id,scope)).ownerAgentId,null);assert.equal(await db.knowledgeDocument.count({where:{baseId:base.id}}),2);
   assert.equal(await authorizeExpertDisclosure(db,actor.id,null,binding,[latestRef]),true);
-  await core.deleteFile(documentId);
-  assert.equal(await authorizeExpertDisclosure(db,actor.id,null,binding,[reference]),false);
-  assert.equal(await authorizeExpertDisclosure(db,actor.id,null,binding,[latestRef]),false);
-  assert.equal((await core.resolveExpertKnowledge(b.id,pinned,reference)).releases.length,0);
+  await assert.rejects(() => core.deleteFile(documentId), /KNOWLEDGE_BASE_IN_USE/);
+  assert.equal(await authorizeExpertDisclosure(db,actor.id,null,binding,[latestRef]),true);
 });
 test('current file grants revoke old expert versions after a reference is removed and republished',async()=>{
   const key=randomUUID(),agent=await db.officialAgent.create({data:{key:'revoke-'+key,name:'取消引用独立验收',kind:'GENERAL'}});

@@ -47,7 +47,7 @@
       <div v-if="filteredDocuments.length" class="pagination-row">
         <el-pagination v-model:current-page="filePage" v-model:page-size="filePageSize" background layout="total, sizes, prev, pager, next" :page-sizes="pageSizes" :total="filteredDocuments.length" />
       </div>
-      <p class="folder-help">文件处理成功后自动生效；更新处理中继续使用旧内容。支持 Markdown、PDF 等文件，单文件不超过 20 MiB。</p>
+      <p class="folder-help">文件处理成功后自动生效；更新处理中继续使用旧内容。支持 Markdown、文本、CSV、PDF、Word、PPT、Excel，单文件不超过 20 MiB。</p>
     </template>
     <KnowledgeFilePreview v-model="previewOpen" :document="previewDocument" :base-name="selectedBase?.name" />
     <el-dialog v-model="settingsOpen" class="knowledge-settings-dialog" title="知识库高级设置" width="1180px" align-center append-to-body destroy-on-close><KnowledgeCoreAdmin settings-only/><template #footer><el-button @click="settingsOpen=false">关闭</el-button></template></el-dialog>
@@ -79,7 +79,7 @@ watch(fileSearch,()=>{filePage.value=1;});
 watch(folderPageSize,()=>{folderPage.value=1;});
 watch(filePageSize,()=>{filePage.value=1;});
 let alive=true,request=0,timer:ReturnType<typeof setTimeout>|undefined;
-function reason(code:string){return ({EMBEDDING_SERVICE_UNCONFIGURED:'尚未配置可用语义服务，请到高级设置配置',PROFILE_DISABLED:'语义服务已停用',PROVIDER_CREDENTIALS_MISSING:'语义服务凭据尚未配置',PDF_TEXT_UNAVAILABLE:'PDF 未提取到文字，请转换后重新上传',KNOWLEDGE_BASE_IN_USE:'仍有专家引用此文件夹，请先在专家配置中改用其他知识库或关闭知识检索，再删除',KNOWLEDGE_BASE_IMMUTABLE:'此文件夹已有文档版本（版本不可变），不能彻底删除；请改为停用'} as Record<string,string>)[code]||code;}
+function reason(code:string){return ({EMBEDDING_SERVICE_UNCONFIGURED:'尚未配置可用语义服务，请到高级设置配置',PROFILE_DISABLED:'语义服务已停用',PROVIDER_CREDENTIALS_MISSING:'语义服务凭据尚未配置',PDF_TEXT_UNAVAILABLE:'PDF 未提取到文字，请转换后重新上传',KNOWLEDGE_BASE_IN_USE:'仍有专家引用，请先在专家配置中去掉引用再删除'} as Record<string,string>)[code]||code;}
 function message(e:unknown){return reason(e instanceof Error?e.message:'操作失败，请重试');}
 function date(value?:string){return value?new Date(value).toLocaleDateString('zh-CN'):'—';}
 function preview(document:KnowledgeDocument){previewDocument.value=document;previewOpen.value=true;}
@@ -94,7 +94,7 @@ if(route)watch(()=>String(route.params.baseId||''),(id)=>{if(id===baseId.value)r
 async function createFolder(){try{const {value}=await ElMessageBox.prompt('文件夹名称','新建文件夹',{inputValidator:v=>!!v?.trim()||'请填写名称',confirmButtonText:'创建',cancelButtonText:'取消'});creating.value=true;const base=await api.createBase(value.trim());await reload();ElMessage.success('已创建');await openBase(base);}catch(e){if(e!=='cancel'&&e!=='close')error.value=message(e);}finally{creating.value=false;}}
 async function renameFolder(base:KnowledgeBase){try{const {value}=await ElMessageBox.prompt('文件夹名称','重命名',{inputValue:base.name,inputValidator:v=>!!v.trim()||'请填写名称'});await api.updateBase(base.id,{name:value.trim()});await reload();emit('changed');ElMessage.success('已重命名');}catch(e){if(e!=='cancel'&&e!=='close')error.value=message(e);}}
 function escapeHtml(value:string){return value.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]||ch));}
-async function removeFolder(base:KnowledgeBase){const count=base._count?.documents??0;const name=`<span style="color:var(--el-color-primary)">${escapeHtml(base.name)}</span>`;try{await ElMessageBox.confirm(`将永久删除文件夹「${name}」及其中 ${count} 个文件、分段和索引，此操作不可恢复。仍有专家引用该文件夹时会删除失败。`,`删除“${base.name}”？`,{type:'warning',confirmButtonText:'删除文件夹',cancelButtonText:'取消',confirmButtonClass:'el-button--danger',dangerouslyUseHTMLString:true});await api.deleteBase(base.id);if(baseId.value===base.id)showFolders();else await reload();emit('changed');ElMessage.success('文件夹已删除');}catch(e){if(e!=='cancel'&&e!=='close')error.value=message(e);}}
+async function removeFolder(base:KnowledgeBase){const count=base._count?.documents??0;const name=`<span style="color:var(--el-color-primary)">${escapeHtml(base.name)}</span>`;try{await ElMessageBox.confirm(`将永久删除文件夹「${name}」及其中 ${count} 个文件、分段和索引，此操作不可恢复。仍有专家引用时不能删除。`,`删除“${base.name}”？`,{type:'warning',confirmButtonText:'删除文件夹',cancelButtonText:'取消',confirmButtonClass:'el-button--danger',dangerouslyUseHTMLString:true});await api.deleteBase(base.id);if(baseId.value===base.id)showFolders();else await reload();emit('changed');ElMessage.success('文件夹已删除');}catch(e){if(e!=='cancel'&&e!=='close')ElMessage.error(message(e));}}
 function beginUpload(){fileInput.value?.click();}
 function beginReplace(document:KnowledgeDocument){replaceTarget.value=document;replaceInput.value?.click();}
 async function sendFiles(files:File[],documentId?:string){if(uploading.value||!baseId.value)return;const id=baseId.value;uploading.value=true;error.value='';try{for(const file of files){if(file.size>20*1024*1024)throw new Error(`${file.name} 超过 20 MiB`);if(!/\.(md|markdown|txt|pdf|docx|pptx|xlsx|csv)$/i.test(file.name))throw new Error(`${file.name} 的格式暂不支持`);const body=new FormData();body.set('file',file);body.set('idempotencyKey',crypto.randomUUID());if(documentId)body.set('documentId',documentId);await api.upload(id,body);}ElMessage.success('文件已上传，系统正在自动处理');if(alive&&id===baseId.value)await loadDocuments(false);emit('changed');}catch(e){error.value=message(e);}finally{if(alive)uploading.value=false;}}
@@ -102,7 +102,7 @@ function uploadFiles(event:Event){const input=event.target as HTMLInputElement;c
 function replaceFile(event:Event){const input=event.target as HTMLInputElement,file=input.files?.[0],target=replaceTarget.value;input.value='';if(file&&target)void sendFiles([file],target.id);}
 function retryable(document:KnowledgeDocument){return ['FAILED','CANCELLED'].includes(latestKnowledgeIndex(document)?.job?.status||'');}
 async function retry(document:KnowledgeDocument){const job=latestKnowledgeIndex(document)?.job;if(!job)return;try{await api.jobAction(job.id,'retry');await loadDocuments(false);}catch(e){error.value=message(e);}}
-async function remove(document:KnowledgeDocument){try{const usage=await api.usage(document.id);await ElMessageBox.confirm(`删除后，所有引用此文件的专家都不能再调用。${usage.length?'影响专家：'+usage.map(e=>e.name).join('、')+'。':''}`,`删除“${document.title}”？`,{type:'warning',confirmButtonText:'删除文件',cancelButtonText:'取消'});await api.deleteDocument(document.id);await loadDocuments(false);emit('changed');ElMessage.success('文件已删除，所有专家的访问已撤销');}catch(e){if(e!=='cancel'&&e!=='close')error.value=message(e);}}
+async function remove(document:KnowledgeDocument){try{const usage=await api.usage(document.id);await ElMessageBox.confirm(`将删除此文件。仍有专家引用时不能删除。${usage.length?'引用专家：'+usage.map(e=>e.name).join('、')+'。':''}`,`删除“${document.title}”？`,{type:'warning',confirmButtonText:'删除文件',cancelButtonText:'取消'});await api.deleteDocument(document.id);await loadDocuments(false);emit('changed');ElMessage.success('文件已删除');}catch(e){if(e!=='cancel'&&e!=='close')ElMessage.error(message(e));}}
 onMounted(reload);onBeforeUnmount(()=>{alive=false;request++;stopPoll();});
 defineExpose({reload});
 </script>

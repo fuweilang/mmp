@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 import { validateKnowledgeProfileDependency } from '../../src/knowledge-core/profiles.service';
 import { KNOWLEDGE_PARSER_VERSION } from '../../src/knowledge-core/index-config';
 import { parseKnowledgeBytes } from '../../src/knowledge-core/parser';
+import { knowledgeConfigCites } from '../../src/knowledge-core/knowledge-core.service';
 import { chunkSections } from '../../src/knowledge-core/chunking';
 import { KnowledgeHttpAdapter, validateEmbeddingVector } from '../../src/knowledge-core/provider';
 import { createServer, Server } from 'node:http';
@@ -49,6 +50,13 @@ function adapter(endpoint: string, patch: Record<string, unknown> = {}) {
   } as any);
 }
 
+test('folder and file deletion share one citation check', () => {
+  const config = { releaseIds: ['release-a'], knowledge: [{ baseId: 'base-a', releaseId: 'release-a', indexes: [{ documentId: 'doc-1' }] }] };
+  const releases = new Set(['release-a']);
+  assert.equal(knowledgeConfigCites(config, { baseId: 'base-a', releaseIds: releases }), true);
+  assert.equal(knowledgeConfigCites({ knowledge: [{ baseId: 'base-a', indexes: [{ documentId: 'doc-1' }] }] }, { baseId: 'base-a', releaseIds: releases }), true);
+  assert.equal(knowledgeConfigCites({ releaseIds: ['other'] }, { baseId: 'base-a', releaseIds: releases }), false);
+});
 test('CSV quoted multiline cells retain one logical row and repeated header', async () => {
   const out = await parseKnowledgeBytes(
     'x.csv',
@@ -124,6 +132,44 @@ test('DOCX paragraphs survive; expanded XML and entity declarations are bounded'
     ).status,
     'FAILED',
   );
+});
+test('PPTX slide text becomes sections; notes and unsafe XML do not', async () => {
+  const zip = new JSZip();
+  const slide = (title: string, body: string) =>
+    `<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:sp><p:txBody><a:p><a:r><a:t>${title}</a:t></a:r></a:p><a:p><a:r><a:t>${body}</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>`;
+  zip.file('ppt/slides/slide2.xml', slide('第二页', '投放'));
+  zip.file('ppt/slides/slide1.xml', slide('第一页', '标题'));
+  zip.file('ppt/notesSlides/notesSlide1.xml', slide('备注', '不要收入'));
+  const out = await parseKnowledgeBytes('材料.pptx', await zip.generateAsync({ type: 'nodebuffer' }));
+  assert.equal(out.status, 'READY');
+  assert.deepEqual(out.sections.map((s) => s.text), ['第一页\n标题', '第二页\n投放']);
+  assert.deepEqual(out.sections.map((s) => s.locator.page), [1, 2]);
+  zip.file('ppt/slides/slide1.xml', '<!DOCTYPE x [<!ENTITY x "oops">]><p:sld/>');
+  assert.equal((await parseKnowledgeBytes('材料.pptx', await zip.generateAsync({ type: 'nodebuffer' }))).status, 'FAILED');
+  const blank = new JSZip();
+  blank.file('ppt/slides/slide1.xml', '<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:sp><p:txBody><a:p><a:r><a:t> </a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>');
+  assert.equal((await parseKnowledgeBytes('空.pptx', await blank.generateAsync({ type: 'nodebuffer' }))).status, 'DOWNLOAD_ONLY');
+  assert.equal((await parseKnowledgeBytes('材料.pptx', await zip.generateAsync({ type: 'nodebuffer' }), { maxXmlBytes: 20 })).status, 'PARTIAL');
+});
+test('XLSX keeps sheet names, cached cells and column alignment', async () => {
+  const zip = new JSZip();
+  zip.file('xl/workbook.xml', '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="营收" sheetId="1" r:id="rId1"/><sheet name="备注" sheetId="2" r:id="rId2"/></sheets></workbook>');
+  zip.file('xl/_rels/workbook.xml.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>');
+  zip.file('xl/sharedStrings.xml', '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si><t>名称</t></si><si><t>金额</t></si><si><t>广告</t></si></sst>');
+  zip.file('xl/worksheets/sheet1.xml', '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="inlineStr"><is><t>备注</t></is></c></row><row r="2"><c r="A2" t="s"><v>2</v></c><c r="C2" t="inlineStr"><is><t>投放</t></is></c><c r="B2"><v>12</v></c></row><row r="3"><c r="A3"><f>B2*2</f><v>24</v></c><c r="B3"><f>1/0</f></c></row></sheetData></worksheet>');
+  zip.file('xl/worksheets/sheet2.xml', '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>只有表头</t></is></c></row></sheetData></worksheet>');
+  const out = await parseKnowledgeBytes('表.xlsx', await zip.generateAsync({ type: 'nodebuffer' }));
+  assert.equal(out.status, 'READY');
+  assert.deepEqual(out.sections.map((s) => s.text), ['广告 | 12 | 投放\n', '24\n', '只有表头\n']);
+  assert.equal(out.sections[0].tableHeader, '营收\n名称 | 金额 | 备注');
+  assert.deepEqual(out.sections[0].locator, { headingPath: ['营收'], rowStart: 2, rowEnd: 2 });
+  assert.equal(out.sections[1].tableHeader, '营收\n名称 | 金额 | 备注');
+  assert.equal(out.sections[1].locator.rowStart, 3);
+  assert.deepEqual(out.sections[2].locator, { headingPath: ['备注'], rowStart: 1, rowEnd: 1 });
+  assert.equal(out.sections[2].tableHeader, undefined);
+  const chunks = chunkSections(out.sections, { targetTokens: 50, maxTokens: 80, overlapTokens: 0 });
+  assert.equal(chunks[0].text.startsWith('营收\n名称 | 金额 | 备注\n广告 | 12 | 投放'), true);
+  assert.equal(chunks[0].locator.rowStart, 2);
 });
 test('embedding response reorders valid indexed vectors and batches without fabricated usage', async () => {
   usage.length = 0;
