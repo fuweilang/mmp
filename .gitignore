@@ -56,3 +56,6 @@ _backups/
 
 # Root development launcher ownership and startup locks
 /.mmp-dev/
+
+# Mimosa security scanner runtime state
+**/.mimosa/
