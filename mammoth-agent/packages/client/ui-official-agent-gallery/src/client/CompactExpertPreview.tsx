@@ -3,8 +3,6 @@ import type { HostObservable, InjectFace, PropsLocale, PropsRenderSlots, PropsRu
 import type { ExpertKnowledgeSource } from '@mammoth-ai/mmp-official-agent-gallery/types'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import type {} from '@mammoth-ai/mmp-client-ui-chat/client'
-import { formatRunDuration, LIVE_RUN_CLOCK_INTERVAL_MS } from '@mammoth-ai/mmp-client-ui-chat/src/client/chat/message-chrome.ts'
-import { RunningWhaleTail } from '@mammoth-ai/mmp-client-ui-chat/src/client/chat/RunningWhaleTail.tsx'
 import { IconUsersOutlineRegular, MarkdownText, TextShimmer } from '@mammoth-ai/mmp-client-ui-primitives'
 import type { PreviewProfile } from './expert-preview-bridge.ts'
 import { ExpertPreviewEntry, type PreviewTarget } from './ExpertPreviewEntry.tsx'
@@ -163,6 +161,35 @@ function PreviewByline({ name,avatarUrl }: PreviewProfile) {
   return <header className={css.byline} data-expert-preview-byline=""><span className={css.avatar} aria-hidden="true">{avatarUrl && failedUrl!==avatarUrl ? <img src={avatarUrl} alt="" onError={()=>{setFailedUrl(avatarUrl)}} /> : <IconUsersOutlineRegular size={18}/>}</span><strong>{name}</strong></header>
 }
 
+/** Local copies of the chat running-status pieces; cross-package src value imports are blocked by the client bundle purity gate. */
+const LIVE_RUN_CLOCK_INTERVAL_MS = 1000
+
+type RunDurationTranslate = (key: 'duration.secondUnit' | 'duration.minuteUnit' | 'duration.hourUnit') => string
+
+function formatRunDuration(ms: number, t: RunDurationTranslate): string {
+  const total = Math.max(0, Math.floor(ms / 1000))
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor(total / 60) % 60
+  const seconds = total % 60
+  let text = ''
+  if (hours > 0) text += String(hours) + t('duration.hourUnit')
+  if (total >= 60) text += String(minutes) + t('duration.minuteUnit')
+  return text + String(seconds) + t('duration.secondUnit')
+}
+
+const REST_PATH = 'M8.844 13.742C8.967 12.328 8.45 10.4 8.45 9.65C8.45 8.94 8.88 8.43 9.6 8.43C11.285 8.43 12.106 8.281 12.685 8.104C13.71 7.791 14.585 6.768 15.055 5.945C15.137 5.803 14.99 5.641 14.829 5.671C13.829 5.86 12.828 5.376 11.827 4.978C10.659 4.514 9.491 4.707 8.935 4.876C8.805 4.915 8.658 4.819 8.636 4.686C8.468 3.643 7.405 2.615 5.498 2.238C4.54 2.048 3.748 1.574 3.347 1.202C3.252 1.113 3.088 1.125 3.03 1.242C2.628 2.059 2.168 3.82 5.248 6.115C5.82 6.494 6.31 6.785 6.574 7.637C6.72 8.104 6.157 9.168 6.061 9.368C5.157 11.27 5.089 12.19 4.926 13.742'
+
+function RunningWhaleTail() {
+  return (
+    <span className={css.runningIcon} aria-hidden="true">
+      <span className={css.runningWhaleAnimated} />
+      <svg className={css.runningWhaleStill} width="100%" height="100%" viewBox="0 0 16 16" fill="none">
+        <path d={REST_PATH} stroke="currentColor" strokeWidth={1} />
+      </svg>
+    </span>
+  )
+}
+
 /** Home-parity pre-first-token indicator: whale tail + live “深度思考中，用时 N 秒 ···” clock. */
 function ThinkingLine({ startTime, chatText }: { startTime: number | undefined; chatText: MessagesProps['chatText'] }) {
   const [now, setNow] = useState(Date.now)
@@ -173,7 +200,7 @@ function ThinkingLine({ startTime, chatText }: { startTime: number | undefined; 
     return () => { clearInterval(timer) }
   }, [startTime])
   const label = startTime === undefined ? chatText('chat.deepDiving') : chatText('chat.deepDivingFor', {
-    duration: formatRunDuration(Math.max(1000, now - startTime), chatText).map(part => part.text).join(''),
+    duration: formatRunDuration(Math.max(1000, now - startTime), chatText),
   })
   return <div className={css.thinking} role="status" aria-live="polite" aria-atomic="true">
     <RunningWhaleTail />
