@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
     inputs:
       source_ref:
-        description: '打包源码分支或 tag；默认 5.0'
+        description: '必填：打包源码分支或 tag（例如 5.5）；留空会被拒绝，避免误用默认分支'
         type: string
-        default: '5.0'
+        default: ''
         required: true
 
 permissions:
@@ -38,6 +38,14 @@ jobs:
       # 未签名包：避免 electron-builder 尝试发现证书
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
+      - name: Require source_ref
+        if: ${{ inputs.source_ref == '' }}
+        shell: pwsh
+        working-directory: .
+        run: |
+          Write-Error 'source_ref 必填（例如 5.5）；不允许空值回落到默认分支'
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
