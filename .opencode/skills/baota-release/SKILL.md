@@ -38,7 +38,7 @@ description: >-
 | production/smoke.sh:9-14 | ✅已修（2026-11-08）：按 manifest 遍历所有平台做真实 GET + 大小 + sha256；探活用 Range，feed 存在时校验其引用 |
 | scripts/collect-baota-desktop.ts:35-36、57-65 | ✅已修（2026-11-08）：manifest 改为合并（保留 Windows/其它架构），unsigned 支持 arm64+x64 并做 lipo 架构断言 |
 | apps/desktop/scripts/upload-target.ts:125-143、desktop-release-tag.ts:64-69 | 普通production upload会向COS写文件并创建/推送desktop-v标签；不是单纯宝塔传包。当前禁止push时不可调用 |
-| mammoth-agent/.github/workflows/{macos-package,macos-intel-package,desktop-publish}.yml | 文件在单仓子目录，根.github/workflows不存在；workflow内部仍假设checkout根是mammoth-agent，production source限制master或mmp-v*，Publish指向COS且会推tag。未核实远端根工作流/runner，不能说“推3.0就能原样CI发宝塔” |
+| `.github/workflows/windows-package.yml`（仓库根） | ✅2026-11-17 已存在并在 origin/5.3 实测成功；`workflow_dispatch` 的 `source_ref` 默认值仍写死 `'5.0'`，**必须显式传** `-f source_ref=<分支>`；产物 artifact 名 `mammoth-agent-win-x64-unsigned`。`mammoth-agent/.github/workflows/{macos-package,macos-intel-package,desktop-publish}.yml` 依赖自托管 runner/COS，不用于宝塔发版 |
 | release.sh:137-139、491-498、545-559 | 历史done旧note未清仍在；回滚记录的nginx时间戳与实际切流备份时间须对照，不把state.done当已验收 |
 
 ### 双Mac打包与正式更新
@@ -103,8 +103,61 @@ GitHub代码备份已完成；CI路线仍需另行批准并补齐单仓workflow�
 
 **一键入口**：`ground/infra/production/release.sh --yes`（详见第 4 节方式 A）。
 
-默认范围：**中台 api + web + pg**，只替换 `https://www.mmai.vip`。
+默认范围：**中台 api + web + pg + knowledge**，只替换 `https://www.mmai.vip`。
 默认不做：Octop、客户端 dmg、GitHub PR、commit/push。
+
+### 知识库处理容器（发版必须带上）
+
+知识库分段不在 API 进程里跑，`worker-main.ts` 也不会被 HTTP 服务引用。`compose.yml` 若只有 pg、api、web，上传的文件会一直停在「处理中」。发版时在同一 compose 增加服务 `knowledge`：
+
+- 镜像与 `api` 相同（`${MMP_API_IMAGE}`），`env_file`、`DATABASE_URL`、uploads / library / secrets 卷与 `api` 相同，`depends_on` pg 健康后再起，`restart: unless-stopped`。
+- 工作目录已是 `/app/apps/backend`。命令只跑 `node dist/knowledge-core/worker-main.js`。
+- 不要在这个容器里跑 `prisma migrate deploy`。迁移仍只由 `api` 的启动命令做。
+- 不要在总后台加按钮来触发分段。
+
+发版后 `docker compose ps` 必须看到 `knowledge` 在跑。再上传一份小文件，状态应从「处理中」变为处理完成。
+
+**发版前镜像断言（5.3.0 新增）**：api 镜像里必须同时有两个入口，缺 knowledge 入口会一直「处理中」：
+
+```bash
+docker run --rm --platform linux/amd64 --entrypoint sh mmp-api:$RELEASE_ID -c \
+  'test -f /app/apps/backend/dist/main.js && test -f /app/apps/backend/dist/knowledge-core/worker-main.js && echo entry-ok'
+```
+
+**发版后验收（release.sh/smoke.sh 都不检查 knowledge，必须手工做）**
+
+1. `docker compose ps` 四个服务 Up；`docker compose exec -T knowledge sh -c 'tr "\0" " " < /proc/1/cmdline'` 显示 `node dist/knowledge-core/worker-main.js`。
+2. `docker compose logs --tail=30 knowledge` 无 error（正常时几乎无输出）。
+3. 真实上传：登录超管 → `POST /admin/api/knowledge-core/bases`（临时库）→ `POST .../bases/<id>/documents` 带 `file` + `idempotencyKey` → 轮询 `GET .../jobs/<jobId>` 到 `SUCCEEDED/READY`。
+4. 清理临时库（见下方删除语义，通常要 SQL 清理）。
+
+**删除语义（5.3.1 起明确）**：`kc_document_revision`/`kc_chunk`/`kc_embedding` 有不可变触发器。
+
+- 空库：`DELETE /admin/api/knowledge-core/bases/:id` → 200。
+- 有任何文档版本：→ **400 `KNOWLEDGE_BASE_IMMUTABLE`**（旧 5.3.0 会 500 `KNOWLEDGE_INTERNAL_ERROR`）。前端提示“改为停用”，不要报“服务坏了”。
+- 清理测试库只能 SQL：单事务内 `SET LOCAL session_replication_role = replica;` 再按 chunk→embedding→job→request→index→revision→document→release→base 顺序删除，否则 `kc_no_mutation` 会拒绝。
+
+```sql
+BEGIN;
+SET LOCAL session_replication_role = replica;
+CREATE TEMP TABLE _t AS SELECT :'base_id'::text AS id;
+DELETE FROM kc_embedding e USING kc_chunk c, kc_index_revision ir, kc_document_revision dr, kc_document d, _t b
+ WHERE e.chunk_id=c.id AND c.index_revision_id=ir.id AND ir.revision_id=dr.id AND dr.document_id=d.id AND d.base_id=b.id;
+DELETE FROM kc_chunk c USING kc_index_revision ir, kc_document_revision dr, kc_document d, _t b
+ WHERE c.index_revision_id=ir.id AND ir.revision_id=dr.id AND dr.document_id=d.id AND d.base_id=b.id;
+DELETE FROM kc_ingestion_request r USING _t b WHERE r.base_id=b.id;
+DELETE FROM kc_ingestion_job j USING _t b WHERE j.base_id=b.id;
+DELETE FROM kc_index_revision ir USING kc_document_revision dr, kc_document d, _t b
+ WHERE ir.revision_id=dr.id AND dr.document_id=d.id AND d.base_id=b.id;
+DELETE FROM kc_document_revision dr USING kc_document d, _t b WHERE dr.document_id=d.id AND d.base_id=b.id;
+DELETE FROM kc_document d USING _t b WHERE d.base_id=b.id;
+DELETE FROM kc_release_item ri USING kc_release r, _t b WHERE ri.release_id=r.id AND r.base_id=b.id;
+DELETE FROM kc_release r USING _t b WHERE r.base_id=b.id;
+DELETE FROM kc_base x USING _t b WHERE x.id=b.id;
+COMMIT;
+```
+
+用法：`psql -v base_id=<id> -f cleanup.sql`；结束后核对 `select count(*) from kc_base` 回到发布前的数。
 
 只有用户明确说“发客户端 / 发 dmg / 发安装包”才处理客户端。
 
@@ -362,7 +415,7 @@ cd /Users/fuweilang/Documents/code/mmp
 | `GET /admin/api/users`（带登录 cookie） | 200，`application/json` |
 | `GET /console/api/version` | 200 JSON |
 | 真实登录 | 200，能进 `/console/` |
-| `docker compose ps` | api/web/pg 均 Up，`RestartCount=0` |
+| `docker compose ps` | api/web/pg/**knowledge** 均 Up，`RestartCount=0` |
 | web 日志 | 无 `No usable native binding`、无 `failed to map segment` |
 | 下载页 | 无包时明确提示，不报 500 |
 
@@ -1020,6 +1073,66 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 - `--only` 分段发版刷新 `last-release.json`。
 - 旧链接 query 保留（需重建 web 镜像）。
 - 双账号隔离、桌面客户端真机、真实短信/支付仍未验。
+
+## 4O. 2026-11-17 5.3 全栈 + 三平台（Ground 5.3.0→5.3.1 / 桌面 0.3.5）
+
+> 范围：5.3（已合并 5.2，尖端 `36566cc2`）；中台 api+web+pg+**knowledge**；mac-arm64 / mac-x64 / win-x64 三包；全部 unsigned。
+> 结果：首发 29 分钟（00:23:59 → 00:52:55），热修 5.3.1 8 分钟（`--reuse-web`）。返工约 20 分钟，全部来自“独立 worktree”和“并行顺序”。
+
+### 4O.1 实测耗时
+
+| 节点 | 实测 | 性质 |
+|---|---|---|
+| worktree + clonefile 预热依赖/缓存 + 版本 bump + 门禁 | ~7 min | 必要（一次性） |
+| 前端 / 官网静态导出 | 5 s / 5 s | 必要 |
+| api 镜像（5.3.0） | ~2.3 min | 必要 |
+| 服务器 web 镜像 | **710 s** | 关键路径 |
+| 桌面 mac-arm64（缓存热） | ~4 min | 并行 |
+| 桌面 mac-x64（首次失败后重打） | ~15 min | 关键路径 |
+| Windows CI（并行） | ~15 min | 并行 |
+| 部署 + 迁移 + nginx | ~40 s | 必要 |
+| smoke（三平台全量 GET + sha） | 5.5 min | 必要 |
+| 三平台上传 + 公网 sha 校验 | ~6 min（与 x64 打包重叠） | 必要 |
+| 5.3.1 热修（api 重建 + 复用 web + smoke） | **8.2 min** | 已验证 |
+
+### 4O.2 本轮 8 个坑（全部已处理）
+
+| # | 现象 | 根因 | 损失 | 处理 / 以后规避 |
+|---|---|---|---|---|
+| 1 | x64 打包 `npm pack @mammoth-ai/node-addon-system-darwin-x64@0.1.2` 404 | 独立 worktree 只有 git 跟踪文件；`native/system/packages/darwin-x64/bin/system.node` 是**未跟踪的交叉编译产物**，缺失时回退 registry（私有包不存在） | ~2 min + 一次重打 | 新建 worktree 后先补未跟踪原生产物：`native/system/packages/<plat>-<arch>/bin/system.node`（mac-arm64 会由 build:native 现场生成，x64 必须拷贝）；`git status --ignored` 对一遍 |
+| 2 | Windows CI 若在版本 bump 前触发，产物仍是旧版本 | CI 只认远端 `source_ref` | 会发错版本 | 版本 bump **先 push** 再 `gh workflow run windows-package.yml -f source_ref=5.3`；workflow 默认值写死 5.0，务必显式传 |
+| 3 | 首发 smoke 中途 `exit=1`：`alias mammoth-agent-mac-x64.dmg serves 290036295, manifest declares 290250551` | 中台 smoke 与客户端上传并发：smoke 先读 manifest（旧 x64），随后别名被替换成新包 | ~5 min（重跑 `--from smoke`） | 顺序固定：**中台 smoke 通过后再传客户端**；若必须并行，客户端全部传完后必须 `release.sh --release-id <ID> --from smoke --yes` 重跑，禁止拿中间态判定失败 |
+| 4 | release.sh / smoke.sh 完全不检查 knowledge | 脚本早于知识库容器 | 容器死了也会“发版成功” | 按本文“知识库处理容器”四条手工验收；镜像内断言 `dist/knowledge-core/worker-main.js` |
+| 5 | `DELETE /admin/api/knowledge-core/bases/:id` 返回 500 `KNOWLEDGE_INTERNAL_ERROR` | `kc_document_revision`/`kc_chunk`/`kc_embedding` 有 `kc_no_mutation` 触发器，`deleteBase` 硬删必然抛错，`safeKnowledgeError` 兜成 500 | 验收清理受阻 | ✅5.3.1 已修：有 revision 时抛 `KNOWLEDGE_BASE_IMMUTABLE`（400，前端提示“改为停用”）；空库仍 200。测试数据用 `session_replication_role=replica` 单事务清理 |
+| 6 | 本机可用磁盘只有 14 GiB | 历史 docker 镜像 + `.desktop-build` 10G + node_modules 3G | 差点不够 | 清本机旧 `mmp-api`/`mmp-web` 镜像（不动 `.desktop-build`）；worktree 用 APFS `cp -cR` 克隆 `node_modules`、`.desktop-build`（不额外占空间）；门禁 ≥18 GiB |
+| 7 | 超管登录 401，`release-private/admin-credentials.txt` 里的密码是错的 | 凭据又过期 | 登录后验收会全卡 | 排期前先真实登录；本轮已把文件更新为实测密码（仍保持 600，不进仓库/聊天） |
+| 8 | `official_kb_document` 0 行，怀疑知识库没数据 | 该表是 LEGACY 路由老资料；新知识库在 `kc_*`，生产已有 67 个库、559 个历史任务 SUCCEEDED | 0（虚警） | 先查表名：知识库是 `kc_base`/`kc_document`/`kc_ingestion_job`；`official_kb_document` 只在 `LEGACY + enterprise_knowledge` 专家上用（生产此类专家 0 个） |
+
+### 4O.3 新增门禁（续 4L.3，编号 23–28）
+
+23. **worktree 补未跟踪产物**：`git worktree add` 出来的目录缺 `native/system/packages/*/bin/system.node`、`packages/*/lib` 等生成物；涉及跨架构桌面包时必须先同步（见 4O.2-1）。
+24. **版本变更必须落远端**：Windows 包只能由远端 CI 出，`source_ref` 必须显式传当前发布分支；本地 dirty 的版本号对 CI 不可见。
+25. **客户端上传与中台 smoke 互斥**：manifest/别名在发布窗口内会多次变化；要么先 smoke 再传包，要么全传完重跑 `--from smoke`。
+26. **knowledge 门禁**：镜像双入口断言 + `compose ps` 四服务 + 日志无错 + 真实上传到 `SUCCEEDED/READY`（本文知识库章节）。
+27. **知识库删除语义**：有文档版本 → `KNOWLEDGE_BASE_IMMUTABLE`（400），只能停用；清理测试库必须 `session_replication_role=replica`。
+28. **本机磁盘 ≥18 GiB + clonefile 预热**：`cp -cR` 克隆 `node_modules`/`.desktop-build`；不要清缓存，不要 `docker system prune -a`。
+29. **凭据前置**：登录 200 才算通过门禁；`admin-credentials.txt` 过期直接换，别在窗口里试。
+30. **发布窗口内不要并发两个写 `downloads/` 的动作**：三平台上传串行，`publish-desktop-downloads.ts` 先 `--dry-run` 看 diff 再 `--yes`。
+
+### 4O.4 本轮基线（首发 5.3.0 → 热修 5.3.1）
+
+| 项 | 值 |
+|---|---|
+| 源码 | 起点 `36566cc2`（5.3 含 5.2 merge）；发布分支 `release/5.3.0` 推送后 `origin/5.3` = `4cd0d882`（含 0.3.5 家族、Ground 5.3.0、host 门禁测试修、knowledge 删除修复、Ground 5.3.1） |
+| 镜像 | 首发 api/web `5.3.0-20261117-0023`；热修 api `mmp-api:5.3.1-20261117-0109` + 复用 web `mmp-web:5.3.0-20261117-0023` |
+| DB | 迁移 59/59，本轮**无新迁移**；知识库表前缀 `kc_*`（67 库 / 559 历史任务 SUCCEEDED） |
+| 桌面 | 0.3.5 unsigned：arm64 `646f7b32…` 268,487,964B；x64 `304a56e0…` 290,036,295B；win `62786bba…` 314,457,464B；manifest/三别名 `no-store`，公网 GET+sha 已验 |
+| 回滚 | 首发：`.env.bak-20261117-004000`、`middle-web.bak-20261117-004000`、`website.bak-20261117-004000`、nginx `mammoth.conf.bak-20261117-004145`；热修：`.env.bak-20261117-011135` 等、nginx `bak-20261117-011301` |
+| 磁盘 | 服务器 73.5G → 59.9G（只留当前+上一版镜像）；本机 14G → 18G |
+| Windows CI | run `43906938409` 成功（`source_ref=5.3`，unsigned，artifact `mammoth-agent-win-x64-unsigned`） |
+| 验收 | 4 容器 Up/0 重启；`/api/version` 5.3.1；console/admin 200；`/admin/api/users` 200 JSON；头像 200；知识库上传端到端通过；空库删除 200、有版本删除 400 |
+
+> 客户端无需重打时：本次 5.3.1 只改 Ground，`--reuse-web` 直接把中台热修压到 8 分钟，桌面保持 0.3.5 不动。
 
 ## 5. 网络与下载（最容易吃掉几小时）
 

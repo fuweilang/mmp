@@ -20,6 +20,7 @@
     "test:library:http": "node --test --test-concurrency=1 test/library/library.http.test.cjs test/library/library.sharing.http.test.cjs test/library/library.admin.http.test.cjs",
     "test:library:backup": "node --test --test-concurrency=1 test/library/library.backup.test.cjs",
     "knowledge:worker": "node dist/knowledge-core/worker-main.js",
+    "dev:worker": "node --env-file=.env dist/knowledge-core/worker-main.js",
     "test:knowledge-core": "node --import tsx --test test/knowledge-core/core.unit.test.ts test/knowledge-core/ingestion.unit.test.ts",
     "test:knowledge-core:db": "node --import tsx --test test/knowledge-core/ingestion.postgres.test.ts",
     "test:knowledge-retrieval": "node --import tsx --test test/knowledge-core/retrieval.unit.test.ts test/knowledge-core/library-source.unit.test.ts",

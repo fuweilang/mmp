@@ -806,6 +806,8 @@ onUnmounted(() => {
 <style scoped>
 .official-skills-page {
   box-sizing: border-box;
+  font-size: 13px;
+  --el-font-size-base: 13px;
   min-width: 0;
   padding: 15px;
   background: var(--el-bg-color, #fff);
@@ -932,6 +934,8 @@ onUnmounted(() => {
   overflow: hidden;
 }
 .official-skill-dialog.el-dialog {
+  font-size: 13px;
+  --el-font-size-base: 13px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -971,6 +975,8 @@ onUnmounted(() => {
   flex-direction: column;
   box-sizing: border-box;
   width: 480px;
+  font-size: 13px;
+  --el-font-size-base: 13px;
   max-width: calc(100vw - 48px);
   max-height: calc(100vh - 48px);
   max-height: calc(100dvh - 48px);

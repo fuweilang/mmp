@@ -50,6 +50,8 @@ export interface Config {
   maxResponseBytes: number
   /** Minimum interval between intermediate download progress notifications. */
   progressIntervalMs: number
+  /** When true, activation downloads and loads a missing model. False only inspects disk. */
+  prepareOnStart: boolean
 }
 
 /** Validate deployment-varying runtime choices at plugin activation. */
@@ -78,4 +80,5 @@ export const Config: z<Partial<Config>, Config> = z.object({
   maxLogBytes: z.natural().min(1).default(64 * 1024),
   maxResponseBytes: z.natural().min(1).default(128 * 1024),
   progressIntervalMs: z.natural().min(1).max(MAX_TIMER_DELAY_MS).default(100),
+  prepareOnStart: z.boolean().default(false),
 })

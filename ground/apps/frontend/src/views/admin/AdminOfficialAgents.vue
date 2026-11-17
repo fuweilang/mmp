@@ -239,6 +239,8 @@ onMounted(() => { void editorResources.load().catch(() => {}); void load(); });
 <style scoped>
 .official-agents-page {
   background: #fff;
+  font-size: 13px;
+  --el-font-size-base: 13px;
   min-height: calc(100vh - 120px);
   padding: 15px;
   min-width: 0;
@@ -279,5 +281,15 @@ onMounted(() => { void editorResources.load().catch(() => {}); void load(); });
     flex-direction: column;
     gap: 12px;
   }
+}
+</style>
+<style>
+.el-dialog.official-agent-dialog,
+.el-drawer.official-agent-audit,
+.el-dialog.expert-metadata-dialog,
+.el-dialog.expert-skill-content-dialog,
+.el-dialog.expert-resource-dialog {
+  font-size: 13px;
+  --el-font-size-base: 13px;
 }
 </style>

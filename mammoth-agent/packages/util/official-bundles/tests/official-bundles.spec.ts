@@ -25,7 +25,7 @@ describe('Shipped profile templates', () => {
   it('stack each mode bundle on base except the standalone minimal SDK', () => {
     expect(PROFILE_TEMPLATES).toEqual({
       acp: { bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-acp-app'] },
-      web: { bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app'] },
+      web: { bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app', '@mammoth-ai/mmp-experimental-voice-input-bundle'] },
       headless: { bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-headless'] },
       sdk: { bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-sdk-app'] },
       'sdk-minimal': { bundles: ['@mammoth-ai/mmp-sdk-minimal'] },

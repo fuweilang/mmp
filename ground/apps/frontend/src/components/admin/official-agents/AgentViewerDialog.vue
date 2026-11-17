@@ -227,7 +227,7 @@ function onAvatarError(agent: OfficialAgentRow) {
 
 .form-section-title {
   margin: 4px 0 12px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--el-text-color-primary);
 }

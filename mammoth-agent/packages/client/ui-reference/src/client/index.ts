@@ -75,6 +75,7 @@ export function apply(ctx: ClientContext): void {
     trigger: '@',
     name: 'reference',
     showGroupTitle: false,
+    menu: false,
     async candidates(session: ClientSessionContext, { query, quoted, drilled, signal }) {
       if (sessions.binding(session.sessionId) === undefined) {
         throw new Error(`reference candidates require a retained session "${session.sessionId}"`)

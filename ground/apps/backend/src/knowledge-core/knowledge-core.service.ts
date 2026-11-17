@@ -164,6 +164,10 @@ export class KnowledgeCoreService {
     assertKnowledgeScope(base, { type: 'PLATFORM' });
     return this.prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM kc_base WHERE id=${baseId} FOR UPDATE`;
+      // Revision rows are immutable by trigger, so a base that ever received a document
+      // can only be archived (enabled=false); deleting would fail inside Postgres.
+      const revisions = await tx.knowledgeDocumentRevision.count({ where: { document: { baseId } } });
+      if (revisions > 0) throw new KnowledgeCoreError('KNOWLEDGE_BASE_IMMUTABLE');
       const releaseIds = (await tx.knowledgeRelease.findMany({ where: { baseId }, select: { id: true } })).map(release => release.id);
       if (releaseIds.length) {
         const agents = await tx.officialAgent.findMany({ select: { executionConfig: true, onlineVersion: { select: { executionConfig: true } } } });

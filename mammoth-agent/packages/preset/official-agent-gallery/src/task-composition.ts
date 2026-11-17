@@ -5,19 +5,25 @@ import type { Session } from '@mammoth-ai/mmp-session'
 import { createHash } from 'node:crypto'
 import type { OfficialAgentBinding, OfficialSkillBinding } from './types.ts'
 export const MAX_CATALOG_SKILLS=5
+export const MAX_CATALOG_EXPERTS=3
 export interface CatalogSkillRef { readonly id:string; readonly revision:number }
+export interface CatalogExpertRef { readonly id:string; readonly versionId:string }
 export interface CatalogSelection {
  readonly protocol:1; readonly selectionVersion:number
- readonly expertRef:{readonly id:string;readonly versionId:string}|null
+ readonly expertRef:CatalogExpertRef|null
  readonly skillRef:CatalogSkillRef|null
  /** Present when the client sent a list. Older selections have only `skillRef`. */
  readonly skillRefs?:readonly CatalogSkillRef[]
+ /** Chip order. Absent on older selections, which carry only `expertRef`. The first entry is the lead. */
+ readonly expertRefs?:readonly CatalogExpertRef[]
 }
 export interface CatalogAttempt {
  readonly protocol:1; readonly requestId:string; readonly messageId:string
  readonly authScope:{readonly userId:string;readonly scope:string}
  readonly selection:CatalogSelection; readonly selectionHash:string; readonly inputHash:string; readonly compositionHash:string
  readonly expert:OfficialAgentBinding|null; readonly skill:OfficialSkillBinding|null; readonly skillHash:string|null
+ /** Lead first. Absent unless more than one expert was selected. */
+ readonly experts?:readonly OfficialAgentBinding[]
  /** Chip order. Absent on attempts stored before skills could stack. */
  readonly skills?:readonly OfficialSkillBinding[]; readonly skillHashes?:readonly string[]
  /** Display offsets into the user text, one per listed skill. Absent from the composition hash. */
@@ -41,6 +47,9 @@ function skillRefOf(raw:Record<string,unknown>):CatalogSkillRef{
 export function selectionSkills(selection:CatalogSelection):readonly CatalogSkillRef[]{
  return selection.skillRefs??(selection.skillRef?[selection.skillRef]:[])
 }
+export function selectionExperts(selection:CatalogSelection):readonly CatalogExpertRef[]{
+ return selection.expertRefs??(selection.expertRef?[selection.expertRef]:[])
+}
 export function parseSelection(raw:unknown):CatalogSelection{
  const v=object(raw)
  if(v.protocol!==1||!Number.isSafeInteger(v.selectionVersion)||Number(v.selectionVersion)<0||!Object.prototype.hasOwnProperty.call(v,'expertRef')||!Object.prototype.hasOwnProperty.call(v,'skillRef'))throw Error('TASK_SELECTION_INCOMPLETE')
@@ -53,11 +62,20 @@ export function parseSelection(raw:unknown):CatalogSelection{
  for(const skill of skillRefs){if(seen.has(skill.id))throw Error('TASK_SELECTION_DUPLICATE_SKILL');seen.add(skill.id)}
  const first=skillRefs[0]??null
  if((legacy?.id??null)!==(first?.id??null)||(legacy?.revision??null)!==(first?.revision??null))throw Error('TASK_SELECTION_SKILL_MISMATCH')
- return {...base,skillRef:first,skillRefs}
+ const withSkills={...base,skillRef:first,skillRefs}
+ if(!Object.prototype.hasOwnProperty.call(v,'expertRefs'))return withSkills
+ if(!Array.isArray(v.expertRefs))throw Error('TASK_SELECTION_INVALID')
+ if(v.expertRefs.length>MAX_CATALOG_EXPERTS)throw Error('TASK_SELECTION_TOO_MANY_EXPERTS')
+ const expertRefs=v.expertRefs.map(item=>{const row=object(item);return {id:id(row.id),versionId:id(row.versionId)}}),seenExperts=new Set<string>()
+ for(const row of expertRefs){if(seenExperts.has(row.id))throw Error('TASK_SELECTION_DUPLICATE_EXPERT');seenExperts.add(row.id)}
+ const lead=expertRefs[0]??null
+ if((expert?.id??null)!==(lead?.id??null)||(expert?.versionId??null)!==(lead?.versionId??null))throw Error('TASK_SELECTION_EXPERT_MISMATCH')
+ return {...withSkills,expertRef:lead,expertRefs}
 }
-export function compositionHashOf(value:Pick<CatalogAttempt,'expert'|'skill'|'skillHash'|'skills'|'skillHashes'|'selectionHash'|'authScope'>):string{
+export function compositionHashOf(value:Pick<CatalogAttempt,'expert'|'skill'|'skillHash'|'skills'|'skillHashes'|'experts'|'selectionHash'|'authScope'>):string{
  const base={expert:value.expert,skill:value.skill,skillHash:value.skillHash,selectionHash:value.selectionHash,authScope:value.authScope}
- return Array.isArray(value.skills)?catalogHash({...base,skills:value.skills,skillHashes:value.skillHashes}):catalogHash(base)
+ const withSkills=Array.isArray(value.skills)?{...base,skills:value.skills,skillHashes:value.skillHashes}:base
+ return Array.isArray(value.experts)?catalogHash({...withSkills,experts:value.experts}):catalogHash(withSkills)
 }
 export const catalogHash=(v:unknown):string=>createHash('sha256').update(JSON.stringify(v)).digest('hex')
 export function attemptForMessage(session:Session,messageId:string):CatalogAttempt|undefined{
@@ -68,7 +86,19 @@ export function attemptForRequest(session:Session,requestId:string):CatalogAttem
  const event=session.snapshotEvents().findLast(event=>event.type==='official-gallery/attempt'&&event.data.requestId===requestId)
  return event?.type==='official-gallery/attempt'?validateAttempt(event.data):undefined
 }
-declare module '@mammoth-ai/cordis' { interface Events { 'task/prepare-prompt'(agent:Agent,request:unknown,message?:UserMessage):Promise<'handled'|undefined> } }
+declare module '@mammoth-ai/cordis' {
+  interface Events {
+    /**
+     * Let a task owner prepare one queued prompt before ordinary admission.
+     * @mode serial
+     * @param agent - Agent that will receive the prompt.
+     * @param request - admission request carrying the task selection.
+     * @param message - queued user message when admission already built one.
+     * @returns `handled` when the listener owns the prompt, otherwise undefined.
+     */
+    'task/prepare-prompt'(agent: Agent, request: unknown, message?: UserMessage): Promise<'handled' | undefined>
+  }
+}
 declare module '@mammoth-ai/mmp-session/types' { interface SessionEventMap {
  /** Frozen authorized role/method revision for one accepted user-message attempt. Required, not ignorable. */
  'official-gallery/attempt':CatalogAttempt
@@ -83,6 +113,8 @@ export function validateAttempt(value:CatalogAttempt):CatalogAttempt{
  const listed=selectionSkills(selection),bound=Array.isArray(value.skills)?value.skills:value.skill?[value.skill]:[]
  if(listed.length!==bound.length||listed.some((skill,index)=>skill.id!==bound[index]?.sessionSource.id||skill.revision!==bound[index]?.sessionSource.packageRevision))throw Error('TASK_COMPOSITION_REFERENCE_MISMATCH')
  if((selection.expertRef?.id??null)!==(value.expert?.agentId??null)||(selection.expertRef?.versionId??null)!==(value.expert?.versionId??null)||(selection.skillRef?.id??null)!==(value.skill?.sessionSource.id??null)||(selection.skillRef?.revision??null)!==(value.skill?.sessionSource.packageRevision??null))throw Error('TASK_COMPOSITION_REFERENCE_MISMATCH')
+ const teamRefs=selectionExperts(selection),teamBound=Array.isArray(value.experts)?value.experts:value.expert?[value.expert]:[]
+ if((teamRefs.length>1)!==Array.isArray(value.experts)||teamRefs.length!==teamBound.length||teamRefs.some((row,index)=>row.id!==teamBound[index]?.agentId||row.versionId!==teamBound[index]?.versionId))throw Error('TASK_COMPOSITION_REFERENCE_MISMATCH')
  if(Array.isArray(value.skills)&&(value.skillHashes?.length??-1)!==value.skills.length)throw Error('TASK_COMPOSITION_HISTORY_INVALID')
  return value
 }

@@ -334,11 +334,13 @@ export class ConversationController extends Service implements IConversation {
     }
     // An Inbox row can show the acceptance before the receipt; a receipt that fails afterwards changes
     // nothing here because the Host already holds the message.
+    const experts = catalogSelection === undefined ? [] : catalogSelection.expertRefs ?? (catalogSelection.expertRef ? [catalogSelection.expertRef] : [])
+    const lead = experts[0]
     const prompt = catalogSelection === undefined ? session.prompt(content, mode, signal, submission.requestId)
       : session.prompt(content, mode, signal, submission.requestId, {
         protocol: 1, selectionVersion: catalogSelection.selectionVersion,
-        expertRef: catalogSelection.expertRef
-          ? { id: catalogSelection.expertRef.id, versionId: catalogSelection.expertRef.versionId } : null,
+        expertRef: lead ? { id: lead.id, versionId: lead.versionId } : null,
+        expertRefs: experts.map(expert => ({ id: expert.id, versionId: expert.versionId })),
         skillRef: catalogSelection.skillRefs[0] ? { id: catalogSelection.skillRefs[0].id, revision: catalogSelection.skillRefs[0].revision } : null,
         skillRefs: catalogSelection.skillRefs.map(skill => ({ id: skill.id, revision: skill.revision })),
         ...(placedMarks ? { skillMarks } : {}),

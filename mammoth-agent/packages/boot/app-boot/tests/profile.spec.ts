@@ -394,6 +394,52 @@ describe('loadProfile', () => {
     ])
   })
 
+  it('adds voice input to a stock web profile once and leaves a customized list', () => {
+    const voice = '@mammoth-ai/mmp-experimental-voice-input-bundle'
+    const anchor = stageInstallation({
+      '@mammoth-ai/mmp-base': { patch: '[]\n' },
+      '@mammoth-ai/mmp-web-app': { patch: '[]\n' },
+      [voice]: { patch: '[]\n' },
+      'custom-bundle': { patch: '[]\n' },
+    })
+    const home = tmp()
+    const stock = resolveProfileDir('web', home)
+    initProfile(stock, ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app'])
+    loadProfile('t', 'web', anchor, home)
+    expect(readProfileManifest('t', stock).mmp?.profile).toEqual({
+      bundles: [...PROFILE_TEMPLATES.web!.bundles],
+      bundleMigrations: ['web-voice-input'],
+    })
+    const migrated = readProfileManifest('t', stock)
+    writeProfileManifest(stock, {
+      ...migrated,
+      mmp: { ...migrated.mmp, profile: { ...migrated.mmp?.profile, bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app'] } },
+    })
+    loadProfile('t', 'web', anchor, home)
+    expect(readProfileManifest('t', stock).mmp?.profile?.bundles).toEqual(['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app'])
+
+    const shippedHome = tmp()
+    const shipped = resolveProfileDir('web', shippedHome)
+    initProfile(shipped, [...PROFILE_TEMPLATES.web!.bundles])
+    loadProfile('t', 'web', anchor, shippedHome)
+    const stamped = readProfileManifest('t', shipped)
+    expect(stamped.mmp?.profile?.bundleMigrations).toEqual(['web-voice-input'])
+    writeProfileManifest(shipped, {
+      ...stamped,
+      mmp: { ...stamped.mmp, profile: { ...stamped.mmp?.profile, bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app'] } },
+    })
+    loadProfile('t', 'web', anchor, shippedHome)
+    expect(readProfileManifest('t', shipped).mmp?.profile?.bundles).toEqual(['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app'])
+
+    const customHome = tmp()
+    const custom = resolveProfileDir('web', customHome)
+    initProfile(custom, ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app', 'custom-bundle'])
+    loadProfile('t', 'web', anchor, customHome)
+    expect(readProfileManifest('t', custom).mmp?.profile).toEqual({
+      bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app', 'custom-bundle'],
+    })
+  })
+
   it('removes a retired bundle from an application-owned profile and keeps the rest of the manifest', () => {
     const anchor = stageInstallation({
       '@mammoth-ai/mmp-base': { patch: '[]\n' },

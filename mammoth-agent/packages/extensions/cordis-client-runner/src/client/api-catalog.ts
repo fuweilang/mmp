@@ -1069,7 +1069,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'TaskCatalogSelection',
-    declaration: 'export interface TaskCatalogSelection {\n    readonly protocol: 1;\n    readonly selectionVersion: number;\n    readonly expertRef: {\n        readonly id: string;\n        readonly versionId: string;\n    } | null;\n    readonly skillRef: {\n        readonly id: string;\n        readonly revision: number;\n    } | null;\n    readonly skillRefs?: readonly {\n        readonly id: string;\n        readonly revision: number;\n    }[];\n    readonly skillMarks?: readonly number[];\n}',
+    declaration: 'export interface TaskCatalogSelection {\n    readonly protocol: 1;\n    readonly selectionVersion: number;\n    readonly expertRef: {\n        readonly id: string;\n        readonly versionId: string;\n    } | null;\n    readonly expertRefs?: readonly {\n        readonly id: string;\n        readonly versionId: string;\n    }[];\n    readonly skillRef: {\n        readonly id: string;\n        readonly revision: number;\n    } | null;\n    readonly skillRefs?: readonly {\n        readonly id: string;\n        readonly revision: number;\n    }[];\n    readonly skillMarks?: readonly number[];\n}',
   },
   {
     name: 'ThemeDefinition',

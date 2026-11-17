@@ -14,7 +14,9 @@ function profileScope(name: string) {
 
 describe('webApp (the real web profile)', () => {
   it('composes mmp-base then mmp-web-app: unique names, inject edges on roster rows or platform seed words', () => {
-    expect(WEB_PROFILE_BUNDLES).toEqual(['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app'])
+    expect(WEB_PROFILE_BUNDLES).toEqual([
+      '@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app', '@mammoth-ai/mmp-experimental-voice-input-bundle',
+    ])
     const names = webApp.rows.map(row => row.name)
     expect(new Set(names).size).toBe(names.length)
     const known = new Set([...names, ...Object.keys(getStaticModules())])

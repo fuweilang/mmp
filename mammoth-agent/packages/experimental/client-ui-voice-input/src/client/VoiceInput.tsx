@@ -10,6 +10,7 @@ import { failureText } from './failure-text.ts'
 import type { MicrophoneDevice } from './microphone-device.ts'
 import type { SpeechReadiness } from './readiness.ts'
 import { Waveform } from './Waveform.tsx'
+import { PreparationCard } from './PreparationCard.tsx'
 import { VoiceSetupDialog } from './VoiceSetupDialog.tsx'
 import { NS } from './locales.ts'
 import { Button, IconCloseOutlineRegular, IconStopFillRegular, IconMicrophoneOutlineRegular, StateDot, Tooltip } from '@mammoth-ai/mmp-client-ui-primitives'
@@ -44,6 +45,7 @@ export type VoiceInputProps = Pick<PropsRuntime<'conversation.input.activity'>, 
   & PropsLocale<typeof NS> & InjectFace<VoiceInputInjected>
 
 type Phase = 'idle' | 'requesting' | 'recording' | 'transcribing' | 'feedback'
+
 interface ActiveRecording {
   readonly capture: Recording
   readonly abort: AbortController
@@ -62,8 +64,8 @@ async function disposeRecording(capture: Recording): Promise<void> {
 }
 
 /** Render a compact microphone or an expanded capture, transcription, or retry row. */
-export function VoiceInput({ sessionId, inputActions, locked, onActiveChange,
-  createRecording, transcribe, openSettings, useSpeechReadiness, usePluginNavigation, t }: VoiceInputProps) {
+export function VoiceInput({ sessionId, inputActions, locked, onActiveChange, createRecording, transcribe, openSettings,
+  prepare, cancelPreparation, useSpeechReadiness, usePluginNavigation, t }: VoiceInputProps) {
   const readiness = useSpeechReadiness(value => value), catalog = readiness.catalog
   const navigable = usePluginNavigation(present => present)
   const provider = catalog?.providers.find(item => item.id === catalog.selection.providerId)
@@ -160,7 +162,10 @@ export function VoiceInput({ sessionId, inputActions, locked, onActiveChange,
     <VoiceSetupDialog open={setupOpen && !usable}
       needsInstallation={readiness.connected && provider?.location === 'host-local' && provider.preparation.phase === 'unprepared'}
       onDismiss={() => { setSetupOpen(false) }}
-      onOpenDetails={navigable ? () => { setSetupOpen(false); openSettings() } : undefined} t={t} />
+      onOpenDetails={navigable ? () => { setSetupOpen(false); openSettings() } : undefined} t={t}>
+      {!navigable && provider ? <PreparationCard provider={provider} connected={readiness.connected}
+        prepare={prepare} cancelPreparation={cancelPreparation} t={t} /> : undefined}
+    </VoiceSetupDialog>
   </>
   return <div className={css.captureRow} data-voice-activity={phase}>
     <Button type="button" className={css.roundButton} size="sm" aria-label={t(pending ? 'discard' : 'cancel')}

@@ -1,7 +1,8 @@
 /**
  * Keep experimental packages outside default installations, runtime imports, and shipped compositions.
- * The one declared exception is a bundle the launcher names in `OPTIONAL_BUNDLES`: shipped for the person to
- * switch on, selected by no shipped template, its own dependency graph outside the default product's.
+ * The declared exceptions are a bundle the launcher names in `OPTIONAL_BUNDLES`, shipped for the person to
+ * switch on with its dependency graph outside the default product's, and voice input, which the web template
+ * selects while that same graph stays outside the walk.
  */
 
 import { existsSync, globSync, readFileSync, statSync } from 'node:fs'
@@ -23,6 +24,8 @@ import {
 import { isExperimentalPackageName } from './experimental-package-policy.ts'
 // The independently published entry package owns platform-engine dependencies.
 const EXTERNAL_KIT_PACKAGES = new Set(['@deepseek-ai/libreoffice-kit'])
+/** Experimental bundles the web template selects. Their direct dependencies may appear as composed rows. */
+const WEB_TEMPLATE_EXPERIMENTAL_BUNDLES = new Set(['@mammoth-ai/mmp-experimental-voice-input-bundle'])
 const PROFILE_SOURCE = 'packages/util/official-bundles/src/bundles.ts'
 const PRESET_PATTERN = 'packages/bundle/web-app/presets/*.patch.yml'
 const RUNTIME_SECTIONS = ['dependencies', 'optionalDependencies', 'peerDependencies'] as const
@@ -127,6 +130,7 @@ export function verifyDefaultProductIsolation(root: string): ProductIsolationRes
       directory = parent
     }
   }
+  const allowedExperimental = new Set<string>()
   const reference = (name: string, origin: string, owner?: Package): void => {
     if (name.startsWith('.') || name.startsWith('/') || /^(?:file|link):/.test(name)) {
       const target = name.startsWith('file://') ? fileURLToPath(name)
@@ -137,7 +141,9 @@ export function verifyDefaultProductIsolation(root: string): ProductIsolationRes
     }
     const packageName = barePackageName(name)
     if (isExperimentalPackageName(packageName)) {
-      failures.push(`${origin} -> ${name}: default product must not include experimental packages`)
+      if (!allowedExperimental.has(packageName)) {
+        failures.push(`${origin} -> ${name}: default product must not include experimental packages`)
+      }
       return
     }
     const pkg = packages.get(packageName)
@@ -241,12 +247,19 @@ export function verifyDefaultProductIsolation(root: string): ProductIsolationRes
     if (path.startsWith('apps/') || path === 'python/sdk-runtime') add(pkg, path)
   }
   if (selection !== undefined) {
+    for (const name of selection.webBundles) {
+      if (!WEB_TEMPLATE_EXPERIMENTAL_BUNDLES.has(name)) continue
+      allowedExperimental.add(name)
+      for (const dependency of Object.keys(packages.get(name)?.manifest.dependencies ?? {})) allowedExperimental.add(dependency)
+    }
     for (const name of selection.packages) {
       reference(name, PROFILE_SOURCE)
       if (packages.get(name)?.manifest.mmp?.bundle?.patch === undefined) {
         failures.push(`${PROFILE_SOURCE}: default bundle ${name} must declare mmp.bundle.patch`)
       }
-      if (optionalBundles.has(name)) failures.push(`${PROFILE_SOURCE}: optional bundle ${name} must not be a default bundle`)
+      if (optionalBundles.has(name) && !WEB_TEMPLATE_EXPERIMENTAL_BUNDLES.has(name)) {
+        failures.push(`${PROFILE_SOURCE}: optional bundle ${name} must not be a default bundle`)
+      }
     }
     const webLayers = selection.webBundles.flatMap((name) => {
       const pkg = packages.get(name)

@@ -1,4 +1,7 @@
 /** Empty local caches guide explicit enablement to plugin setup without starting installation. */
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium, type Browser } from 'playwright'
 import { expect, it, onTestFinished } from 'vitest'
@@ -10,10 +13,16 @@ const expected = fileURLToPath(new URL('./expected/voice-setup.expected.md', imp
 
 it('guides a newly enabled voice plugin to installation and lets the user postpone it', async () => {
   const resources: { scaffold?: WebScaffold; browser?: Browser } = {}
+  const root = await mkdtemp(join(tmpdir(), 'mmp-voice-setup-'))
   onTestFinished(async () => {
-    try { await resources.browser?.close() } finally { await resources.scaffold?.close() }
+    try { await resources.browser?.close() } finally {
+      try { await resources.scaffold?.close() } finally { await rm(root, { recursive: true, force: true }) }
+    }
   })
-  const scaffold = await launchWebScaffold({ profile: { packages: [{ dir: bundle, enabled: false }] } })
+  // The shipped bundle prepares on activation. This overlay replaces that config so the dialog stays manual.
+  const overlay = join(root, 'voice.patch.yml')
+  await writeFile(overlay, `- id: speech-to-text-sensevoice\n  config:\n    dataRoot: ${JSON.stringify(join(root, 'models'))}\n    prepareOnStart: false\n`)
+  const scaffold = await launchWebScaffold({ profile: { packages: [{ dir: bundle, enabled: false }] }, extraOverlayPath: overlay })
   resources.scaffold = scaffold
   const browser = await chromium.launch()
   resources.browser = browser

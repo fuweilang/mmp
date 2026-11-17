@@ -1,5 +1,21 @@
+@font-face {
+  font-family: "AlibabaPuHuiTi";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/alibaba-puhuiti/AlibabaPuHuiTi-3-55-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "AlibabaPuHuiTi";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/alibaba-puhuiti/AlibabaPuHuiTi-3-75-SemiBold.woff2") format("woff2");
+}
+
 :root {
-  --app-font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --app-font-family: "AlibabaPuHuiTi", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --app-heading-font-family: var(--app-font-family);
   --app-text-color: #667085;
   --app-primary-color: #4A53A3;

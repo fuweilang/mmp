@@ -67,6 +67,11 @@ const router = createRouter({
           component: () => import('../views/admin/AdminOfficialKnowledge.vue'),
         },
         {
+          path: 'official-knowledge/:baseId',
+          meta: { title: '猛犸知识库' },
+          component: () => import('../views/admin/AdminOfficialKnowledge.vue'),
+        },
+        {
           path: 'models',
           meta: { title: '模型管理' },
           component: () => import('../views/admin/AdminModels.vue'),

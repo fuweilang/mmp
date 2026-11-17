@@ -11,6 +11,7 @@
     "dev:api": "pnpm --filter @mammoth/backend start:dev",
     "dev:web": "pnpm --filter @mammoth/frontend dev",
     "dev:gateway": "node scripts/dev-gateway.mjs",
+    "dev:knowledge": "pnpm --filter @mammoth/backend dev:worker",
     "build": "pnpm --filter @mammoth/shared build && pnpm --filter @mammoth/backend build && pnpm --filter @mammoth/frontend build",
     "verify": "pnpm verify:web && pnpm verify:api",
     "verify:web": "pnpm --filter @mammoth/shared build && pnpm --filter @mammoth/frontend typecheck && pnpm --filter @mammoth/frontend build",

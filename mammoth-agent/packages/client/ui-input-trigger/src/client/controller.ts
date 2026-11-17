@@ -162,7 +162,7 @@ export class InputTriggerController {
       && prev.hit.span.start === hit.span.start && prev.hit.span.end === hit.span.end
     this.hit = hit
     if (same) return
-    const roster = this.deps.roster.sources(hit.trigger)
+    const roster = this.menuSources(hit.trigger)
     if (roster.length === 0) {
       this.stopFetch()
       this.reduce({ type: 'close' })
@@ -458,7 +458,7 @@ export class InputTriggerController {
   refreshOpenMenu(): void {
     if (this.disposed || !this.menu.getSnapshot().open || this.hit === null) return
     const launched = this.launcher.getSnapshot()
-    const roster = this.deps.roster.sources(this.hit.trigger)
+    const roster = this.menuSources(this.hit.trigger)
       .filter(source => launched === null || source.name === launched)
     if (roster.length === 0) return
     this.fetchCandidates(this.hit, roster)
@@ -472,6 +472,11 @@ export class InputTriggerController {
     this.hit = null
     for (const off of this.lexiconOffs.values()) off()
     this.lexiconOffs.clear()
+  }
+
+  /** Sources that belong in the candidate menu. An omitted source still serializes its chips. */
+  private menuSources(trigger: string): readonly InputTriggerSource[] {
+    return this.deps.roster.sources(trigger).filter(source => source.menu !== false)
   }
 
   /** The session projection handed to sources (agent-backed identity; constant per scope). */
@@ -530,7 +535,7 @@ export class InputTriggerController {
       // open menu, so one source cannot contribute its previous catalog.
       void Promise.resolve().then(() => {
         if (this.disposed || this.hit !== hit || !this.menu.getSnapshot().open) return
-        this.fetchCandidates(hit, this.deps.roster.sources(hit.trigger))
+        this.fetchCandidates(hit, this.menuSources(hit.trigger))
       })
     }))
   }

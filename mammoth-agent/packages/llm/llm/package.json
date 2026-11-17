@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-llm",
   "description": "Provider-neutral LLM service interface for the DeepSeek Harness",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "publishConfig": {
     "access": "public"
   },

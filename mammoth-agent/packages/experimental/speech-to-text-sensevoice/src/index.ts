@@ -1,4 +1,7 @@
-/** Optional local SenseVoice provider; activation performs no downloads or model loading. */
+/**
+ * Optional local SenseVoice provider.
+ * `prepareOnStart` downloads a missing model during activation; otherwise activation only inspects disk.
+ */
 import { isAbsolute } from 'node:path'
 import type { Context } from '@mammoth-ai/cordis'
 import type {} from '@mammoth-ai/mmp-experimental-speech-to-text'
@@ -13,7 +16,7 @@ export const name = 'experimental-speech-to-text-sensevoice'
 export const inject = ['speechToText', 'subprocess']
 
 /**
- * Register the local recognizer and inspect disk caches without downloading or loading models.
+ * Register the local recognizer. `prepareOnStart` downloads and loads a missing cache; otherwise only inspect disk.
  * @param ctx - Host registry and subprocess owner.
  * @param config - validated runtime configuration.
  */
@@ -32,7 +35,8 @@ export function apply(ctx: Context, config: Config): void {
       preparation: worker,
       transcribe: async (input, signal) => await worker.transcribe(input, signal),
     })
-    worker.inspect()
+    if (config.prepareOnStart) worker.prepareIfMissing()
+    else worker.inspect()
     return async () => {
       const removing = unregister()
       await worker.dispose()

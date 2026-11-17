@@ -575,8 +575,20 @@ function sameBundles(left: readonly string[], right: readonly string[]): boolean
   return left.length === right.length && left.every((value, index) => value === right[index])
 }
 
+/** Id recorded after the stock web profile gains voice input, so removing that bundle stays removed. */
+const WEB_VOICE_MIGRATION = 'web-voice-input'
+
+/** Return recorded installation-owned bundle rewrites, ignoring a non-array value. */
+function recordedMigrations(manifest: ProfileManifest): string[] {
+  const value = manifest.mmp?.profile?.bundleMigrations
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string')
+}
+
 /** Return `manifest` with `mmp.profile.bundles` replaced, preserving all other fields. */
-function withBundles(manifest: ProfileManifest, bundles: readonly string[]): ProfileManifest {
+function withBundles(
+  manifest: ProfileManifest, bundles: readonly string[], migrations?: readonly string[],
+): ProfileManifest {
   return {
     ...manifest,
     mmp: {
@@ -584,6 +596,7 @@ function withBundles(manifest: ProfileManifest, bundles: readonly string[]): Pro
       profile: {
         ...manifest.mmp?.profile,
         bundles: [...bundles],
+        ...migrations === undefined ? {} : { bundleMigrations: [...migrations] },
       },
     },
   }
@@ -598,6 +611,17 @@ function normalizeShippedProfile(name: string, dir: string, manifest: ProfileMan
   const template = PROFILE_TEMPLATES[name]
   const bundles = manifest.mmp?.profile?.bundles
   if (template === undefined || bundles === undefined) return manifest
+  if (name === 'web') {
+    const migrations = recordedMigrations(manifest)
+    const stock = installationOwned !== undefined && sameBundles(bundles, installationOwned)
+    const current = sameBundles(bundles, template.bundles)
+    if (!migrations.includes(WEB_VOICE_MIGRATION) && (stock || current)) {
+      const normalized = withBundles(manifest, current ? bundles : template.bundles, [...migrations, WEB_VOICE_MIGRATION])
+      writeProfileManifest(dir, normalized)
+      return normalized
+    }
+    return manifest
+  }
   const isRetiredTuple = installationOwned !== undefined && sameBundles(bundles, installationOwned)
   if (!isRetiredTuple) return manifest
   const normalized = withBundles(manifest, template.bundles)
