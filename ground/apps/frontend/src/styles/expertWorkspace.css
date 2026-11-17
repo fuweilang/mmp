@@ -90,6 +90,11 @@
 .expert-save-button.el-button:hover,.expert-save-button.el-button:active { background:var(--app-primary-hover-color); }
 .expert-workspace .expert-save-button.el-button { border-radius: 12px !important; }
 .expert-more-button.el-button { width: 32px; padding: 0; color: #686871; }
+.expert-more-menu.el-popper { border: 0 !important; border-radius: 12px !important; box-shadow: 0 8px 28px rgba(23, 16, 40, 0.12); }
+.expert-more-menu .el-dropdown-menu { padding: 6px !important; border-radius: 12px !important; }
+.expert-more-menu .el-dropdown-menu__item { height: 32px; margin: 0; padding: 0 10px; border-radius: 8px !important; color: #29292e; font-size: 13px; line-height: 32px; }
+.expert-more-menu .el-dropdown-menu__item:not(.is-disabled):hover,
+.expert-more-menu .el-dropdown-menu__item:not(.is-disabled):focus { background: #f4f4f6 !important; color: #29292e !important; }
 .expert-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .el-dialog.expert-workspace .expert-workspace-grid {
   display: grid;
@@ -193,7 +198,8 @@
 .expert-selected-skill summary > svg { transform: rotate(-90deg); }
 .expert-selected-skill details[open] summary > svg { transform: none; }
 .expert-selected-skill details p { margin: 0 0 10px 30px; color: #8b8b95; font-size: 12px; line-height: 20px; }
-.expert-skill-glyph { display: grid; place-items: center; flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: #7863ff; color: #fff; }
+.expert-skill-glyph { display: grid; place-items: center; flex-shrink: 0; width: 20px; height: 20px; overflow: hidden; border-radius: 50%; background: #7863ff; color: #fff; }
+.expert-skill-glyph img { width: 100%; height: 100%; object-fit: cover; }
 .expert-selected-skill > .el-button,
 .expert-knowledge-row > .el-button { width: 24px; height: 32px; padding: 0; color: #94949f; }
 .expert-add-button.el-button { gap: 3px; height: 24px; margin: 8px 0 2px; padding: 0 6px; border: 0; border-radius: 6px; background: #f3f3f4; color: #343439; font-size: 12px; font-weight: 400; }
@@ -345,10 +351,12 @@
 .expert-metadata-dialog .catalog-icon-hint { display: none; }
 .expert-metadata-dialog .el-dialog__footer { padding: 16px 0 0; border: 0; }
 .expert-metadata-dialog .el-dialog__footer .el-button { min-width: 104px; height: 44px; border: 0; border-radius: 12px !important; font-size: 13px; }
+.expert-metadata-dialog .expert-metadata-sections { display: flex; flex-direction: column; gap: 8px; border: 0; }
+.expert-metadata-dialog .expert-metadata-sections .el-collapse-item { overflow: hidden; border-radius: 12px; background: #f6f6f8; }
 .expert-metadata-dialog .el-collapse { border: 0; }
-.expert-metadata-dialog .el-collapse-item__header { height: 32px; border: 0; color: #8e8e98; font-size: 12px; }
-.expert-metadata-dialog .el-collapse-item__wrap { border: 0; }
-.expert-metadata-dialog .el-collapse-item__content { padding-bottom: 4px; }
+.expert-metadata-dialog .el-collapse-item__header { height: 40px; padding: 0 12px; border: 0; background: transparent; color: #29292e; font-size: 13px; font-weight: 500; }
+.expert-metadata-dialog .el-collapse-item__wrap { border: 0; background: transparent; }
+.expert-metadata-dialog .el-collapse-item__content { padding: 0 12px 8px; }
 
 /* Expert avatar actions match the compact two-row Monica menu. */
 .expert-metadata-dialog .catalog-avatar-trigger { position: relative; width: 72px; height: 72px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }

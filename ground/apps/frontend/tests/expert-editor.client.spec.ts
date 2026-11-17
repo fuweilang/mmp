@@ -8,7 +8,7 @@ import ExpertResourcePicker from '../src/components/admin/ExpertResourcePicker.v
 import ExpertKnowledgePanel from '../src/components/admin/ExpertKnowledgePanel.vue';
 import { createExpertEditorResources } from '../src/components/admin/expert-editor-resources';
 
-const fixture = vi.hoisted(() => ({ list: vi.fn(), update: vi.fn(), create: vi.fn(), preview: vi.fn(), publish: vi.fn(), removeAvatar: vi.fn(), uploadAvatar:vi.fn(), listSkills:vi.fn(), skillDetail:vi.fn(), catalog:vi.fn(),bases:vi.fn(), releases:vi.fn(), documents:vi.fn(),chunks:vi.fn(),profiles:vi.fn(),health:vi.fn(),extracted:vi.fn(),createBase:vi.fn(),upload:vi.fn(),job:vi.fn(),jobAction:vi.fn(),release:vi.fn(),providers:vi.fn(),usage:vi.fn() }));
+const fixture = vi.hoisted(() => ({ list: vi.fn(), update: vi.fn(), create: vi.fn(), preview: vi.fn(), publish: vi.fn(), removeAvatar: vi.fn(), uploadAvatar:vi.fn(), listSkills:vi.fn(), skillDetail:vi.fn(), catalog:vi.fn(),bases:vi.fn(), releases:vi.fn(), documents:vi.fn(),chunks:vi.fn(),profiles:vi.fn(),health:vi.fn(),extracted:vi.fn(),createBase:vi.fn(),upload:vi.fn(),job:vi.fn(),jobAction:vi.fn(),release:vi.fn(),providers:vi.fn(),usage:vi.fn(),deleteDocument:vi.fn() }));
 vi.mock('../src/stores/auth', () => ({ useAuthStore: () => ({ session: { platformRoleKey: 'super_admin' } }) }));
 vi.mock('../src/utils/agent', () => ({ agentWebUrl: 'http://127.0.0.1:5201/agent/' }));
 vi.mock('../src/api/admin', async original => ({
@@ -16,7 +16,7 @@ vi.mock('../src/api/admin', async original => ({
   adminOfficialAgentApi: fixture,
   adminOfficialSkillApi: { enabledOptions: async () => [], list:fixture.listSkills,detail:fixture.skillDetail },
   adminLlmProviderApi: { list: fixture.providers },
-  adminKnowledgeCoreApi: { editorCatalog:fixture.catalog,profiles:fixture.profiles,bases:fixture.bases,releases:fixture.releases,documents:fixture.documents,chunks:fixture.chunks,health:fixture.health,extracted:fixture.extracted,createBase:fixture.createBase,upload:fixture.upload,job:fixture.job,jobAction:fixture.jobAction,release:fixture.release,usage:fixture.usage,originalUrl:()=>'/test-original' },
+  adminKnowledgeCoreApi: { editorCatalog:fixture.catalog,profiles:fixture.profiles,bases:fixture.bases,releases:fixture.releases,documents:fixture.documents,chunks:fixture.chunks,health:fixture.health,extracted:fixture.extracted,createBase:fixture.createBase,upload:fixture.upload,job:fixture.job,jobAction:fixture.jobAction,release:fixture.release,usage:fixture.usage,deleteDocument:fixture.deleteDocument,originalUrl:()=>'/test-original' },
 }));
 let app: App | undefined, root: HTMLElement | undefined;
 let row: any;
@@ -60,15 +60,11 @@ async function click(text: string, where: ParentNode = document) {
     [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(node => node.textContent?.trim() === text)!.click();
     return;
   }
-  if (['基本信息', '角色、流程与交付要求', '高级：自动标识'].includes(text) && !document.querySelector('.expert-metadata-dialog')) {
+  if (['基本信息', '角色', '标识'].includes(text) && !document.querySelector('.expert-metadata-dialog')) {
     document.querySelector<HTMLButtonElement>('.expert-name-button')!.click();
     await nextTick();
   }
   if (text === '基本信息') return;
-  if (['角色、流程与交付要求','高级：自动标识'].includes(text)) {
-    const more=[...document.querySelectorAll<HTMLElement>('.expert-metadata-dialog button')].find(b=>b.textContent?.trim()==='更多设置');
-    if(more?.getAttribute('aria-expanded')==='false') {more.click();await nextTick();}
-  }
   if (text === '完成') text='确认';
   const candidates = [
     ...where.querySelectorAll<HTMLElement>('button,[role="button"],[role="tab"]'),
@@ -332,7 +328,7 @@ it('preview persistence locks explicit avatar, new-expert kind and key controls 
   await prompt('新专家测试指令');
   const name = document.querySelector<HTMLInputElement>('input[aria-label="专家名称"]')!;
   name.value = '新专家'; name.dispatchEvent(new Event('input', { bubbles: true })); await nextTick();
-  await click('角色、流程与交付要求', dialog()); await click('高级：自动标识', dialog()); await nextTick();
+  await click('角色', dialog()); await click('标识', dialog()); await nextTick();
   let finish!: (value: any) => void;
   fixture.create.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   await click('保存并试聊', dialog()); await vi.waitFor(() => expect(fixture.create).toHaveBeenCalled());
@@ -379,7 +375,7 @@ it('existing tool aliases and unavailable IDs stay visible and can be removed in
   row.draft.toolScope = ['delegate', 'retired-tool'];
   await mount();
   expect(dialog().querySelector('[aria-label="专家能力配置"]')!.textContent).not.toContain('已有工具权限');
-  await click('高级：自动标识',dialog());
+  await click('标识',dialog());
   const controls = () => [...document.querySelectorAll<HTMLInputElement>('.expert-metadata-dialog .expert-tool-options input[type="checkbox"]')];
   const alias = controls().find(input => input.value === 'delegate');
   const retired = controls().find(input => input.value === 'retired-tool');
@@ -460,10 +456,93 @@ it('skills come from the platform catalog and selections are saved as real skill
   const picker=document.querySelector('.expert-resource-dialog')!;
   await vi.waitFor(()=>expect(picker.textContent).toContain('后台已有技能'));
   await click('添加',picker);await nextTick();
-  await click('关闭技能选择',picker);
+  expect(picker.querySelector('.resource-modal-footer')?.textContent).toContain('确认');
+  await click('确认',picker);
   await click('保存草稿',dialog());
   await vi.waitFor(()=>expect(fixture.update).toHaveBeenCalledWith('expert-one',expect.objectContaining({linkedSkillIds:['platform-skill']})));
   expect(fixture.listSkills).toHaveBeenCalled();
+});
+
+it('skill and knowledge pickers page twenty rows and search the full list after a short pause', async () => {
+  const skills = Array.from({ length: 25 }, (_, index) => ({ id: `s${index}`, name: index === 24 ? '唯一命中技能' : `技能${index}`, summary: '说明', status: '已启用', selectable: true, avatarUrl: index === 0 ? '/uploads/skill.png' : null }));
+  const selected = ref<string[]>([]);
+  root = document.createElement('div'); document.body.append(root);
+  app = createApp({ render: () => h(ExpertResourcePicker, { modelValue: selected.value, 'onUpdate:modelValue': (value: string[]) => { selected.value = value; }, resources: skills, title: '添加技能', resourceLabel: '技能', manageLabel: '技能管理', manageUrl: '/admin/official-skills', loading: false, error: '' }) });
+  app.use(ElementPlus); app.mount(root); await nextTick();
+  await click('添加技能', root);
+  const picker = document.querySelector('.expert-resource-dialog')!;
+  expect(picker.querySelectorAll('.resource-picker-row')).toHaveLength(20);
+  expect(picker.querySelector('.resource-modal-avatar')?.getAttribute('src')).toBe('/uploads/skill.png');
+  expect(picker.textContent).not.toContain('唯一命中技能');
+  const list = picker.querySelector<HTMLElement>('.resource-picker-list')!;
+  Object.defineProperty(list, 'clientHeight', { configurable: true, value: 400 });
+  Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 2000 });
+  list.scrollTop = 1600;
+  list.dispatchEvent(new Event('scroll'));
+  await nextTick();
+  expect(picker.querySelectorAll('.resource-picker-row')).toHaveLength(25);
+  const skillInput = picker.querySelector('input')!;
+  skillInput.value = '唯一命中';
+  skillInput.dispatchEvent(new Event('input'));
+  await nextTick();
+  expect(picker.querySelectorAll('.resource-picker-row').length).toBeGreaterThan(1);
+  await new Promise(resolve => setTimeout(resolve, 250));
+  await nextTick();
+  expect(picker.textContent).toContain('唯一命中技能');
+  expect(picker.querySelectorAll('.resource-picker-row')).toHaveLength(1);
+  app.unmount(); root.remove(); app = undefined;
+
+  fixture.documents.mockResolvedValue([]);
+  fixture.releases.mockResolvedValue([]);
+  fixture.bases.mockResolvedValue(Array.from({ length: 25 }, (_, index) => ({ id: `kb-${index}`, name: index === 24 ? '唯一命中知识库' : `库${index}`, enabled: true })));
+  await mount();
+  await click('添加知识库', dialog());
+  const knowledge = document.querySelector('.expert-knowledge-picker')!;
+  await vi.waitFor(() => expect(knowledge.querySelectorAll('.expert-knowledge-catalog-row')).toHaveLength(20));
+  expect(knowledge.textContent).not.toContain('唯一命中知识库');
+  const knowledgeList = knowledge.querySelector<HTMLElement>('.expert-knowledge-list')!;
+  Object.defineProperty(knowledgeList, 'clientHeight', { configurable: true, value: 400 });
+  Object.defineProperty(knowledgeList, 'scrollHeight', { configurable: true, value: 2000 });
+  knowledgeList.scrollTop = 1600;
+  knowledgeList.dispatchEvent(new Event('scroll'));
+  await nextTick();
+  expect(knowledge.querySelectorAll('.expert-knowledge-catalog-row')).toHaveLength(25);
+  const knowledgeInput = knowledge.querySelector<HTMLInputElement>('input[aria-label="搜索知识库"]')!;
+  knowledgeInput.value = '唯一命中';
+  knowledgeInput.dispatchEvent(new Event('input'));
+  await new Promise(resolve => setTimeout(resolve, 250));
+  await nextTick();
+  expect(knowledge.textContent).toContain('唯一命中知识库');
+  expect(knowledge.querySelectorAll('.expert-knowledge-catalog-row')).toHaveLength(1);
+});
+
+it('deletes a knowledge file after naming the other experts that use it', async () => {
+  const file = {id:'document',title:'接待须知',enabled:true,revisions:[{id:'revision',originalName:'接待须知.md',sizeBytes:100,createdAt:'2026-11-12',indexes:[{id:'index',profileId:'embedding',status:'READY'}]}]};
+  fixture.profiles.mockResolvedValue([{id:'embedding',task:'EMBEDDING',enabled:true}]);
+  fixture.health.mockResolvedValue({configured:true});
+  fixture.bases.mockResolvedValue([{id:'kb',name:'后台知识库',enabled:true,ownerAgentId:'someone-else'}]);
+  fixture.releases.mockResolvedValue([{id:'release',version:1,items:[{indexRevisionId:'index'}]}]);
+  fixture.documents.mockImplementation(async () => fixture.deleteDocument.mock.calls.length ? [] : [file]);
+  fixture.usage.mockResolvedValue([{id:'other',name:'另一个专家'}]);
+  fixture.deleteDocument.mockResolvedValue({id:'document',deleted:true});
+  row.draft.executionConfig.releaseIds = ['release'];
+  await mount();
+  dialog().querySelector<HTMLButtonElement>('[aria-label="更多专家操作"]')!.click();
+  await nextTick();
+  expect(document.querySelector('.expert-more-menu')?.textContent).toContain('编辑专家信息');
+  await click('查看后台知识库', dialog());
+  await vi.waitFor(() => expect(document.body.textContent).toContain('接待须知.md'));
+  await click('删除接待须知.md');
+  const box = () => document.querySelector('.el-message-box')!;
+  await vi.waitFor(() => expect(box().textContent).toContain('另一个专家'));
+  await click('取消', box());
+  await vi.waitFor(() => expect(document.querySelector('.el-message-box')).toBeNull());
+  expect(fixture.deleteDocument).not.toHaveBeenCalled();
+  await click('删除接待须知.md');
+  await vi.waitFor(() => expect(box().textContent).toContain('另一个专家'));
+  await click('删除文件', box());
+  await vi.waitFor(() => expect(fixture.deleteDocument).toHaveBeenCalledWith('document'));
+  await vi.waitFor(() => expect(document.querySelector('.expert-knowledge-documents')?.textContent).not.toContain('接待须知.md'));
 });
 
 it('resource selection keeps unavailable bindings removable while blocking new unready resources', async () => {
@@ -491,7 +570,8 @@ it('platform knowledge binds a real release and opens its document chunks with p
   expect(fixture.releases).not.toHaveBeenCalledWith('disabled-kb');expect(fixture.documents).not.toHaveBeenCalledWith('disabled-kb');
   expect(picker.textContent).not.toContain('v3');
   await click('添加',picker.querySelector('.expert-knowledge-catalog-row')!);await nextTick();
-  await click('关闭添加知识库',picker);
+  expect(picker.querySelector('.expert-knowledge-picker-footer')?.textContent).toContain('确认');
+  await click('确认',picker);
   await click('保存草稿',dialog());
   await vi.waitFor(()=>expect(fixture.update).toHaveBeenCalledWith('expert-one',expect.objectContaining({executionConfig:expect.objectContaining({releaseIds:['release'],retrievalPolicy:'REQUIRED'})})));
   await click('查看后台知识库',dialog());

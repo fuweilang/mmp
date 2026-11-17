@@ -88,6 +88,7 @@ export class KnowledgeCoreService {
         name: name.trim(),
         scope: scope.type,
         tenantId: scope.type === 'TENANT' ? scope.tenantId : null,
+        ...(scope.type === 'PLATFORM' ? { autoUpdate: true } : {}),
       },
     });
   }

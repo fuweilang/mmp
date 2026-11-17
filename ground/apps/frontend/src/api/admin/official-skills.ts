@@ -37,6 +37,7 @@ export type OfficialSkillOption = {
   categories?: OfficialSkillCategory[];
   packageRevision: number;
   enabledAt: string | null;
+  avatarUrl?: string | null;
 };
 
 export type OfficialSkillZipPreview = {

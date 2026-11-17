@@ -107,6 +107,8 @@ test('current file grants revoke old expert versions after a reference is remove
 });
 test('migration reconstructs all successful files instead of following the latest subset release',async()=>{
   const base=await core.createBase(scope,'迁移子集验收-'+randomUUID());
+  assert.equal((await core.getBase(base.id,scope)).autoUpdate,true);
+  await db.knowledgeBase.update({where:{id:base.id},data:{autoUpdate:false}});
   const ids:string[]=[];
   for(const name of ['甲.md','乙.md']){const job=await core.upload(base.id,scope,{originalName:name,bytes:Buffer.from('迁移验收 '+name),profileId,idempotencyKey:randomUUID()});await drain();ids.push((await core.inspectJob(job.id,scope)).index.id);await core.createRelease(base.id,scope,[ids.at(-1)!]);}
   await db.knowledgeBase.update({where:{id:base.id},data:{autoUpdate:true}});

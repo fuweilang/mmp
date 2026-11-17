@@ -175,6 +175,7 @@ export class OfficialSkillService {
         categories: true,
         currentRevision: true,
         enabledAt: true,
+        customAvatarPath: true,
       },
       orderBy: { name: 'asc' },
     });
@@ -187,6 +188,7 @@ export class OfficialSkillService {
       categories: row.categories,
       packageRevision: row.currentRevision,
       enabledAt: row.enabledAt?.toISOString() ?? null,
+      avatarUrl: uploadedCatalogIconUrl(row.customAvatarPath),
     }));
   }
 
