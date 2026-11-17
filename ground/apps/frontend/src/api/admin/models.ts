@@ -95,10 +95,13 @@ export const adminLlmProviderApi = {
   removeModel: (modelId: string) =>
     adminHttp<{ ok: boolean }>(`/llm-models/${modelId}`, { method: 'DELETE' }),
   /** 连通探测：已存模型或表单草稿 */
-  probe: (body: AdminLlmProbeBody) =>
+  cancelProbe: (modelId: string) =>
+    adminHttp<{ ok: true }>(`/llm-models/${modelId}/probe-cancel`, { method: 'POST' }),
+  probe: (body: AdminLlmProbeBody, signal?: AbortSignal) =>
     adminHttp<AdminLlmProbeResult>('/llm-providers/probe', {
       method: 'POST',
       body: JSON.stringify(body),
+      signal,
     }),
   /** 拉取上游 /models 列表（表单草稿或已存厂商） */
   listRemoteModels: (body: AdminLlmListModelsBody) =>
@@ -133,5 +136,5 @@ export type AdminLlmListModelsResult = {
   ok: boolean;
   latencyMs: number;
   message: string;
-  models: Array<{ id: string; ownedBy?: string }>;
+  models: Array<{ id: string; ownedBy?: string; name?: string; type?: string; context?: number }>;
 };

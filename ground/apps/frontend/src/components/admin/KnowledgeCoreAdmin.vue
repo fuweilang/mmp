@@ -116,10 +116,9 @@
     </div>
     <el-collapse>
       <el-collapse-item title="技术人员设置" name="technical-service">
-    <el-alert title="Embedding 和 Rerank 独立于聊天模型。更换向量模型后须重建索引。本地检查只看配置，主动探测才会请求服务并可能计费。" type="info" :closable="false" />
+    <el-alert title="这里和聊天模型无关。检查配置只看本地填得齐不齐；测试连通才会访问服务商，可能产生少量费用。换新配置不会改掉已经做好的搜索结果。" type="info" :closable="false" />
     <div class="toolbar">
       <el-button @click="openProvider()">新建供应商凭据</el-button>
-      <el-button @click="router.push('/admin/models')">聊天模型管理</el-button>
       <el-button type="primary" @click="openProfile()">新建服务配置</el-button>
     </div>
     <h3 class="section-title">供应商凭据</h3>
@@ -130,32 +129,25 @@
       <el-table-column label="密钥" width="120"><template #default="{row}">{{row.hasApiKey ? row.apiKeyMasked : '未配置'}}</template></el-table-column>
       <el-table-column label="聊天模型数" width="110" align="center"><template #default="{row}">{{row.models.length}}</template></el-table-column>
       <el-table-column label="状态" width="80" align="center"><template #default="{row}">{{row.enabled?'启用':'停用'}}</template></el-table-column>
-      <el-table-column label="操作" width="110" align="center" class-name="provider-ops" label-class-name="provider-ops"><template #default="{row}"><el-button text type="primary" @click="openProvider(row)">管理凭据</el-button></template></el-table-column>
+      <el-table-column label="操作" width="180" align="center" class-name="provider-ops" label-class-name="provider-ops"><template #default="{row}"><el-button text type="primary" @click="openProvider(row)">管理凭据</el-button><el-button text :type="row.enabled?'danger':'primary'" @click="toggleProvider(row)">{{row.enabled?'停用':'启用'}}</el-button></template></el-table-column>
     </el-table>
-    <p class="muted profiles-note">更换密钥会影响引用该供应商的聊天模型和检索配置。修改 Base URL 不会改已有检索端点，需要创建后继配置。</p>
+    <p class="muted profiles-note">更换密钥会影响用到这家服务的聊天模型和知识库搜索。平时保留正在使用的那一条即可。</p>
     <h3 class="section-title">检索配置</h3>
-    <el-table :data="profiles" border class="service-table">
-      <el-table-column prop="task" label="任务" width="130"/>
-      <el-table-column prop="model" label="供应商模型名" min-width="180"/>
-      <el-table-column label="供应商与端点" min-width="260"><template #default="{row}"><span>{{providers.find(p=>p.id===row.providerId)?.displayName || '供应商不可用'}}</span><p class="muted cell-url" :title="row.endpoint">{{row.endpoint}}</p></template></el-table-column>
-      <el-table-column prop="dimension" label="维度" width="80" align="center"/>
+    <p class="muted profiles-note">每一行是一套搜索设置。上传的文件会用「启用」的那一套变成可以按问题找到的内容。</p>
+    <el-table :data="profiles" border class="service-table" aria-label="检索配置">
+      <el-table-column label="用来做什么" width="180"><template #default="{row}">{{ profileTaskLabel(row.task) }}</template></el-table-column>
+      <el-table-column prop="model" label="模型" min-width="180"/>
+      <el-table-column label="服务商" min-width="220"><template #default="{row}"><span>{{providers.find(p=>p.id===row.providerId)?.displayName || '服务商不可用'}}</span><p class="muted cell-url" :title="row.endpoint">{{row.endpoint}}</p></template></el-table-column>
       <el-table-column label="状态" width="180">
         <template #default="{row}">{{row.enabled?'启用':'停用'}}<p class="muted">{{profileHealth[row.id] || '尚未检查'}}</p>
       </template>
     </el-table-column>
-    <el-table-column label="操作" width="230" align="center" class-name="profile-ops" label-class-name="profile-ops">
+    <el-table-column label="操作" width="320" align="center" class-name="profile-ops" label-class-name="profile-ops">
       <template #default="{row}">
-        <el-button text type="primary" @click="health(row.id)">本地检查</el-button>
+        <el-button text type="primary" @click="health(row.id)">检查配置</el-button>
         <el-button text :type="row.enabled?'danger':'primary'" @click="enableProfile(row)">{{row.enabled?'停用':'启用'}}</el-button>
-        <el-dropdown trigger="click" @command="(command:string)=>onProfileCommand(command,row)">
-          <el-button text type="primary">更多</el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="probe">主动探测（可能计费）</el-dropdown-item>
-              <el-dropdown-item command="successor">创建后继版本</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <el-button text type="primary" @click="probe(row.id)">测试连通</el-button>
+        <el-button text type="primary" @click="openProfile(row)">换新配置</el-button>
       </template>
     </el-table-column>
   </el-table>
@@ -253,46 +245,51 @@
   </el-collapse>
 </el-tab-pane>
 </el-tabs>
-<el-dialog v-model="profileOpen" :title="profileForm.predecessorId?'创建后继配置（旧配置保持不变）':'新建检索配置'" width="650px">
-  <el-form label-width="140px">
-    <el-form-item label="供应商">
+<el-dialog v-model="profileOpen" :title="profileForm.predecessorId?'换一套新的检索配置':'新建检索配置'" width="650px">
+  <p v-if="profileForm.predecessorId" class="muted profiles-note">旧配置和已经做好的搜索结果会保留。新上传的文件才会改用这一套。</p>
+  <el-form label-width="120px">
+    <el-form-item label="用哪家服务">
       <el-select v-model="profileForm.providerId" filterable>
         <el-option v-for="p in providers" :key="p.id" :value="p.id" :label="`${p.displayName}${p.enabled?'':'（停用）'}${p.hasApiKey?'':'（未配密钥）'}`" />
       </el-select>
     </el-form-item>
-    <el-form-item label="任务">
+    <el-form-item label="用来做什么">
       <el-select v-model="profileForm.task">
-        <el-option label="Embedding" value="EMBEDDING"/>
-        <el-option label="Rerank" value="RERANK"/>
+        <el-option label="把文件变成可搜索内容" value="EMBEDDING"/>
+        <el-option label="重新排序搜索结果" value="RERANK"/>
       </el-select>
     </el-form-item>
-    <el-form-item label="供应商模型名">
-      <el-input v-model="profileForm.model" placeholder="填写供应商模型名，不是聊天模型数据库 ID" maxlength="200"/>
+    <el-form-item label="模型名称">
+      <el-input v-model="profileForm.model" placeholder="例如 BAAI/bge-m3，按服务商文档填写" maxlength="200"/>
     </el-form-item>
-    <el-form-item v-if="profileForm.task==='EMBEDDING'" label="向量维度">
+    <el-form-item v-if="profileForm.task==='EMBEDDING'" label="向量长度">
       <el-input-number v-model="profileForm.dimension" :min="1" :max="16000"/>
     </el-form-item>
-    <el-form-item label="Tokenizer">
-      <el-select v-model="profileForm.tokenizer">
-        <el-option label="cl100k_base" value="cl100k_base"/>
-        <el-option label="o200k_base" value="o200k_base"/>
-      </el-select>
+    <el-form-item label="接口地址">
+      <el-input v-model="profileForm.endpoint" placeholder="不填则按服务商地址自动补上" maxlength="2048"/>
     </el-form-item>
-    <el-form-item label="完整接口 Endpoint">
-      <el-input v-model="profileForm.endpoint" placeholder="HTTPS URL；留空由供应商基础地址派生" maxlength="2048"/>
-    </el-form-item>
-    <el-form-item label="超时（ms）">
-      <el-input-number v-model="profileForm.timeoutMs" :min="1" :max="120000"/>
-    </el-form-item>
-    <el-form-item label="批量大小">
-      <el-input-number v-model="profileForm.batchSize" :min="1" :max="128"/>
-    </el-form-item>
-    <el-form-item label="输入 Token 上限">
-      <el-input-number v-model="profileForm.maxInputTokens" :min="1" :max="131072"/>
-    </el-form-item>
-    <el-form-item label="响应字节上限">
-      <el-input-number v-model="profileForm.maxResponseBytes" :min="1024" :max="16777216"/>
-    </el-form-item>
+    <el-collapse>
+      <el-collapse-item title="高级参数" name="profile-advanced">
+        <el-form-item label="分词方式">
+          <el-select v-model="profileForm.tokenizer">
+            <el-option label="cl100k_base" value="cl100k_base"/>
+            <el-option label="o200k_base" value="o200k_base"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="超时（毫秒）">
+          <el-input-number v-model="profileForm.timeoutMs" :min="1" :max="120000"/>
+        </el-form-item>
+        <el-form-item label="每批条数">
+          <el-input-number v-model="profileForm.batchSize" :min="1" :max="128"/>
+        </el-form-item>
+        <el-form-item label="单次字数上限">
+          <el-input-number v-model="profileForm.maxInputTokens" :min="1" :max="131072"/>
+        </el-form-item>
+        <el-form-item label="返回大小上限">
+          <el-input-number v-model="profileForm.maxResponseBytes" :min="1024" :max="16777216"/>
+        </el-form-item>
+      </el-collapse-item>
+    </el-collapse>
   </el-form>
   <template #footer>
     <el-button @click="profileOpen=false">取消</el-button>
@@ -308,7 +305,8 @@
     <el-form-item v-if="providerEditId" label="清除密钥"><el-checkbox v-model="providerForm.clearApiKey" @change="providerForm.apiKey=''">明确清除已保存密钥</el-checkbox></el-form-item>
     <el-form-item label="启用"><el-switch v-model="providerForm.enabled" /></el-form-item>
   </el-form>
-  <template #footer><el-button @click="providerOpen=false">取消</el-button><el-button type="primary" :disabled="busy || !providerForm.name.trim() || !providerForm.displayName.trim()" @click="saveProvider">保存凭据</el-button></template>
+  <p v-if="providerTestMessage" :class="providerTestOk ? 'muted' : 'error'">{{ providerTestMessage }}</p>
+  <template #footer><el-button @click="providerOpen=false">取消</el-button><el-button :loading="testingProvider" :disabled="!canTestProvider" @click="testProvider">测试</el-button><el-button type="primary" :disabled="busy || !providerForm.name.trim() || !providerForm.displayName.trim()" @click="saveProvider">保存凭据</el-button></template>
 </el-dialog>
 <el-dialog v-model="inspectionOpen" title="不可变正文与分段" width="850px">
   <p>正文按 UTF-16 偏移分页，分段保留定位信息；全部内容以纯文本显示。</p>
@@ -330,12 +328,12 @@
 </template>
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { adminKnowledgeCoreApi as api, type AdminLlmProviderRow, type KnowledgeProfile, type KnowledgeBase, type KnowledgeDocument, type KnowledgeRelease, type KnowledgeJob, type KnowledgeEvidence, type KnowledgeTestResult } from '../../api/admin';
+import { adminKnowledgeCoreApi as api, adminLlmProviderApi, type AdminLlmProviderRow, type KnowledgeProfile, type KnowledgeBase, type KnowledgeDocument, type KnowledgeRelease, type KnowledgeJob, type KnowledgeEvidence, type KnowledgeTestResult } from '../../api/admin';
 import { knowledgeStateLabel as stateLabel, profileCreatePayload, releaseEligibleIndexes } from '../../utils/knowledge-admin';
 const props = withDefaults(defineProps<{settingsOnly?:boolean}>(),{settingsOnly:false});
-const router = useRouter();
+
 const tab = ref(props.settingsOnly ? 'profiles' : 'bases'), busy = ref(false), error = ref('');
 const profiles = ref<KnowledgeProfile[]>([]), providers = ref<AdminLlmProviderRow[]>([]), bases = ref<KnowledgeBase[]>([]), baseId = ref(''), documents = ref<KnowledgeDocument[]>([]), releases = ref<KnowledgeRelease[]>([]), allReleases = ref<Array<KnowledgeRelease & {
     baseName: string;
@@ -386,13 +384,46 @@ async function jobAction(id: string, action: 'retry' | 'cancel') { await act(asy
 function selectIndex(id: string, checked: boolean) { selectedIndexes.value = checked ? [...new Set([...selectedIndexes.value, id])] : selectedIndexes.value.filter(x => x !== id); }
 async function publishRelease() { await act(async () => { const ids = selectedIndexes.value.filter(id => eligible.value.includes(id)); if (ids.length !== selectedIndexes.value.length)
     throw new Error('所选索引已不可发布，请刷新'); await api.release(baseId.value, ids); ElMessage.success('不可变知识版本已发布'); await reload(); }); }
-const providerOpen = ref(false), providerEditId = ref('');
+const providerOpen = ref(false), providerEditId = ref(''), testingProvider = ref(false), providerTestMessage = ref(''), providerTestOk = ref(false);
 const providerForm = reactive({name:'', displayName:'', baseUrl:'', apiKey:'', clearApiKey:false, enabled:true});
-function clearProviderSecret() { providerForm.apiKey = ''; providerForm.clearApiKey = false; }
+const canTestProvider = computed(() => !testingProvider.value && !!providerForm.baseUrl.trim() && !providerForm.clearApiKey && (!!providerEditId.value || !!providerForm.apiKey.trim()));
+function clearProviderSecret() { providerForm.apiKey = ''; providerForm.clearApiKey = false; providerTestMessage.value = ''; }
 function openProvider(p?: AdminLlmProviderRow) {
   providerEditId.value = p?.id ?? '';
+  providerTestMessage.value = '';
   Object.assign(providerForm, {name:p?.name ?? '', displayName:p?.displayName ?? '', baseUrl:p?.baseUrl ?? '', apiKey:'', clearApiKey:false, enabled:p?.enabled ?? true});
   providerOpen.value = true;
+}
+async function testProvider() {
+  const baseUrl = providerForm.baseUrl.trim();
+  if (!baseUrl || providerForm.clearApiKey) return;
+  const apiKey = providerForm.apiKey.trim();
+  if (!apiKey && !providerEditId.value) return;
+  testingProvider.value = true;
+  providerTestMessage.value = '';
+  try {
+    const result = await adminLlmProviderApi.probe({ baseUrl, ...(apiKey ? { apiKey } : {}), ...(providerEditId.value ? { providerId: providerEditId.value } : {}) });
+    providerTestOk.value = result.ok;
+    providerTestMessage.value = result.ok ? `连接成功（${result.latencyMs}ms）` : result.message;
+    if (result.ok) ElMessage.success(providerTestMessage.value);
+    else ElMessage.error(providerTestMessage.value);
+  } catch (e) {
+    providerTestOk.value = false;
+    providerTestMessage.value = e instanceof Error ? e.message : '测试失败';
+    ElMessage.error(providerTestMessage.value);
+  } finally {
+    testingProvider.value = false;
+  }
+}
+async function toggleProvider(row: AdminLlmProviderRow) {
+  const enabling = !row.enabled;
+  try {
+    await ElMessageBox.confirm(enabling ? `启用后，引用「${row.displayName}」的聊天模型和检索会恢复使用。` : `停用「${row.displayName}」后，引用它的聊天模型和检索都会停止。`, enabling ? '启用供应商' : '停用供应商', { type: 'warning', confirmButtonText: enabling ? '启用' : '停用', cancelButtonText: '取消' });
+  } catch (e) {
+    if (e === 'cancel' || e === 'close') return;
+    throw e;
+  }
+  await act(async () => { await api.updateProvider(row.id, { enabled: enabling }); await reload(); ElMessage.success(enabling ? '已启用' : '已停用'); });
 }
 async function saveProvider() { await act(async () => {
   if (providerForm.clearApiKey) await ElMessageBox.confirm('清除后所有引用此供应商的服务将无法请求。确认清除？', '清除供应商密钥');
@@ -407,11 +438,20 @@ const defaults = () => ({ providerId: '', task: 'EMBEDDING' as 'EMBEDDING' | 'RE
 const profileForm = reactive(defaults());
 function openProfile(p?: KnowledgeProfile) { Object.assign(profileForm, defaults(), p ? { ...p, dimension: p.dimension ?? 1536, predecessorId: p.id } : {}); profileOpen.value = true; }
 async function saveProfile() { await act(async () => { await api.createProfile(profileCreatePayload(profileForm)); profileOpen.value = false; await reload(); }); }
-async function enableProfile(p: KnowledgeProfile) { await act(async () => { await api.enableProfile(p.id, !p.enabled); await reload(); }); }
+async function enableProfile(p: KnowledgeProfile) {
+  const enabling = !p.enabled;
+  try {
+    await ElMessageBox.confirm(enabling ? `启用后，新的文件会使用「${p.model}」做检索。` : `停用后，「${p.model}」不再用于新的检索。已经做好的索引不会被删掉。`, enabling ? '启用检索配置' : '停用检索配置', { type: 'warning', confirmButtonText: enabling ? '启用' : '停用', cancelButtonText: '取消' });
+  } catch (e) {
+    if (e === 'cancel' || e === 'close') return;
+    throw e;
+  }
+  await act(async () => { await api.enableProfile(p.id, enabling); await reload(); ElMessage.success(enabling ? '已启用' : '已停用'); });
+}
 const profileHealthText: Record<string, string> = { PROFILE_DISABLED: '配置已停用', PROFILE_NOT_FOUND: '配置不存在', PROFILE_TASK_MISMATCH: '任务类型不匹配', PROFILE_INVALID_CONFIGURATION: '配置不完整', PROFILE_INVALID_ENDPOINT: '接口地址无效', PROFILE_UNCONFIGURED: '尚未配置', PROVIDER_DISABLED: '供应商已停用', PROVIDER_CREDENTIALS_MISSING: '未配置密钥', PROVIDER_CREDENTIALS_UNAVAILABLE: '密钥不可用', PROVIDER_ENDPOINT_MISSING: '未配置服务地址', PROVIDER_UNCONFIGURED: '供应商未配置', INVALID_PROVIDER_INPUT: '供应商参数无效' };
 function healthText(code?: string | null) { return code ? profileHealthText[code] || '配置未就绪' : '配置未就绪'; }
-function onProfileCommand(command: string, profile: KnowledgeProfile) { if (command === 'probe') void probe(profile.id); else if (command === 'successor') openProfile(profile); }
-async function health(id: string) { await act(async () => { const r = await api.health(id); configured.value[id] = r.configured; profileHealth[id] = r.configured ? '本地配置有效' : healthText(r.errorCode); }); }
+function profileTaskLabel(task: string) { return task === 'EMBEDDING' ? '把文件变成可搜索内容' : task === 'RERANK' ? '重新排序搜索结果' : task; }
+async function health(id: string) { await act(async () => { const r = await api.health(id); configured.value[id] = r.configured; const text = r.configured ? '本地配置有效。这一步没有请求供应商。' : healthText(r.errorCode); profileHealth[id] = text; if (r.configured) ElMessage.success(text); else ElMessage.warning(text); }); }
 async function probe(id: string) { await act(async () => { await ElMessageBox.confirm('将向供应商发送固定的「连接测试」输入，可能产生计费。连接成功不代表检索质量合格。', '主动探测', { confirmButtonText: '发送探测（可能计费）' }); const r = await api.probe(id); profileHealth[id] = r.available ? `连接成功 · ${r.durationMs}ms · 估算 ${r.estimatedTokens} / 实际 ${r.actualTokens ?? '供应商未提供'} Token` : `连接失败：${healthText(r.errorCode)}`; }); }
 const inspectionOpen = ref(false), inspectIds = ref<string[]>([]), chunkPage = ref<Awaited<ReturnType<typeof api.chunks>>>(), extracted = ref<Awaited<ReturnType<typeof api.extracted>>>();
 async function inspect(d: string, r: string, i: string) { await act(async () => { inspectIds.value = [d, r, i]; [chunkPage.value, extracted.value] = await Promise.all([api.chunks(d, r, i), api.extracted(d, r, i)]); inspectionOpen.value = true; }); }
