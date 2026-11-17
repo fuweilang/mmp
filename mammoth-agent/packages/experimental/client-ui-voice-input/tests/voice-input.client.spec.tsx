@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /** Click capture preserves draft edits and Session ownership without composer banners. */
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { bindSnapshotSelector, makeTranslate, RemoteError } from '@mammoth-ai/mmp-client-test-runtime'
 import { createSnapshotStore } from '@mammoth-ai/mmp-client-store'
 import { zh as commonZh } from '@mammoth-ai/mmp-client-locale/src/locales/zh.ts'
@@ -182,9 +182,9 @@ it('rejects excessive audio and keeps locked recognition disabled', async () => 
   expect(b.transcribe).not.toHaveBeenCalled()
   fireEvent.click(screen.getByRole('button', { name: zh.cancel }))
   act(() => { b.readiness.set({ catalog: null, connected: false, error: null }) })
-  expect(screen.getByRole<HTMLButtonElement>('button', { name: zh['setupPrompt.trigger'] }).disabled).toBe(false)
+  expect(screen.getByRole<HTMLButtonElement>('button', { name: zh.loading }).disabled).toBe(false)
   b.view.rerender(<VoiceInput {...b.props} locked />)
-  const locked = screen.getByRole<HTMLButtonElement>('button', { name: zh['setupPrompt.trigger'] })
+  const locked = screen.getByRole<HTMLButtonElement>('button', { name: zh.loading })
   expect(locked.disabled).toBe(true)
   fireEvent.click(locked)
   expect(screen.queryByRole('dialog')).toBeNull()
@@ -298,23 +298,23 @@ it.each(['escape', 'hidden', 'session'])('discards pending permission after %s',
   expect(b.transcribe).not.toHaveBeenCalled()
 })
 
-it('offers installation on click without a preparation tooltip', () => {
+it('starts a missing model beside the microphone without a dialog or tooltip', () => {
   const b = fixture(), state = b.readiness.getSnapshot()
   act(() => { b.readiness.set({ ...state, catalog: { ...state.catalog!, providers: [
     { ...state.catalog!.providers[0]!, preparation: { phase: 'unprepared' } },
   ] } }) })
-  const mic = screen.getByRole<HTMLButtonElement>('button', { name: zh['setupPrompt.trigger'] })
+  const mic = screen.getByRole<HTMLButtonElement>('button', { name: zh['preparation.unprepared'] })
   expect(mic.disabled).toBe(false)
-  expect(mic.getAttribute('aria-haspopup')).toBe('dialog')
+  expect(mic.getAttribute('aria-haspopup')).toBeNull()
   fireEvent.pointerEnter(mic.parentElement!)
   expect(screen.queryByRole('tooltip')).toBeNull()
-  fireEvent.click(mic)
-  expect(screen.getByRole('dialog').textContent).toContain(zh['setupPrompt.body'])
-  expect(b.capture.start).not.toHaveBeenCalled()
-  expect(b.props.prepare).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByRole('button', { name: zh['setupPrompt.open'] }))
-  expect(b.props.openSettings).toHaveBeenCalledOnce()
   expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByRole('status').textContent).toBe(zh['preparation.unprepared'])
+  expect(b.props.prepare).not.toHaveBeenCalled()
+  fireEvent.click(mic)
+  expect(b.props.prepare).toHaveBeenCalledWith(id)
+  expect(b.capture.start).not.toHaveBeenCalled()
+  expect(b.props.openSettings).not.toHaveBeenCalled()
 })
 
 it.each<SpeechPreparationState>([
@@ -322,68 +322,62 @@ it.each<SpeechPreparationState>([
   { phase: 'downloading', resource: 'model', completedBytes: 0 },
   { phase: 'failed', message: 'download failed' },
   { phase: 'cancelled' },
-])('guides $phase recognition to its status page without starting recording or preparation', (preparation) => {
+])('shows $phase beside the microphone without a dialog', (preparation) => {
   const b = fixture(), state = b.readiness.getSnapshot()
   act(() => { b.readiness.set({ ...state, catalog: { ...state.catalog!, providers: [
     { ...state.catalog!.providers[0]!, preparation },
   ] } }) })
-  fireEvent.click(screen.getByRole('button', { name: zh['setupPrompt.trigger'] }))
-  expect(screen.getByRole('dialog').textContent).toContain(zh['setupPrompt.unavailableBody'])
-  expect(screen.queryByText(zh['setupPrompt.body'])).toBeNull()
+  const expected = preparation.phase === 'downloading' ? zh['short.downloading']
+    : preparation.phase === 'failed' ? zh.preparationFailed.replace('{message}', 'download failed')
+      : preparation.phase === 'cancelled' ? zh['preparation.cancelled']
+        : zh['preparation.checking']
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByRole('status').textContent).toBe(expected)
+  fireEvent.click(screen.getByRole('button', { name: expected }))
   expect(b.capture.start).not.toHaveBeenCalled()
-  expect(b.props.prepare).not.toHaveBeenCalled()
-  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: zh['setupPrompt.details'] }))
-  expect(b.props.openSettings).toHaveBeenCalledOnce()
-})
-
-it('prepares the local model from setup guidance while the Plugins page navigation is absent', () => {
-  const b = fixture(undefined, false), state = b.readiness.getSnapshot()
-  act(() => { b.readiness.set({ ...state, catalog: { ...state.catalog!, providers: [
-    { ...state.catalog!.providers[0]!, preparation: { phase: 'unprepared' } },
-  ] } }) })
-  fireEvent.click(screen.getByRole('button', { name: zh['setupPrompt.trigger'] }))
-  const dialog = within(screen.getByRole('dialog'))
-  expect(dialog.queryByRole('button', { name: zh['setupPrompt.open'] })).toBeNull()
-  expect(dialog.getByRole('button', { name: zh['setupPrompt.later'] })).toBeTruthy()
-  fireEvent.click(dialog.getByRole('button', { name: zh.prepare }))
-  expect(b.props.prepare).toHaveBeenCalledWith(id)
   expect(b.props.openSettings).not.toHaveBeenCalled()
+  if (preparation.phase === 'failed' || preparation.phase === 'cancelled') expect(b.props.prepare).toHaveBeenCalledWith(id)
+  else expect(b.props.prepare).not.toHaveBeenCalled()
+})
+
+it('shows a download failure beside the microphone and retries without a dialog', () => {
+  const b = fixture(undefined, false), state = b.readiness.getSnapshot()
+  act(() => { b.readiness.set({ ...state, catalog: { ...state.catalog!, providers: [{
+    ...state.catalog!.providers[0]!,
+    preparation: { phase: 'failed', message: 'ENOTFOUND', download: {
+      resource: 'model.int8.onnx', source: 'https://hf-mirror.com', reason: 'dns', code: 'ENOTFOUND',
+    } },
+  }] } }) })
+  const status = screen.getByRole('status')
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(status.textContent).toBe('无法下载 model.int8.onnx：无法解析下载地址。')
+  expect(status.textContent).not.toContain('hf-mirror.com')
+  fireEvent.click(screen.getByRole('button', { name: status.textContent ?? '' }))
+  expect(b.props.prepare).toHaveBeenCalledWith(id)
   expect(b.capture.start).not.toHaveBeenCalled()
 })
 
-it('moves focus into setup guidance, contains Tab traversal, and restores the draft focus on dismissal', () => {
+it('keeps draft focus when recognition is offline', () => {
   const b = fixture()
   render(<textarea aria-label="draft" defaultValue="Keep this draft" />)
   const draft = screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'draft' })
   act(() => { b.readiness.set({ catalog: null, connected: false, error: 'offline' }) })
   draft.focus()
-  const mic = screen.getByRole('button', { name: zh['setupPrompt.trigger'] })
+  const mic = screen.getByRole('button', { name: zh.failed.replace('{message}', 'offline') })
   fireEvent.mouseDown(mic)
   fireEvent.click(mic)
-  const dialog = screen.getByRole('dialog')
-  const details = within(dialog).getByRole('button', { name: zh['setupPrompt.details'] })
-  const close = within(dialog).getByRole('button', { name: zh.cancel })
-  expect(document.activeElement).toBe(details)
-  fireEvent.keyDown(details, { key: 'Tab' })
-  expect(document.activeElement).toBe(close)
-  fireEvent.keyDown(close, { key: 'Tab', shiftKey: true })
-  expect(document.activeElement).toBe(details)
-  fireEvent.keyDown(details, { key: 'Escape' })
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(document.activeElement).toBe(draft)
   expect(draft.value).toBe('Keep this draft')
   expect(b.inputActions.submit).not.toHaveBeenCalled()
   expect(b.props.openSettings).not.toHaveBeenCalled()
+  expect(b.props.prepare).not.toHaveBeenCalled()
 })
 
-it.each(['later', 'escape', 'ready', 'session'])('dismisses unavailable recognition guidance on %s without changing the draft', (reason) => {
+it.each(['offline', 'ready', 'session'])('leaves the draft unchanged when recognition is %s', (reason) => {
   const b = fixture(), ready = b.readiness.getSnapshot()
   act(() => { b.readiness.set({ catalog: null, connected: false, error: 'offline' }) })
-  const open = () => { fireEvent.click(screen.getByRole('button', { name: zh['setupPrompt.trigger'] })) }
-  open()
-  expect(screen.getByRole('dialog').textContent).toContain(zh['setupPrompt.unavailableTitle'])
-  if (reason === 'later') fireEvent.click(screen.getByRole('button', { name: zh['setupPrompt.later'] }))
-  if (reason === 'escape') fireEvent.keyDown(document, { key: 'Escape' })
+  fireEvent.click(screen.getByRole('button', { name: zh.failed.replace('{message}', 'offline') }))
   if (reason === 'ready') act(() => { b.readiness.set(ready) })
   if (reason === 'session') b.view.rerender(<VoiceInput {...b.props} sessionId={'two' as SessionId} />)
   expect(screen.queryByRole('dialog')).toBeNull()
@@ -391,11 +385,5 @@ it.each(['later', 'escape', 'ready', 'session'])('dismisses unavailable recognit
   expect(b.capture.start).not.toHaveBeenCalled()
   expect(b.inputActions.setDraft).not.toHaveBeenCalled()
   expect(b.inputActions.insertText).not.toHaveBeenCalled()
-  if (reason === 'ready') {
-    act(() => { b.readiness.set({ ...ready, connected: false }) })
-    expect(screen.queryByRole('dialog')).toBeNull()
-  } else {
-    open()
-    expect(screen.getByRole('dialog')).toBeTruthy()
-  }
+  if (reason === 'ready') expect(screen.getByRole('button', { name: zh.start })).toBeTruthy()
 })

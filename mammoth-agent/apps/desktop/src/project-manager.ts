@@ -22,13 +22,49 @@ import {
 import type { DesktopPaths } from './paths.ts'
 import type { DesktopRelease } from './release.ts'
 import { readDesktopRuntime } from './runtime-tree.ts'
-import { initProfile, removeLinkProjections, sanitizeProfile } from '@mammoth-ai/mmp-app-boot'
-import { PROFILE_TEMPLATES, type ProfileTemplate } from '@mammoth-ai/mmp-official-bundles'
+import { initProfile, readProfileManifest, removeLinkProjections, sanitizeProfile, writeProfileManifest } from '@mammoth-ai/mmp-app-boot'
+import { INSTALLATION_OWNED_PROFILE_TUPLES, PROFILE_TEMPLATES, type ProfileTemplate } from '@mammoth-ai/mmp-official-bundles'
 
 const PROJECT_NAME = '@mammoth-ai/mmp-desktop-runtime'
 const MMP_PACKAGE = '@mammoth-ai/mmp'
 const CORE_BUILD_PACKAGE = '@mammoth-ai/mmp-subprocess-local'
 const WEB_PROFILE = PROFILE_TEMPLATES.web as ProfileTemplate
+/** Recorded after a stock desktop profile gains voice input, so a later removal stays removed. */
+const DESKTOP_VOICE_MIGRATION = 'desktop-voice-input'
+
+function sameBundles(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index])
+}
+
+/**
+ * Add voice input to an unchanged desktop bundle list once.
+ * A list that is not the older base and web-app pair, and not the current web template, stays as written.
+ */
+function migrateDesktopVoiceInput(projectDir: string): void {
+  const manifest = readProfileManifest('mmp', projectDir)
+  const profile = manifest.mmp?.profile
+  if (profile?.bundles === undefined) return
+  const bundles = profile.bundles
+  const recorded = profile.bundleMigrations
+  const migrations = Array.isArray(recorded) ? recorded.filter((item): item is string => typeof item === 'string') : []
+  if (migrations.includes(DESKTOP_VOICE_MIGRATION)) return
+  const previous = INSTALLATION_OWNED_PROFILE_TUPLES.web
+  const stock = previous !== undefined && sameBundles(bundles, previous)
+  const current = sameBundles(bundles, WEB_PROFILE.bundles)
+  if (!stock && !current) return
+  writeProfileManifest(projectDir, {
+    ...manifest,
+    mmp: {
+      ...manifest.mmp,
+      profile: {
+        ...profile,
+        bundles: [...(current ? bundles : WEB_PROFILE.bundles)],
+        bundleMigrations: [...migrations, DESKTOP_VOICE_MIGRATION],
+      },
+    },
+  })
+}
+
 const WORKSPACE_SETTINGS = 'nodeLinker: hoisted\nautoInstallPeers: false\n'
 function writeJson(path: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value, undefined, 2)}\n`, { mode: 0o600 })
@@ -172,4 +208,5 @@ export function createDevelopmentProjectMetadata(projectDir: string, release: De
 /** Create the first external plugin profile without running a package manager. */
 export function createPluginProfile(projectDir: string): void {
   initProfile(projectDir, WEB_PROFILE.bundles)
+  migrateDesktopVoiceInput(projectDir)
 }

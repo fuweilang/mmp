@@ -68,7 +68,7 @@ kind: "package-group"
 | [`plugin-market-bundle`](plugin-market-bundle/README.zh.md) | 默认禁用的可选自定义插件索引：索引服务和「发现」标签页 | — |
 | [`liveshare`](liveshare/README.zh.md) | 可选 LiveShare host bundle：通过 Relay 以 `view` 或 `write` 档分享会话，派生与附件上传为独立开关 | 注入 `connection`；通过宿主 Web 资源提供查看页 |
 | [`liveshare-protocol`](liveshare-protocol/README.zh.md) | owner bundle 与 Relay 共用的线路帧与身份契约 | 库与协议，不使用 ctx key |
-| [`voice-input-bundle`](voice-input-bundle/README.zh.md) | 网页 profile 选中的语音输入组合；其他 profile 不选中 | — |
+| [`voice-input-bundle`](voice-input-bundle/README.zh.md) | 网页 profile 和未改过的桌面 profile 选中的语音输入组合；其他随附 profile 不选中 | — |
 | [`agent-team-profile`](agent-team-profile/README.zh.md) | Agent Teams 协作、工具与 Web UI 组合包 | — |
 | [`agent-team`](agent-team/README.zh.md) | 具名 teammate，成员之间直接消息与持久共享任务板 | `ctx.agentTeams` |
 | [`client-ui-agent-team`](client-ui-agent-team/README.zh.md) | Web Team roster、任务板与 teammate 导航 | — |

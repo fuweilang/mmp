@@ -3,15 +3,13 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { HostObservable, InjectFace, PropsLocale, PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import type { TokenSpan } from '@mammoth-ai/mmp-client-ui-conversation/client'
 import type { TranscriptionRequest } from '@mammoth-ai/mmp-experimental-api-speech-to-text/types'
-import type { SpeechPreparationOptions, SpeechProviderId, SpeechSelection, SpeechSelectionPatch, Transcript } from '@mammoth-ai/mmp-experimental-speech-to-text/types'
+import type { SpeechPreparationOptions, SpeechProviderId, SpeechProviderView, SpeechSelection, SpeechSelectionPatch, Transcript } from '@mammoth-ai/mmp-experimental-speech-to-text/types'
 import type { RemoteResult } from '@mammoth-ai/mmp-typert-protocol'
 import { audioBase64, type Recording } from './audio.ts'
 import { failureText } from './failure-text.ts'
 import type { MicrophoneDevice } from './microphone-device.ts'
 import type { SpeechReadiness } from './readiness.ts'
 import { Waveform } from './Waveform.tsx'
-import { PreparationCard } from './PreparationCard.tsx'
-import { VoiceSetupDialog } from './VoiceSetupDialog.tsx'
 import { NS } from './locales.ts'
 import { Button, IconCloseOutlineRegular, IconStopFillRegular, IconMicrophoneOutlineRegular, StateDot, Tooltip } from '@mammoth-ai/mmp-client-ui-primitives'
 import css from './VoiceInput.module.css'
@@ -57,6 +55,18 @@ interface ActiveRecording {
   timer?: ReturnType<typeof setTimeout> | undefined
 }
 
+function composerStatus(connected: boolean, error: string | null, provider: SpeechProviderView | undefined, t: VoiceInputProps['t']): string {
+  if (!connected || provider === undefined) return error ? t('failed', { message: error }) : t('loading')
+  const state = provider.preparation
+  if (state.phase === 'failed') {
+    const failure = state.download
+    return failure === undefined ? t('preparationFailed', { message: state.message })
+      : t(`download.${failure.reason}`, { resource: failure.resource, status: String(failure.status ?? '') })
+  }
+  if (state.phase === 'downloading') return t('short.downloading')
+  return t(`preparation.${state.phase}`, { name: provider.name })
+}
+
 async function disposeRecording(capture: Recording): Promise<void> {
   try { await capture.dispose() } catch (_error) {
     // Tracks stop before AudioContext.close(); a close failure must not hide the recording result.
@@ -64,16 +74,14 @@ async function disposeRecording(capture: Recording): Promise<void> {
 }
 
 /** Render a compact microphone or an expanded capture, transcription, or retry row. */
-export function VoiceInput({ sessionId, inputActions, locked, onActiveChange, createRecording, transcribe, openSettings,
-  prepare, cancelPreparation, useSpeechReadiness, usePluginNavigation, t }: VoiceInputProps) {
+export function VoiceInput({ sessionId, inputActions, locked, onActiveChange, createRecording, transcribe,
+  prepare, useSpeechReadiness, t }: VoiceInputProps) {
   const readiness = useSpeechReadiness(value => value), catalog = readiness.catalog
-  const navigable = usePluginNavigation(present => present)
   const provider = catalog?.providers.find(item => item.id === catalog.selection.providerId)
   const usable = readiness.connected && (provider?.preparation.phase === 'ready' || provider?.preparation.phase === 'standby'
     || provider?.preparation.phase === 'waking')
   const [phase, setPhase] = useState<Phase>('idle'), [message, setMessage] = useState(''), [pending, setPending] = useState('')
-  const [setupOpen, setSetupOpen] = useState(false)
-  useEffect(() => { if (usable) setSetupOpen(false) }, [usable])
+  const preparationPhase = provider?.preparation.phase
   const current = useRef<ActiveRecording>(), generation = useRef(0)
   const expanded = phase !== 'idle'
   useLayoutEffect(() => { onActiveChange(expanded); return () => { onActiveChange(false) } }, [expanded, onActiveChange])
@@ -83,10 +91,10 @@ export function VoiceInput({ sessionId, inputActions, locked, onActiveChange, cr
     const active = current.current
     current.current = undefined
     if (active) { clearTimeout(active.timer); active.abort.abort(); void disposeRecording(active.capture) }
-    setPending(''); setMessage(''); setPhase('idle'); setSetupOpen(false)
+    setPending(''); setMessage(''); setPhase('idle')
   }
   useEffect(() => {
-    setPending(''); setMessage(''); setPhase('idle'); setSetupOpen(false)
+    setPending(''); setMessage(''); setPhase('idle')
     const blur = (): void => { if (current.current?.phase === 'recording') cancel() }
     const visibility = (): void => {
       if (document.hidden && current.current && current.current.phase !== 'transcribing') cancel()
@@ -152,21 +160,19 @@ export function VoiceInput({ sessionId, inputActions, locked, onActiveChange, cr
       if (run === generation.current) { current.current = undefined; feedback(failureText(failure, t)) }
     }
   }
-  if (!expanded) return <>
-    <Tooltip label={t('dictate')} disabled={!usable} side="top" portal>
-      <span className={css.triggerAnchor}><Button className={css.trigger} size="sm" disabled={locked}
-        aria-label={t(usable ? 'start' : 'setupPrompt.trigger')} aria-haspopup={usable ? undefined : 'dialog'}
-        onMouseDown={(event) => { event.preventDefault() }}
-        onClick={() => { if (usable) void start(); else setSetupOpen(true) }}><IconMicrophoneOutlineRegular size={18} /></Button></span>
-    </Tooltip>
-    <VoiceSetupDialog open={setupOpen && !usable}
-      needsInstallation={readiness.connected && provider?.location === 'host-local' && provider.preparation.phase === 'unprepared'}
-      onDismiss={() => { setSetupOpen(false) }}
-      onOpenDetails={navigable ? () => { setSetupOpen(false); openSettings() } : undefined} t={t}>
-      {!navigable && provider ? <PreparationCard provider={provider} connected={readiness.connected}
-        prepare={prepare} cancelPreparation={cancelPreparation} t={t} /> : undefined}
-    </VoiceSetupDialog>
-  </>
+  if (!expanded) {
+    const status = usable ? '' : composerStatus(readiness.connected, readiness.error, provider, t)
+    const canRetry = preparationPhase === 'failed' || preparationPhase === 'cancelled' || preparationPhase === 'unprepared'
+    return <>
+      {status !== '' && <span className={css.setupStatus} role="status" title={status} data-failed={preparationPhase === 'failed' || undefined}>{status}</span>}
+      <Tooltip label={t('dictate')} disabled={!usable} side="top" portal>
+        <span className={css.triggerAnchor}><Button className={css.trigger} size="sm" disabled={locked}
+          aria-label={usable ? t('start') : status}
+          onMouseDown={(event) => { event.preventDefault() }}
+          onClick={() => { if (usable) void start(); else if (canRetry && provider) void prepare(provider.id) }}><IconMicrophoneOutlineRegular size={18} /></Button></span>
+      </Tooltip>
+    </>
+  }
   return <div className={css.captureRow} data-voice-activity={phase}>
     <Button type="button" className={css.roundButton} size="sm" aria-label={t(pending ? 'discard' : 'cancel')}
       onClick={cancel}><IconCloseOutlineRegular size={14} /></Button>
