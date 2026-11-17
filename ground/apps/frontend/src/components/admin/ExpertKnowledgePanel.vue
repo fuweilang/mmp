@@ -15,21 +15,22 @@
     </div>
   </section>
 
-  <el-dialog v-model="pickerOpen" class="expert-knowledge-dialog expert-knowledge-picker" width="1080px" align-center append-to-body :show-close="false" :close-on-click-modal="false" aria-label="添加知识库">
+  <el-dialog v-model="pickerOpen" class="expert-knowledge-dialog expert-knowledge-picker" width="1080px" align-center append-to-body :show-close="false" :close-on-click-modal="false" destroy-on-close aria-label="添加知识库">
     <div class="expert-knowledge-picker-layout">
       <aside class="expert-knowledge-sidebar"><h2>添加知识库</h2><button type="button" class="expert-knowledge-primary" :disabled="disabled" @click="openCreate"><Plus :size="15" />创建知识库</button></aside>
       <main class="expert-knowledge-catalog">
         <header><h2>我的知识库</h2><button type="button" class="expert-knowledge-icon-button" aria-label="关闭添加知识库" @click="pickerOpen = false"><X :size="21" /></button></header>
         <div class="expert-knowledge-search"><Search :size="17" /><input v-model="search" aria-label="搜索知识库" placeholder="搜索知识库" /></div>
-        <div class="expert-knowledge-list" v-loading="loading">
-          <article v-for="entry in filteredCatalog" :key="entry.base.id" class="expert-knowledge-catalog-row">
+        <div ref="knowledgeListEl" class="expert-knowledge-list" v-loading="loading" @scroll="onKnowledgeScroll($event)">
+          <article v-for="entry in visibleCatalog" :key="entry.base.id" class="expert-knowledge-catalog-row">
             <span class="expert-knowledge-icon"><Database :size="23" /></span>
             <div class="expert-knowledge-row-copy"><strong>{{ entry.base.name }}</strong><small>{{ catalogMeta(entry) }}</small><small v-if="!entry.base.enabled">已停用</small><small v-else-if="!bindable(entry)">{{ entry.error || '资料待就绪或尚未发布' }}</small></div>
             <button type="button" class="expert-knowledge-icon-button" :aria-label="`查看${entry.base.name}资料`" @click="openDocuments(entry.base)"><Eye :size="18" /></button>
             <button type="button" class="expert-knowledge-pick" :class="{ 'is-added': baseIsBound(entry.base.id) }" :disabled="disabled || baseIsBound(entry.base.id) || !entry.base.enabled || !bindable(entry) || hasOperation(entry.base.id)" @click="addBase(entry)">{{ baseIsBound(entry.base.id) ? '已添加' : '添加' }}</button>
           </article>
-          <p v-if="!loading && !filteredCatalog.length" class="expert-knowledge-empty">{{ search ? '未找到知识库' : '暂无知识库，创建一个开始吧' }}</p>
+          <p v-if="!loading && !filteredCatalog.length" class="expert-knowledge-empty">{{ appliedSearch ? '未找到知识库' : '暂无知识库，创建一个开始吧' }}</p>
         </div>
+        <footer class="expert-knowledge-picker-footer"><button type="button" class="expert-knowledge-primary" @click="pickerOpen = false">确认</button></footer>
       </main>
     </div>
   </el-dialog>
@@ -51,7 +52,7 @@
     <div v-if="activeOperation" class="expert-knowledge-notice"><span>{{ activeOperation.message }}</span><button type="button" v-if="!activeOperation.busy" class="expert-knowledge-link" @click="resumeOperation(activeOperation)">{{ activeOperation.retryJob ? '重试处理' : activeOperation.jobId ? '继续检查' : '重试上传' }}</button><a v-if="activeOperation.recovery" class="expert-knowledge-link" href="/admin/official-knowledge" target="_blank" rel="noopener">管理资料</a><button type="button" v-if="!activeOperation.busy" class="expert-knowledge-link" :disabled="disabled" @click="abandonOperation(activeOperation.baseId)">暂不关联</button></div>
     <div class="expert-knowledge-document-list" v-loading="documentsLoading">
       <article v-for="document in activeDocuments" :key="`${document.id}:${newestRevision(document)?.id}:${newestRevision(document)?.indexes[0]?.id}`" class="expert-knowledge-document-row">
-        <span class="expert-knowledge-file-icon"><FileText :size="24" /></span><div class="expert-knowledge-row-copy"><strong>{{ newestRevision(document)?.originalName || document.title }}</strong><small>{{ documentMeta(document) }}</small><small>{{ documentStatus(document) }}</small></div><button type="button" class="expert-knowledge-icon-button" :disabled="!newestRevision(document)" :aria-label="`预览${document.title}`" @click="openPreview(document)"><Eye :size="19" /></button>
+        <span class="expert-knowledge-file-icon"><FileText :size="24" /></span><div class="expert-knowledge-row-copy"><strong>{{ newestRevision(document)?.originalName || document.title }}</strong><small>{{ documentMeta(document) }}</small><small>{{ documentStatus(document) }}</small></div><button type="button" class="expert-knowledge-icon-button" :disabled="!newestRevision(document)" :aria-label="`预览${document.title}`" @click="openPreview(document)"><Eye :size="19" /></button><button type="button" class="expert-knowledge-icon-button" :disabled="disabled" :aria-label="`删除${newestRevision(document)?.originalName || document.title}`" @click="removeDocument(document)"><Trash2 :size="17" /></button>
       </article>
       <p v-if="!documentsLoading && !activeDocuments.length" class="expert-knowledge-empty">{{ viewReleaseId ? '当前关联资料暂不可用，请检查知识库状态' : '暂无资料，上传文件后即可查看和关联' }}</p>
     </div>
@@ -68,7 +69,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { ElMessageBox } from 'element-plus';
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { createExpertEditorResources, expertEditorResourcesKey } from './expert-editor-resources';
 import { BookOpen, Database, ExternalLink, Eye, FileText, Plus, Search, Trash2, Upload, X } from 'lucide-vue-next';
 import { adminKnowledgeCoreApi as api, type KnowledgeBase, type KnowledgeDocument, type KnowledgeJob, type KnowledgeProfile, type KnowledgeRelease, type KnowledgeRevision } from '../../api/admin';
@@ -81,13 +83,32 @@ const initialResources=resources.peek();
 const copyCatalog=(entries:Entry[])=>entries.map(entry=>({...entry,documents:[...entry.documents],releases:[...entry.releases]}));
 type Operation = { baseId: string; file: File; profileId: string; key: string; jobId?: string; retryJob?: boolean; recovery?: boolean; message: string; busy: boolean };
 const catalog = ref<Entry[]>(initialResources ? copyCatalog(initialResources.catalog) : []), profiles = ref<KnowledgeProfile[]>(initialResources?.profiles ?? []), healthy = ref<Record<string, boolean>>(initialResources?.health ?? {});
-const loading = ref(false), catalogError = ref(''), pickerOpen = ref(false), createOpen = ref(false), documentsOpen = ref(false), previewOpen = ref(false), search = ref('');
+const PAGE = 20;
+const loading = ref(false), catalogError = ref(''), pickerOpen = ref(false), createOpen = ref(false), documentsOpen = ref(false), previewOpen = ref(false), search = ref(''), appliedSearch = ref(''), visibleCatalogCount = ref(PAGE);
+const knowledgeListEl = ref<HTMLElement | null>(null);
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
 const viewReleaseId = ref(''), boundEntryContext = ref(false);
 const newName = ref(''), creating = ref(false), createError = ref(''), activeBase = ref<KnowledgeBase>(), documentsLoading = ref(false), documentError = ref('');
 const profileId = ref(''), fileInput = ref<HTMLInputElement>(), operations = ref<Operation[]>([]), uploadBusy = ref(false);
 let alive = true, catalogRequest = 0, documentRequest = 0, pollGeneration = 0, pollTimer: ReturnType<typeof setTimeout> | undefined, wakePoll: (() => void) | undefined;
 const usableProfiles = computed(() => profiles.value.filter(p => p.enabled && p.task === 'EMBEDDING' && healthy.value[p.id]));
-const filteredCatalog = computed(() => catalog.value.filter(entry => entry.base.name.toLowerCase().includes(search.value.toLowerCase())));
+watch(search, value => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { appliedSearch.value = value; visibleCatalogCount.value = PAGE; }, 200);
+});
+const filteredCatalog = computed(() => catalog.value.filter(entry => entry.base.name.toLowerCase().includes(appliedSearch.value.trim().toLowerCase())));
+const visibleCatalog = computed(() => filteredCatalog.value.slice(0, visibleCatalogCount.value));
+function onKnowledgeScroll(event: Event) {
+  const el = event.currentTarget as HTMLElement;
+  if (el.clientHeight === 0 || visibleCatalogCount.value >= filteredCatalog.value.length) return;
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 48) visibleCatalogCount.value += PAGE;
+}
+function revealKnowledgeIfShort() {
+  const el = knowledgeListEl.value;
+  if (!el || el.clientHeight === 0 || visibleCatalogCount.value >= filteredCatalog.value.length) return;
+  if (el.scrollHeight <= el.clientHeight + 1) visibleCatalogCount.value += PAGE;
+}
+watch([filteredCatalog, visibleCatalogCount, pickerOpen], () => { if (pickerOpen.value) void nextTick(revealKnowledgeIfShort); });
 const activeEntry = computed(() => catalog.value.find(entry => entry.base.id === activeBase.value?.id));
 const activeDocuments = computed(() => {
   const entry = activeEntry.value;
@@ -129,6 +150,34 @@ function chooseUploadProfile() {
 }
 
 function unlink(id: string) { if (!props.disabled) emit('update:modelValue', props.modelValue.filter(value => value !== id)); }
+async function removeDocument(document: KnowledgeDocument) {
+  if (props.disabled || !activeBase.value) return;
+  const base = activeBase.value;
+  const name = newestRevision(document)?.originalName || document.title;
+  try {
+    const usage = await api.usage(document.id);
+    const names = usage.map(item => item.name).filter(Boolean);
+    await ElMessageBox.confirm(
+      names.length ? `删除后，这份文件会从「${base.name}」移除。还在使用它的专家：${names.join('、')}。` : `删除后，这份文件会从「${base.name}」移除。`,
+      `删除「${name}」？`,
+      { type: 'warning', confirmButtonText: '删除文件', cancelButtonText: '取消' },
+    );
+    await api.deleteDocument(document.id);
+    if (!alive) return;
+    if (previewDocument.value?.id === document.id) closePreview();
+    const entry = await refreshBase(base.id);
+    resources.invalidate();
+    if (entry && props.modelValue.some(id => entry.releases.some(release => release.id === id))) {
+      const next = latestBindableRelease(entry.releases, entry.documents, profiles.value, healthy.value);
+      emit('update:modelValue', next ? replaceBaseBinding(props.modelValue, entry.releases, next.id) : props.modelValue.filter(id => !entry.releases.some(release => release.id === id)));
+      emit('changed');
+    }
+    documentError.value = '';
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return;
+    if (alive) documentError.value = message(error);
+  }
+}
 function addBase(entry: Entry) { const release = bindable(entry); if (props.disabled || !release || baseIsBound(entry.base.id) || hasOperation(entry.base.id)) return; emit('update:modelValue', replaceBaseBinding(props.modelValue, entry.releases, release.id)); emit('changed'); }
 async function refresh(force=false) {
   const request = ++catalogRequest; loading.value = true; catalogError.value = '';
@@ -267,12 +316,12 @@ async function loadPreviewPage(kind: 'text' | 'chunks' | 'both') {
   finally { if (alive && request === previewRequest) previewLoading.value = false; }
 }
 onMounted(()=>refresh());
-onBeforeUnmount(() => { alive = false; catalogRequest++; documentRequest++; stopPolling(); invalidatePreview(); });
+onBeforeUnmount(() => { alive = false; clearTimeout(searchTimer); catalogRequest++; documentRequest++; stopPolling(); invalidatePreview(); });
 defineExpose({ refresh });
 </script>
 
 <style scoped>
-.expert-knowledge-panel{min-width:0;color:#24242b}.expert-knowledge-bound{display:flex;align-items:center;gap:8px;margin:0;padding:0;min-height:36px;border:0;background:transparent}.expert-knowledge-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.expert-knowledge-icon{display:inline-flex;align-items:center;justify-content:center;color:#fff;background:#28aa78;width:20px;height:20px;border-radius:6px;flex-shrink:0}.expert-knowledge-icon-button{border:0;background:transparent;color:#73737f;display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:30px;border-radius:7px;padding:4px;cursor:pointer}.expert-knowledge-icon-button:hover{background:#f1f1f5}.expert-knowledge-icon-button:disabled,.expert-knowledge-pick:disabled,button:disabled{cursor:default;opacity:.5}.expert-knowledge-add{display:flex;align-items:center;gap:5px;background:#f4f4f6;border:0;padding:0 8px;height:24px;border-radius:6px;color:#24242b;font-size:12px;cursor:pointer}.expert-knowledge-link{border:0;background:none;padding:0;color:#7458ed;cursor:pointer;font-size:12px}.expert-knowledge-error{color:#ba3c3c;font-size:12px;line-height:1.7}.expert-knowledge-notice{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#927039;background:#fffbef;border-radius:8px;padding:9px 11px;margin:8px 0;font-size:12px;line-height:1.5}.expert-knowledge-primary,.expert-knowledge-secondary,.expert-knowledge-pick{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:13px;line-height:18px;white-space:nowrap}.expert-knowledge-primary{background:#7654ef;color:#fff}.expert-knowledge-secondary{background:#f3f3f7;color:#55545f}.expert-knowledge-pick{color:#36353f;background:#fff;min-width:64px;height:30px;padding:0 12px;border:1px solid #e6e6ec;border-radius:12px}.expert-knowledge-pick.is-added{background:#f3f3f6;color:#9b9ba4}.expert-knowledge-dialog header{display:flex;align-items:center;gap:12px}.expert-knowledge-dialog h2{margin:0;flex:1;font-size:18px;font-weight:600;line-height:26px;color:#292933}.expert-knowledge-picker-layout{display:flex;height:700px;max-height:calc(100dvh - 20px);margin:0}.expert-knowledge-sidebar{box-sizing:border-box;flex:0 0 200px;background:#f4f4f7;padding:30px 20px;border-radius:24px 0 0 24px}.expert-knowledge-sidebar h2{font-size:18px;margin:0 0 24px}.expert-knowledge-sidebar .expert-knowledge-primary{width:100%}.expert-knowledge-sidebar p{font-size:13px;color:#666471;padding:17px 10px}.expert-knowledge-catalog{padding:28px 32px;flex:1;min-width:0;display:flex;flex-direction:column}.expert-knowledge-catalog header{margin-bottom:22px}.expert-knowledge-search{display:flex;align-items:center;gap:8px;border:1px solid #e9e9ef;border-radius:9px;padding:9px 12px;color:#a1a1ad}.expert-knowledge-search input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:13px}.expert-knowledge-list{flex:1;overflow:auto;margin-top:16px}.expert-knowledge-catalog-row,.expert-knowledge-document-row{display:flex;align-items:center;gap:15px;padding:18px 0;border-bottom:1px solid #f0f0f3}.expert-knowledge-catalog-row>.expert-knowledge-icon{width:32px;height:32px;border-radius:8px}.expert-knowledge-row-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}.expert-knowledge-row-copy strong{font-size:13px;font-weight:500;line-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#34343e}.expert-knowledge-row-copy small{font-size:11px;color:#aaa9b1;line-height:16px}.expert-knowledge-empty{text-align:center;padding:62px 20px;color:#a3a2ad;font-size:13px;line-height:1.8}.expert-knowledge-create header{margin-bottom:26px}.expert-knowledge-create form{margin:0}.expert-knowledge-create label{display:block;font-size:13px;color:#45454f;margin-bottom:10px}.expert-knowledge-create input{box-sizing:border-box;width:100%;border:1px solid #e4e4eb;border-radius:9px;padding:12px;font:inherit;font-size:13px;color:#33333d;outline:0}.expert-knowledge-create input:focus{border-color:#9e83f3}.expert-knowledge-create footer{display:flex;justify-content:flex-end;gap:10px;margin-top:30px}.expert-knowledge-required{color:#e35b6c}.expert-knowledge-documents header{margin-bottom:14px}.expert-knowledge-documents h2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.expert-knowledge-bound-context{display:flex;align-items:center;gap:12px;padding:6px 0 10px;color:#85838f;font-size:12px}.expert-knowledge-file-input{display:none}.expert-knowledge-upload-options{color:#a4a3ad;font-size:11px;line-height:1.7;margin-bottom:10px}.expert-knowledge-upload-options a{color:#7654ef}.expert-knowledge-document-list{overflow:auto;flex:1;min-height:0}.expert-knowledge-file-icon{display:inline-flex;align-items:center;justify-content:center;background:#efa45c;color:#fff;width:32px;height:32px;border-radius:8px;flex-shrink:0}.expert-knowledge-document-row{padding:17px 0}.expert-knowledge-preview-content{overflow:auto;flex:1;min-height:0;padding-top:18px}.expert-knowledge-original{display:inline-flex;align-items:center;gap:5px;color:#7654ef;text-decoration:none;font-size:12px}.expert-knowledge-preview nav{display:flex;gap:22px;margin-bottom:22px;border-bottom:1px solid #ececf0}.expert-knowledge-preview nav button{background:none;border:0;padding:0 3px 12px;color:#9997a3;cursor:pointer}.expert-knowledge-preview nav button.active{color:#7654ef;border-bottom:2px solid #7654ef}.expert-knowledge-preview pre{font-family:inherit;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;color:#555461;line-height:1.9;margin:0 0 18px}.expert-knowledge-chunk{border:1px solid #eeeef2;border-radius:10px;margin-bottom:14px;padding:16px}.expert-knowledge-chunk small{display:block;color:#aaa9b4;font-size:11px;margin-bottom:10px}.expert-knowledge-chunk pre{margin:0}@media(max-width:700px){.expert-knowledge-sidebar{flex-basis:150px;padding:24px 12px}.expert-knowledge-sidebar h2{font-size:16px}.expert-knowledge-catalog{padding:24px 16px}.expert-knowledge-catalog-row{gap:9px}.expert-knowledge-dialog h2{font-size:16px}.expert-knowledge-row-copy strong{font-size:13px}}
+.expert-knowledge-panel{min-width:0;color:#24242b}.expert-knowledge-bound{display:flex;align-items:center;gap:8px;margin:0;padding:0;min-height:36px;border:0;background:transparent}.expert-knowledge-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.expert-knowledge-icon{display:inline-flex;align-items:center;justify-content:center;color:#fff;background:#28aa78;width:20px;height:20px;border-radius:6px;flex-shrink:0}.expert-knowledge-icon-button{border:0;background:transparent;color:#73737f;display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:30px;border-radius:7px;padding:4px;cursor:pointer}.expert-knowledge-icon-button:hover{background:#f1f1f5}.expert-knowledge-icon-button:disabled,.expert-knowledge-pick:disabled,button:disabled{cursor:default;opacity:.5}.expert-knowledge-add{display:flex;align-items:center;gap:5px;background:#f4f4f6;border:0;padding:0 8px;height:24px;border-radius:6px;color:#24242b;font-size:12px;cursor:pointer}.expert-knowledge-link{border:0;background:none;padding:0;color:#7458ed;cursor:pointer;font-size:12px}.expert-knowledge-error{color:#ba3c3c;font-size:12px;line-height:1.7}.expert-knowledge-notice{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#927039;background:#fffbef;border-radius:8px;padding:9px 11px;margin:8px 0;font-size:12px;line-height:1.5}.expert-knowledge-primary,.expert-knowledge-secondary,.expert-knowledge-pick{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:13px;line-height:18px;white-space:nowrap}.expert-knowledge-primary{background:#7654ef;color:#fff}.expert-knowledge-secondary{background:#f3f3f7;color:#55545f}.expert-knowledge-pick{color:#36353f;background:#fff;min-width:64px;height:30px;padding:0 12px;border:1px solid #e6e6ec;border-radius:12px}.expert-knowledge-pick.is-added{background:#f3f3f6;color:#9b9ba4}.expert-knowledge-dialog header{display:flex;align-items:center;gap:12px}.expert-knowledge-dialog h2{margin:0;flex:1;font-size:18px;font-weight:600;line-height:26px;color:#292933}.expert-knowledge-picker-layout{display:flex;height:700px;max-height:calc(100dvh - 20px);margin:0}.expert-knowledge-sidebar{box-sizing:border-box;flex:0 0 200px;background:#f4f4f7;padding:30px 20px;border-radius:24px 0 0 24px}.expert-knowledge-sidebar h2{font-size:18px;margin:0 0 24px}.expert-knowledge-sidebar .expert-knowledge-primary{width:100%}.expert-knowledge-sidebar p{font-size:13px;color:#666471;padding:17px 10px}.expert-knowledge-catalog{padding:28px 32px;flex:1;min-width:0;display:flex;flex-direction:column}.expert-knowledge-catalog header{margin-bottom:22px}.expert-knowledge-search{display:flex;align-items:center;gap:8px;border:1px solid #e9e9ef;border-radius:9px;padding:9px 12px;color:#a1a1ad}.expert-knowledge-search input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:13px}.expert-knowledge-list{flex:1;overflow:auto;margin-top:16px}.expert-knowledge-picker-footer{display:flex;justify-content:flex-end;padding-top:16px}.expert-knowledge-catalog-row,.expert-knowledge-document-row{display:flex;align-items:center;gap:15px;padding:18px 0;border-bottom:1px solid #f0f0f3}.expert-knowledge-catalog-row>.expert-knowledge-icon{width:32px;height:32px;border-radius:8px}.expert-knowledge-row-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}.expert-knowledge-row-copy strong{font-size:13px;font-weight:500;line-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#34343e}.expert-knowledge-row-copy small{font-size:11px;color:#aaa9b1;line-height:16px}.expert-knowledge-empty{text-align:center;padding:62px 20px;color:#a3a2ad;font-size:13px;line-height:1.8}.expert-knowledge-create header{margin-bottom:26px}.expert-knowledge-create form{margin:0}.expert-knowledge-create label{display:block;font-size:13px;color:#45454f;margin-bottom:10px}.expert-knowledge-create input{box-sizing:border-box;width:100%;border:1px solid #e4e4eb;border-radius:9px;padding:12px;font:inherit;font-size:13px;color:#33333d;outline:0}.expert-knowledge-create input:focus{border-color:#9e83f3}.expert-knowledge-create footer{display:flex;justify-content:flex-end;gap:10px;margin-top:30px}.expert-knowledge-required{color:#e35b6c}.expert-knowledge-documents header{margin-bottom:14px}.expert-knowledge-documents h2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.expert-knowledge-bound-context{display:flex;align-items:center;gap:12px;padding:6px 0 10px;color:#85838f;font-size:12px}.expert-knowledge-file-input{display:none}.expert-knowledge-upload-options{color:#a4a3ad;font-size:11px;line-height:1.7;margin-bottom:10px}.expert-knowledge-upload-options a{color:#7654ef}.expert-knowledge-document-list{overflow:auto;flex:1;min-height:0}.expert-knowledge-file-icon{display:inline-flex;align-items:center;justify-content:center;background:#efa45c;color:#fff;width:32px;height:32px;border-radius:8px;flex-shrink:0}.expert-knowledge-document-row{padding:17px 0}.expert-knowledge-preview-content{overflow:auto;flex:1;min-height:0;padding-top:18px}.expert-knowledge-original{display:inline-flex;align-items:center;gap:5px;color:#7654ef;text-decoration:none;font-size:12px}.expert-knowledge-preview nav{display:flex;gap:22px;margin-bottom:22px;border-bottom:1px solid #ececf0}.expert-knowledge-preview nav button{background:none;border:0;padding:0 3px 12px;color:#9997a3;cursor:pointer}.expert-knowledge-preview nav button.active{color:#7654ef;border-bottom:2px solid #7654ef}.expert-knowledge-preview pre{font-family:inherit;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;color:#555461;line-height:1.9;margin:0 0 18px}.expert-knowledge-chunk{border:1px solid #eeeef2;border-radius:10px;margin-bottom:14px;padding:16px}.expert-knowledge-chunk small{display:block;color:#aaa9b4;font-size:11px;margin-bottom:10px}.expert-knowledge-chunk pre{margin:0}@media(max-width:700px){.expert-knowledge-sidebar{flex-basis:150px;padding:24px 12px}.expert-knowledge-sidebar h2{font-size:16px}.expert-knowledge-catalog{padding:24px 16px}.expert-knowledge-catalog-row{gap:9px}.expert-knowledge-dialog h2{font-size:16px}.expert-knowledge-row-copy strong{font-size:13px}}
 </style>
 <style>
 .el-dialog.expert-knowledge-dialog{box-sizing:border-box;max-width:90vw;border-radius:24px;padding:0!important;overflow:hidden;background:#fff;box-shadow:0 12px 64px #17102826;color:#36353f}.expert-knowledge-dialog>.el-dialog__header{display:none;padding:0!important;margin:0!important}.expert-knowledge-dialog>.el-dialog__body{padding:0!important;color:inherit}.expert-knowledge-create>.el-dialog__body{padding:28px 30px!important}.expert-knowledge-documents>.el-dialog__body{box-sizing:border-box;height:568px;max-height:90vh;padding:26px 30px!important;display:flex;flex-direction:column}.expert-knowledge-preview>.el-dialog__body{box-sizing:border-box;height:644px;max-height:90vh;padding:26px 32px!important;display:flex;flex-direction:column}

@@ -63,6 +63,7 @@ export type OfficialAgentLinkedSkill = {
   enabledAt: string | null;
   packageRevision: number;
   enabled: boolean;
+  avatarUrl?: string | null;
 };
 
 export type OfficialAgentRow = {

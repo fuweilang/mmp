@@ -8,6 +8,8 @@ import {
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { decryptApiKey, encryptApiKey, maskApiKeyHint } from './llm-key-crypto';
+import { geekAiChatBase, loadGeekAiModel, type GeekAiModelLoad } from '../billing/geekai-model-price';
+import { withUpstreamThinking } from './upstream-thinking';
 import axios from 'axios';
 import { LlmHealthService, type HealthState } from './llm-health.service';
 import { modelCapabilities } from './model-capabilities';
@@ -176,6 +178,7 @@ export class LlmProvidersService {
     const apiKeyHint = apiKey ? maskApiKeyHint(apiKey) : null;
 
     const models = dto.models ?? [];
+    const geekAi = await this.geekAiModels(name, dto.baseUrl, apiKey, models.map(m => m.modelId));
     let preferredSeen = false;
     for (const m of models) {
       if (m.isPreferred) {
@@ -202,14 +205,7 @@ export class LlmProvidersService {
             enabled: dto.enabled ?? true,
             sortOrder: dto.sortOrder ?? 0,
             models: {
-              create: models.map((m, i) => ({
-                modelId: m.modelId.trim(),
-                displayName: (m.displayName || m.modelId).trim(),
-                enabled: m.enabled ?? true,
-                thinkingEnabled: Boolean(m.thinkingEnabled),
-                isPreferred: Boolean(m.isPreferred),
-                sortOrder: m.sortOrder ?? i,
-              })),
+              create: models.map((m, i) => this.modelRow(m, i, geekAi)),
             },
           },
           include: { models: { orderBy: [{ sortOrder: 'asc' }, { modelId: 'asc' }] } },
@@ -336,6 +332,11 @@ export class LlmProvidersService {
     if (!provider) throw new NotFoundException('厂商不存在');
     const modelId = dto.modelId.trim();
     if (!modelId) throw new BadRequestException('modelId 必填');
+    let apiKey = '';
+    if (geekAiChatBase(provider.baseUrl)) {
+      try { apiKey = provider.apiKeyEnc ? decryptApiKey(provider.apiKeyEnc) : ''; } catch { apiKey = ''; }
+    }
+    const geekAi = await this.geekAiModels(provider.name, provider.baseUrl, apiKey, [modelId]);
 
     try {
       const created = await this.prisma.$transaction(async (tx) => {
@@ -344,15 +345,7 @@ export class LlmProvidersService {
           await tx.llmModel.updateMany({ where: { isPreferred: true }, data: { isPreferred: false } });
         }
         return tx.llmModel.create({
-          data: {
-            providerId,
-            modelId,
-            displayName: (dto.displayName || modelId).trim(),
-            enabled: dto.enabled ?? true,
-            thinkingEnabled: Boolean(dto.thinkingEnabled),
-            isPreferred: Boolean(dto.isPreferred),
-            sortOrder: dto.sortOrder ?? 0,
-          },
+          data: { providerId, ...this.modelRow(dto, 0, geekAi) },
         });
       });
       await this.prisma.auditLog.create({
@@ -474,12 +467,20 @@ export class LlmProvidersService {
    * 最小连通探测：有 modelId 则打 chat/completions；否则打 models 列表。
    * 支持已存 modelRowId，或表单草稿 baseUrl/apiKey/modelId。
    */
+  cancelProbe(actor: User, modelRowId: string): { ok: true } {
+    this.requirePlatformAdmin(actor);
+    this.health.cancelProbe(modelRowId.trim());
+    return { ok: true };
+  }
+
   async probe(
     actor: User,
     dto: ProbeLlmDto,
+    signal?: AbortSignal,
   ): Promise<{ ok: boolean; latencyMs: number; message: string; statusCode?: number }> {
     this.requirePlatformAdmin(actor);
-    if (dto.modelRowId && !dto.apiKey && !dto.baseUrl && !dto.modelId) return this.health.probeSaved(dto.modelRowId);
+    if (signal?.aborted) return { ok: false, latencyMs: 0, message: '已中断' };
+    if (dto.modelRowId && !dto.apiKey && !dto.baseUrl && !dto.modelId) return this.health.probeSaved(dto.modelRowId, signal);
     const started = Date.now();
 
     let baseUrl = (dto.baseUrl || '').trim();
@@ -538,14 +539,13 @@ export class LlmProvidersService {
         const url = this.buildUpstreamPath(baseUrl, 'chat');
         const resp = await axios.post(
           url,
-          {
+          withUpstreamThinking({
             model: modelId,
             messages: [{ role: 'user', content: 'ping' }],
             max_tokens: 1,
             stream: false,
-            thinking: { type: 'disabled' },
-          },
-          { headers, timeout: 20000, validateStatus: () => true },
+          }, baseUrl, false),
+          { headers, timeout: 20000, signal, validateStatus: () => true },
         );
         const latencyMs = Date.now() - started;
         if (resp.status >= 200 && resp.status < 300) {
@@ -580,6 +580,7 @@ export class LlmProvidersService {
         statusCode: resp.status,
       };
     } catch (err) {
+      if (signal?.aborted) return { ok: false, latencyMs: Date.now() - started, message: '已中断' };
       const latencyMs = Date.now() - started;
       const msg = err instanceof Error ? err.message : '请求失败';
       return { ok: false, latencyMs, message: `不通: ${msg}` };
@@ -594,7 +595,7 @@ export class LlmProvidersService {
   async listRemoteModels(
     actor: User,
     dto: ListRemoteModelsDto,
-  ): Promise<{ ok: boolean; latencyMs: number; message: string; models: Array<{ id: string; ownedBy?: string }> }> {
+  ): Promise<{ ok: boolean; latencyMs: number; message: string; models: Array<{ id: string; ownedBy?: string; name?: string; type?: string; context?: number }> }> {
     this.requirePlatformAdmin(actor);
     const started = Date.now();
 
@@ -651,17 +652,21 @@ export class LlmProvidersService {
         : raw && typeof raw === 'object' && Array.isArray((raw as { data?: unknown }).data)
           ? ((raw as { data: unknown[] }).data)
           : [];
-      const models: Array<{ id: string; ownedBy?: string }> = [];
+      const models: Array<{ id: string; ownedBy?: string; name?: string; type?: string; context?: number }> = [];
       const seen = new Set<string>();
       for (const item of list) {
         if (!item || typeof item !== 'object') continue;
-        const id = String((item as { id?: unknown }).id || '').trim();
+        const row = item as { id?: unknown; owned_by?: unknown; name?: unknown; type?: unknown; context?: unknown };
+        const id = String(row.id || '').trim();
         if (!id || seen.has(id)) continue;
         seen.add(id);
-        const ownedBy = (item as { owned_by?: unknown }).owned_by;
+        const context = typeof row.context === 'number' && Number.isSafeInteger(row.context) && row.context >= 1024 ? row.context : undefined;
         models.push({
           id,
-          ownedBy: typeof ownedBy === 'string' ? ownedBy : undefined,
+          ownedBy: typeof row.owned_by === 'string' ? row.owned_by : undefined,
+          name: typeof row.name === 'string' && row.name.trim() ? row.name.trim().slice(0, 128) : undefined,
+          type: typeof row.type === 'string' ? row.type : undefined,
+          context,
         });
       }
       models.sort((a, b) => a.id.localeCompare(b.id));
@@ -713,5 +718,43 @@ export class LlmProvidersService {
       }
     }
     return { models, preferredRef, source: 'ground' };
+  }
+
+  /** Confirm each GeekAI row is a CNY chat model, and keep its context window. Other providers skip this. */
+  private async geekAiModels(providerName: string, baseUrl: string | null | undefined, apiKey: string, modelIds: string[]) {
+    const ids = [...new Set(modelIds.map(id => id.trim()).filter(Boolean))];
+    if (!geekAiChatBase(baseUrl) || !ids.length) return null;
+    if (!apiKey.trim()) throw new BadRequestException('请填写极客智坊 API Key');
+    const loaded: GeekAiModelLoad[] = [];
+    let cursor = 0;
+    await Promise.all(Array.from({ length: Math.min(4, ids.length) }, async () => {
+      while (cursor < ids.length) {
+        const modelId = ids[cursor++];
+        loaded.push(await loadGeekAiModel(providerName, baseUrl, modelId, apiKey));
+      }
+    }));
+    const bad = loaded.filter(row => !row.ok);
+    if (bad.length) throw new BadRequestException(bad.map(row => `模型 ${row.modelId}：${row.reason}`).join('；'));
+    return new Map(loaded.flatMap(row => row.ok ? [[row.modelId, row] as const] : []));
+  }
+
+  private modelRow(
+    m: { modelId: string; displayName?: string; enabled?: boolean; thinkingEnabled?: boolean; isPreferred?: boolean; sortOrder?: number },
+    index: number,
+    geekAi: Map<string, Extract<GeekAiModelLoad, { ok: true }>> | null,
+  ) {
+    const modelId = m.modelId.trim();
+    const fact = geekAi?.get(modelId);
+    const custom = m.displayName?.trim();
+    const displayName = (custom && custom !== modelId ? custom : fact?.displayName || custom || modelId).slice(0, 128);
+    return {
+      modelId,
+      displayName,
+      enabled: m.enabled ?? true,
+      thinkingEnabled: Boolean(m.thinkingEnabled),
+      isPreferred: Boolean(m.isPreferred),
+      sortOrder: m.sortOrder ?? index,
+      ...(fact?.contextWindow ? { meta: { contextWindow: fact.contextWindow } } : {}),
+    };
   }
 }

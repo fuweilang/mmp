@@ -22,6 +22,360 @@ export interface KnowledgeParseResult {
 }
 class ExtractionLimit extends Error {}
 const clean = (s: string) => s.replace(/\r\n?/g, '\n').replace(/\0/g, '');
+const localName = (name: string) => {
+  const index = name.lastIndexOf(':');
+  return index === -1 ? name : name.slice(index + 1);
+};
+const orderedParser = new XMLParser({
+  preserveOrder: true,
+  parseTagValue: false,
+  trimValues: false,
+  ignoreAttributes: false,
+});
+const sheetParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  parseTagValue: false,
+  trimValues: false,
+});
+const MAX_SHEET_COLUMNS = 256;
+
+/** Stream one Office XML part. The byte budget is shared by every part of one package. */
+function officeXmlReader(maxXmlBytes: number) {
+  let expanded = 0;
+  return async (file: JSZip.JSZipObject) => {
+    const buffers: Buffer[] = [];
+    await pipeline(
+      file.nodeStream('nodebuffer'),
+      new Writable({
+        write(chunk: Buffer, _enc, done) {
+          expanded += chunk.length;
+          if (expanded > maxXmlBytes) return done(new ExtractionLimit());
+          buffers.push(chunk);
+          done();
+        },
+      }),
+    );
+    const xml = new TextDecoder('utf-8', { fatal: true }).decode(
+      Buffer.concat(buffers),
+    );
+    if (/<!DOCTYPE|<!ENTITY/i.test(xml) || XMLValidator.validate(xml) !== true)
+      throw new Error('invalid XML');
+    return xml;
+  };
+}
+
+function orderedText(node: unknown): string {
+  if (typeof node === 'string') return node;
+  if (!Array.isArray(node)) return '';
+  return node
+    .map((item) => {
+      if (!item || typeof item !== 'object') return '';
+      return Object.entries(item as Record<string, unknown>)
+        .map(([key, value]) => {
+          if (key === ':@') return '';
+          if (key === '#text') return String(value);
+          const name = localName(key);
+          if (name === 'tab') return '\t';
+          if (name === 'br') return '\n';
+          return orderedText(value);
+        })
+        .join('');
+    })
+    .join('');
+}
+
+/** Slide body paragraphs only. Notes, pictures and charts stay out of the text. */
+function slideParagraphs(node: unknown, out: string[]): void {
+  if (!Array.isArray(node)) return;
+  for (const item of node) {
+    if (!item || typeof item !== 'object') continue;
+    for (const [key, value] of Object.entries(item as Record<string, unknown>)) {
+      if (key === ':@' || key === '#text') continue;
+      if (localName(key) === 'p') {
+        const text = clean(orderedText(value)).trim();
+        if (text) out.push(text);
+      } else slideParagraphs(value, out);
+    }
+  }
+}
+
+function numberedPart(path: string, kind: 'slide' | 'sheet') {
+  const match = new RegExp(`${kind}(\\d+)\\.xml$`, 'i').exec(path);
+  const n = match ? Number(match[1]) : Number.NaN;
+  return Number.isSafeInteger(n) ? n : Number.MAX_SAFE_INTEGER;
+}
+
+function asArray(value: unknown): unknown[] {
+  if (value === undefined || value === null) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function plainText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (!value || typeof value !== 'object') return '';
+  if (Array.isArray(value)) return value.map(plainText).join('');
+  let text = '';
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (key.startsWith('@_')) continue;
+    text += plainText(child);
+  }
+  return text;
+}
+
+function sharedStrings(document: unknown): string[] {
+  const root =
+    document && typeof document === 'object'
+      ? (document as Record<string, unknown>)
+      : {};
+  const sst = root.sst ?? root['x:sst'];
+  const items =
+    sst && typeof sst === 'object'
+      ? ((sst as Record<string, unknown>).si ??
+        (sst as Record<string, unknown>)['x:si'])
+      : [];
+  return asArray(items).map((item) => plainText(item));
+}
+
+function columnIndex(ref: string): number {
+  const letters = /^[A-Z]+/i.exec(ref)?.[0];
+  if (!letters) return -1;
+  let n = 0;
+  for (const ch of letters.toUpperCase()) {
+    n = n * 26 + (ch.charCodeAt(0) - 64);
+    if (n > MAX_SHEET_COLUMNS) return MAX_SHEET_COLUMNS;
+  }
+  return n - 1;
+}
+
+/** Cached cell values only. A formula with no cached value contributes nothing. */
+function cellValue(cell: Record<string, unknown>, shared: readonly string[]): string {
+  const type = String(cell['@_t'] ?? '');
+  if (type === 'inlineStr') return plainText(cell.is ?? cell['x:is']).trim();
+  const raw = cell.v ?? cell['x:v'];
+  const value = raw === undefined || raw === null ? '' : String(raw).trim();
+  if (!value) return '';
+  if (type === 's') {
+    const index = Number(value);
+    return Number.isSafeInteger(index) ? (shared[index] ?? '') : '';
+  }
+  return value;
+}
+
+function sheetRows(
+  document: unknown,
+  shared: readonly string[],
+  markTruncated: () => void,
+): { row: number; cells: Map<number, string> }[] {
+  const root =
+    document && typeof document === 'object'
+      ? (document as Record<string, unknown>)
+      : {};
+  const worksheet = (root.worksheet ?? root['x:worksheet']) as
+    | Record<string, unknown>
+    | undefined;
+  const data = worksheet?.sheetData ?? worksheet?.['x:sheetData'];
+  const rows = asArray(
+    data && typeof data === 'object'
+      ? ((data as Record<string, unknown>).row ??
+        (data as Record<string, unknown>)['x:row'])
+      : [],
+  );
+  const parsed: { row: number; cells: Map<number, string> }[] = [];
+  let fallback = 0;
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const record = row as Record<string, unknown>;
+    fallback += 1;
+    const rowNumber = Number(record['@_r']);
+    const cells = new Map<number, string>();
+    let nextCol = 0;
+    for (const cell of asArray(record.c ?? record['x:c'])) {
+      if (!cell || typeof cell !== 'object') continue;
+      const item = cell as Record<string, unknown>;
+      const fromRef = columnIndex(String(item['@_r'] ?? ''));
+      const col = fromRef >= 0 ? fromRef : nextCol;
+      nextCol = col + 1;
+      if (col >= MAX_SHEET_COLUMNS) {
+        markTruncated();
+        continue;
+      }
+      const text = cellValue(item, shared).replace(/[\t\r\n]+/g, ' ').trim();
+      if (text) cells.set(col, text);
+    }
+    if (cells.size)
+      parsed.push({
+        row: Number.isSafeInteger(rowNumber) && rowNumber > 0 ? rowNumber : fallback,
+        cells,
+      });
+  }
+  return parsed;
+}
+
+function renderRow(cells: Map<number, string>, columns: number[]): string {
+  const rendered = columns.map((col) =>
+    (cells.get(col) ?? '')
+      .replace(/\\/g, '\\\\')
+      .replace(/\n/g, '\\n')
+      .replace(/\|/g, '\\|'),
+  );
+  while (rendered.length && !rendered[rendered.length - 1]) rendered.pop();
+  return rendered.join(' | ');
+}
+
+function worksheetPath(target: string): string | undefined {
+  const relative = target
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/^xl\//, '');
+  if (relative.includes('..') || !/^worksheets\/sheet\d+\.xml$/i.test(relative))
+    return undefined;
+  return `xl/${relative}`;
+}
+
+function sheetOrder(
+  workbook: unknown,
+  rels: unknown,
+): { name: string; path: string }[] {
+  const root =
+    workbook && typeof workbook === 'object'
+      ? (workbook as Record<string, unknown>)
+      : {};
+  const book = (root.workbook ?? root['x:workbook']) as
+    | Record<string, unknown>
+    | undefined;
+  const sheets = asArray(
+    book?.sheets && typeof book.sheets === 'object'
+      ? ((book.sheets as Record<string, unknown>).sheet ??
+        (book.sheets as Record<string, unknown>)['x:sheet'])
+      : [],
+  );
+  const relRoot =
+    rels && typeof rels === 'object' ? (rels as Record<string, unknown>) : {};
+  const relationships = relRoot.Relationships as Record<string, unknown> | undefined;
+  const byId = new Map<string, string>();
+  for (const rel of asArray(relationships?.Relationship)) {
+    if (!rel || typeof rel !== 'object') continue;
+    const record = rel as Record<string, unknown>;
+    const id = String(record['@_Id'] ?? '');
+    const path = worksheetPath(String(record['@_Target'] ?? ''));
+    if (id && path) byId.set(id, path);
+  }
+  const ordered: { name: string; path: string }[] = [];
+  for (const sheet of sheets) {
+    if (!sheet || typeof sheet !== 'object') continue;
+    const record = sheet as Record<string, unknown>;
+    const path = byId.get(String(record['@_r:id'] ?? record['@_id'] ?? ''));
+    if (!path) continue;
+    ordered.push({
+      name: String(record['@_name'] ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, 200),
+      path,
+    });
+  }
+  return ordered;
+}
+
+type SectionAdder = (
+  text: string,
+  locator: TextSection['locator'],
+  tableHeader?: string,
+) => void;
+
+async function parseSlides(
+  archive: JSZip,
+  readXml: (file: JSZip.JSZipObject) => Promise<string>,
+  add: SectionAdder,
+  truncated: () => boolean,
+): Promise<'ok' | 'xml-limit'> {
+  const slides = Object.keys(archive.files)
+    .filter((path) => /^ppt\/slides\/slide\d+\.xml$/i.test(path))
+    .sort((a, b) => numberedPart(a, 'slide') - numberedPart(b, 'slide') || a.localeCompare(b));
+  for (const path of slides) {
+    if (truncated()) return 'ok';
+    const entry = archive.file(path);
+    if (!entry) continue;
+    let xml: string;
+    try {
+      xml = await readXml(entry);
+    } catch (e) {
+      if (e instanceof ExtractionLimit) return 'xml-limit';
+      throw e;
+    }
+    const paragraphs: string[] = [];
+    slideParagraphs(orderedParser.parse(xml), paragraphs);
+    if (!paragraphs.length) continue;
+    const page = numberedPart(path, 'slide');
+    add(paragraphs.join('\n'), {
+      ...(page < Number.MAX_SAFE_INTEGER ? { page } : {}),
+    });
+  }
+  return 'ok';
+}
+
+async function parseSheets(
+  archive: JSZip,
+  readXml: (file: JSZip.JSZipObject) => Promise<string>,
+  add: SectionAdder,
+  truncated: () => boolean,
+  markTruncated: () => void,
+): Promise<'ok' | 'xml-limit'> {
+  const read = async (path: string) => {
+    const entry = archive.file(path);
+    if (!entry) return undefined;
+    return sheetParser.parse(await readXml(entry));
+  };
+  let shared: string[] = [];
+  let sheets: { name: string; path: string }[] = [];
+  try {
+    const strings = await read('xl/sharedStrings.xml');
+    if (strings) shared = sharedStrings(strings);
+    const book = archive.file('xl/workbook.xml');
+    if (book)
+      sheets = sheetOrder(
+        sheetParser.parse(await readXml(book)),
+        await read('xl/_rels/workbook.xml.rels'),
+      );
+  } catch (e) {
+    if (e instanceof ExtractionLimit) return 'xml-limit';
+    throw e;
+  }
+  if (!sheets.length) {
+    sheets = Object.keys(archive.files)
+      .filter((path) => /^xl\/worksheets\/sheet\d+\.xml$/i.test(path))
+      .sort((a, b) => numberedPart(a, 'sheet') - numberedPart(b, 'sheet') || a.localeCompare(b))
+      .map((path) => ({ name: '', path }));
+  }
+  for (const sheet of sheets) {
+    if (truncated()) return 'ok';
+    const entry = archive.file(sheet.path);
+    if (!entry) continue;
+    let rows: ReturnType<typeof sheetRows>;
+    try {
+      rows = sheetRows(sheetParser.parse(await readXml(entry)), shared, markTruncated);
+    } catch (e) {
+      if (e instanceof ExtractionLimit) return 'xml-limit';
+      throw e;
+    }
+    if (!rows.length) continue;
+    const columns = [
+      ...new Set(rows.flatMap((row) => [...row.cells.keys()])),
+    ].sort((a, b) => a - b);
+    const header = renderRow(rows[0].cells, columns);
+    const locatorBase = sheet.name ? { headingPath: [sheet.name] } : {};
+    if (rows.length === 1) {
+      add(`${header}\n`, { ...locatorBase, rowStart: rows[0].row, rowEnd: rows[0].row });
+      continue;
+    }
+    const tableHeader = sheet.name ? `${sheet.name}\n${header}` : header;
+    for (const row of rows.slice(1)) {
+      if (truncated()) return 'ok';
+      const line = renderRow(row.cells, columns);
+      if (!line.trim()) continue;
+      add(`${line}\n`, { ...locatorBase, rowStart: row.row, rowEnd: row.row }, tableHeader);
+    }
+  }
+  return 'ok';
+}
 /** Extracted offsets are UTF-16 offsets in canonical extracted text, never original binary offsets. */
 export async function parseKnowledgeBytes(
   name: string,
@@ -151,20 +505,7 @@ export async function parseKnowledgeBytes(
       const archive = await JSZip.loadAsync(bytes);
       const entry = archive.file('word/document.xml');
       if (!entry) throw new Error('missing body');
-      let expanded = 0;
-      const readXml = async (file: JSZip.JSZipObject) => {
-        const buffers: Buffer[] = [];
-        await pipeline(file.nodeStream('nodebuffer'), new Writable({
-          write(chunk: Buffer, _enc, done) {
-            expanded += chunk.length;
-            if (expanded > maxXmlBytes) return done(new ExtractionLimit());
-            buffers.push(chunk); done();
-          },
-        }));
-        const xml = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(buffers));
-        if (/<!DOCTYPE|<!ENTITY/i.test(xml) || XMLValidator.validate(xml) !== true) throw new Error('invalid XML');
-        return xml;
-      };
+      const readXml = officeXmlReader(maxXmlBytes);
       let xml: string, stylesXml: string | undefined;
       try {
         xml = await readXml(entry);
@@ -262,6 +603,22 @@ export async function parseKnowledgeBytes(
       } finally {
         await parser.destroy();
       }
+    } else if (ext === '.pptx' || ext === '.xlsx') {
+      const archive = await JSZip.loadAsync(bytes);
+      const readXml = officeXmlReader(maxXmlBytes);
+      const outcome =
+        ext === '.pptx'
+          ? await parseSlides(archive, readXml, add, () => truncated)
+          : await parseSheets(archive, readXml, add, () => truncated, () => {
+              truncated = true;
+            });
+      if (outcome === 'xml-limit')
+        return {
+          status: 'PARTIAL',
+          sections,
+          truncated: true,
+          reason: sections.length ? 'EXTRACTION_LIMIT' : 'EXPANDED_XML_LIMIT',
+        };
     } else
       return {
         status: 'DOWNLOAD_ONLY',
