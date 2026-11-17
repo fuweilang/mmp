@@ -46,7 +46,7 @@ afterEach(() => {
 describe('desktop voice input profile', () => {
   const voice = '@mammoth-ai/mmp-experimental-voice-input-bundle'
 
-  it('adds voice input to a stock desktop profile once and leaves a customized list', async () => {
+  it('adds voice input to stock and customised desktop profiles once, and respects a later removal', async () => {
     const { manager } = setup()
     await manager.applyRelease()
     const dir = manager.paths.profile
@@ -82,7 +82,8 @@ describe('desktop voice input profile', () => {
     })
     await manager.applyRelease()
     expect(readProfileManifest('mmp', dir).mmp?.profile).toEqual({
-      bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app', 'custom-bundle'],
+      bundles: ['@mammoth-ai/mmp-base', '@mammoth-ai/mmp-web-app', voice, 'custom-bundle'],
+      bundleMigrations: ['desktop-voice-input'],
     })
   })
 })
