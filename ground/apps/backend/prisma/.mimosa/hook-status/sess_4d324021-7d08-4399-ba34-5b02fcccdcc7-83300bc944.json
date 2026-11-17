@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-11-16T08:48:04.881Z",
+  "sessionId": "sess_4d324021-7d08-4399-ba34-5b02fcccdcc7",
+  "event": "PostToolUse",
+  "toolName": "Edit",
+  "file": "/Users/luoxiaojun/Documents/mmp/mmp/ground/apps/frontend/src/components/admin/KnowledgeFolderManager.vue",
+  "outcome": "clear",
+  "coverage": "complete",
+  "findingCount": 0,
+  "durationMs": 2,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

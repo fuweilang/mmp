@@ -1,7 +1,7 @@
 /** Same-origin admin preview handoff; the standard composer owns all submission policy. */
 import type { PreviewTarget } from './ExpertPreviewEntry.tsx'
 
-type Failure = 'previewQuestionTooLong' | 'previewQuestionEmpty' | 'previewInputNotReady' | 'previewDraftExists' | 'previewSubmitFailed' | 'previewRequestLimit'
+type Failure = 'previewQuestionTooLong' | 'previewQuestionEmpty' | 'previewInputNotReady' | 'previewDraftExists' | 'previewSubmitFailed' | 'previewRequestLimit' | 'previewRebindFailed'
 interface PreviewInput {
   initialize(text: string): 'applied' | 'preserved' | 'blocked'
   submit(): void | Promise<void>
@@ -28,7 +28,8 @@ function previewProfile(value: unknown, origin: string): PreviewProfile | undefi
 
 /**
  * Bind one captured preview identity to its parent frame and retained session input.
- * @param options - browser window, immutable launch identity, current input resolver, and localized errors.
+ * @param options - browser window, immutable launch identity, current input resolver, localized errors,
+ *                  and an optional in-place rebind that swaps the retained session to a newer preview.
  * @returns readiness starter and disposer; disposing releases the listener and bounded polling timer.
  */
 export function installExpertPreviewBridge(options: {
@@ -37,6 +38,7 @@ export function installExpertPreviewBridge(options: {
   input: () => PreviewInput | undefined
   message: (key: Failure) => string
   onProfile?: (profile: PreviewProfile) => void
+  rebind?: (nextPreviewId: string) => Promise<void>
 }): {
   start(): void
   state(running: boolean): void
@@ -44,7 +46,8 @@ export function installExpertPreviewBridge(options: {
   unavailable(): void
   dispose(): void
 } {
-  const { frame, target, input, message } = options
+  const { frame, input, message } = options
+  let target = options.target
   const parent = frame.parent
   const origin = frame.location.origin
   const replies = new Map<string, Reply | undefined>()
@@ -58,7 +61,7 @@ export function installExpertPreviewBridge(options: {
     if (disposed || event.source !== parent || event.origin !== origin) return
     const data: unknown = event.data
     if (data === null || typeof data !== 'object'
-      || !('type' in data) || (data.type !== 'mmp.expert-preview.submit' && data.type !== 'mmp.expert-preview.cancel')
+      || !('type' in data) || (data.type !== 'mmp.expert-preview.submit' && data.type !== 'mmp.expert-preview.cancel' && data.type !== 'mmp.expert-preview.rebind')
       || !('agentId' in data) || data.agentId !== target.agentId
       || !('previewId' in data) || data.previewId !== target.previewId
       || !('requestId' in data) || typeof data.requestId !== 'string' || !data.requestId.trim() || data.requestId.length > 128) return
@@ -72,6 +75,17 @@ export function installExpertPreviewBridge(options: {
     const fail = (key: Failure): Reply => ({ type: 'mmp.expert-preview.error', ...target, requestId, message: message(key) })
     if (replies.size >= 128) { post(fail('previewRequestLimit')); return }
     replies.set(requestId, undefined)
+    if (data.type === 'mmp.expert-preview.rebind') {
+      const nextPreviewId = 'nextPreviewId' in data && typeof data.nextPreviewId === 'string' ? data.nextPreviewId : ''
+      const rebind = options.rebind
+      if (!nextPreviewId.trim() || nextPreviewId.length > 128 || !rebind) { post(fail('previewRebindFailed')); return }
+      const settle = (reply: Reply) => { replies.set(requestId, reply); post(reply) }
+      rebind(nextPreviewId).then(
+        () => { target = { ...target, previewId: nextPreviewId }; settle({ type: 'mmp.expert-preview.accepted', ...target, requestId }) },
+        () => settle(fail('previewRebindFailed')),
+      )
+      return
+    }
     if (data.type === 'mmp.expert-preview.cancel') {
       const settle = (reply: Reply) => { replies.set(requestId, reply); post(reply) }
       try {

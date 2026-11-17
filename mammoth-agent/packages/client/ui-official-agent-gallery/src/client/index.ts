@@ -85,6 +85,14 @@ export function apply(ctx: ClientContext): void {
       bridge = installExpertPreviewBridge({
         onProfile: (profile) => { previewProfile.set(profile) },
         frame: window, target: preview, message: key => t(embeddedPreview && key === 'previewSubmitFailed' ? 'previewAdmissionFailed' : key),
+        ...(embeddedPreview ? { rebind: async (nextPreviewId: string) => {
+          if (sessionId === undefined) throw new Error('preview session not ready')
+          const result = await ctx.remote.officialAgentGallery.rebindPreview(sessionId, nextPreviewId)
+          if (!result.ok) throw new Error(result.error.message)
+          // Reloads restore the newest preview identity for this retained session.
+          window.history.replaceState({ ...window.history.state,
+            expertPreviewSession: { agentId: preview.agentId, previewId: nextPreviewId, sessionId } }, '', window.location.href)
+        } } : {}),
         input: () => {
           const binding = sessionId === undefined ? undefined : ctx.sessions.binding(sessionId)
           if (binding === undefined) return
@@ -156,7 +164,13 @@ export function apply(ctx: ClientContext): void {
         }, CompactExpertPreview))
         scope.slots.inject('official.expert.preview.session', () => scope.slots.register({
           name: 'official.expert.preview.session', locale: NS,
-          inject: () => ({ hooks:{ previewProfile }, chatText: ctx.locale.bind('chat'), reportContent: (hasMessages: boolean, userCount: number) => bridge?.content(hasMessages, userCount), openSource: async (id: SessionId, recordId: string, label: string) => {
+          inject: () => ({ hooks:{ previewProfile }, chatText: ctx.locale.bind('chat'), reportContent: (hasMessages: boolean, userCount: number) => bridge?.content(hasMessages, userCount), reportState: (running: boolean) => bridge?.state(running),
+            download: async (id: SessionId, artifactId: string) => {
+              const result = await ctx.remote.officialAgentGallery.downloadArtifact(id, artifactId)
+              if (!result.ok) throw new Error(result.error.message)
+              return result.value
+            },
+            openSource: async (id: SessionId, recordId: string, label: string) => {
             const result = await ctx.remote.officialAgentGallery.openKnowledgeSource(id, recordId, label)
             if (!result.ok) throw new Error(result.error.message)
             return result.value

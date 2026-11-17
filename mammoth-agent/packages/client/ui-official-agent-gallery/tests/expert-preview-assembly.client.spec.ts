@@ -2,6 +2,7 @@
 import '../../ui-conversation/tests/control-row-dom.ts'
 import { afterEach, expect, vi } from 'vitest'
 import { act, fireEvent, waitFor } from '@testing-library/react'
+import { createHash } from 'node:crypto'
 import { ok } from '@mammoth-ai/mmp-remote-mock'
 import { createClientTest, webApp } from '@mammoth-ai/mmp-client-test-runtime/src/assembly/index.ts'
 import { SESSION_FORMAT_VERSION, SessionId } from '@mammoth-ai/mmp-session/types'
@@ -97,7 +98,7 @@ it('renders embedded expert messages and citations while the ordinary session li
       { type: 'event', event: { type: 'step/start', seq: 4, time: 5, data: { turn: 1, step: 2 } } },
       { type: 'event', event: { type: 'assistant/message', seq: 5, time: 6, surfaceOp: 'append', data: { turn: 1, step: 2, message: { id: 'empty-tool-assistant', role: 'assistant', source: { kind: 'model', provider: 'test', model: 'test' }, content: [] }, stream: [] } } },
       { type: 'event', event: { type: 'turn/end', seq: 6, time: 7, data: { turn: 1, reason: { kind: 'error', error: { code: 'EXPERT_KNOWLEDGE_NO_EVIDENCE', message: '已启用必需检索，但此次没有可用的知识证据。' } } } } },
-    ], hasMore: false, projections: { asOfSeq: 6, values: { officialExpertKnowledge: [{ recordId: 'old-record', turn: 1, messageId: 'm1', label: 'T1L1S1', title: '知识文档完整标题', locator: '第 2 页' }] } as SessionProjectionValues }, assistantStream: { revision: 0 } } satisfies SessionFollowFrame)
+    ], hasMore: false, projections: { asOfSeq: 6, values: { officialExpertKnowledge: [{ recordId: 'old-record', turn: 1, messageId: 'm1', label: 'T1L1S1', title: '知识文档完整标题', locator: '第 2 页' }], officialGalleryRuntime: { phase: 'completed', attemptId: 'attempt-1', turn: 1, generation: 0, loaded: true, artifactCount: 1, lastArtifact: { id: 'artifact-1', name: '姓名手机号.xlsx' } } } as SessionProjectionValues }, assistantStream: { revision: 0 } } satisfies SessionFollowFrame)
   })
   const client = await start()
   await waitFor(() => expect(mock.remote.officialAgentGallery.createPreview).toHaveBeenCalledTimes(1))
@@ -114,6 +115,12 @@ it('renders embedded expert messages and citations while the ordinary session li
   expect(compact.textContent).toContain('EXPERT_KNOWLEDGE_NO_EVIDENCE')
   expect(compact.textContent).toContain('此次没有可用的知识证据')
   expect(compact.textContent).not.toContain('未能交接预览问题')
+  // 技能产物在精简预览里也有下载入口：按钮渲染 + 点击走 downloadArtifact 远程。
+  const artifactBar = compact.querySelector('[data-expert-preview-artifact]')!
+  expect(artifactBar.textContent).toContain('姓名手机号.xlsx')
+  mock.remote.officialAgentGallery.downloadArtifact.mockResolvedValue(ok({ name: '姓名手机号.xlsx', data: Buffer.from('hello').toString('base64'), sha256: createHash('sha256').update('hello').digest('hex') }))
+  fireEvent.click(artifactBar.querySelector('button')!)
+  await waitFor(() => expect(mock.remote.officialAgentGallery.downloadArtifact).toHaveBeenCalledWith(sessionId, 'artifact-1'))
   expect(document.querySelector('[data-sidebar-drawer]')).toBeNull()
   expect(document.querySelector('[data-shell-leading]')).toBeNull()
   expect(document.querySelector('[data-shell-bottom]')).toBeNull()
@@ -146,6 +153,18 @@ it('renders embedded expert messages and citations while the ordinary session li
     data: { ...request, requestId: 'assembly-second', text: '继续刚才的问题' } })) })
   await waitFor(() => expect(mock.remote.session.prompt).toHaveBeenCalledTimes(2), { container: document.createElement('div') })
   expect(mock.remote.session.prompt.mock.calls[1]?.[0]).toMatchObject({ sessionId, content: [{ type: 'text', text: '继续刚才的问题' }] })
+  // 配置更新重绑：同一会话换到新预览快照，不新建会话；后续提交以新 previewId 验证。
+  mock.remote.officialAgentGallery.rebindPreview.mockResolvedValue(ok(undefined))
+  act(() => { window.dispatchEvent(new MessageEvent('message', { origin: window.location.origin, source: parent as never,
+    data: { type: 'mmp.expert-preview.rebind', agentId: 'assembly-expert', previewId: 'assembly-preview', nextPreviewId: 'assembly-preview-2', requestId: 'assembly-rebind' } })) })
+  await waitFor(() => expect(mock.remote.officialAgentGallery.rebindPreview).toHaveBeenCalledWith(sessionId, 'assembly-preview-2'))
+  await waitFor(() => expect(parent.postMessage).toHaveBeenCalledWith({ type: 'mmp.expert-preview.accepted', agentId: 'assembly-expert', previewId: 'assembly-preview-2', requestId: 'assembly-rebind' }, window.location.origin))
+  expect(mock.remote.officialAgentGallery.createPreview).toHaveBeenCalledTimes(1)
+  act(() => { window.dispatchEvent(new MessageEvent('message', { origin: window.location.origin, source: parent as never,
+    data: { type: 'mmp.expert-preview.submit', agentId: 'assembly-expert', previewId: 'assembly-preview-2', requestId: 'assembly-third', text: '换绑后继续对话' } })) })
+  await waitFor(() => expect(mock.remote.session.prompt).toHaveBeenCalledTimes(3), { container: document.createElement('div') })
+  expect(mock.remote.session.prompt.mock.calls[2]?.[0]).toMatchObject({ sessionId, content: [{ type: 'text', text: '换绑后继续对话' }] })
+  expect(parent.postMessage).toHaveBeenLastCalledWith({ type: 'mmp.expert-preview.accepted', agentId: 'assembly-expert', previewId: 'assembly-preview-2', requestId: 'assembly-third' }, window.location.origin)
   await client.unload('@mammoth-ai/mmp-client-ui-official-agent-gallery')
   parent.postMessage.mockClear()
   act(() => { window.dispatchEvent(new MessageEvent('message', { origin: window.location.origin, source: parent as never, data: { ...request, requestId: 'after-unload' } })) })

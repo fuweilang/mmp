@@ -6,13 +6,14 @@
         <el-tooltip content="开启新会话"><el-button text aria-label="重新试聊" :disabled="resetting" @click="restart"><RotateCcw :size="15" /></el-button></el-tooltip>
       </div>
     </div>
-    <div v-if="!resetting && (error || bridgeError || expired)" class="expert-preview-notices">
+    <div v-if="!resetting && (error || bridgeError || expired || sessionNotice)" class="expert-preview-notices">
+      <el-alert v-if="sessionNotice" :title="sessionNotice" :type="sessionNoticeKind" :closable="false" />
       <el-alert v-if="bridgeError" :title="bridgeError" type="error" :closable="false" />
       <el-alert v-if="error" :title="error" type="error" :closable="false" />
       <el-alert v-if="expired" title="本次试聊已到期，下一次发送将自动重新开始。" type="info" :closable="false" />
     </div>
     <div class="expert-preview-stage">
-    <div v-if="launchUrl" v-show="hasTranscript" class="expert-preview-viewport"><iframe ref="previewFrame" :key="launchUrl" :src="launchUrl" title="专家草稿试聊" class="expert-preview-frame" /></div>
+    <div v-if="launchUrl" v-show="hasTranscript" class="expert-preview-viewport"><iframe ref="previewFrame" :key="frameUrl" :src="frameUrl" title="专家草稿试聊" class="expert-preview-frame" /></div>
     <div v-if="!hasTranscript && !outgoing" class="expert-preview-empty">
       <div class="expert-preview-profile">
         <div class="expert-preview-avatar"><img v-if="avatarUrl" :src="avatarUrl" alt="" /><UserRound v-else :size="27" /></div>
@@ -60,6 +61,9 @@ const stopped=ref(false), resetting=ref(false);
 const canStop=computed(()=>!stopped.value && (!!pending.value || running.value));
 let cancelWait:Promise<void>|undefined, cancelDone:(()=>void)|undefined, cancelTimer:ReturnType<typeof setTimeout>|undefined, disposed=false;
 const hasTranscript = ref(false), userCount = ref(0);
+const sessionNotice = ref(''), sessionNoticeKind = ref<'info' | 'warning'>('info');
+const frameUrl = ref('');
+const rebindWaiters = new Map<string, (accepted: boolean) => void>();
 const outgoing = ref<{text:string;afterUserCount:number}|null>(null);
 const pending = ref<{requestId:string;text:string;dispatched:boolean} | null>(null);
 let initializationTimer: ReturnType<typeof setTimeout> | undefined;
@@ -91,7 +95,7 @@ function onQuestionEnter(event: KeyboardEvent) {
 function submitQuestion() {
   if (props.disabled || pending.value || cancelRequestId.value || (running.value && !stopped.value) || !question.value.trim()) return;
   if (question.value.length>16000) {bridgeError.value='试聊问题最多16000字，请缩短后发送。';return;}
-  bridgeError.value='';
+  bridgeError.value='';sessionNotice.value='';
   stopped.value=false;resetting.value=false;
   const requestId=crypto.randomUUID();
   pending.value={requestId,text:question.value,dispatched:false};
@@ -144,6 +148,10 @@ function onPreviewMessage(event: MessageEvent) {
   if (event.origin!==launch.origin || !event.data || typeof event.data!=='object') return;
   const message = event.data;
   if (message.agentId!==launch.searchParams.get('expertId') || message.previewId!==launch.searchParams.get('expertPreview')) return;
+  const rebindWaiter = rebindWaiters.get(message.requestId);
+  if (rebindWaiter && (message.type==='mmp.expert-preview.accepted' || message.type==='mmp.expert-preview.error')) {
+    rebindWaiter(message.type==='mmp.expert-preview.accepted'); return;
+  }
   if(cancelRequestId.value && message.requestId===cancelRequestId.value && (message.type==='mmp.expert-preview.accepted' || message.type==='mmp.expert-preview.error')) {
     finishStop(message.type==='mmp.expert-preview.error');return;
   }
@@ -179,7 +187,33 @@ function onPreviewMessage(event: MessageEvent) {
     bridgeError.value=typeof message.message==='string' ? message.message.slice(0,500) : '试聊发送失败，问题已保留，请重试。';
   }
 }
-watch(()=>props.launchUrl,()=>{finishStop();resetting.value=false;readyUrl.value='';running.value=false;hasTranscript.value=false;userCount.value=0;if(outgoing.value)outgoing.value.afterUserCount=0;if(pending.value)pending.value.dispatched=false;});
+/** 预览更新时优先在当前会话内换绑新快照，保住对话；失败再整页重建。 */
+function tryRebind(previousUrl: string, nextUrl: string): Promise<boolean> {
+  return new Promise(resolve => {
+    const previous = new URL(previousUrl), next = new URL(nextUrl);
+    const agentId = previous.searchParams.get('expertId'), previousId = previous.searchParams.get('expertPreview'), nextId = next.searchParams.get('expertPreview');
+    if (!agentId || !previousId || !nextId || previousId === nextId) { resolve(false); return; }
+    const requestId = crypto.randomUUID();
+    const settle = (accepted: boolean) => { rebindWaiters.delete(requestId); clearTimeout(timer); resolve(accepted); };
+    const timer = setTimeout(() => settle(false), 8000);
+    rebindWaiters.set(requestId, settle);
+    previewFrame.value?.contentWindow?.postMessage({ type: 'mmp.expert-preview.rebind', agentId, previewId: previousId, nextPreviewId: nextId, requestId }, previous.origin);
+  });
+}
+watch(()=>props.launchUrl,async(next,previous)=>{
+  const restarted=resetting.value;
+  if(next&&previous&&!restarted&&readyUrl.value===previous&&previewFrame.value){
+    if(await tryRebind(previous,next)){
+      // 同一会话换绑成功：保留对话与状态，后续消息走新快照。
+      readyUrl.value=next;sessionNotice.value='已应用最新配置，当前对话继续。';sessionNoticeKind.value='info';
+      sendApprovedQuestion();return;
+    }
+  }
+  finishStop();resetting.value=false;readyUrl.value='';running.value=false;hasTranscript.value=false;userCount.value=0;frameUrl.value=next;if(outgoing.value)outgoing.value.afterUserCount=0;if(pending.value)pending.value.dispatched=false;
+  // 换绑不可用（旧页未就绪/超时）时回退整页重建，并明确告知旧对话已被替换。
+  if(previous&&!restarted){sessionNotice.value='左侧配置已更新，已开启新的试聊会话，之前的对话不再保留。';sessionNoticeKind.value='warning';}
+  else sessionNotice.value='';
+},{immediate:true});
 watch(()=>[props.approvedRequestId,props.busy,props.stale],sendApprovedQuestion);
 watch(()=>props.error,error=>{if(error && pending.value)releasePending();});
 watch(()=>props.rejectedRequestId,id=>{if(id && pending.value?.requestId===id)releasePending();});

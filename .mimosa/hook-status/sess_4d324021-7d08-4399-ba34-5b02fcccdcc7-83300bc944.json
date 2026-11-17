@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-11-17T01:54:32.530Z",
+  "sessionId": "sess_4d324021-7d08-4399-ba34-5b02fcccdcc7",
+  "event": "PostToolUse",
+  "toolName": "Edit",
+  "file": "mammoth-agent/packages/client/ui-official-agent-gallery/tests/expert-preview-assembly.client.spec.ts",
+  "outcome": "clear",
+  "coverage": "complete",
+  "findingCount": 0,
+  "durationMs": 10,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

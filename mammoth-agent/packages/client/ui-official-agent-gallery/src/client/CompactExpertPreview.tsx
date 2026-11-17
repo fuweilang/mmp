@@ -42,7 +42,9 @@ export function CompactExpertPreview({ target, launch, getSession, reportUnavail
 type MessagesProps = PropsRuntime<'official.expert.preview.session'> & PropsLocale<'officialAgentGallery'> & InjectFace<{ hooks:{ previewProfile:HostObservable<PreviewProfile> } }> & {
   chatText: import('@mammoth-ai/mmp-client-ui-chat/client').ChatViewSlotProps['t']
   openSource: (sessionId: SessionId, recordId: string, label: string) => Promise<{ text: string; locator: unknown }>
+  download?: (sessionId: SessionId, artifactId: string) => Promise<{ name: string; data: string; sha256: string }>
   reportContent: (hasMessages: boolean, userCount: number) => void
+  reportState: (running: boolean) => void
 }
 
 function failureText(message: string, code: string | undefined, t: MessagesProps['chatText']): string {
@@ -55,18 +57,49 @@ function failureText(message: string, code: string | undefined, t: MessagesProps
 
 /** Reuse the ordinary incremental Chat projection and shared Markdown renderer. */
 export function CompactExpertMessages({
-  sessionId, useChat, useSession, useProjection, usePreviewProfile, chatText, openSource, reportContent, t,
+  sessionId, useChat, useSession, useProjection, usePreviewProfile, chatText, openSource, download, reportContent, reportState, t,
 }: MessagesProps) {
   const chat = useChat(value => value.legacy)
   const profile = usePreviewProfile(value => value)
   const running = useSession(value => value.running)
   const error = useSession(value => value.promptError)
   const sources = useProjection('officialExpertKnowledge')
+  const runtime = useProjection('officialGalleryRuntime')
+  const [artifactBusy, setArtifactBusy] = useState(false)
+  const [artifactFailed, setArtifactFailed] = useState(false)
+  const artifact = runtime?.lastArtifact ?? null
+  const saveArtifact = async () => {
+    if (!artifact || !download || artifactBusy) return
+    setArtifactBusy(true)
+    setArtifactFailed(false)
+    try {
+      const file = await download(sessionId, artifact.id)
+      const bytes = Uint8Array.from(atob(file.data), c => c.charCodeAt(0))
+      const hash = await crypto.subtle.digest('SHA-256', bytes)
+      if (Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('') !== file.sha256) throw Error('Integrity mismatch')
+      const url = URL.createObjectURL(new Blob([bytes]))
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = file.name
+      anchor.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch {
+      setArtifactFailed(true)
+    } finally {
+      setArtifactBusy(false)
+    }
+  }
   // Reveal the frame only after its transcript has committed, replacing the parent's pending bubble.
   useEffect(() => {
     reportContent(chat.nodes.length > 0 || !!chat.partial || !!error,
       chat.nodes.filter(node => node.kind === 'user' || node.kind === 'steering').length)
   }, [chat.nodes, chat.partial, error, sources, reportContent])
+  // Second running-state channel beside the launch-time session subscription:
+  // this render-layer report keeps the administration parent in sync even when
+  // the launch-bound subscription stops delivering (the bridge dedups).
+  useEffect(() => {
+    reportState(running)
+  }, [running, reportState])
   const body = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
   const labels = useMemo(() => ({
@@ -116,6 +149,10 @@ export function CompactExpertMessages({
     </article> : null}
     {waiting ? <article className={css.assistant} data-role="assistant-waiting" aria-busy="true">{byline()}<span className={css.waiting} aria-hidden="true"><i/><i/><i/></span></article> : null}
     {error ? <p role="alert">{failureText(error.error.message, error.error.code, chatText)} <code>({error.error.code})</code></p> : null}
+    {artifact ? <p className={css.artifactBar} data-expert-preview-artifact="">
+      <button type="button" className={css.artifactButton} onClick={() => void saveArtifact()} disabled={artifactBusy || !download}>{artifactBusy ? t('artifactBusy') : t('artifactDownload', { name: artifact.name })}</button>
+      {artifactFailed ? <span role="alert" className={css.artifactError}>{t('artifactFailed')}</span> : null}
+    </p> : null}
   </div>
 }
 

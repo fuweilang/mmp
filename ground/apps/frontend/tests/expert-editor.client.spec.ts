@@ -172,6 +172,30 @@ it('preview saves current inputs before freezing and marks later edits as stale'
   await click('保存草稿', dialog()); await vi.waitFor(() => expect(fixture.update).toHaveBeenCalledTimes(2));
   expect(dialog().textContent).not.toContain('配置已修改');
 });
+it('recreating a stale preview keeps the conversation by rebinding the live session', async () => {
+  await mount(); await prompt('第一版指令');
+  await click('保存并试聊', dialog());
+  await vi.waitFor(() => expect(dialog().querySelector('iframe')).toBeTruthy());
+  const frame=dialog().querySelector('iframe')!,post=vi.spyOn(frame.contentWindow!,'postMessage');
+  const deliver=(data:object)=>window.dispatchEvent(new MessageEvent('message',{origin:'http://127.0.0.1:5201',source:frame.contentWindow,data:{agentId:'expert-one',previewId:'preview-one',...data}}));
+  deliver({type:'mmp.expert-preview.ready'});await nextTick();
+  deliver({...post.mock.calls[0]![0],type:'mmp.expert-preview.accepted'});
+  deliver({type:'mmp.expert-preview.content',hasMessages:true,userCount:1});await nextTick();
+  fixture.preview.mockResolvedValueOnce({ agentId: 'expert-one', previewId: 'preview-two', launch: { path: '/agent?expertPreview=preview-two&expertId=expert-one' }, expiresAt: '2099-01-01T00:00:00Z' });
+  await prompt('第二版指令');
+  await click('保存并试聊', dialog());
+  await vi.waitFor(() => expect(fixture.preview).toHaveBeenCalledTimes(2));
+  await vi.waitFor(() => expect(post.mock.calls.some(call => (call[0] as {type?:string}).type === 'mmp.expert-preview.rebind')).toBe(true));
+  const rebind = post.mock.calls.map(call => call[0] as Record<string, unknown>).find(call => call.type === 'mmp.expert-preview.rebind')!;
+  expect(rebind.previewId).toBe('preview-one');
+  expect(rebind.nextPreviewId).toBe('preview-two');
+  deliver({ type: 'mmp.expert-preview.accepted', previewId: 'preview-two', requestId: rebind.requestId as string });
+  await vi.waitFor(() => expect(dialog().querySelector('.expert-preview-notices')?.textContent).toContain('当前对话继续'));
+  // 同一 iframe 保留，对话记录未被替换；下一条消息已按新快照发出。
+  expect(dialog().querySelector('iframe')?.src).toContain('expertPreview=preview-one');
+  await vi.waitFor(() => expect(post.mock.calls.some(call => (call[0] as {type?:string;previewId?:string}).type === 'mmp.expert-preview.submit' && (call[0] as {previewId?:string}).previewId === 'preview-two')).toBe(true));
+  expect(dialog().textContent).not.toContain('已开启新的试聊会话');
+});
 it('save failure keeps the new input and does not start a stale preview', async () => {
   await mount(); await prompt('不能丢失的指令'); fixture.update.mockRejectedValueOnce(new Error('模拟保存失败'));
   await click('保存并试聊', dialog());
@@ -572,9 +596,14 @@ it('compact preview keeps one composer, reuses a current conversation and refres
   await vi.waitFor(()=>expect(fixture.preview).toHaveBeenCalledTimes(2));
   expect(fixture.update).toHaveBeenLastCalledWith('expert-one',expect.objectContaining({systemPrompt:'更新后的左侧指令',executionConfig:expect.objectContaining({releaseIds:['B']})}));
   expect(fixture.update.mock.invocationCallOrder.at(-1)).toBeLessThan(fixture.preview.mock.invocationCallOrder.at(-1)!);
-  expect(post).toHaveBeenCalledTimes(2);
-  frame=dialog().querySelector('iframe')!;post=vi.spyOn(frame.contentWindow!,'postMessage');sendReady();await nextTick();
-  expect(post).toHaveBeenCalledWith(expect.objectContaining({previewId:'frozen-2',text:'读取新的知识库'}),'http://127.0.0.1:5201');
+  await vi.waitFor(()=>expect(post.mock.calls.some(call => (call[0] as {type?:string}).type === 'mmp.expert-preview.rebind')).toBe(true));
+  const rebindCall = post.mock.calls.map(call => call[0] as Record<string, unknown>).find(call => call.type === 'mmp.expert-preview.rebind')!;
+  expect(rebindCall).toMatchObject({ previewId: 'frozen-1', nextPreviewId: 'frozen-2' });
+  window.dispatchEvent(new MessageEvent('message',{origin:'http://127.0.0.1:5201',source:frame.contentWindow,data:{type:'mmp.expert-preview.accepted',agentId:'expert-one',previewId:'frozen-2',requestId:rebindCall.requestId}}));
+  await vi.waitFor(()=>expect(post).toHaveBeenCalledWith(expect.objectContaining({previewId:'frozen-2',text:'读取新的知识库'}),'http://127.0.0.1:5201'));
+  // 会话保留：iframe 未重建，仍显示旧预览地址，新消息已按新快照发出。
+  expect(dialog().querySelector('iframe')!.src).toContain('frozen-1');
+  expect(dialog().textContent).toContain('当前对话继续');
 });
 
 it('uploading the first owned knowledge file renews an opened preview without editing the prompt', async () => {

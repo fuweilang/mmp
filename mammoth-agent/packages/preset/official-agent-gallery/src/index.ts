@@ -339,6 +339,29 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     if(execution.agentId!==request.agentId||!('preview' in execution)||execution.preview?.id!==request.previewId||execution.versionId!==null)throw Error('EXPERT_PREVIEW_BINDING_CHANGED: recreate the preview')
     return this.createExpert(request,execution,execution.key)
   }
+  /**
+   * Rebind one live creator-only preview Session to a newer immutable preview of the
+   * same expert, preserving the transcript. Configuration-derived state (role prompt,
+   * tools, model policy, skills, knowledge) is re-read from the new binding per turn.
+   */
+  @Remote
+  async rebindPreview(agent: Agent, nextPreviewId: string): Promise<void> {
+    const binding = this.bindingFor(agent.session)
+    if (!binding?.preview || binding.versionId !== null) throw new Error('GALLERY_PREVIEW_REBIND_NOT_PREVIEW')
+    if (typeof nextPreviewId !== 'string' || !nextPreviewId.trim() || nextPreviewId === binding.preview.id) return
+    const execution = await this.ground.resolvePreview(binding.agentId, nextPreviewId)
+    if (execution.agentId!==binding.agentId||!('preview' in execution)||execution.preview?.id!==nextPreviewId||execution.versionId!==null)throw new Error('EXPERT_PREVIEW_BINDING_CHANGED: recreate the preview')
+    agent.session.append('official-agent/bound', {
+      agentId: execution.agentId,
+      versionId: execution.versionId,
+      kind: execution.kind,
+      name: execution.key,
+      ...this.executionFields(execution),
+      systemPrompt: execution.systemPrompt,
+      toolScope: execution.toolScope,
+      ...execution.linkedSkills === undefined ? {} : { linkedSkills: execution.linkedSkills },
+    } satisfies OfficialAgentBinding)
+  }
 
   private async createExpert(request:OfficialAgentSessionRequest,execution:import('./ground.ts').GroundOfficialExecution,name:string):Promise<SessionId>{
     const workspace = this.ctx.workspaceRegistry.get(request.workspaceId)
