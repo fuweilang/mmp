@@ -43,7 +43,20 @@
           placeholder="请再次输入密码"
         />
       </el-form-item>
-      <el-form-item v-if="!hideRoleSelect" label="角色" prop="roleKeys">
+      <el-form-item v-if="editPerEnterprise" label="所属企业">
+        <div v-if="!form.memberships?.length" class="form-hint">还没有所属企业</div>
+        <div v-else class="membership-list">
+          <div v-for="row in form.memberships" :key="row.tenantId" class="membership-row">
+            <span class="membership-name">{{ row.name }}</span>
+            <el-select v-model="row.role" class="membership-role">
+              <el-option label="企业管理员" value="ADMIN" />
+              <el-option label="企业成员" value="MEMBER" />
+            </el-select>
+          </div>
+        </div>
+        <div v-if="form.memberships?.length" class="form-hint">每家企业单独改角色，不会移除其他企业</div>
+      </el-form-item>
+      <el-form-item v-if="!hideRoleSelect && !editPerEnterprise" label="角色" prop="roleKeys">
         <el-select
           v-model="form.roleKeys"
           multiple
@@ -62,7 +75,7 @@
           />
         </el-select>
       </el-form-item>
-      <el-form-item :label="platformAccount && editingId ? '加入终端企业' : '所属企业'" prop="tenantId">
+      <el-form-item v-if="!editPerEnterprise" :label="platformAccount && editingId ? '加入终端企业' : '所属企业'" prop="tenantId">
         <el-select
           :model-value="selectedEnterpriseKnown ? form.tenantId : ''"
           filterable
@@ -94,6 +107,15 @@
 import { computed, ref, watch, nextTick } from 'vue';
 import type { FormInstance, FormRules } from 'element-plus';
 import type { AdminEnterpriseRow, AdminRoleRow } from '@/api/admin';
+import type { MemberRole } from '@mammoth/shared';
+
+export type MembershipEdit = {
+  tenantId: string;
+  name: string;
+  role: 'ADMIN' | 'MEMBER';
+  /** 打开弹窗时的成员档。OWNER 显示为管理员，未改动则不回写。 */
+  original: MemberRole;
+};
 
 export type UserFormModel = {
   name: string;
@@ -102,6 +124,7 @@ export type UserFormModel = {
   passwordConfirm: string;
   roleKeys: string[];
   tenantId: string;
+  memberships: MembershipEdit[];
 };
 
 const props = defineProps<{
@@ -143,6 +166,9 @@ const platformAccount = computed(() => props.form.roleKeys.some(key => ['super_a
 const hideRoleSelect = computed(
   () => Boolean(props.editingId) && props.form.roleKeys.includes('super_admin'),
 );
+
+/** 编辑普通用户：按已加入的企业改角色，不再用一个角色覆盖一家企业。 */
+const editPerEnterprise = computed(() => Boolean(props.editingId) && !platformAccount.value);
 
 const assignableRoles = computed(() =>
   props.roleOptions.filter((role) => role.key !== 'super_admin'),
@@ -240,6 +266,43 @@ defineExpose({
 
 .form-hint-block {
   margin: 0 0 4px 96px;
+}
+
+.membership-list {
+  width: 100%;
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid #dfe5ef;
+}
+
+.membership-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.membership-row:last-child {
+  border-bottom: 0;
+}
+
+.membership-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.membership-role {
+  width: 132px;
+  flex: none;
+}
+
+.membership-role :deep(.el-select__wrapper) {
+  min-height: 32px;
+  border-radius: 0;
 }
 </style>
 

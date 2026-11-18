@@ -34,10 +34,9 @@
         <div class="view-perms-title">权限详情</div>
         <el-select
           v-if="tenantOptions.length > 1"
+          class="view-perms-tenant"
           :model-value="selectedTenantId"
           placeholder="选择企业"
-          size="small"
-          style="width: 200px"
           @change="onTenantChange"
         >
           <el-option
@@ -223,6 +222,15 @@ function permChipTitle(item: { key: string; labelEn?: string }) {
   font-size: 13px;
   font-weight: 600;
   color: #1d2939;
+}
+
+.view-perms-tenant {
+  width: 220px;
+}
+
+.view-perms-tenant .el-select__wrapper {
+  min-height: 32px;
+  border-radius: 0;
 }
 
 .view-perms-admin {

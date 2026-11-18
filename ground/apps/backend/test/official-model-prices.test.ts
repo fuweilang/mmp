@@ -83,3 +83,29 @@ test('a five-yuan signup gift credits 50,000 coins once, independently of the sa
   assert.equal((await creditSignupGiftInTx(tx as any,params)).credited,false);
   assert.equal(credited,50000);assert.equal(ledger.type,'signup_gift');assert.equal(ledger.meta.welcomeGiftYuan,5);
 });
+
+test('an existing signup gift is not rewritten when the configured amount changes', async () => {
+  const { creditSignupGiftForTenant } = await import('../src/billing/welcome-gift');
+  let credited = 50000;
+  let giftYuan = 5;
+  const ledger = { coins: 50000, type: 'signup_gift' };
+  const db = {
+    tenant: { findUnique: async () => ({ type: 'ENTERPRISE', status: 'active' }) },
+    $transaction: async (fn: (tx: any) => Promise<unknown>) => fn({
+      platformBillingConfig: { findUnique: async () => ({ welcomeGiftYuan: giftYuan, aiCoinsPerYuan: 10000 }) },
+      tenantAiWallet: {
+        findUnique: async () => ({ id: 'wallet', balanceCoins: credited }),
+        create: async () => { throw new Error('wallet already exists'); },
+        update: async ({ data }: any) => { credited += data.balanceCoins.increment; return { balanceCoins: credited }; },
+      },
+      tenantAiLedger: {
+        findUnique: async () => ledger,
+        create: async () => { throw new Error('gift already recorded'); },
+      },
+    }),
+  };
+  giftYuan = 3;
+  assert.equal(await creditSignupGiftForTenant(db as any, { tenantId: 'enterprise' }), true);
+  assert.equal(credited, 50000);
+  assert.equal(await creditSignupGiftForTenant({ tenant: { findUnique: async () => ({ type: 'PLATFORM', status: 'active' }) }, $transaction: async () => { throw new Error('platform should not gift'); } } as any, { tenantId: 'hq' }), true);
+});

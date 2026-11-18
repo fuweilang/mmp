@@ -1,4 +1,10 @@
 <template>
+  <Teleport to="body">
+    <div v-if="probingIds.length || bulkRunning" class="probe-toast" role="status">
+      <span class="probe-spinner" aria-hidden="true" />
+      <span>{{ probeToastText }}</span>
+    </div>
+  </Teleport>
   <section class="models-page">
     <div class="page-head">
       <div>
@@ -14,14 +20,24 @@
           clearable
           placeholder="搜索 Model ID / 显示名 / 厂商"
         />
-        <el-select v-model="selectedFamily" class="page-filter" aria-label="模型筛选" placeholder="全部模型">
-          <el-option label="全部模型" value="" />
-          <el-option v-for="family in familyOptions" :key="family" :label="family" :value="family" />
-        </el-select>
-        <el-select v-model="selectedProvider" class="page-filter" aria-label="厂商筛选" placeholder="全部厂商">
-          <el-option label="全部厂商" value="" />
-          <el-option v-for="provider in providers" :key="provider.id" :label="provider.displayName || provider.name" :value="provider.id" />
-        </el-select>
+        <el-select-v2
+          v-model="selectedFamily"
+          class="page-filter"
+          popper-class="models-filter-popper"
+          aria-label="模型筛选"
+          filterable
+          :options="familySelectOptions"
+          placeholder="全部模型"
+        />
+        <el-select-v2
+          v-model="selectedProvider"
+          class="page-filter"
+          popper-class="models-filter-popper"
+          aria-label="厂商筛选"
+          filterable
+          :options="providerSelectOptions"
+          placeholder="全部厂商"
+        />
         <el-button @click="testEnabled">{{ bulkRunning ? '停止' : '测试已启用' }}</el-button>
         <el-button @click="$router.push('/admin/knowledge-services')">检索服务</el-button>
         <el-button @click="openGeekAi">接入极客智坊</el-button>
@@ -300,6 +316,26 @@ const flatRows = computed<FlatRow[]>(() => {
 });
 
 const familyOptions = computed(() => [...new Set(flatRows.value.map(row => modelFamily(row.model.modelId, row.model.displayName)))].sort((a, b) => a === '其他' ? 1 : b === '其他' ? -1 : a.localeCompare(b)));
+const familySelectOptions = computed(() => [
+  { value: '', label: '全部模型' },
+  ...familyOptions.value.map((family) => ({ value: family, label: family })),
+]);
+const providerSelectOptions = computed(() => [
+  { value: '', label: '全部厂商' },
+  ...providers.value.map((provider) => ({ value: provider.id, label: provider.displayName || provider.name })),
+]);
+
+const probeToastText = computed(() => {
+  const names = probingIds.value
+    .map((id) => {
+      const row = flatRows.value.find((item) => item.model.id === id);
+      return row?.model.displayName || row?.model.modelId || '';
+    })
+    .filter(Boolean);
+  if (names.length === 1) return `正在测试 ${names[0]}`;
+  if (names.length > 1) return `正在测试 ${names.length} 个模型`;
+  return '正在测试…';
+});
 
 const filteredRows = computed(() => {
   const q = keyword.value.trim().toLowerCase();
@@ -756,6 +792,40 @@ onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of pr
 </script>
 
 <style scoped>
+.probe-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 4000;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(480px, calc(100vw - 32px));
+  padding: 10px 16px;
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+  color: #333946;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.probe-spinner {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border: 2px solid #d9deff;
+  border-top-color: #4A53A3;
+  border-radius: 50%;
+  animation: probe-spin 0.8s linear infinite;
+}
+
+@keyframes probe-spin {
+  to { transform: rotate(360deg); }
+}
+
 .models-page {
   display: flex;
   flex-direction: column;
@@ -813,6 +883,10 @@ onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of pr
 }
 .page-filter {
   width: 160px;
+  --el-border-radius-base: 0;
+}
+.page-filter :deep(.el-select__wrapper) {
+  border-radius: 0;
 }
 .page-filter :deep(.el-select__selected-item) {
   color: var(--el-text-color-regular);
@@ -956,5 +1030,9 @@ onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of pr
 }
 .el-dialog.models-dialog .el-dialog__footer {
   flex-shrink: 0;
+}
+
+.models-filter-popper.el-popper {
+  border-radius: 0;
 }
 </style>

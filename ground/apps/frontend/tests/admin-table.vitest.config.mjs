@@ -9,5 +9,5 @@ const { default: vue } = await import(pathToFileURL(frontend.resolve('@vitejs/pl
 export default {
   root: resolve(here, '..'), plugins: [vue()],
   resolve: { alias: { '@': resolve(here, '../src'), '@mammoth/shared': resolve(here, '../../../packages/shared/src/index.ts'), vitest: resolve(dirname(native.resolve('vitest/package.json')), 'dist/index.js') } },
-  test: { environment: 'jsdom', include: ['tests/admin-table.client.spec.ts', 'tests/admin-platform-membership.client.spec.ts'], globals: false, pool: 'forks', server: { deps: { inline: [/\.vue$/] } } },
+  test: { environment: 'jsdom', include: ['tests/admin-table.client.spec.ts', 'tests/admin-platform-membership.client.spec.ts', 'tests/admin-user-table.client.spec.ts', 'tests/admin-wallets.client.spec.ts'], globals: false, pool: 'forks', server: { deps: { inline: [/\.vue$/] } } },
 };

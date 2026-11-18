@@ -107,6 +107,45 @@ it('AdminUsers supplies user-row names during asynchronous loading and saves the
   expect(api.updateUser.mock.calls[0][1]).not.toHaveProperty('isPlatformAdmin');
 });
 
+it('编辑普通用户时列出全部企业，只提交改过的那一家角色', async () => {
+  const orgUser = {
+    id: 'yang',
+    name: '杨泽昆',
+    phone: '18552375428',
+    isPlatformAdmin: false,
+    roleKeys: ['org_admin'],
+    status: 'active',
+    tenants: [
+      { id: 't1', name: '测试团队', role: 'ADMIN' },
+      { id: 't2', name: '猛犸战略部', role: 'ADMIN' },
+      { id: 't3', name: '一', role: 'ADMIN' },
+      { id: 't4', name: '二', role: 'OWNER' },
+      { id: 't5', name: '杨泽昆的个人空间', role: 'ADMIN' },
+    ],
+  };
+  api.listUsers.mockResolvedValue([orgUser]);
+  mount(() => h(AdminUsers)); await flush();
+  (document.querySelector('.edit-user-fixture') as HTMLButtonElement).click(); await flush();
+  const text = document.body.textContent ?? '';
+  for (const name of ['测试团队', '猛犸战略部', '一', '二', '杨泽昆的个人空间']) expect(text).toContain(name);
+  expect(text).not.toContain('加入终端企业');
+  expect(text).toContain('不会移除其他企业');
+  const row = [...document.querySelectorAll('.membership-row')].find((node) => node.textContent?.includes('测试团队'))!;
+  (row.querySelector('.el-select__wrapper') as HTMLElement).click(); await flush();
+  const listId = row.querySelector('input')!.getAttribute('aria-controls')!;
+  const option = [...document.getElementById(listId)!.querySelectorAll('.el-select-dropdown__item')].find((node) => node.textContent?.trim() === '企业成员');
+  expect(option).toBeDefined();
+  (option as HTMLElement).click(); await flush();
+  const save = [...document.querySelectorAll('.user-form-dialog .el-dialog__footer button')].find((node) => node.textContent?.includes('保存'));
+  (save as HTMLButtonElement).click();
+  await vi.waitFor(() => expect(api.updateUser).toHaveBeenCalledWith('yang', {
+    name: '杨泽昆',
+    membershipRoles: [{ tenantId: 't1', role: 'MEMBER' }],
+  }));
+  expect(api.updateUser.mock.calls[0][1]).not.toHaveProperty('tenantId');
+  expect(api.updateUser.mock.calls[0][1]).not.toHaveProperty('roleKeys');
+});
+
 it('AdminUsers retains the existing real name after load failure and supports retry without an implicit binding', async () => {
   api.listEnterprises.mockRejectedValueOnce(new Error('fixture load failure'));
   mount(() => h(AdminUsers)); await flush();

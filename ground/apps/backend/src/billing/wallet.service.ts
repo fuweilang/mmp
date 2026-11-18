@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AdjustWalletDto } from './dto/billing.dto';
 import { ledgerCoinsAtCurrentRate, currentLedgerCoinsSql } from './billing.pricing';
 import { BillingConfigService } from './billing-config.service';
+import { creditSignupGiftForTenant } from './welcome-gift';
 
 function requireTenantIdOrThrow(tenantId: string | null): string {
   if (!tenantId) throw new BadRequestException('请先选择企业');
@@ -42,12 +43,19 @@ function metaNumber(meta: Record<string, unknown>, key: string): number | null {
 
 @Injectable()
 export class WalletService {
+  /** 已经送过开户赠送的企业。避免每次扣费都再查一次流水。 */
+  private signupGiftSettled = new Set<string>();
+
   constructor(
     private prisma: PrismaService,
     private config: BillingConfigService,
   ) {}
 
   async ensureWallet(tenantId: string) {
+    if (!this.signupGiftSettled.has(tenantId)) {
+      const settled = await creditSignupGiftForTenant(this.prisma, { tenantId });
+      if (settled) this.signupGiftSettled.add(tenantId);
+    }
     const existing = await this.prisma.tenantAiWallet.findUnique({ where: { tenantId } });
     if (existing) return existing;
     try {
@@ -65,9 +73,22 @@ export class WalletService {
   async listWallets(actor: User) {
     this.requirePlatformAdmin(actor);
     const rows = await this.prisma.tenantAiWallet.findMany({
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
       include: {
-        tenant: { select: { id: true, name: true, slug: true, type: true, status: true } },
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            type: true,
+            status: true,
+            members: {
+              where: { role: { in: [MemberRole.OWNER, MemberRole.ADMIN] } },
+              select: { user: { select: { id: true, name: true, phone: true } } },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
+        },
       },
       take: 500,
     });
@@ -81,6 +102,7 @@ export class WalletService {
       totalCredited: w.totalCredited,
       totalDebited: w.totalDebited,
       updatedAt: w.updatedAt.toISOString(),
+      admins: w.tenant.members.map((member) => member.user),
     }));
   }
 
@@ -146,7 +168,7 @@ export class WalletService {
     if (dto.deltaCoins === 0) throw new BadRequestException('调账数量不能为 0');
     const tenant = await this.prisma.tenant.findUnique({ where: { id: dto.tenantId } });
     if (!tenant) throw new NotFoundException('企业不存在');
-    if (tenant.type === 'PLATFORM') throw new BadRequestException('平台租户不设企业钱包');
+    if (tenant.type === 'PLATFORM') throw new BadRequestException('平台租户不设企业 AI 币');
 
     const existing = await this.prisma.tenantAiLedger.findUnique({
       where: { idempotencyKey: dto.idempotencyKey },

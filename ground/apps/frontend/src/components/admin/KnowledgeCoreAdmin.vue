@@ -1,7 +1,7 @@
 <template>
   <div class="knowledge-core-admin" v-loading="busy">
     <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" />
-    <el-tabs v-model="tab">
+    <el-tabs v-model="tab" :class="{ 'service-only': serviceOnly }">
       <el-tab-pane v-if="!settingsOnly" label="知识库与索引" name="bases">
         <div class="toolbar">
           <el-select v-model="baseId" placeholder="选择知识库" @change="()=>act(loadBase)">
@@ -108,8 +108,7 @@
     </div>
   </el-tab-pane>
   <el-tab-pane label="搜索服务" name="profiles">
-    <p v-if="serviceOnly" class="plain-lead">给专家用哪些文件，在专家配置里选。这里管理文件处理和检索使用的服务；实际效果请在专家调试中验证。</p>
-    <p v-else class="plain-lead">给专家用哪些文件，在专家配置里选。这里只确认上传的文件能不能被按问题找到。</p>
+    <p v-if="!serviceOnly" class="plain-lead">给专家用哪些文件，在专家配置里选。这里只确认上传的文件能不能被按问题找到。</p>
     <div class="service-status">
       <p v-if="activeEmbedding">可以搜索。新上传的文件会用「{{ embeddingLabel }}」整理成可搜索的内容。</p>
       <p v-else>还不能按问题搜索。文件可以上传并保存，但专家问到这些资料时找不到。</p>
@@ -117,12 +116,12 @@
     </div>
     <el-collapse>
       <el-collapse-item title="技术人员设置" name="technical-service">
-    <el-alert title="这里和聊天模型无关。检查配置只看本地填得齐不齐；测试连通才会访问服务商，可能产生少量费用。换新配置不会改掉已经做好的搜索结果。" type="info" :closable="false" />
-    <div class="toolbar">
+    <section class="tech-block">
+    <div class="tech-block-head">
+      <h3>供应商凭据</h3>
       <el-button @click="openProvider()">新建供应商凭据</el-button>
-      <el-button type="primary" @click="openProfile()">新建服务配置</el-button>
     </div>
-    <h3 class="section-title">供应商凭据</h3>
+    <p class="muted">更换密钥会影响用到这家服务的聊天模型和知识库搜索。平时保留正在使用的那一条即可。</p>
     <el-table :data="providers" border class="service-table" aria-label="供应商凭据">
       <el-table-column prop="displayName" label="供应商" min-width="140" />
       <el-table-column prop="name" label="短名" min-width="150" />
@@ -132,9 +131,13 @@
       <el-table-column label="状态" width="80" align="center"><template #default="{row}">{{row.enabled?'启用':'停用'}}</template></el-table-column>
       <el-table-column label="操作" width="180" align="center" class-name="provider-ops" label-class-name="provider-ops"><template #default="{row}"><el-button text type="primary" @click="openProvider(row)">管理凭据</el-button><el-button text :type="row.enabled?'danger':'primary'" @click="toggleProvider(row)">{{row.enabled?'停用':'启用'}}</el-button></template></el-table-column>
     </el-table>
-    <p class="muted profiles-note">更换密钥会影响用到这家服务的聊天模型和知识库搜索。平时保留正在使用的那一条即可。</p>
-    <h3 class="section-title">检索配置</h3>
-    <p class="muted profiles-note">每一行是一套搜索设置。上传的文件会用「启用」的那一套变成可以按问题找到的内容。</p>
+    </section>
+    <section class="tech-block">
+    <div class="tech-block-head">
+      <h3>检索配置</h3>
+      <el-button type="primary" @click="openProfile()">新建服务配置</el-button>
+    </div>
+    <p class="muted">每一行是一套搜索设置。上传的文件会用「启用」的那一套变成可以按问题找到的内容。检查配置只看本地填得齐不齐；测试连通才会访问服务商。</p>
     <el-table :data="profiles" border class="service-table" aria-label="检索配置">
       <el-table-column label="用来做什么" width="180"><template #default="{row}">{{ profileTaskLabel(row.task) }}</template></el-table-column>
       <el-table-column prop="model" label="模型" min-width="180"/>
@@ -153,6 +156,7 @@
     </el-table-column>
   </el-table>
   <el-empty v-if="!profiles.length" description="尚未配置检索服务" />
+    </section>
       </el-collapse-item>
     </el-collapse>
 </el-tab-pane>
@@ -479,5 +483,5 @@ onMounted(reload);
 onBeforeUnmount(() => testAbort?.abort());
 </script>
 <style scoped>
-.knowledge-core-admin{min-width:0}.plain-lead{margin:4px 0 12px;line-height:1.7}.service-status{display:grid;justify-items:start;gap:10px;margin-bottom:16px}.service-status p{margin:0;line-height:1.7}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}.toolbar .el-input{max-width:420px}.el-select{min-width:240px;max-width:100%}.upload-form{margin-top:20px}.document-card{border:1px solid var(--el-border-color);padding:16px;margin:16px 0;border-radius:8px}.revision{border-top:1px solid var(--el-border-color-lighter);padding:12px 0}.section-title{margin:18px 0 8px;font-size:14px;font-weight:600}.profiles-note{margin:12px 0 0}.muted{color:var(--el-text-color-secondary);font-size:13px}.service-table.el-table{font-size:13px}.service-table :deep(.el-table__cell),.service-table :deep(.el-button){font-size:13px}.service-table :deep(th.el-table__cell){background:var(--el-fill-color-light);font-weight:500}.service-table :deep(td.el-table__cell){padding:12px 0}.cell-url{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.knowledge-core-admin :deep(.profile-ops .cell),.knowledge-core-admin :deep(.provider-ops .cell){white-space:nowrap}.knowledge-core-admin :deep(.profile-ops .el-button),.knowledge-core-admin :deep(.provider-ops .el-button){padding-left:6px;padding-right:6px}.error{color:var(--el-color-danger)}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--el-fill-color-light);padding:12px;max-height:420px;overflow:auto}a{color:var(--el-color-primary)}
+.knowledge-core-admin{min-width:0}.service-only :deep(.el-tabs__header){display:none}.plain-lead{margin:4px 0 12px;line-height:1.7}.service-status{display:grid;justify-items:start;gap:10px;margin-bottom:16px}.service-status p{margin:0;line-height:1.7}.tech-block+.tech-block{margin-top:8px;padding-top:16px;border-top:1px solid #eef0f4}.tech-block-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.tech-block-head h3{margin:0;font-size:14px;font-weight:600;color:#333946}.tech-block>.muted{margin:8px 0 12px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}.toolbar .el-input{max-width:420px}.el-select{min-width:240px;max-width:100%}.upload-form{margin-top:20px}.document-card{border:1px solid var(--el-border-color);padding:16px;margin:16px 0;border-radius:8px}.revision{border-top:1px solid var(--el-border-color-lighter);padding:12px 0}.section-title{margin:18px 0 8px;font-size:14px;font-weight:600}.profiles-note{margin:12px 0 0}.muted{color:var(--el-text-color-secondary);font-size:13px}.service-table.el-table{font-size:13px}.service-table :deep(.el-table__cell),.service-table :deep(.el-button){font-size:13px}.service-table :deep(th.el-table__cell){background:var(--el-fill-color-light);font-weight:500}.service-table :deep(td.el-table__cell){padding:12px 0}.cell-url{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.knowledge-core-admin :deep(.profile-ops .cell),.knowledge-core-admin :deep(.provider-ops .cell){white-space:nowrap}.knowledge-core-admin :deep(.profile-ops .el-button),.knowledge-core-admin :deep(.provider-ops .el-button){padding-left:6px;padding-right:6px}.error{color:var(--el-color-danger)}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--el-fill-color-light);padding:12px;max-height:420px;overflow:auto}a{color:var(--el-color-primary)}
 </style>

@@ -9,7 +9,6 @@ import { ApiError } from '@/api/http';
 
 export function useAdminEnterpriseWallets() {
   const WALLET_PATH = '/admin/enterprise-wallets';
-  const TAB_STORAGE_KEY = 'admin.enterprise-wallets.tab';
   const FILTER_STORAGE_KEY = 'admin.enterprise-wallets.tenantId';
   const fixedCoinAmounts = [1000, 5000, 10000, 50000, 100000];
 
@@ -25,6 +24,9 @@ export function useAdminEnterpriseWallets() {
   const ledgerPageSize = ref(20);
   const ledgerTotal = ref(0);
   const ledgerType = ref('');
+  const ordersVisible = ref(false);
+  const ordersTenantId = ref('');
+  const ordersTitle = ref('');
   const ordersStatus = ref('');
   const adjusting = ref(false);
   const error = ref('');
@@ -47,24 +49,6 @@ export function useAdminEnterpriseWallets() {
   const ordersPageSize = ref(20);
   const ordersTotal = ref(0);
 
-  function readStoredTab(): 'wallets' | 'orders' {
-    try {
-      const v = localStorage.getItem(TAB_STORAGE_KEY);
-      if (v === 'orders' || v === 'wallets') return v;
-    } catch {
-      /* ignore */
-    }
-    return 'wallets';
-  }
-
-  function persistTab(tab: 'wallets' | 'orders') {
-    try {
-      localStorage.setItem(TAB_STORAGE_KEY, tab);
-    } catch {
-      /* ignore */
-    }
-  }
-
   function readStoredFilter(): string {
     try {
       return localStorage.getItem(FILTER_STORAGE_KEY) || '';
@@ -80,27 +64,6 @@ export function useAdminEnterpriseWallets() {
     } catch {
       /* ignore */
     }
-  }
-
-  function tabFromQuery(raw: unknown): 'wallets' | 'orders' | null {
-    if (raw === 'orders') return 'orders';
-    if (raw === 'wallets' || raw === 'funds') return 'wallets';
-    return null;
-  }
-
-  function resolveInitialTab(): 'wallets' | 'orders' {
-    return tabFromQuery(route.query.tab) ?? readStoredTab();
-  }
-
-  const fundsMainTab = ref<'wallets' | 'orders'>(resolveInitialTab());
-
-  function syncTabToRoute(tab: 'wallets' | 'orders') {
-    persistTab(tab);
-    if (route.query.tab === tab) return;
-    router.replace({
-      path: WALLET_PATH,
-      query: { ...route.query, tab },
-    });
   }
 
   const adjustVisible = ref(false);
@@ -125,10 +88,7 @@ export function useAdminEnterpriseWallets() {
     return filteredWallets.value.slice(start, start + walletsPageSize.value);
   });
 
-  const drawerTitle = computed(() => {
-    const name = fundsReport.value?.tenant.name || fundsTenantId.value;
-    return name ? `企业资金 — ${name}` : '企业资金';
-  });
+  const drawerTitle = computed(() => fundsReport.value?.tenant.name || '企业 AI 币');
 
 
 
@@ -154,8 +114,14 @@ export function useAdminEnterpriseWallets() {
       ledgerPage.value = report.ledgerPage?.page ?? page;
       ledgerPageSize.value = report.ledgerPage?.pageSize ?? ledgerPageSize.value;
       ledgerTotal.value = report.ledgerPage?.total ?? (report.ledger?.length ?? 0);
+      // 入账（含首次开户赠送）发生在资金接口里。流水翻页不再拉整表。
+      if (!onlyLedger) {
+        const wasMissing = !wallets.value.some((w) => w.tenantId === tenantId);
+        await refreshWallets();
+        if (wasMissing) walletsPage.value = 1;
+      }
     } catch (e) {
-      ElMessage.error(e instanceof ApiError ? e.message : '加载企业资金失败');
+      ElMessage.error(e instanceof ApiError ? e.message : '加载明细失败');
     } finally {
       fundsLoading.value = false;
       ledgerLoading.value = false;
@@ -184,7 +150,7 @@ export function useAdminEnterpriseWallets() {
   function openFunds(row: AdminWalletRow) {
     router.replace({
       path: WALLET_PATH,
-      query: { ...route.query, tenantId: row.tenantId, tab: fundsMainTab.value },
+      query: { ...route.query, tenantId: row.tenantId },
     });
   }
 
@@ -196,20 +162,41 @@ export function useAdminEnterpriseWallets() {
     ledgerType.value = '';
     const q = { ...route.query };
     delete q.tenantId;
-    q.tab = fundsMainTab.value;
     router.replace({ path: WALLET_PATH, query: q });
   }
 
+  function openOrders(row: AdminWalletRow) {
+    ordersTenantId.value = row.tenantId;
+    ordersTitle.value = row.tenantName;
+    ordersStatus.value = '';
+    ordersPage.value = 1;
+    ordersVisible.value = true;
+    void loadOrders({ page: 1 });
+  }
+
+  function onOrdersClosed() {
+    ordersVisible.value = false;
+    ordersTenantId.value = '';
+    ordersTitle.value = '';
+    ordersStatus.value = '';
+    rechargeOrders.value = [];
+    ordersPage.value = 1;
+    ordersTotal.value = 0;
+  }
+
   async function loadOrders(opts?: { page?: number }) {
+    if (!ordersTenantId.value) return;
+    const tenantId = ordersTenantId.value;
     ordersLoading.value = true;
     const page = opts?.page ?? ordersPage.value;
     try {
       const res = await adminBillingApi.listRechargeOrders({
-        tenantId: selectedTenantId.value || undefined,
+        tenantId,
         status: ordersStatus.value || undefined,
         page,
         pageSize: ordersPageSize.value,
       });
+      if (tenantId !== ordersTenantId.value) return;
       rechargeOrders.value = res.items ?? [];
       ordersPage.value = res.page ?? page;
       ordersPageSize.value = res.pageSize ?? ordersPageSize.value;
@@ -249,42 +236,43 @@ export function useAdminEnterpriseWallets() {
     selectedTenantId.value = tenantId || '';
     persistFilter(selectedTenantId.value);
     walletsPage.value = 1;
-    ordersPage.value = 1;
-    if (fundsMainTab.value === 'orders') void loadOrders({ page: 1 });
   }
 
   function onEnterpriseFilterClear() {
     selectedTenantId.value = '';
     persistFilter('');
     walletsPage.value = 1;
-    ordersPage.value = 1;
-    if (fundsMainTab.value === 'orders') void loadOrders({ page: 1 });
   }
 
-  function onMainTabChange(name: string | number) {
-    const tab: 'wallets' | 'orders' = name === 'orders' ? 'orders' : 'wallets';
-    fundsMainTab.value = tab;
-    syncTabToRoute(tab);
-    if (tab === 'orders') void loadOrders({ page: 1 });
-  }
+  let walletListSeq = 0;
 
-  async function reload() {
+  async function refreshWallets() {
+    const seq = ++walletListSeq;
     loading.value = true;
     error.value = '';
     try {
-      wallets.value = await adminBillingApi.listWallets();
-      if (selectedTenantId.value && !wallets.value.some((w) => w.tenantId === selectedTenantId.value)) {
+      const rows = await adminBillingApi.listWallets();
+      if (seq !== walletListSeq) return;
+      wallets.value = rows;
+      const openFundsId = fundsTenantId.value;
+      if (
+        selectedTenantId.value
+        && selectedTenantId.value !== openFundsId
+        && !rows.some((w) => w.tenantId === selectedTenantId.value)
+      ) {
         selectedTenantId.value = '';
         persistFilter('');
       }
-      if (fundsMainTab.value === 'orders') {
-        await loadOrders();
-      }
     } catch (e) {
+      if (seq !== walletListSeq) return;
       error.value = e instanceof ApiError ? e.message : '加载失败';
     } finally {
-      loading.value = false;
+      if (seq === walletListSeq) loading.value = false;
     }
+  }
+
+  async function reload() {
+    await refreshWallets();
   }
 
   function resetAdjustAmount() {
@@ -334,6 +322,7 @@ export function useAdminEnterpriseWallets() {
         totalCredited: fundsReport.value.wallet.totalCredited,
         totalDebited: fundsReport.value.wallet.totalDebited,
         updatedAt: '',
+        admins: [],
       } as AdminWalletRow);
     openAdjust(row, mode);
   }
@@ -376,30 +365,13 @@ export function useAdminEnterpriseWallets() {
     { immediate: true },
   );
 
-  watch(
-    () => route.query.tab,
-    (tab) => {
-      const next = tabFromQuery(tab);
-      if (!next) return;
-      if (fundsMainTab.value !== next) fundsMainTab.value = next;
-      persistTab(next);
-      if (next === 'orders') void loadOrders();
-    },
-  );
-
   watch(filteredWallets, (rows) => {
     const maxPage = Math.max(1, Math.ceil(rows.length / walletsPageSize.value) || 1);
     if (walletsPage.value > maxPage) walletsPage.value = maxPage;
   });
 
   onMounted(() => {
-    const tab = resolveInitialTab();
-    fundsMainTab.value = tab;
-    persistTab(tab);
     selectedTenantId.value = readStoredFilter();
-    if (route.query.tab !== tab) {
-      router.replace({ path: WALLET_PATH, query: { ...route.query, tab } });
-    }
     void reload();
   });
   return {
@@ -413,6 +385,8 @@ export function useAdminEnterpriseWallets() {
     ledgerPageSize,
     ledgerTotal,
     ledgerType,
+    ordersVisible,
+    ordersTitle,
     ordersStatus,
     adjusting,
     error,
@@ -424,7 +398,6 @@ export function useAdminEnterpriseWallets() {
     ordersPage,
     ordersPageSize,
     ordersTotal,
-    fundsMainTab,
     adjustVisible,
     adjustTarget,
     adjustMode,
@@ -440,7 +413,9 @@ export function useAdminEnterpriseWallets() {
     onLedgerSizeChange,
     onLedgerTypeChange,
     openFunds,
+    openOrders,
     onDrawerClosed,
+    onOrdersClosed,
     loadOrders,
     onOrdersPageChange,
     onOrdersSizeChange,
@@ -449,7 +424,6 @@ export function useAdminEnterpriseWallets() {
     onWalletsSizeChange,
     onEnterpriseFilterChange,
     onEnterpriseFilterClear,
-    onMainTabChange,
     reload,
     selectFixedAmount,
     handleCustomAmountInput,
