@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-system-prompt",
   "description": "System prompt assembly registry for the DeepSeek Harness",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "publishConfig": {
     "access": "public"
   },

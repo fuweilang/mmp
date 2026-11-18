@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp",
   "description": "mmp CLI: profile launch, plugin management, and configuration inspection",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "publishConfig": {
     "access": "public"
   },

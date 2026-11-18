@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-personalized-recommendations",
   "description": "Personalized pages and built-in plugin recommendations offered as cards below answers",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "icon": "./icon.svg",
   "publishConfig": {
     "access": "public"

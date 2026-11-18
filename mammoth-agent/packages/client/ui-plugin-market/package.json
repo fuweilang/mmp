@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-plugin-market",
   "description": "Discover tab of the mmp web Plugins page: browse configured plugin market indexes and install their bundles",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "publishConfig": {
     "access": "public"
   },
