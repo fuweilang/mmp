@@ -7,6 +7,8 @@ import { consoleLibraryEntry, consoleLibraryViews, memberLibraryView } from '../
 /** 本次整页加载是否已刷新过会话权限（含总后台与企业控制台，避免旧缓存里的 effectivePermissions 一直生效）。 */
 let sessionRefreshed = false;
 const AppShell = () => import('../layouts/AppShell.vue');
+/** 只承担 path/name 的占位路由：父组件不渲染 <router-view>，不需要真实视图。 */
+const EmptyRoute = { render: () => null };
 
 function goAgentOrReport() {
   if (!redirectToAgentWeb()) ElMessage.error('猛犸专家地址未配置，请联系管理员');
@@ -56,9 +58,9 @@ const router = createRouter({
           meta: { title: '专家配置' },
           component: () => import('../views/admin/AdminOfficialAgents.vue'),
           children: [
-            { path: '', name: 'admin-official-agents' },
-            { path: 'new', name: 'admin-official-agents-new', meta: { title: '新建专家' } },
-            { path: ':id', name: 'admin-official-agents-edit', meta: { title: '编辑专家' } },
+            { path: '', name: 'admin-official-agents', component: EmptyRoute },
+            { path: 'new', name: 'admin-official-agents-new', meta: { title: '新建专家' }, component: EmptyRoute },
+            { path: ':id', name: 'admin-official-agents-edit', meta: { title: '编辑专家' }, component: EmptyRoute },
           ],
         },
         {

@@ -6,7 +6,9 @@ import {
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { modelPricingSnapshot, parseModelPurchasePrices } from './model-pricing';
-import { COINS_PER_YUAN, officialModelPrice, seedOfficialPriceCatalogue, officialPriceCatalogue } from './official-model-prices';
+import { COINS_PER_YUAN, officialModelPrice, seedOfficialPriceCatalogue, officialPriceCatalogue, type OfficialPrice } from './official-model-prices';
+import { geekAiChatBase, loadGeekAiModel } from './geekai-model-price';
+import { decryptApiKey } from '../llm/llm-key-crypto';
 import { UpdateBillingConfigDto } from './dto/billing.dto';
 import { listEnabledChatModels } from './octop-providers.reader';
 import { LlmProvidersService } from '../llm/llm-providers.service';
@@ -166,10 +168,10 @@ export class BillingConfigService {
     const sellPriceMultiplier = Number(row.sellPriceMultiplier);
     const storedPrices = await this.readSystemPrices();
     seedOfficialPriceCatalogue(storedPrices);
-    const providers = await this.prisma.llmProvider.findMany({ select: { name: true, baseUrl: true } });
+    const providers = await this.prisma.llmProvider.findMany({ select: { name: true, baseUrl: true, apiKeyEnc: true } });
     const models = await Promise.all(listed.models.map(async model => {
-      const price = await officialModelPrice(providers.find(p => p.name === model.providerName)?.baseUrl ?? null, model.modelId);
-      return { ref: `${model.providerName}/${model.modelId}`, name: model.modelName, provider: model.providerName, price };
+      const loaded = await this.referencePrice(model.providerName, model.modelId, providers.find(p => p.name === model.providerName));
+      return { ref: `${model.providerName}/${model.modelId}`, name: model.modelName, provider: model.providerName, price: loaded.ok ? loaded.price : null };
     }));
     await this.persistSystemPrices(storedPrices);
     return {
@@ -201,15 +203,28 @@ export class BillingConfigService {
   async quoteModel(provider: string, model: string) {
     const row = await this.ensureConfig();
     if (row.aiCoinsPerYuan !== COINS_PER_YUAN) throw new BadRequestException('AI币面值转换尚未完成');
-    const upstream = await this.prisma.llmProvider.findUnique({ where: { name: provider }, select: { baseUrl: true } });
+    const upstream = await this.prisma.llmProvider.findUnique({ where: { name: provider }, select: { baseUrl: true, apiKeyEnc: true } });
     const storedPrices = await this.readSystemPrices();
     seedOfficialPriceCatalogue(storedPrices);
-    const price = await officialModelPrice(upstream?.baseUrl ?? null, model);
+    const loaded = await this.referencePrice(provider, model, upstream ?? undefined);
     await this.persistSystemPrices(storedPrices);
-    if (!price) throw new BadRequestException(`模型 ${provider}/${model} 暂无有效的系统参考价，暂不可用于企业计费`);
+    if (!loaded.ok) throw new BadRequestException(`模型 ${provider}/${model} ${loaded.reason}`);
+    const price = loaded.price;
     return { ...modelPricingSnapshot(`${provider}/${model}`, { [`${provider}/${model}`]: price }, Number(row.sellPriceMultiplier), COINS_PER_YUAN),
       source: price.source, checkedAt: price.checkedAt, expiresAt: price.expiresAt, tier: price.tier,
       cacheWrite5m: price.cacheWrite5m, cacheWrite1h: price.cacheWrite1h };
+  }
+
+  /** DeepSeek and Kimi use the public tariff. GeekAI uses the saved key's CNY price and never the public tariff of the same model id. */
+  private async referencePrice(provider: string, model: string, upstream?: { baseUrl: string | null; apiKeyEnc: string | null }): Promise<{ ok: true; price: OfficialPrice } | { ok: false; reason: string }> {
+    if (geekAiChatBase(upstream?.baseUrl)) {
+      let apiKey = '';
+      try { apiKey = upstream?.apiKeyEnc ? decryptApiKey(upstream.apiKeyEnc) : ''; } catch { apiKey = ''; }
+      const loaded = await loadGeekAiModel(provider, upstream?.baseUrl, model, apiKey);
+      return loaded.ok ? { ok: true, price: loaded.price } : { ok: false, reason: loaded.reason };
+    }
+    const price = await officialModelPrice(upstream?.baseUrl ?? null, model);
+    return price ? { ok: true, price } : { ok: false, reason: '暂无有效的系统参考价，暂不可用于企业计费' };
   }
 
   /** Read the cache independently of generated scalar selections, including a development watcher opened before generation. */

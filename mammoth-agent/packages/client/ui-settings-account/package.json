@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-settings-account",
   "description": "Manage DeepSeek login and open Platform billing pages",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "publishConfig": {
     "access": "public"
   },

@@ -216,10 +216,12 @@ async function syncEditorRoute() {
   }
   try {
     const detail = await adminOfficialAgentApi.detail(target.id);
-    if (editorTarget()?.kind !== 'edit' || editorTarget()?.id !== target.id) return;
+    const current = editorTarget();
+    if (current?.kind !== 'edit' || current.id !== target.id) return;
     openEdit(detail);
   } catch (error) {
-    if (editorTarget()?.id !== target.id) return;
+    const current = editorTarget();
+    if (current?.kind !== 'edit' || current.id !== target.id) return;
     ElMessage.error(error instanceof Error ? error.message : '找不到这个专家');
     await router.replace({ name: 'admin-official-agents' });
   }

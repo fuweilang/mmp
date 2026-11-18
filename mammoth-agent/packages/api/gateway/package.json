@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-api-gateway",
   "description": "Typert Remote Host dispatcher and Client API endpoint",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "publishConfig": {
     "access": "public"
   },

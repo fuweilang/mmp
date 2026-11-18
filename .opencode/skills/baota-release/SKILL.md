@@ -38,7 +38,7 @@ description: >-
 | production/smoke.sh:9-14 | ✅已修（2026-11-08）：按 manifest 遍历所有平台做真实 GET + 大小 + sha256；探活用 Range，feed 存在时校验其引用 |
 | scripts/collect-baota-desktop.ts:35-36、57-65 | ✅已修（2026-11-08）：manifest 改为合并（保留 Windows/其它架构），unsigned 支持 arm64+x64 并做 lipo 架构断言 |
 | apps/desktop/scripts/upload-target.ts:125-143、desktop-release-tag.ts:64-69 | 普通production upload会向COS写文件并创建/推送desktop-v标签；不是单纯宝塔传包。当前禁止push时不可调用 |
-| `.github/workflows/windows-package.yml`（仓库根） | ✅2026-11-17 已存在并在 origin/5.3 实测成功；`workflow_dispatch` 的 `source_ref` 默认值仍写死 `'5.0'`，**必须显式传** `-f source_ref=<分支>`；产物 artifact 名 `mammoth-agent-win-x64-unsigned`。`mammoth-agent/.github/workflows/{macos-package,macos-intel-package,desktop-publish}.yml` 依赖自托管 runner/COS，不用于宝塔发版 |
+| `.github/workflows/windows-package.yml`（仓库根） | ✅2026-11-18 已改：`source_ref` 无默认值、必填，留空会先跑 `Require source_ref` 直接失败（不再回落到旧分支）；必须显式传 `-f source_ref=<分支>`，产物 artifact 名 `mammoth-agent-win-x64-unsigned`（签名时为 `-signed`）。`mammoth-agent/.github/workflows/{macos-package,macos-intel-package,desktop-publish}.yml` 依赖自托管 runner/COS，不用于宝塔发版 |
 | release.sh:137-139、491-498、545-559 | 历史done旧note未清仍在；回滚记录的nginx时间戳与实际切流备份时间须对照，不把state.done当已验收 |
 
 ### 双Mac打包与正式更新
@@ -77,7 +77,7 @@ GitHub代码备份已完成；CI路线仍需另行批准并补齐单仓workflow�
 
 1. `cd mammoth-agent && pnpm run build --profile local` → 必须 `10 passed, 0 failed`。3.0 曾在首跑就以 212 个错误失败，白等 31 分钟。
 2. 家族版本一致：`packages/*/*/package.json`、`apps/*/package.json`、根 `package.json` 的 version 必须全等；核心包 `@mammoth-ai/mmp` 在 `apps/cli`，Desktop Host 在 `apps/desktop-host`。`bump.ts` 只能从"已一致"状态前进，混合状态会直接抛错。
-3. 超管登录真实 200：`release-private/admin-credentials.txt` 可能过期（本次 401，账号 active 但密码被改）。凭据不通就不要排期，否则登录后的验收全做不了。
+3. 超管登录真实 200：直接跑 `node ground/infra/production/check-admin-login.mjs`（只打印 pwlen 与状态码）。凭据过期就先更新 `release-private/admin-credentials.txt`（600），不要在窗口里反复试。
 4. 服务器：磁盘 ≥40G、无 `.release.lock`、`downloads/` 现有 manifest 与 Windows 资产已落到 state 里。
 5. 记下当前 `MMP_API_IMAGE`/`MMP_WEB_IMAGE` 与上一版镜像 tag，作为回滚基线。
 6. **下载指针一致性**：manifest 的 `file` 必须是本次产物；两个固定别名必须同步替换，否则页面显示新版本、用户下到旧包。
@@ -129,13 +129,14 @@ docker run --rm --platform linux/amd64 --entrypoint sh mmp-api:$RELEASE_ID -c \
 1. `docker compose ps` 四个服务 Up；`docker compose exec -T knowledge sh -c 'tr "\0" " " < /proc/1/cmdline'` 显示 `node dist/knowledge-core/worker-main.js`。
 2. `docker compose logs --tail=30 knowledge` 无 error（正常时几乎无输出）。
 3. 真实上传：登录超管 → `POST /admin/api/knowledge-core/bases`（临时库）→ `POST .../bases/<id>/documents` 带 `file` + `idempotencyKey` → 轮询 `GET .../jobs/<jobId>` 到 `SUCCEEDED/READY`。
-4. 清理临时库（见下方删除语义，通常要 SQL 清理）。
+4. 清理临时库：5.5 起直接 `DELETE /admin/api/knowledge-core/bases/:id`（未被专家引用即 200 级联删除）；被引用会 400 `KNOWLEDGE_BASE_IN_USE`，先解引用再删。只有接口不可用时才用下方 SQL。
 
-**删除语义（5.3.1 起明确）**：`kc_document_revision`/`kc_chunk`/`kc_embedding` 有不可变触发器。
+**删除语义（5.5 起改为级联硬删）**：5.5 的 `deleteBase` 在单事务内先解绑引用、再用删除守卫绕过批量清理 embedding/chunk/release/revision，最后删 base；不再抛 `KNOWLEDGE_BASE_IMMUTABLE`。
 
-- 空库：`DELETE /admin/api/knowledge-core/bases/:id` → 200。
-- 有任何文档版本：→ **400 `KNOWLEDGE_BASE_IMMUTABLE`**（旧 5.3.0 会 500 `KNOWLEDGE_INTERNAL_ERROR`）。前端提示“改为停用”，不要报“服务坏了”。
-- 清理测试库只能 SQL：单事务内 `SET LOCAL session_replication_role = replica;` 再按 chunk→embedding→job→request→index→revision→document→release→base 顺序删除，否则 `kc_no_mutation` 会拒绝。
+- 被专家草稿/已发布版本引用：→ **400 `KNOWLEDGE_BASE_IN_USE`**（前端提示“仍有专家引用，请先在专家配置中去掉引用”）。
+- 未被引用：有文档版本也能 `DELETE /admin/api/knowledge-core/bases/:id` → 200 `{"deleted":true}`（5.5 实测）。
+- 旧版本（≤5.4）仍是 `KNOWLEDGE_BASE_IMMUTABLE`（400）；跨版本排障先看 `git log -1 --format=%h -- ground/apps/backend/src/knowledge-core/knowledge-core.service.ts`。
+- 只有接口不可用或残留脏数据时才手写 SQL（单事务 `SET LOCAL session_replication_role = replica;`，顺序 chunk→embedding→job→request→index→revision→document→release→base）。
 
 ```sql
 BEGIN;
@@ -400,7 +401,9 @@ location ^~ /admin/api/   { proxy_pass http://127.0.0.1:33100/api/admin/; ... }
 
 ```bash
 cd /Users/fuweilang/Documents/code/mmp
-./ground/infra/production/smoke.sh https://www.mmai.vip
+./ground/infra/production/smoke.sh https://www.mmai.vip                       # 全量：三平台真实 GET + sha
+MMP_SMOKE_SKIP_DOWNLOAD=1 ./ground/infra/production/smoke.sh https://www.mmai.vip  # 快速（~30s）：Range 探活 + 别名大小 + manifest/feed
+MMP_SMOKE_SKIP_DOWNLOAD_HASH=1 ./ground/infra/production/smoke.sh https://www.mmai.vip  # 真实下载但不比 sha（~4.5min）
 ```
 
 再逐项：
@@ -1069,8 +1072,8 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 
 ### 4N.5 仍未闭环
 
-- `smoke.sh --quick`（30 s 版）仍未实现；当前重复验收只能靠 `MMP_SMOKE_SKIP_DOWNLOAD_HASH=1`。
-- `--only` 分段发版刷新 `last-release.json`。
+- ~~`smoke.sh --quick`（30 s 版）仍未实现~~ → ✅2026-11-18：`MMP_SMOKE_SKIP_DOWNLOAD=1`（Range 探活 + 别名大小 + manifest/feed，约 30 s）。
+- ~~`--only` 分段发版刷新 `last-release.json`~~ → ✅2026-11-18：只要 smoke 跑过就刷新，镜像 tag 从 `state.json` 回读。
 - 旧链接 query 保留（需重建 web 镜像）。
 - 双账号隔离、桌面客户端真机、真实短信/支付仍未验。
 
@@ -1190,11 +1193,11 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 |---|---|---|---|
 | P0 | **首发 smoke 跳过下载 hash**：中台刚上线时用 `MMP_SMOKE_SKIP_DOWNLOAD_HASH=1`（只验路由/健康/版本/别名长度），客户端传完再跑一次全量 | **4.5 min** | 流程（门禁 31） |
 | P0 | **一次性磁盘清理清单**（别分三轮）：旧 `mmp-api`/`mmp-web` 镜像、worktree 里旧 `release/x.y.z-*`、`apps/desktop/.desktop-build/targets/*/unsigned-artifacts` | 4–6 min | 门禁 32 |
-| P0 | **登录 helper**：从凭据文件解析 phone/password（不打印密码），返回 `login/me/admin-users/console-version` 四行结论 | 3–4 min | 门禁 33 |
+| P0 | **登录 helper**：从凭据文件解析 phone/password（不打印密码），返回 `login/me/admin-users/console-version` 四行结论 | 3–4 min | ✅ 2026-11-18：`node ground/infra/production/check-admin-login.mjs`（门禁 33） |
 | P1 | **知识库验收脚本化**：建库→上传→轮询 `SUCCEEDED/READY`→`session_replication_role=replica` 清理，一条命令出结论 | 4 min | 门禁 35 |
-| P1 | `--only`/`--from` 分段发布也刷新 `release/last-release.json`（4N.5 遗留，本轮是整轮跑完才自然刷新） | 0（正确性） | `release.sh` |
-| P1 | Windows workflow 的 `source_ref` 默认值改成 `${{ github.ref_name }}`，别再写死 `5.0` | 0（防呆） | `.github/workflows/windows-package.yml` |
-| P2 | `scripts/preflight-release.mjs` 一键门禁（4H.2 已提未做）：git 冻结/家族版本/磁盘/锁/凭据/nginx 模板/`dist/main.js`/`.sql` 扫描 | 10–30 min | 新脚本 |
+| P1 | `--only`/`--from` 分段发布也刷新 `release/last-release.json`（4N.5 遗留） | 0（正确性） | ✅ 2026-11-18 已落地：`release.sh` 在 smoke 后总是写基线，镜像 tag 读 `state.json` |
+| P1 | Windows workflow 的 `source_ref` 默认值写死 `5.0` | 0（防呆） | ✅ 2026-11-18 已改：无默认值 + `Require source_ref` 步骤，留空直接失败 |
+| P2 | `scripts/preflight-release.mjs` 一键门禁（4H.2 已提未做）：git 冻结/家族版本/磁盘/锁/凭据/nginx 模板/`dist/main.js`/`.sql` 扫描 | 10–30 min | `release.sh --only preflight` 已覆盖大部分（版本/磁盘/SSH/基础镜像/上一版 tag）；其余仍靠门禁清单 |
 | P2 | web SSR 拉自家 `/api/*` 的超时与重试（现在 10.5 s 直接失败），或 smoke 下载限速错峰 | 体验 | `apps/web` |
 | P2 | 修掉 `date -Is` 的 macOS 分支（state 时间戳统一 ISO） | 0（噪音） | `release.sh` |
 | P2 | 客户端上传与中台 smoke 的间隔压缩：smoke 一过就立刻起长传，别等收尾汇报 | 1–2 min | 流程 |
@@ -1224,14 +1227,79 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 
 ### 4P.7 新增门禁（续 4O.3，编号 31–36）
 
-31. **首发 smoke 不做全量下载 hash**：中台刚切流时 `MMP_SMOKE_SKIP_DOWNLOAD_HASH=1`；客户端全部上传后再跑一次全量 sha，省 4.5 min。
+31. **首发 smoke 用快速模式**：中台刚切流时 `MMP_SMOKE_SKIP_DOWNLOAD=1`（~30s，Range 探活 + 别名大小 + manifest/feed）；客户端全部上传后再跑全量 sha。
 32. **磁盘一次清到位**：顺序 `docker rmi` 旧 api/web → 删 worktree `release/*-*`（保留 `last-release.json`）→ 删 `targets/*/unsigned-artifacts`；跑完必须 ≥18 GiB 再开工，别边跑边清。
-33. **凭据只用 helper**：解析 `admin-credentials.txt` 的“密码”行，登录前先打印 `pwlen`；连续 401 先怀疑解析，别直接判定密码过期。
+33. **凭据只用 helper**：`node ground/infra/production/check-admin-login.mjs`；它按“密码 <pw>（…实测 200）”格式解析，只打印 `pwlen`。连续 401 先怀疑解析，别直接判定密码过期。
 34. **PG 模板命令**：`cd /www/mmp-prod && docker compose exec -T pg sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'`，不要写死 `postgres`。
-35. **知识库验收=5 步脚本**：建库 → 上传（`file`+`idempotencyKey`）→ 轮询 `jobs/:id` 到 `SUCCEEDED/READY` → 有版本删除应 400 → `replica` 事务清理并核对 `kc_base` 回到原值。
+35. **知识库验收=5 步脚本**：建库 → 上传（`file`+`idempotencyKey`）→ 轮询 `jobs/:id` 到 `SUCCEEDED/READY` → 删除（5.5 未被引用即 200 级联；被引用 400 `KNOWLEDGE_BASE_IN_USE`）→ 核对 `kc_base`/`kc_release` 回到原值。
 36. **收尾提示主分支**：bump 落在 `release/x.y.z` 后，主开发分支会落后；结束时明确告知是否需要 `git merge --ff-only`。
 37. **客户端功能“发了但没出现”先查 profile**：桌面功能很多是靠 `mmp.profile.bundles` 注入的（语音= `@mammoth-ai/mmp-experimental-voice-input-bundle`）。先看 `~/.dsh/profiles/<name>/package.json` 的 bundles 与 `bundleMigrations`，再怀疑安装包。任何“只在干净 profile 生效”的迁移都要问一句：带第三方插件的实例会不会被漏掉。
 38. **纯客户端发布不复用 release.sh**：中台不动时只走 `bump → push → Windows CI → 双 Mac 打包 → publish-desktop-downloads.ts --version x.y.z`，最后 `MMP_SMOKE_SKIP_DOWNLOAD_HASH=1 smoke.sh` 验 manifest/别名，约 25 分钟。
+
+## 4Q. 2026-11-18 5.5 全栈 + 三平台：58 分钟，瓶颈从构建变成上传
+
+> 范围：Ground `5.3.2→5.5.0`、桌面 `0.3.8→0.3.9`；中台 api+web+pg+knowledge、官网、mac-arm64 / mac-x64 / win-x64（全部 unsigned）。
+> 结果：00:41 预检 → 01:39 全量 smoke 通过，58 分钟。**首次出现「构建不是关键路径、上行带宽才是」**。
+
+### 4Q.1 实测时间线
+
+| 时刻 | 事件 | 耗时 | 性质 |
+|---|---|---|---|
+| 00:39:53 | 触发 Windows CI（`source_ref=5.5`） | ~15 min | 并行 |
+| 00:41:13 | `--only preflight` | 7 s | 必要 |
+| 00:41:28→00:41:39 | 前端 5 s + 官网 6 s | 11 s | 必要 |
+| 00:41:39→00:44:09 | api 镜像（冷缓存 2.5 min，368MB 压缩包） | 150 s | 必要 |
+| 00:41:3x→00:44 | mac-arm64（缓存热） | ~4 min | 并行 |
+| 00:44:10→00:56:18 | **服务器 web 镜像** | **674 s** | 关键路径 |
+| 00:44→00:54 | mac-x64（串行，含运行态自检） | ~10 min | 并行 |
+| 00:56:20→01:12:29 | **上传发布包（368MB api tar）** | **969 s** | 关键路径（上行 ~0.4MB/s） |
+| 01:12:29→01:14:10 | 备份落位 + 载入 api 镜像 | 101 s | 必要 |
+| 01:14:10→01:14:37 | compose up + 迁移 + 健康 + nginx | 27 s | 必要 |
+| 01:14:37→01:20:06 | 首发 smoke（当时还下载了 872MB） | 329 s | 已被新开关压缩到 ~30 s |
+| 01:20→01:32 | 三客户端逐个上传 + 公网 sha（arm64→x64→win） | ~12 min | 必要 |
+| 01:32→01:39 | 全量 smoke（三平台真实 GET + sha） | ~7 min | 必要 |
+
+### 4Q.2 本轮问题与固化
+
+| # | 现象 | 根因 | 处理 / 固化 |
+|---|---|---|---|
+| 1 | 上传发布包 16 分钟 | 单次 rsync 368MB，上行 ~0.4MB/s；`--partial` 只保证断点续传 | 预检先看上行；客户端每出一个传一个；服务器与本地都别和大文件上传抢带宽（门禁 39） |
+| 2 | Ground 前端 5 个类型错误（router 子路由、`editorTarget()` 窄化） | 5.4 新代码从未跑过 `verify:web` | 5.5 已修（`3c17aa66`）；门禁仍是「排期前跑 `pnpm --dir ground run verify`」 |
+| 3 | `version:check` 报 `packages/shared/dist/version.js 3.6.0` | dist 是 gitignore 产物，bump 前不会更新 | 跑 `version:bump` 会顺带 sync dist；只看 `config/version.json` 与 `src/version.ts` 不够 |
+| 4 | 首跑 smoke 仍下载 872MB | 当时只有 `MMP_SMOKE_SKIP_DOWNLOAD_HASH`，它只跳过 sha | ✅ 新增 `MMP_SMOKE_SKIP_DOWNLOAD=1`（门禁 31/45） |
+| 5 | 知识库临时库删除返回 200（与 5.3.1 文档写 400 不一致） | 5.5 改成事务内级联硬删，只在被专家引用时 400 `KNOWLEDGE_BASE_IN_USE` | ✅ 文档已改；验收按 5.5 语义 |
+| 6 | `state.json` 的 web-image note 写着上一版 web tag | deploy 步骤把 `previous_images.web` 当成新镜像写进 note | ✅ 已修：note 写本次 `MMP_WEB_IMAGE` |
+| 7 | `--only smoke` 不刷新 `last-release.json` | 条件写成 deploy && smoke | ✅ 已修：smoke 跑过就写，镜像 tag 从 `state.json` 回读 |
+| 8 | Windows workflow 默认 `source_ref='5.0'` | 历史写死 | ✅ 已修：无默认值 + `Require source_ref`，留空直接失败 |
+| 9 | 凭据文件格式解析错，连两次 401 差点误判过期 | 「密码 <pw>（…实测 200）」被整段当密码 | ✅ 新增 `ground/infra/production/check-admin-login.mjs`（门禁 33），只打印 `pwlen` |
+| 10 | 桌面 0.3.8 当天已发过，5.5 仍需重打 | `84646359`（知识来源分组）、`936becbb`（内联预览）改了客户端 | 发版前对比 `e2c3dd1d..HEAD -- mammoth-agent`，别只看版本号（门禁 41） |
+
+### 4Q.3 新增门禁（续 4P.7，编号 39–46）
+
+39. **上传带宽是硬瓶颈**：368MB api tar + 872MB 客户端；预检先测上行，客户端每出一个传一个；不要在上传期间拉大文件或跑全量 smoke。
+40. **两处版本一起 bump 再 push**：`pnpm --dir ground run version:bump --set 5.5.0`（自动 sync dist）+ `pnpm exec tsx scripts/release/bump.ts --family mmp patch`（自动 commit）；两个 commit 推送后才触发 Windows CI。
+41. **客户端要不要重打，看提交不看版本号**：`git diff --name-only <上次客户端发布 commit>..HEAD -- mammoth-agent`，有业务文件就必须重打并 bump。
+42. **数据修复类迁移也要备份+演练**：`pg_dump -Fc` → 恢复进 `drill_<ts>` 库 → 校验迁移数 → `dropdb`；本轮 59→60 只用 1 分钟。
+43. **知识库删除语义按版本判断**：5.5 未被引用即 200 级联硬删；被引用 400 `KNOWLEDGE_BASE_IN_USE`；≤5.4 仍是 `KNOWLEDGE_BASE_IMMUTABLE`。
+44. **state 只信本次 tag**：`state.images.web` 必须是本次；`rollback.nginx_backup` 以 nginx 步骤时间戳为准；旧 note 收尾时要校对。
+45. **smoke 分两段**：切流后 `MMP_SMOKE_SKIP_DOWNLOAD=1`（~30 s）放行；客户端全部传完再跑全量 GET+sha。
+46. **收尾只留当前+上一版**：`docker rmi` 后 `docker images | grep mmp` 复核，并清服务器 `/tmp/mmp-*` 与构建目录。
+
+### 4Q.4 本轮基线（`5.5.0-20261118-0041`）
+
+| 项 | 值 |
+|---|---|
+| 源码 | `bf4d1c98`（5.5）；含 `f270db01 release(ground): 5.5.0`、`bf4d1c98 release(mmp): 0.3.9`，已 push |
+| 镜像 | api `mmp-api:5.5.0-20261118-0041`、web `mmp-web:5.5.0-20261118-0041`；上一版 `5.3.2-20261117-1127` |
+| DB | 备份 `backups/20261118-004021/mammoth_core.dump`（92M）；迁移 59→60；演练 59；`kc_base` 67 / `kc_release` 559 |
+| 桌面 | 0.3.9 unsigned：arm64 `a5647eaa…` 268,778,180B；x64 `aef2c4c6…` 290,104,023B；win `bbaedeb3…` 314,404,492B；manifest + 3 别名 `no-store` |
+| Windows CI | run `44128325926` 成功（`source_ref=5.5`，artifact `mammoth-agent-win-x64-unsigned`） |
+| 回滚 | `.env.bak-20261118-011230`、`middle-web.bak-20261118-011230`、`website.bak-20261118-011230`、nginx `20261118-011437` |
+| 磁盘 | 服务器发布后 71G→62G；本机打包前需 18Gi 以上 |
+| 验收 | 4 容器 Up/0 重启；`/api/version` 5.5.0；登录 200；`/admin/api/users` 200 JSON；知识库上传 `SUCCEEDED`；语音模型 `/csukuangfj/` 200 |
+| 未验 | 全部 unsigned（无自动更新）、真 Intel 实机、桌面 GUI 人工点检、真实短信/支付 |
+
+> 客户端每次发布都要先看线上 `mammoth-latest.json` 与 `release/desktop-*.json`：同一天可能已经发过 0.3.8，别用同一个版本号覆盖。
 
 ## 5. 网络与下载（最容易吃掉几小时）
 
@@ -1388,7 +1456,8 @@ file "$APP/Contents/Resources/app.asar.unpacked/mmp/node_modules/@mammoth-ai/nod
 
 ```bash
 # 1) 触发（源码必须在远端，CI 按 source_ref checkout）
-gh workflow run windows-package.yml -f source_ref=5.0
+#    source_ref 无默认值、必填；留空会被 Require source_ref 步骤拒绝
+gh workflow run windows-package.yml -f source_ref=5.5
 gh run watch
 
 # 2) 取产物（含 exe / blockmap / latest.yml(签名时) / installer.json）

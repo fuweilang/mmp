@@ -6,8 +6,10 @@ import {
   Param,
   Patch,
   Post,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { User } from '@prisma/client';
 import { CurrentUser } from '../auth/current-user';
 import { JwtGuard } from '../auth/jwt.guard';
@@ -38,8 +40,15 @@ export class AdminLlmProvidersController {
 
   /** 连通探测（已存或草稿）。须在 :id 路由之前。 */
   @Post('probe')
-  probe(@CurrentUser() user: User, @Body() dto: ProbeLlmDto) {
-    return this.llm.probe(user, dto);
+  probe(@CurrentUser() user: User, @Body() dto: ProbeLlmDto, @Res({ passthrough: true }) res: Response) {
+    const ac = new AbortController();
+    let settled = false;
+    const onClose = () => { if (!settled) ac.abort(); };
+    res.on('close', onClose);
+    return this.llm.probe(user, dto, ac.signal).finally(() => {
+      settled = true;
+      res.off('close', onClose);
+    });
   }
 
   /** 拉取上游模型列表（表单草稿或已存厂商）。须在 :id 路由之前。 */
@@ -77,6 +86,11 @@ export class AdminLlmProvidersController {
 @UseGuards(JwtGuard)
 export class AdminLlmModelsController {
   constructor(private llm: LlmProvidersService) {}
+
+  @Post(':id/probe-cancel')
+  cancelProbe(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.llm.cancelProbe(user, id);
+  }
 
   @Patch(':id')
   update(@CurrentUser() user: User, @Param('id') id: string, @Body() dto: UpdateLlmModelDto) {

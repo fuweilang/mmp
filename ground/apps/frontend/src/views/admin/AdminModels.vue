@@ -4,7 +4,7 @@
       <div>
         <h1>模型管理</h1>
         <p>
-          自动模式先用默认模型，故障时按优先级切换备选（数字越小越优先，0 最高）。系统每 5 分钟检查，故障恢复后自动启用；手动禁用需手动开启。
+          自动模式先用默认模型，故障时按优先级切换备选（数字越小越优先，0 最高）。已正常的模型 24 小时内不再自动探测；失败后 6 小时内不再自动重试。手动禁用需手动开启。
         </p>
       </div>
       <div class="page-head-actions">
@@ -14,6 +14,8 @@
           clearable
           placeholder="搜索 Model ID / 显示名 / 厂商"
         />
+        <el-button @click="testEnabled">{{ bulkRunning ? '停止' : '测试已启用' }}</el-button>
+        <el-button @click="openGeekAi">接入极客智坊</el-button>
         <el-button type="primary" @click="openCreate">新建模型</el-button>
       </div>
     </div>
@@ -31,13 +33,14 @@
       v-if="!loading && !error && flatRows.length === 0"
       description="暂无模型，请点击「新建模型」"
     >
+      <el-button @click="openGeekAi">接入极客智坊</el-button>
       <el-button type="primary" @click="openCreate">新建模型</el-button>
     </el-empty>
 
     <div v-else class="panel">
       <el-table
         v-loading="loading"
-        :data="filteredRows"
+        :data="pagedRows"
         border
         class="model-table"
         row-key="key"
@@ -78,7 +81,7 @@
         </el-table-column>
         <el-table-column label="普通对话思考" width="150" align="center">
           <template #header>
-            <el-tooltip content="新建模型默认关闭。开启后普通对话也会启用深度思考，通常响应更慢；关闭后仅工具调用时启用思考。实际效果取决于模型支持。" placement="top" :show-after="200">
+            <el-tooltip content="默认关闭。开启后普通对话和工具调用都会启用深度思考，通常响应更慢。关闭后都不强制思考。实际效果取决于模型支持。" placement="top" :show-after="200">
               <span class="thinking-header" tabindex="0">普通对话思考 ⓘ</span>
             </el-tooltip>
           </template>
@@ -96,10 +99,9 @@
               <el-button
                 text
                 type="primary"
-                :loading="probingKey === row.model.id"
                 @click="onProbeSaved(row.model)"
               >
-                测试
+                {{ probingIds.includes(row.model.id) ? '中断' : '测试' }}
               </el-button>
               <el-button text type="primary" @click="openEdit(row)">编辑</el-button>
               <el-button
@@ -114,6 +116,16 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination
+        v-if="filteredRows.length > 0"
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        class="model-pagination"
+        background
+        :page-sizes="[10, 20, 50, 100]"
+        :total="filteredRows.length"
+        layout="total, sizes, prev, pager, next"
+      />
     </div>
 
     <!-- 新建 / 编辑 同一弹窗 -->
@@ -144,6 +156,7 @@
         </el-form-item>
         <el-form-item label="Base URL" required>
           <el-input v-model="dialog.form.baseUrl" placeholder="https://api.deepseek.com" />
+          <div v-if="geekAiDialog" class="hint">国内入口。保存时只接收对话模型，并按这把密钥的人民币价格计费。美元标价、画图和视频模型不会出现在网页和桌面客户端。</div>
         </el-form-item>
         <el-form-item label="API Key" :required="dialog.mode === 'create'">
           <el-input
@@ -186,20 +199,22 @@
           :closable="false"
         />
 
-        <div v-if="dialog.remoteModels.length" class="remote-list">
+        <div v-if="visibleRemoteModels.length" class="remote-list">
           <el-checkbox-group v-model="dialog.selectedIds">
             <div
-              v-for="m in dialog.remoteModels"
+              v-for="m in visibleRemoteModels"
               :key="m.id"
               class="remote-item"
             >
               <el-checkbox :value="m.id">
                 <span class="remote-id">{{ m.id }}</span>
-                <span v-if="m.ownedBy" class="remote-owned">{{ m.ownedBy }}</span>
+                <span v-if="m.name && m.name !== m.id" class="remote-owned">{{ m.name }}</span>
+                <span v-else-if="m.ownedBy" class="remote-owned">{{ m.ownedBy }}</span>
               </el-checkbox>
             </div>
           </el-checkbox-group>
         </div>
+        <div v-if="geekAiDialog && hiddenRemoteCount" class="hint">已隐藏 {{ hiddenRemoteCount }} 个非对话模型</div>
 
         <el-form-item label="手填 Model ID" class="manual-item">
           <el-select
@@ -235,7 +250,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   adminLlmProviderApi,
@@ -257,7 +272,10 @@ const providers = ref<AdminLlmProviderRow[]>([]);
 // Preserve initial positions across settings changes and health refreshes.
 const rowPositions = new Map<string, number>();
 const busyModelId = ref<string | null>(null);
-const probingKey = ref<string | null>(null);
+const probes = new Map<string, AbortController>();
+const probingIds = ref<string[]>([]);
+const bulkRunning = ref(false);
+let bulkStop: AbortController | null = null;
 
 const flatRows = computed<FlatRow[]>(() => {
   const out: FlatRow[] = [];
@@ -278,6 +296,18 @@ const filteredRows = computed(() => {
   });
 });
 
+const pageSize = ref(20);
+const page = ref(1);
+const pagedRows = computed(() => {
+  const start = (page.value - 1) * pageSize.value;
+  return filteredRows.value.slice(start, start + pageSize.value);
+});
+watch([keyword, pageSize], () => { page.value = 1; });
+watch(filteredRows, (rows) => {
+  const last = Math.max(1, Math.ceil(rows.length / pageSize.value));
+  if (page.value > last) page.value = last;
+});
+
 const dialog = reactive({
   visible: false,
   mode: 'create' as 'create' | 'edit',
@@ -289,7 +319,7 @@ const dialog = reactive({
   apiKeyMasked: null as string | null,
   existingModelIds: [] as string[],
   fetchError: '' as string,
-  remoteModels: [] as Array<{ id: string; ownedBy?: string }>,
+  remoteModels: [] as Array<{ id: string; ownedBy?: string; name?: string; type?: string; context?: number }>,
   selectedIds: [] as string[],
   form: {
     name: '',
@@ -321,8 +351,8 @@ function resetDialogModels() {
   dialog.existingModelIds = [];
 }
 
-async function reload() {
-  loading.value = true;
+async function reload(quiet = false) {
+  if (!quiet) loading.value = true;
   error.value = '';
   try {
     const nextProviders = await adminLlmProviderApi.list();
@@ -338,7 +368,7 @@ async function reload() {
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : '加载失败';
   } finally {
-    loading.value = false;
+    if (!quiet) loading.value = false;
   }
 }
 
@@ -348,6 +378,34 @@ const nameConflictProvider = computed(() => {
   if (!n) return null;
   return providers.value.find((p) => p.name.toLowerCase() === n) || null;
 });
+
+const GEEKAI_BASE = 'https://geekai.co/api/v1';
+function isGeekAiBase(baseUrl: string | null | undefined) {
+  try {
+    const url = new URL(baseUrl || '');
+    return url.protocol === 'https:' && url.hostname === 'geekai.co' && (url.pathname === '/api/v1' || url.pathname === '/api/v1/');
+  } catch {
+    return false;
+  }
+}
+const geekAiDialog = computed(() => isGeekAiBase(dialog.form.baseUrl));
+const visibleRemoteModels = computed(() =>
+  geekAiDialog.value ? dialog.remoteModels.filter((m) => !m.type || m.type === 'chat') : dialog.remoteModels,
+);
+const hiddenRemoteCount = computed(() => dialog.remoteModels.length - visibleRemoteModels.value.length);
+
+function openGeekAi() {
+  const existing = providers.value.find((p) => p.name.toLowerCase() === 'geekai' || isGeekAiBase(p.baseUrl));
+  if (existing) {
+    openEditProvider(existing);
+    ElMessage.info('极客智坊已经在列表里。勾选要启用的对话模型后保存。');
+    return;
+  }
+  openCreate();
+  dialog.form.name = 'geekai';
+  dialog.form.displayName = '极客智坊';
+  dialog.form.baseUrl = GEEKAI_BASE;
+}
 
 function openCreate() {
   dialog.mode = 'create';
@@ -483,7 +541,7 @@ async function onSave() {
         enabled: true,
         models: modelIds.map((modelId, i) => ({
           modelId,
-          displayName: modelId,
+          displayName: dialog.remoteModels.find((m) => m.id === modelId)?.name || modelId,
           enabled: true,
           isPreferred: false,
           thinkingEnabled: false,
@@ -504,7 +562,7 @@ async function onSave() {
       for (const modelId of toAdd) {
         await adminLlmProviderApi.addModel(dialog.providerId, {
           modelId,
-          displayName: modelId,
+          displayName: dialog.remoteModels.find((m) => m.id === modelId)?.name || modelId,
           enabled: true,
           isPreferred: false,
         });
@@ -523,17 +581,98 @@ async function onSave() {
   }
 }
 
-async function onProbeSaved(m: AdminLlmModelRow) {
-  probingKey.value = m.id;
+function trackProbe(id: string, ac: AbortController | null) {
+  if (ac) probes.set(id, ac);
+  else probes.delete(id);
+  probingIds.value = [...probes.keys()];
+}
+
+async function runProbe(model: AdminLlmModelRow, stop?: AbortSignal) {
+  if (stop?.aborted) return { kind: 'stopped' as const, message: '' };
+  const ac = new AbortController();
+  const onStop = () => {
+    ac.abort();
+    void adminLlmProviderApi.cancelProbe(model.id).catch(() => {});
+  };
+  stop?.addEventListener('abort', onStop, { once: true });
+  trackProbe(model.id, ac);
   try {
-    const res = await adminLlmProviderApi.probe({ modelRowId: m.id });
-    await reload();
-    if (res.ok) ElMessage.success(res.message || '连通正常');
-    else ElMessage.error(res.message || '连通失败');
+    const res = await adminLlmProviderApi.probe({ modelRowId: model.id }, ac.signal);
+    if (ac.signal.aborted || res.message === '已中断') return { kind: 'stopped' as const, message: '' };
+    return { kind: res.ok ? 'ok' as const : 'bad' as const, message: res.message || '' };
+  } catch (e) {
+    if (ac.signal.aborted) return { kind: 'stopped' as const, message: '' };
+    throw e;
+  } finally {
+    stop?.removeEventListener('abort', onStop);
+    if (probes.get(model.id) === ac) trackProbe(model.id, null);
+  }
+}
+
+async function onProbeSaved(m: AdminLlmModelRow) {
+  const current = probes.get(m.id);
+  if (current) {
+    current.abort();
+    void adminLlmProviderApi.cancelProbe(m.id).catch(() => {});
+    return;
+  }
+  try {
+    const result = await runProbe(m);
+    if (result.kind === 'stopped') return;
+    await reload(true);
+    if (result.kind === 'ok') ElMessage.success(result.message || '连通正常');
+    else ElMessage.error(result.message || '连通失败');
   } catch (e) {
     ElMessage.error(e instanceof ApiError ? e.message : '测试失败');
+  }
+}
+
+async function testEnabled() {
+  if (bulkRunning.value) {
+    bulkStop?.abort();
+    return;
+  }
+  const models = flatRows.value.filter((row) => row.model.enabled).map((row) => row.model);
+  if (!models.length) {
+    ElMessage.info('没有已启用的模型');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `将测试 ${models.length} 个已启用模型。每个模型会向上游发送一次短对话，可能产生少量费用。同时最多 3 个。`,
+      '测试已启用',
+      { confirmButtonText: '开始', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  bulkRunning.value = true;
+  const stop = new AbortController();
+  bulkStop = stop;
+  let cursor = 0;
+  let ok = 0;
+  let bad = 0;
+  const worker = async () => {
+    while (!stop.signal.aborted) {
+      const model = models[cursor++];
+      if (!model) return;
+      try {
+        const result = await runProbe(model, stop.signal);
+        if (result.kind === 'ok') ok += 1;
+        else if (result.kind === 'bad') bad += 1;
+      } catch {
+        bad += 1;
+      }
+    }
+  };
+  try {
+    await Promise.all(Array.from({ length: Math.min(3, models.length) }, () => worker()));
+    await reload(true);
+    if (stop.signal.aborted) ElMessage.info('已停止');
+    else ElMessage.success(`已测完：${ok} 通，${bad} 不通`);
   } finally {
-    probingKey.value = null;
+    bulkRunning.value = false;
+    if (bulkStop === stop) bulkStop = null;
   }
 }
 
@@ -597,8 +736,8 @@ async function onRoutingChange(model: AdminLlmModelRow, changes: Parameters<type
   finally{busyModelId.value=null;}
 }
 let healthTimer: ReturnType<typeof setInterval> | undefined;
-onMounted(()=>{void reload();healthTimer=setInterval(()=>{if(!dialog.visible&&!loading.value&&!busyModelId.value&&!probingKey.value)void reload();},15000);});
-onUnmounted(()=>clearInterval(healthTimer));
+onMounted(()=>{void reload();healthTimer=setInterval(()=>{if(dialog.visible||loading.value||busyModelId.value)return;void reload(probingIds.value.length>0||bulkRunning.value);},15000);});
+onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of probes.values())ac.abort();});
 </script>
 
 <style scoped>
@@ -668,6 +807,12 @@ onUnmounted(()=>clearInterval(healthTimer));
 .model-table {
   width: 100%;
   font-size: 13px;
+}
+.model-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: 12px 16px;
 }
 :deep(.model-table-header) {
   background: #f8fafc !important;

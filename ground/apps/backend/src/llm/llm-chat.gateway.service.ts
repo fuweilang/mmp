@@ -25,6 +25,7 @@ import { LlmConcurrencyService } from './llm-concurrency.service';
 import { modelCapabilities } from './model-capabilities';
 import { estimateInputTokens, promptFitsContext } from './prompt-tokens';
 import { resolveChatProviderConfiguration } from './provider-configuration';
+import { withUpstreamThinking } from './upstream-thinking';
 
 interface UpstreamUsage {
   cacheWrite5mTokens?: number;
@@ -314,7 +315,7 @@ export class LlmChatGatewayService {
           try{if(attribution?.helperOrigin)await this.expertRuntime!.load(user,tenantId,attribution.helperOrigin);if(attribution?.previewOrigin)await this.expertRuntime!.load(user,tenantId,attribution.previewOrigin);const current=binding?await this.expertRuntime!.enforceModel(user,tenantId,binding):undefined;if(current?.model && current.model!==resolved.modelRef)throw new ForbiddenException('FIXED_GENERATION_MODEL_CHANGED');}
           catch(error){await releaseFrozen('runtime-authorization-revoked');throw error;}
         }
-        const upstreamBody:Record<string,unknown>={...body,model:resolved.modelId,stream,thinking:{type:resolved.thinkingEnabled||(!binding && requestHasTools(body))?'enabled':'disabled'}};
+        const upstreamBody=withUpstreamThinking({...body,model:resolved.modelId,stream},resolved.baseUrl,resolved.thinkingEnabled);
         if(stream)upstreamBody.stream_options={...(typeof body.stream_options==='object'&&body.stream_options?body.stream_options:{}),include_usage:true};
         const started=Date.now();
         this.operationLog.event('info','model.request',{userId:user.id,tenantId,model:resolved.modelRef,automatic,attempt:attempt+1,stream});
@@ -453,12 +454,11 @@ export class LlmChatGatewayService {
           }
         };
         if(binding || attribution?.helperOrigin){try{if(attribution?.helperOrigin)await this.expertRuntime!.load(user,tenantId,attribution.helperOrigin);if(attribution?.previewOrigin)await this.expertRuntime!.load(user,tenantId,attribution.previewOrigin);const current=binding?await this.expertRuntime!.enforceModel(user,tenantId,binding):undefined;if(current?.model && current.model!==resolved.modelRef)throw new ForbiddenException('FIXED_GENERATION_MODEL_CHANGED');}catch(error){await releaseFrozen('runtime-authorization-revoked');throw error;}}
-        const upstreamBody: Record<string, unknown> = {
+        const upstreamBody = withUpstreamThinking({
           ...body,
           model: resolved.modelId,
           stream: false,
-          thinking: { type: resolved.thinkingEnabled || (!binding && requestHasTools(body)) ? 'enabled' : 'disabled' },
-        };
+        }, resolved.baseUrl, resolved.thinkingEnabled);
         const started = Date.now();
         let upstream: AxiosResponse;
         try {
@@ -701,7 +701,7 @@ export class LlmChatGatewayService {
   }
 }
 
-/** Ordinary Agent tools retain their thinking policy; official experts honor the model's Admin setting. */
+/** Tool calls follow the model switch in Admin. Tools no longer force thinking on. */
 function requestHasTools(body: Record<string, unknown>): boolean {
   const tools = body.tools;
   return Array.isArray(tools) && tools.length > 0;

@@ -3,6 +3,7 @@
 # Routing model: / = official site (static), /agent/ = agent web, /console//admin/ = middle platform.
 # Download checks perform real GETs and verify byte size + sha256 for every platform in the manifest.
 # MMP_SMOKE_SKIP_DOWNLOAD_HASH=1 skips only the sha256/hash of large installers (still real GET + size).
+# MMP_SMOKE_SKIP_DOWNLOAD=1 skips the full GET as well (keeps Range probe + alias/feed/manifest checks, ~30s).
 set -euo pipefail
 ORIGIN="${1:-https://www.mmai.vip}"
 TMP="$(mktemp -d)"
@@ -63,6 +64,10 @@ for (const k of keys) if (!m.platforms[k] || typeof m.platforms[k].file !== "str
     echo "download check: $key $file"
     code="$(curl -s -o /dev/null -w '%{http_code}' -r 0-0 --max-time 30 "$ORIGIN/downloads/$file")"
     [[ "$code" == 200 || "$code" == 206 ]] || fail "GET /downloads/$file returned $code"
+    if [[ "${MMP_SMOKE_SKIP_DOWNLOAD:-0}" == "1" ]]; then
+      echo "download skip: $key $file"
+      continue
+    fi
     curl --fail --silent --show-error --location --max-time 900 -o "$TMP/$file" "$ORIGIN/downloads/$file"
     actualBytes="$(wc -c < "$TMP/$file" | tr -d ' ')"
     if [[ -n "$wantBytes" && "$wantBytes" != "null" && "$wantBytes" != "$actualBytes" ]]; then

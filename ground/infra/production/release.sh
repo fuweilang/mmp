@@ -180,7 +180,7 @@ lock_acquire() {
     die "发版锁已存在：$PROD_DIR/.release.lock。确认无人发版后再加 --force-lock"
   fi
   printf 'release=%s\nsession=%s\nstarted=%s\n' \
-    "$RELEASE_ID" "${OPENCODE_SESSION_ID:-local}" "$(date -Is)" \
+    "$RELEASE_ID" "${OPENCODE_SESSION_ID:-local}" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
     | ssh "${SSH_OPTS[@]}" "$HOST" "mkdir -p '$PROD_DIR' && cat > '$PROD_DIR/.release.lock'"
   LOCKED=1
   log "已抢锁：$PROD_DIR/.release.lock"
@@ -558,9 +558,9 @@ echo started' "$PROD_DIR" "mmp-api:$RELEASE_ID" "$web_image"
 
   # 记录回滚信息（如果 state 存在）。
   if [[ -f "$STATE_FILE" ]] && (( ! DRY_RUN )); then
-    node - "$STATE_FILE" "$ts" "$prev_api" "$prev_web" <<'JS'
+    node - "$STATE_FILE" "$ts" "$prev_api" "$prev_web" "$web_image" <<'JS'
 const fs = require('fs');
-const [file, ts, api, web] = process.argv.slice(2);
+const [file, ts, api, web, currentWeb] = process.argv.slice(2);
 const s = JSON.parse(fs.readFileSync(file, 'utf8'));
 s.rollback = s.rollback || {};
 s.rollback.nginx_backup = ts;
@@ -570,7 +570,7 @@ s.rollback.previous_website = `website.bak-${ts}`;
 s.rollback.previous_images = { api, web };
 if (s.steps.find(x => x.name === 'web-image')) {
   const w = s.steps.find(x => x.name === 'web-image');
-  w.note = `server build: ${web || ''}`;
+  w.note = `server build: ${currentWeb || ''}`;
 }
 fs.writeFileSync(file, JSON.stringify(s, null, 2) + '\n');
 JS
@@ -777,11 +777,25 @@ fs.writeFileSync(f, JSON.stringify(s, null, 2) + '\n');
 JS
     fi
     # 为下一次发版留基线：变更集裁剪与 --reuse-web 判断都读它。
-    if step_selected deploy && step_selected smoke; then
-      node - "$REPO_ROOT/release/last-release.json" "$RELEASE_ID" "$VERSION" "$(git -C "$REPO_ROOT" rev-parse HEAD)" "$(git -C "$AGENT_ROOT" rev-parse HEAD)" "${REUSE_WEB:-mmp-web:$RELEASE_ID}" <<'JS'
+    # --only/--from 分段发布只要 smoke 通过也要刷新；镜像 tag 以线上 .env 为准，避免写错 tag。
+    if step_selected smoke; then
+      baseline_api="mmp-api:$RELEASE_ID"
+      baseline_web="${REUSE_WEB:-mmp-web:$RELEASE_ID}"
+      if [[ -f "$STATE_FILE" ]]; then
+        state_images="$(node -e 'const fs=require("fs");try{const s=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write([s.images?.api||"",s.images?.web||""].join("\t"))}catch{}' "$STATE_FILE" 2>/dev/null || true)"
+        state_api="${state_images%%$'\t'*}"
+        state_web="${state_images#*$'\t'}"
+        [[ -n "$state_api" ]] && baseline_api="$state_api"
+        [[ -n "$state_web" ]] && baseline_web="$state_web"
+      fi
+      live_api="$(rsh "grep -E '^MMP_API_IMAGE=' '$PROD_DIR/.env' 2>/dev/null | cut -d= -f2- || true")"
+      live_web="$(rsh "grep -E '^MMP_WEB_IMAGE=' '$PROD_DIR/.env' 2>/dev/null | cut -d= -f2- || true")"
+      [[ -n "$live_api" ]] && baseline_api="$live_api"
+      [[ -n "$live_web" ]] && baseline_web="$live_web"
+      node - "$REPO_ROOT/release/last-release.json" "$RELEASE_ID" "$VERSION" "$(git -C "$REPO_ROOT" rev-parse HEAD)" "$(git -C "$AGENT_ROOT" rev-parse HEAD)" "$baseline_web" "$baseline_api" <<'JS'
 const fs = require('fs');
-const [file, releaseId, version, commit, agentCommit, webImage] = process.argv.slice(2);
-fs.writeFileSync(file, JSON.stringify({ release_id: releaseId, version, commit, mammoth_agent_commit: agentCommit, images: { api: `mmp-api:${releaseId}`, web: webImage }, finished_at: new Date().toISOString() }, null, 2) + '\n');
+const [file, releaseId, version, commit, agentCommit, webImage, apiImage] = process.argv.slice(2);
+fs.writeFileSync(file, JSON.stringify({ release_id: releaseId, version, commit, mammoth_agent_commit: agentCommit, images: { api: apiImage, web: webImage }, finished_at: new Date().toISOString() }, null, 2) + '\n');
 JS
     fi
   fi
