@@ -1,3 +1,4 @@
+import type { SourceLocator } from '../knowledge-core/types';
 import { authorizeExpertDisclosure, authorizeExpertHistoryDisclosure } from './expert-disclosure';
 import { resolveChatProviderConfiguration } from '../llm/provider-configuration';
 import { resolveDeepSeekSearchKey } from './web-search.service';
@@ -15,6 +16,15 @@ import { KnowledgeRetrievalService } from '../knowledge-core/retrieval.service';
 import { AuthorizedRelease, KnowledgeAccess, KnowledgeSourceReference } from '../knowledge-core/retrieval-access';
 import { expertExecutionPrompt } from './expert-definition';
 import type { ExpertExecutionConfig, FrozenExpertExecutionConfig } from '@mammoth/shared';
+/** Protocol2 clients strictly validate locators. Keep richer preparation metadata
+ * in stored chunks/inspection and model context, and expose the established wire fields. */
+function protocol2Source<T extends { locator: SourceLocator }>(source: T): T {
+    const locator: SourceLocator = {};
+    for (const key of ['sectionId','page','paragraph','rowStart','rowEnd','headingPath'] as const) {
+        if (source.locator[key] !== undefined) Object.assign(locator, { [key]: source.locator[key] });
+    }
+    return { ...source, locator };
+}
 export const BUILTIN_TOOL_REVISION = 'ground-builtins-v1';
 const builtinTools = new Set(['enterprise_knowledge', 'web_search', 'web_fetch', 'tabular_analyze', 'delegate_official_agent', 'delegate']);
 function fail(message: string): never { throw new BadRequestException(message); }
@@ -234,7 +244,8 @@ export class ExpertRuntimeService {
                 await persist();
             }
         }
-        return result;
+        return { ...result, evidence: result.evidence.map(protocol2Source),
+            context: { ...result.context, evidence: result.context.evidence.map(protocol2Source) } };
     }
     async authorizeHistory(user: User, tenantId: string | null, expected: {userId:string;scope:string;verifyContent?:boolean}, entries: Array<{binding:ExpertRuntimeBinding;sources:Array<KnowledgeSourceReference & {text?:string}>}>) {
         if (expected.userId !== user.id || expected.scope !== (tenantId ? `tenant:${tenantId}` : 'personal')) throw new ForbiddenException('EXPERT_SOURCE_ACCESS_CHANGED');
@@ -248,7 +259,7 @@ export class ExpertRuntimeService {
         const result = await this.retrieval.openSource(access, ref);
         if (!await authorizeExpertDisclosure(this.db, user.id, tenantId, binding, [ref]))
             throw new ForbiddenException('KNOWLEDGE_FORBIDDEN');
-        return result;
+        return protocol2Source(result);
     }
     async authorizeTool(user: User, tenantId: string | null, binding: ExpertRuntimeBinding, tool: string) {
         const { execution } = await this.load(user, tenantId, binding);

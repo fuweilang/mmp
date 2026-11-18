@@ -1,2 +1,2 @@
 import existing from './expert-editor.vitest.config.mjs';
-export default {...existing,test:{...existing.test,include:['tests/knowledge-files.client.spec.ts']}};
+export default {...existing,test:{...existing.test,include:['tests/knowledge-files.client.spec.ts','tests/knowledge-processing.client.spec.ts']}};

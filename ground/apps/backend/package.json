@@ -20,10 +20,10 @@
     "test:library:http": "node --test --test-concurrency=1 test/library/library.http.test.cjs test/library/library.sharing.http.test.cjs test/library/library.admin.http.test.cjs",
     "test:library:backup": "node --test --test-concurrency=1 test/library/library.backup.test.cjs",
     "knowledge:worker": "node dist/knowledge-core/worker-main.js",
-    "dev:worker": "node --env-file=.env dist/knowledge-core/worker-main.js",
-    "test:knowledge-core": "node --import tsx --test test/knowledge-core/core.unit.test.ts test/knowledge-core/ingestion.unit.test.ts",
+    "dev:worker": "node --watch --env-file=.env dist/knowledge-core/worker-main.js",
+    "test:knowledge-core": "node --import tsx --test test/knowledge-core/core.unit.test.ts test/knowledge-core/worker-restart.unit.test.ts test/knowledge-core/replacement-name.unit.test.ts test/knowledge-core/ingestion.unit.test.ts test/knowledge-core/preparation.unit.test.ts test/knowledge-core/vision-ocr.unit.test.ts test/knowledge-core/ocr-progress.unit.test.ts test/knowledge-core/retry-upgrade.unit.test.ts test/knowledge-core/docx-chunking.unit.test.ts test/knowledge-core/markdown-chunking.unit.test.ts test/knowledge-core/semantic-boundaries.unit.test.ts",
     "test:knowledge-core:db": "node --import tsx --test test/knowledge-core/ingestion.postgres.test.ts",
-    "test:knowledge-retrieval": "node --import tsx --test test/knowledge-core/retrieval.unit.test.ts test/knowledge-core/library-source.unit.test.ts",
+    "test:knowledge-retrieval": "node --import tsx --test test/knowledge-core/retrieval.unit.test.ts test/knowledge-core/library-source.unit.test.ts test/official-expert/locator-protocol.unit.test.ts",
     "test:knowledge-retrieval:db": "node --import tsx --test test/knowledge-core/retrieval.postgres.test.ts",
     "test:knowledge-retrieval:http": "node --test test/knowledge-core/admin.http.test.cjs"
   },

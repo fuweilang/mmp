@@ -79,6 +79,24 @@ export class KnowledgeJobsService {
       await tx.knowledgeIngestionJob.update({ where: { id }, data: { stage } });
     });
   }
+  /** Successful page batches yield fairly; only failed attempts consume the retry allowance. */
+  async yieldBatch(id:string,token:string):Promise<void>{
+    await this.withLease(id,token,async tx=>{
+      await tx.knowledgeIngestionJob.update({where:{id},data:{status:'QUEUED',stage:'PARSING',attempts:0,availableAt:new Date(Date.now()+100),errorCode:null,leaseToken:null,leaseUntil:null}});
+    });
+  }
+  /** Graceful restarts refund only this claim; real failures and cancellation remain intact. */
+  async releaseForRestart(id: string, token: string): Promise<void> {
+    await this.withLease(id, token, async (tx) => {
+      await tx.knowledgeIngestionJob.update({
+        where: { id },
+        data: {
+          status: 'QUEUED', stage: 'UPLOADED', attempts: { decrement: 1 },
+          availableAt: new Date(), errorCode: null, leaseToken: null, leaseUntil: null,
+        },
+      });
+    });
+  }
   async fail(
     id: string,
     token: string,

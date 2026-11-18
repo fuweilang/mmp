@@ -7,7 +7,8 @@ import { PDFParse } from 'pdf-parse';
 import { parse } from 'csv-parse/sync';
 import type { TextSection } from './types';
 
-export const KNOWLEDGE_UPLOAD_MAX_BYTES = 20 * 1024 * 1024;
+export const KNOWLEDGE_UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
+export const knowledgeUploadLimit = (name:string) => extname(name).toLowerCase() === '.pdf' ? KNOWLEDGE_UPLOAD_MAX_BYTES : 20 * 1024 * 1024;
 export interface ExtractionLimits {
   maxChars?: number;
   maxXmlBytes?: number;
@@ -392,7 +393,7 @@ export async function parseKnowledgeBytes(
     )
   )
     throw new Error('Invalid extraction limits');
-  if (!bytes.length || bytes.length > KNOWLEDGE_UPLOAD_MAX_BYTES)
+  if (!bytes.length || bytes.length > knowledgeUploadLimit(name))
     return {
       status: 'FAILED',
       sections: [],
@@ -407,6 +408,7 @@ export async function parseKnowledgeBytes(
     locator: TextSection['locator'],
     tableHeader?: string,
     paragraphOffsets?: TextSection['paragraphOffsets'],
+    softHeadingBoundaries = false,
   ) => {
     if (!text.trim()) return;
     if (sections.length >= maxSections || used >= maxChars) {
@@ -423,6 +425,7 @@ export async function parseKnowledgeBytes(
       sourceOffset: used,
       locator,
       ...(tableHeader ? { tableHeader } : {}),
+      ...(softHeadingBoundaries ? { softHeadingBoundaries: true } : {}),
       ...(paragraphOffsets ? { paragraphOffsets: paragraphOffsets.filter(entry => entry.offset < part.length) } : {}),
     });
     used += part.length;
@@ -477,18 +480,18 @@ export async function parseKnowledgeBytes(
         let group: { start: number; end: number; locator: TextSection['locator']; paragraphs: NonNullable<TextSection['paragraphOffsets']> } | undefined;
         const flush = () => {
           if (!group) return;
-          add(text.slice(group.start, group.end), group.locator, undefined, ext === '.txt' ? undefined : group.paragraphs);
+          add(ext === '.txt' ? text.slice(group.start, group.end) : text, group.locator, undefined, ext === '.txt' ? undefined : group.paragraphs, ext !== '.txt');
           group = undefined;
         };
         for (const match of text.matchAll(/[^\n]+(?:\n(?!\n)[^\n]+)*/g)) {
           paragraph++;
           const entryHeadingPath = [...headingPath];
-          // A short method's heading and body form one semantic section; the chunker owns its token bound.
-          if (group && (ext === '.txt' || /^#{1,6}[\t ]+/m.test(match[0]))) flush();
+          // Markdown is packed by Token budget; headings are retained as soft boundaries.
+          if (group && ext === '.txt') flush();
           if (truncated || sections.length >= maxSections || used >= maxChars) { truncated = true; break; }
           if (!group) group = { start: match.index!, end: match.index!, locator: { paragraph, ...(entryHeadingPath.length ? { headingPath: entryHeadingPath } : {}) }, paragraphs: [] };
           group.end = match.index! + match[0].length;
-          group.paragraphs.push({ offset: match.index! - group.start, paragraph });
+          group.paragraphs.push({ offset: ext === '.txt' ? match.index! - group.start : match.index!, paragraph });
           if (ext !== '.txt')
             for (const heading of match[0].matchAll(
               /^(#{1,6})[\t ]+(.+?)[\t ]*#*[\t ]*$/gm,
@@ -570,6 +573,11 @@ export async function parseKnowledgeBytes(
           )
           .join('');
       };
+      let group: { text: string; locator: TextSection['locator']; paragraphs: NonNullable<TextSection['paragraphOffsets']> } | undefined;
+      const flushGroup = () => {
+        if (group) add(group.text, group.locator, undefined, group.paragraphs);
+        group = undefined;
+      };
       const visit = (node: unknown): void => {
         if (!Array.isArray(node)) return;
         for (const item of node)
@@ -580,13 +588,23 @@ export async function parseKnowledgeBytes(
               paragraph++;
               const text = clean(textOf(value));
               const level = levelOf(attribute(value, 'w:outlineLvl')) ?? styleLevel(attribute(value, 'w:pStyle'));
-              if (level !== undefined && level < 9 && text.trim()) headingPath = [...headingPath.slice(0, level), text.trim()];
-              add(text, { paragraph, ...(headingPath.length ? {headingPath: [...headingPath]} : {}) });
+              if (level !== undefined && level < 9 && text.trim()) {
+                flushGroup();
+                headingPath = [...headingPath.slice(0, level), text.trim()];
+              }
+              if (text.trim()) {
+                if (!group) group = { text: '', locator: { paragraph, ...(headingPath.length ? { headingPath: [...headingPath] } : {}) }, paragraphs: [] };
+                if (group.text) group.text += '\n\n';
+                group.paragraphs.push({ offset: group.text.length, paragraph });
+                group.text += text;
+                if (group.text.length >= maxChars - used) flushGroup();
+              }
             } else visit(value);
             if (truncated) return;
           }
       };
       visit(nodes);
+      flushGroup();
     } else if (ext === '.pdf') {
       if (bytes.subarray(0, 5).toString('latin1') !== '%PDF-')
         throw new Error('invalid PDF');

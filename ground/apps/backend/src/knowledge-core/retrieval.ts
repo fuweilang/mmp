@@ -39,7 +39,7 @@ export function namedHeadingTerms(query: string): string[] {
 export function namedHeadingScore(row: Pick<RetrievalEvidence, 'locator'>, query: string): number {
   const trim = (term: string) => term.replace(/^[.:/]+|[.:/]+$/g, '');
   const terms = new Set(namedHeadingTerms(query));
-  return new Set((row.locator.headingPath?.join(' ').match(/[A-Za-z0-9_.:/-]+/g) ?? [])
+  return new Set(((row.locator.headingPaths?.flat() ?? row.locator.headingPath ?? []).join(' ').match(/[A-Za-z0-9_.:/-]+/g) ?? [])
     .map(term => trim(term).toLowerCase()).filter(term => terms.has(term))).size;
 }
 export function focusNamedHeadings<T extends RetrievalEvidence>(rows: readonly T[], query: string): T[] {

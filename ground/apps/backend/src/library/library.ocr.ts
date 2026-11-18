@@ -16,6 +16,7 @@ const SOURCE = sourceFile();
 let binary: Promise<string | null> | null = null;
 
 async function recognizer(): Promise<string | null> {
+  if (process.platform !== 'darwin') return null;
   if (!binary) {
     binary = (async () => {
       if (!SOURCE) return null;
@@ -40,7 +41,12 @@ async function recognizer(): Promise<string | null> {
 }
 
 /** @returns recognized text, or an empty string when this image has no readable text or OCR is unavailable. */
-export async function recognizeImageText(name: string, bytes: Buffer): Promise<string> {
+export async function isLocalOcrAvailable(): Promise<boolean> {
+  return process.platform === 'darwin' && !!(await recognizer());
+}
+
+export async function recognizeImageText(name: string, bytes: Buffer, strict = false, signal?: AbortSignal): Promise<string> {
+  signal?.throwIfAborted();
   const extension = name.slice(name.lastIndexOf('.')).toLowerCase();
   if (extension !== '.pdf') {
     try {
@@ -51,22 +57,40 @@ export async function recognizeImageText(name: string, bytes: Buffer): Promise<s
     }
   }
   const tool = await recognizer();
-  if (!tool) return '';
+  if (!tool) {
+    if (strict) throw new Error('OCR_UNAVAILABLE');
+    return '';
+  }
+  signal?.throwIfAborted();
   const dir = await mkdtemp(join(tmpdir(), 'library-ocr-'));
   try {
     const input = join(dir, `source${extension || '.img'}`);
     await writeFile(input, bytes);
-    return await new Promise<string>((resolve) => {
+    signal?.throwIfAborted();
+    return await new Promise<string>((resolve, reject) => {
       const child = spawn(tool, [input], { stdio: ['ignore', 'pipe', 'ignore'] });
       const chunks: Buffer[] = [];
       let size = 0;
+      let settled = false;
+      const finish = (error?: string, text = '') => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        signal?.removeEventListener('abort', onAbort);
+        if (error && strict) reject(new Error(error));
+        else resolve(error ? '' : text);
+      };
       child.stdout.on('data', (chunk: Buffer) => {
         size += chunk.length;
-        if (size <= 200_000) chunks.push(chunk);
+        if (size > 200_000) { child.kill(); finish('OCR_OUTPUT_LIMIT'); }
+        else chunks.push(chunk);
       });
-      const timer = setTimeout(() => { child.kill(); resolve(''); }, 30_000);
-      child.on('error', () => { clearTimeout(timer); resolve(''); });
-      child.on('close', () => { clearTimeout(timer); resolve(Buffer.concat(chunks).toString('utf8').trim()); });
+      const onAbort = () => { child.kill(); finish('OCR_CANCELLED'); };
+      const timer = setTimeout(() => { child.kill(); finish('OCR_TIMEOUT'); }, 30_000);
+      signal?.addEventListener('abort', onAbort, { once: true });
+      if (signal?.aborted) onAbort();
+      child.on('error', () => finish('OCR_RECOGNITION_FAILED'));
+      child.on('close', code => finish(code === 0 ? undefined : 'OCR_RECOGNITION_FAILED', Buffer.concat(chunks).toString('utf8').trim()));
     });
   } finally {
     await rm(dir, { recursive: true, force: true });

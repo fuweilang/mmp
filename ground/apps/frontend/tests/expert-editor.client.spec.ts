@@ -128,6 +128,38 @@ it('edit opens three adjacent configuration panels and keeps saved draft open', 
   expect(dialog().textContent).toContain('草稿已保存'); expect(dialog().querySelector('iframe')).toBeNull();
 });
 
+it.each(['是', ' 是 ', '   '])('rejects invalid expert name %j inside metadata before confirm or save', async (name) => {
+  await mount();
+  await click('基本信息');
+  const input = document.querySelector<HTMLInputElement>('input[aria-label="专家名称"]')!;
+  input.value = name;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await nextTick();
+  input.dispatchEvent(new FocusEvent('blur'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+  expect(document.querySelector('.expert-metadata-dialog .el-form-item.is-error')).toBeTruthy();
+  await click('确认', document.querySelector('.expert-metadata-dialog')!);
+  await vi.waitFor(() => expect(document.querySelector('.expert-metadata-dialog .el-form-item.is-error')).toBeTruthy());
+  await vi.waitFor(() => expect(document.querySelector('.expert-metadata-dialog')?.textContent).toMatch(/请输入专家名称|名称至少需要2个字/));
+  expect(fixture.update).not.toHaveBeenCalled();
+  expect(fixture.create).not.toHaveBeenCalled();
+  expect(document.querySelector('.el-message--error')).toBeNull();
+});
+
+it('reveals an invalid stored name inline when saving with metadata initially closed', async () => {
+  await mount();
+  await click('基本信息');
+  const input = document.querySelector<HTMLInputElement>('input[aria-label="专家名称"]')!;
+  input.value = '是'; input.dispatchEvent(new Event('input', { bubbles: true })); await nextTick();
+  // Close with the title-bar button; saving must still enforce name validation.
+  document.querySelector<HTMLButtonElement>('.expert-metadata-dialog .el-dialog__headerbtn')!.click();
+  await nextTick();
+  await click('保存草稿', dialog());
+  await vi.waitFor(() => expect(document.querySelector('.expert-metadata-dialog .el-form-item.is-error')).toBeTruthy());
+  expect(fixture.update).not.toHaveBeenCalled();
+  expect(document.querySelector('.el-message--error')).toBeNull();
+});
+
 it('capabilities offers only precreated platform skills in a Monica-style selection dialog', async () => {
   fixture.listSkills.mockResolvedValue([{id:'precreated',key:'precreated',name:'平台现有技能',summary:'仅选择已有技能',enabledAt:'2026-11-01',packageRevision:1}]);
   await mount();

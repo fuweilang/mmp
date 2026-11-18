@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { HostObservable, InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime, SessionAreaProps, Translate } from '@mammoth-ai/mmp-client-ui-slots'
-import type { ExpertKnowledgeSource } from '@mammoth-ai/mmp-official-agent-gallery/types'
 import type { SessionId } from '@mammoth-ai/mmp-session/types'
 import type {} from '@mammoth-ai/mmp-client-ui-chat/client'
 import { IconUsersOutlineRegular, MarkdownText, TextShimmer } from '@mammoth-ai/mmp-client-ui-primitives'
@@ -113,8 +112,19 @@ export function CompactExpertMessages({
   }, [chat, sources])
   const blocks = (values: readonly import('@mammoth-ai/mmp-client-ui-conversation/client').AssistantBlock[], streaming = false) => values.map((block, index) =>
     block.kind === 'text' && block.text ? <MarkdownText key={index} text={block.text} streaming={streaming} labels={labels} /> : null)
-  const citations = (turnSources: readonly ExpertKnowledgeSource[] | undefined) => turnSources?.length
-    ? <KnowledgeSources embedded sources={turnSources} open={(recordId, label) => openSource(sessionId, recordId, label)} t={t} /> : null
+  const citations = (turn: number) => {
+    // Retrieval admission is broader than the evidence the answer actually cites.
+    // Keep the durable projection intact for exact source authorization/replay.
+    const answer = [
+      ...chat.nodes.flatMap(node => node.kind === 'assistant' && node.turn === turn ? node.blocks : []),
+      ...(chat.partial?.turn === turn ? chat.partial.blocks : []),
+    ].flatMap(block => block.kind === 'text' ? [block.text] : [])
+    const labels = new Set(answer.flatMap(text => Array.from(text.matchAll(/\[((?:T\d+L\d+S\d+)(?:[\s,，;；]+T\d+L\d+S\d+)*)\]/g)))
+      .flatMap(match => match[1]!.match(/T\d+L\d+S\d+/g) ?? []))
+    // A later answer may explicitly cite an authorized passage from an earlier turn.
+    const cited = sources?.filter(source => labels.has(source.label)) ?? []
+    return cited.length ? <KnowledgeSources embedded sources={cited} open={(recordId, label) => openSource(sessionId, recordId, label)} t={t} /> : null
+  }
   const hasText = (values: readonly import('@mammoth-ai/mmp-client-ui-conversation/client').AssistantBlock[]) => values.some(block=>block.kind==='text' && !!block.text.trim())
   const latestUser = chat.nodes.findLastIndex(node=>node.kind==='user' || node.kind==='steering')
   const waiting = running && !error && latestUser>=0 && !chat.nodes.slice(latestUser+1).some(node=>node.kind==='assistant' && hasText(node.blocks)) && !(chat.partial && hasText(chat.partial.blocks))
@@ -136,7 +146,7 @@ export function CompactExpertMessages({
         return <article key={node.seq} className={css.assistant} data-role="assistant">
           {firstInTurn ? byline() : null}
           <div data-expert-preview-answer="">{blocks(node.blocks)}</div>
-          {lastInTurn ? citations(sources?.filter(source => source.turn === node.turn)) : null}
+          {lastInTurn ? citations(node.turn) : null}
         </article>
       }
       if (node.kind === 'turn-error') return <p key={node.seq} role="alert">{failureText(node.message, node.code, chatText)}{node.code ? <code> ({node.code})</code> : null}</p>
@@ -145,7 +155,7 @@ export function CompactExpertMessages({
     {chat.partial && hasText(chat.partial.blocks) ? <article className={css.assistant} data-role="assistant">
       {!chat.nodes.some(node=>node.kind==='assistant' && node.turn===chat.partial?.turn && hasText(node.blocks)) ? byline() : null}
       <div data-expert-preview-answer="">{blocks(chat.partial.blocks, true)}</div>
-      {citations(sources?.filter(source => source.turn === chat.partial?.turn))}
+      {citations(chat.partial.turn)}
     </article> : null}
     {waiting ? <article className={css.assistant} data-role="assistant-waiting" aria-busy="true">{byline()}<ThinkingLine startTime={latestUser >= 0 ? chat.nodes[latestUser]!.time : undefined} chatText={chatText} /></article> : null}
     {error ? <p role="alert">{failureText(error.error.message, error.error.code, chatText)} <code>({error.error.code})</code></p> : null}

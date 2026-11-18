@@ -20,6 +20,7 @@ export function knowledgeFileStatus(document: KnowledgeDocument) {
   if (!document.enabled || document.deletedAt) return '已停用';
   const index=latestKnowledgeIndex(document), available=availableKnowledgeFile(document);
   if (index?.status==='READY') return '可用';
+  if(index?.reasonCode==='INDEX_VERSION_UNSUPPORTED')return available?'待重新处理 · 当前内容可用':'待重新处理';
   const failed=['FAILED','PARTIAL','DOWNLOAD_ONLY','CANCELLED'].includes(index?.status??'');
   return available ? failed?'更新失败 · 继续使用旧内容':'更新中 · 当前内容可用' : failed?'处理失败':'处理中';
 }

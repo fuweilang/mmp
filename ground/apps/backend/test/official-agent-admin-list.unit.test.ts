@@ -25,7 +25,7 @@ function createListService(agents: AgentSeed[]) {
         where?: {
           status?: OfficialAgentStatus;
           kind?: 'GENERAL' | 'KNOWLEDGE';
-          OR?: Array<Record<string, { contains: string; mode?: string }>>;
+          OR?: Array<Record<string, { contains?: string; equals?: string; mode?: string }>>;
         };
         orderBy?: Array<Record<string, 'asc' | 'desc'>> | Record<string, 'asc' | 'desc'>;
       }) => {
@@ -36,12 +36,12 @@ function createListService(agents: AgentSeed[]) {
         if (kind) rows = rows.filter((row) => (row.kind ?? 'GENERAL') === kind);
         const or = args.where?.OR;
         if (or?.length) {
-          const keyword = Object.values(or[0])[0]?.contains?.toLowerCase() ?? '';
-          rows = rows.filter((row) =>
-            [row.id, row.key, row.name, row.summary].some((value) =>
-              value.toLowerCase().includes(keyword),
-            ),
-          );
+          rows = rows.filter((row) => or.some(clause => Object.entries(clause).some(([field, condition]) => {
+            const source = String(row[field as keyof AgentSeed]);
+            const value = condition.mode === 'insensitive' ? source.toLowerCase() : source;
+            if (condition.equals !== undefined) return value === (condition.mode === 'insensitive' ? condition.equals.toLowerCase() : condition.equals);
+            return condition.contains !== undefined && value.includes(condition.mode === 'insensitive' ? condition.contains.toLowerCase() : condition.contains);
+          })));
         }
         const orderBy = Array.isArray(args.orderBy) ? args.orderBy : [args.orderBy ?? {}];
         rows.sort((left, right) => {
@@ -81,7 +81,7 @@ function createListService(agents: AgentSeed[]) {
       groupBy: async (args: {
         where?: {
           kind?: 'GENERAL' | 'KNOWLEDGE';
-          OR?: Array<Record<string, { contains: string; mode?: string }>>;
+          OR?: Array<Record<string, { contains?: string; equals?: string; mode?: string }>>;
         };
       }) => {
         let rows = [...agents];
@@ -89,12 +89,12 @@ function createListService(agents: AgentSeed[]) {
         if (kind) rows = rows.filter((row) => (row.kind ?? 'GENERAL') === kind);
         const or = args.where?.OR;
         if (or?.length) {
-          const keyword = Object.values(or[0])[0]?.contains?.toLowerCase() ?? '';
-          rows = rows.filter((row) =>
-            [row.id, row.key, row.name, row.summary].some((value) =>
-              value.toLowerCase().includes(keyword),
-            ),
-          );
+          rows = rows.filter((row) => or.some(clause => Object.entries(clause).some(([field, condition]) => {
+            const source = String(row[field as keyof AgentSeed]);
+            const value = condition.mode === 'insensitive' ? source.toLowerCase() : source;
+            if (condition.equals !== undefined) return value === (condition.mode === 'insensitive' ? condition.equals.toLowerCase() : condition.equals);
+            return condition.contains !== undefined && value.includes(condition.mode === 'insensitive' ? condition.contains.toLowerCase() : condition.contains);
+          })));
         }
         const counts = new Map<OfficialAgentStatus, number>();
         for (const row of rows) {
@@ -192,7 +192,7 @@ describe('admin official agent list ordering and filters', () => {
       OFFLINE: 0,
     });
 
-    const byId = await service.list(actor, { keyword: 'expert-01526387' });
+    const byId = await service.list(actor, { keyword: 'EXPERT-01526387-D75' });
     assert.equal(byId.items.length, 1);
     assert.equal(byId.items[0]?.id, 'expert-01526387-d75');
   });
@@ -225,4 +225,16 @@ describe('admin official agent list ordering and filters', () => {
     assert.equal(result.items[0]?.status, 'PUBLISHED');
     assert.equal(result.statusCounts.PUBLISHED, 2);
   });
+});
+
+it('does not match hidden introductions or partial identifiers and keeps counts consistent', async () => {
+  const service = createListService(seed.map(row => ({ ...row, summary: '咱们一起想办法' })));
+  for (const keyword of ['们', '01526387']) {
+    const result = await service.list(actor, { keyword });
+    assert.deepEqual(result.items, []);
+    assert.deepEqual(result.statusCounts, { all: 0, DRAFT: 0, PUBLISHED: 0, OFFLINE: 0 });
+  }
+  assert.equal((await service.list(actor, { keyword: ' A专家 ' })).items[0]?.draft.name, 'a专家');
+  assert.equal((await service.list(actor, { keyword: 'old-expert' })).items[0]?.id, 'agent-old');
+  assert.equal((await service.list(actor, { keyword: '   ' })).statusCounts.all, seed.length);
 });

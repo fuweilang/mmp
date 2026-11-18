@@ -2,6 +2,8 @@ import { BadRequestException, Body, CanActivate, Controller, Delete, ExecutionCo
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 import { storedUploadedName, uploadedName } from '../common/uploaded-name';
+import { OcrPageStore } from './ocr-progress';
+import { rasterImageMime, isKnowledgeImage } from './vision-ocr';
 import { randomUUID } from 'node:crypto';
 import { JwtGuard } from '../auth/jwt.guard';
 import { assertSuperAdmin } from '../auth/super-admin';
@@ -14,7 +16,7 @@ import { KnowledgeProfilesService } from './profiles.service';
 import { KnowledgeRetrievalService } from './retrieval.service';
 import { KnowledgeCoreError, safeKnowledgeError } from './errors';
 import type { KnowledgeAccess } from './retrieval-access';
-import { KnowledgeChunkPreviewDto, KnowledgeExtractedPreviewDto, KnowledgeBaseDto, KnowledgeBasePatchDto, KnowledgeEnabledDto, KnowledgeProfileDto, KnowledgeReindexDto, KnowledgeReleaseDto, KnowledgeRetrievalTestDto, KnowledgeSourceDto, KnowledgeUploadDto } from './admin.dto';
+import { KnowledgeChunkPreviewDto, KnowledgeExtractedPreviewDto, KnowledgeBaseDto, KnowledgeBasePatchDto, KnowledgeEnabledDto, KnowledgePreparationPreviewDto, KnowledgeProfileDto, KnowledgeReindexDto, KnowledgeReleaseDto, KnowledgeRetrievalTestDto, KnowledgeSourceDto, KnowledgeUploadDto } from './admin.dto';
 const PLATFORM = {
   type: 'PLATFORM'
 } as const;
@@ -181,20 +183,21 @@ export class KnowledgeAdminController {
         }, include: {
           revisions: {
             select: {
-              id: true, contentHash: true, originalName: true, parserFormat: true, mediaType: true, sizeBytes: true, createdAt: true, indexes: { include: { profile: { select: { enabled: true } }, job: { select: { id: true, status: true, errorCode: true } } } }
+              id: true, contentHash: true, originalName: true, parserFormat: true, mediaType: true, sizeBytes: true, createdAt: true, indexes: { include: { profile: { select: { enabled: true } }, job: { select: { id: true, status: true, stage:true, errorCode: true } } } }
             }
           }
         }, orderBy: {
           createdAt: 'desc'
         }
       });
-      return documents.map(document => ({
+      return Promise.all(documents.map(async document => ({
         ...document, title: storedUploadedName(document.title),
         ...(base.autoUpdate ? { effectiveIndexId: document.revisions.flatMap(r=>r.indexes).find(i=>effective.has(i.id))?.id ?? null } : {}),
-        revisions: document.revisions.map(revision => ({
+        revisions: await Promise.all(document.revisions.map(async revision => ({
           ...revision, originalName: storedUploadedName(revision.originalName),
-        })),
-      }));
+          indexes:await Promise.all(revision.indexes.map(async index=>({...index,...(index.job&&index.chunkerConfig&&typeof index.chunkerConfig==='object'&&!Array.isArray(index.chunkerConfig)&&['ocr','auto'].includes(String(index.chunkerConfig.parseMode))?{job:{...index.job,progress:await new OcrPageStore().progress(index.id).catch(()=>undefined)}}:{})}))),
+        }))),
+      })));
     });
   }
   @Patch('documents/:id')
@@ -229,7 +232,7 @@ export class KnowledgeAdminController {
   @Post('bases/:id/documents')
   @UseInterceptors(FileInterceptor('file', {
     limits: {
-      fileSize: 20 * 1024 * 1024, files: 1, fields: 4
+      fileSize: 100 * 1024 * 1024, files: 1, fields: 4
     }
   }))
   upload(
@@ -331,6 +334,40 @@ export class KnowledgeAdminController {
       }
     });
   }
+  @Get('documents/:documentId/revisions/:revisionId/preparation-context')
+  @Header('X-Content-Type-Options', 'nosniff')
+  @Header('Cache-Control', 'no-store')
+  preparationContext(
+    @Req()
+    req: AdminRequest,
+    @Param('documentId')
+    documentId: string,
+    @Param('revisionId')
+    revisionId: string) {
+    return this.run(() => this.inspection.preparationContext(req.user.id, documentId, revisionId));
+  }
+  @Post('documents/:documentId/revisions/:revisionId/preparation-preview')
+  @Header('X-Content-Type-Options', 'nosniff')
+  @Header('Cache-Control', 'no-store')
+  preparationPreview(
+    @Req()
+    req: AdminRequest,
+    @Param('documentId')
+    documentId: string,
+    @Param('revisionId')
+    revisionId: string,
+    @Body()
+    dto: KnowledgePreparationPreviewDto) {
+    return this.run(async () => {
+      const abort = new AbortController(), stop = () => abort.abort();
+      const response = req.res, onClose = () => { if (!response?.writableFinished) abort.abort(); };
+      req.once('aborted', stop);
+      response?.once('close', onClose);
+      if (req.aborted || response?.destroyed) abort.abort();
+      try { return await this.inspection.preparationPreview(req.user.id, documentId, revisionId, dto, abort.signal); }
+      finally { req.off('aborted', stop); response?.off('close', onClose); }
+    });
+  }
   @Get('documents/:documentId/revisions/:revisionId/original')
   original(
     @Req()
@@ -347,8 +384,9 @@ export class KnowledgeAdminController {
       const source = await this.inspection.original(req.user.id, documentId, revisionId);
       const filename = encodeURIComponent(source.originalName).replace(/[!'()*]/g, character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
       const previewPdf = inline === '1' && source.originalName.toLowerCase().endsWith('.pdf');
-      response.setHeader('Content-Type', previewPdf ? 'application/pdf' : 'application/octet-stream');
-      response.setHeader('Content-Disposition', `${previewPdf ? 'inline' : 'attachment'}; filename="knowledge-source"; filename*=UTF-8''${filename}`);
+      const previewImage = inline === '1' && isKnowledgeImage(source.originalName) ? rasterImageMime(source.bytes) : undefined;
+      response.setHeader('Content-Type', previewPdf ? 'application/pdf' : previewImage || 'application/octet-stream');
+      response.setHeader('Content-Disposition', `${previewPdf || previewImage ? 'inline' : 'attachment'}; filename="knowledge-source"; filename*=UTF-8''${filename}`);
       response.setHeader('X-Content-Type-Options', 'nosniff');
       response.setHeader('Cache-Control', 'no-store');
       response.setHeader('Content-Length', source.bytes.length);

@@ -1,3 +1,5 @@
+import { OcrPageStore } from './ocr-progress';
+import { KnowledgeOcrService } from './vision-ocr';
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,8 +9,6 @@ import { KnowledgeJobsService } from './jobs.service';
 import { KnowledgeCoreService } from './knowledge-core.service';
 import { KnowledgeHttpAdapter } from './provider';
 import { KnowledgeCoreError, safeKnowledgeError } from './errors';
-import { parseKnowledgeBytes } from './parser';
-import { chunkSections } from './chunking';
 import { chunkEmbeddingInput } from './embedding-input';
 import {
   normalizeKnowledgeIndexConfig,
@@ -16,6 +16,7 @@ import {
   KNOWLEDGE_CHUNKER_VERSION,
   type KnowledgeIndexConfiguration,
 } from './index-config';
+import { prepareKnowledgeDocument } from './preparation';
 import { createTokenCounter } from './tokenizer';
 /** No timer starts in Nest HTTP lifecycle. Only standalone worker main invokes run(). */
 @Injectable()
@@ -23,6 +24,7 @@ export class KnowledgeIngestionWorker {
   private readonly logger = new Logger(KnowledgeIngestionWorker.name);
   private stopping = false;
   private active: AbortController | undefined;
+  private readonly ocrPages = new OcrPageStore();
   constructor(
     private readonly prisma: PrismaService,
     private readonly profiles: KnowledgeProfilesService,
@@ -30,6 +32,7 @@ export class KnowledgeIngestionWorker {
     private readonly jobs: KnowledgeJobsService,
     private readonly adapter: KnowledgeHttpAdapter,
     private readonly core?: KnowledgeCoreService,
+    private readonly ocr?: KnowledgeOcrService,
   ) {}
   stop() {
     this.stopping = true;
@@ -77,22 +80,31 @@ export class KnowledgeIngestionWorker {
       );
       if (configuration.indexConfigHash !== index.indexConfigHash)
         throw new KnowledgeCoreError('INDEX_CONFIGURATION_MISMATCH');
-      const parsed = await parseKnowledgeBytes(
-        index.revision.originalName,
-        await this.blobs.read(index.revision.storageKey),
-      );
-      if (parsed.status !== 'READY') {
+      const isOcr=(index.chunkerConfig as KnowledgeIndexConfiguration).parseMode==='ocr'||(index.chunkerConfig as KnowledgeIndexConfiguration).parseMode==='auto';
+      await this.jobs.setStage(job.id, token, isOcr?'PARSING':'CHUNKING');
+      const prepared = await prepareKnowledgeDocument({
+        name: index.revision.originalName,
+        bytes: await this.blobs.read(index.revision.storageKey),
+        tokenizer: profile.tokenizer as 'cl100k_base' | 'o200k_base',
+        maxInputTokens: profile.maxInputTokens,
+        config: index.chunkerConfig as KnowledgeIndexConfiguration,
+        signal: controller.signal,
+        ...(isOcr?{ocrWork:{indexId:index.id,store:this.ocrPages}}:{}),
+        ...('parseMode' in configuration.chunkerConfig && (index.chunkerConfig as KnowledgeIndexConfiguration).ocrModelId && (configuration.chunkerConfig.parseMode==='ocr'||(index.chunkerConfig as KnowledgeIndexConfiguration).ocrRouteHash) ? {ocrRecognizer:(name:string,bytes:Buffer,signal?:AbortSignal)=>this.ocr!.recognize(name,bytes,(index.chunkerConfig as KnowledgeIndexConfiguration).ocrModelId!,signal,(index.chunkerConfig as KnowledgeIndexConfiguration).ocrRouteHash)} : {}),
+      });
+      if(prepared.ocrPending){await this.jobs.yieldBatch(job.id,token);return true;}
+      if (prepared.parseStatus !== 'READY') {
         await this.jobs.withLease(job.id, token, async (tx) => {
           await tx.knowledgeIndexRevision.update({
             where: { id: index.id },
-            data: { status: parsed.status, reasonCode: parsed.reason },
+            data: { status: prepared.parseStatus, reasonCode: prepared.failureReason ?? prepared.whyPartial },
           });
           await tx.knowledgeIngestionJob.update({
             where: { id: job.id },
             data: {
-              status: parsed.status === 'FAILED' ? 'FAILED' : 'SUCCEEDED',
-              stage: parsed.status,
-              errorCode: parsed.reason,
+              status: prepared.parseStatus === 'FAILED' || (isOcr && prepared.parseStatus === 'PARTIAL') ? 'FAILED' : 'SUCCEEDED',
+              stage: prepared.parseStatus,
+              errorCode: prepared.failureReason ?? prepared.whyPartial ?? null,
               leaseToken: null,
               leaseUntil: null,
             },
@@ -100,43 +112,11 @@ export class KnowledgeIngestionWorker {
         });
         return true;
       }
+      const chunks = prepared.chunks;
+      const tokenCount = prepared.totalChunkTokens;
       const counter = createTokenCounter(
         profile.tokenizer as 'cl100k_base' | 'o200k_base',
       );
-      await this.jobs.setStage(job.id, token, 'CHUNKING');
-      const { maxTokens, targetTokens, overlapTokens } =
-        configuration.chunkerConfig;
-      let chunks;
-      try {
-        chunks = chunkSections(parsed.sections, {
-          tokenCounter: counter,
-          maxTokens,
-          targetTokens,
-          overlapTokens,
-        });
-      } catch {
-        throw new KnowledgeCoreError('DOCUMENT_CHUNK_LIMIT');
-      }
-      const tokenCount = chunks.reduce((sum, c) => sum + c.tokenCount, 0);
-      if (chunks.length > 10000 || tokenCount > 500000) {
-        await this.jobs.withLease(job.id, token, async (tx) => {
-          await tx.knowledgeIndexRevision.update({
-            where: { id: index.id },
-            data: { status: 'PARTIAL', reasonCode: 'EXTRACTION_TOKEN_LIMIT' },
-          });
-          await tx.knowledgeIngestionJob.update({
-            where: { id: job.id },
-            data: {
-              status: 'SUCCEEDED',
-              stage: 'PARTIAL',
-              errorCode: 'EXTRACTION_TOKEN_LIMIT',
-              leaseToken: null,
-              leaseUntil: null,
-            },
-          });
-        });
-        return true;
-      }
       await this.jobs.setStage(job.id, token, 'EMBEDDING');
       const result = await this.adapter.embed(
         profile.id,
@@ -145,6 +125,8 @@ export class KnowledgeIngestionWorker {
       );
       // Credentials/config disable is checked again after slow upstream work; lease/cancellation is DB-fenced below.
       await this.profiles.resolveForRequest(profile.id, 'EMBEDDING');
+      const ocrConfig = index.chunkerConfig as KnowledgeIndexConfiguration;
+      if (ocrConfig.parseMode === 'ocr'||prepared.usedOcr) await this.ocr!.assertRoute(ocrConfig.ocrModelId!,ocrConfig.ocrRouteHash);
       if (controller.signal.aborted)
         throw new KnowledgeCoreError('INGESTION_LEASE_LOST');
       await this.jobs.setStage(job.id, token, 'INDEXING');
@@ -192,6 +174,15 @@ export class KnowledgeIngestionWorker {
       });
     } catch (error) {
       const safe = safeKnowledgeError(error);
+      if (this.stopping && controller.signal.aborted) {
+        try {
+          await this.jobs.releaseForRestart(job.id, token);
+        } catch (failure) {
+          if (safeKnowledgeError(failure).code !== 'INGESTION_LEASE_LOST')
+            this.logger.error('INGESTION_STATE_WRITE_FAILED');
+        }
+        return true;
+      }
       if (safe.code !== 'INGESTION_LEASE_LOST') {
         try {
           await this.jobs.fail(job.id, token, safe);

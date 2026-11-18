@@ -14,7 +14,16 @@
           clearable
           placeholder="搜索 Model ID / 显示名 / 厂商"
         />
+        <el-select v-model="selectedFamily" class="page-filter" aria-label="模型筛选" placeholder="全部模型">
+          <el-option label="全部模型" value="" />
+          <el-option v-for="family in familyOptions" :key="family" :label="family" :value="family" />
+        </el-select>
+        <el-select v-model="selectedProvider" class="page-filter" aria-label="厂商筛选" placeholder="全部厂商">
+          <el-option label="全部厂商" value="" />
+          <el-option v-for="provider in providers" :key="provider.id" :label="provider.displayName || provider.name" :value="provider.id" />
+        </el-select>
         <el-button @click="testEnabled">{{ bulkRunning ? '停止' : '测试已启用' }}</el-button>
+        <el-button @click="$router.push('/admin/knowledge-services')">检索服务</el-button>
         <el-button @click="openGeekAi">接入极客智坊</el-button>
         <el-button type="primary" @click="openCreate">新建模型</el-button>
       </div>
@@ -258,6 +267,7 @@ import {
   type AdminLlmProviderRow,
 } from '@/api/admin';
 import { ApiError } from '@/api/http';
+import { modelFamily } from '@/utils/model-family';
 
 type FlatRow = {
   key: string;
@@ -268,6 +278,8 @@ type FlatRow = {
 const loading = ref(false);
 const error = ref('');
 const keyword = ref('');
+const selectedFamily = ref('');
+const selectedProvider = ref('');
 const providers = ref<AdminLlmProviderRow[]>([]);
 // Preserve initial positions across settings changes and health refreshes.
 const rowPositions = new Map<string, number>();
@@ -287,10 +299,13 @@ const flatRows = computed<FlatRow[]>(() => {
   return out.sort((a, b) => rowPositions.get(a.key)! - rowPositions.get(b.key)!);
 });
 
+const familyOptions = computed(() => [...new Set(flatRows.value.map(row => modelFamily(row.model.modelId, row.model.displayName)))].sort((a, b) => a === '其他' ? 1 : b === '其他' ? -1 : a.localeCompare(b)));
+
 const filteredRows = computed(() => {
   const q = keyword.value.trim().toLowerCase();
-  if (!q) return flatRows.value;
   return flatRows.value.filter((r) => {
+    if (selectedFamily.value && modelFamily(r.model.modelId, r.model.displayName) !== selectedFamily.value) return false;
+    if (selectedProvider.value && r.provider.id !== selectedProvider.value) return false;
     const hay = `${r.model.modelId} ${r.model.displayName} ${r.provider.name} ${r.provider.displayName}`.toLowerCase();
     return hay.includes(q);
   });
@@ -302,7 +317,7 @@ const pagedRows = computed(() => {
   const start = (page.value - 1) * pageSize.value;
   return filteredRows.value.slice(start, start + pageSize.value);
 });
-watch([keyword, pageSize], () => { page.value = 1; });
+watch([keyword, selectedFamily, selectedProvider, pageSize], () => { page.value = 1; });
 watch(filteredRows, (rows) => {
   const last = Math.max(1, Math.ceil(rows.length / pageSize.value));
   if (page.value > last) page.value = last;
@@ -790,10 +805,18 @@ onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of pr
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
   align-items: center;
 }
 .page-search {
   width: 260px;
+}
+.page-filter {
+  width: 160px;
+}
+.page-filter :deep(.el-select__selected-item) {
+  color: var(--el-text-color-regular);
+  font-weight: var(--el-font-weight-primary);
 }
 .page-alert {
   margin-bottom: 0;

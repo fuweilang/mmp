@@ -39,7 +39,7 @@ export type KnowledgeIndex = {
     chunkCount: number;
     tokenCount: number;
     createdAt?: string;
-    job?: {id:string;status:string;errorCode?:string|null} | null;
+    job?: {id:string;status:string;stage?:string;errorCode?:string|null;progress?:KnowledgeOcrProgress} | null;
     profile?: {enabled:boolean};
 };
 export type KnowledgeRevision = {
@@ -69,7 +69,9 @@ export type KnowledgeRelease = {
         indexRevisionId: string;
     }>;
 };
+export type KnowledgeOcrProgress = {totalPages:number;completedPages:number;nextPage:number|null;batchSize:number};
 export type KnowledgeJob = {
+    progress?: KnowledgeOcrProgress;
     id: string;
     status: string;
     stage: string;
@@ -118,6 +120,9 @@ export type KnowledgeTestResult = {
         }>;
     };
 };
+export type KnowledgeIndexConfig = { ocrModelId?:string; ocrRouteHash?:string; parseMode: 'text' | 'ocr' | 'auto'; targetTokens: number; maxTokens: number; overlapTokens: number };
+export type KnowledgePreparationContext = { documentId: string; revisionId: string; profileId: string; tokenizer: string; capacityTokens: number; capabilities: {ocrAvailable: boolean}; defaultConfig: KnowledgeIndexConfig };
+export type KnowledgePreparationPreview = { ocrSample?:{totalPages:number;sampledPages:number}; backgroundReprocessAvailable?:boolean; previewKey: string; profileId: string; parseStatus: string; failureReason?: string; readyForReprocess: boolean; resolvedConfig: KnowledgeIndexConfig; displayText: string; totalOriginalChars: number; textPage: number; textPageCount: number; displayTextTruncated: boolean; displayChunks: Array<{ordinal: number; text: string; tokenCount: number; locator: Record<string,unknown>; sourceStart: number; sourceEnd: number}>; totalChunkCount: number; totalChunkTokens: number; chunkPage: number; chunkPageCount: number; displayChunkTruncated: boolean; whyPartial?: string };
 const kc = '/knowledge-core';
 const kcPost = <T>(path: string, body?: unknown, signal?: AbortSignal) => adminHttp<T>(`${kc}/${path}`, { method: 'POST', ...(body ? { body: JSON.stringify(body) } : {}), signal });
 export const adminKnowledgeCoreApi = {
@@ -150,7 +155,9 @@ export const adminKnowledgeCoreApi = {
     enableDocument: (id: string, enabled: boolean) => adminHttp<KnowledgeDocument>(`${kc}/documents/${id}`, { method: 'PATCH', body: JSON.stringify({ enabled }) }),
     deleteDocument: (id: string) => adminHttp<{ id: string; deleted: true }>(`${kc}/documents/${id}`, { method: 'DELETE' }),
     usage: (id: string) => adminHttp<Array<{id: string; name: string}>>(`${kc}/documents/${id}/usage`),
-    reindex: (id: string, profileId: string) => kcPost<KnowledgeJob>(`revisions/${id}/reindex`, { profileId, idempotencyKey: crypto.randomUUID() }),
+    preparationContext: (documentId: string, revisionId: string, signal?: AbortSignal) => adminHttp<KnowledgePreparationContext>(`${kc}/documents/${documentId}/revisions/${revisionId}/preparation-context`, {signal}),
+    preparationPreview: (documentId: string, revisionId: string, body: {config: KnowledgeIndexConfig; textPage?: number; chunkPage?: number}, signal?: AbortSignal) => kcPost<KnowledgePreparationPreview>(`documents/${documentId}/revisions/${revisionId}/preparation-preview`, body, signal),
+    reindex: (id: string, profileId: string, indexConfig?: KnowledgeIndexConfig, idempotencyKey: string = crypto.randomUUID()) => kcPost<KnowledgeJob>(`revisions/${id}/reindex`, { profileId, idempotencyKey, ...(indexConfig ? {indexConfig} : {}) }),
     job: (id: string) => adminHttp<KnowledgeJob>(`${kc}/jobs/${id}`), jobAction: (id: string, action: 'retry' | 'cancel') => kcPost<KnowledgeJob>(`jobs/${id}/${action}`),
     releases: (id: string) => adminHttp<KnowledgeRelease[]>(`${kc}/bases/${id}/releases`), release: (id: string, indexRevisionIds: string[]) => kcPost<KnowledgeRelease>(`bases/${id}/releases`, { indexRevisionIds }),
     chunks: (documentId: string, revisionId: string, indexId: string, offset = 0) => adminHttp<{

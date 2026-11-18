@@ -57,13 +57,18 @@ export function chunkSections(sections: readonly TextSection[], options: Chunkin
         headings.push({ offset: match.index!, path: [...headingPath] });
       }
     }
+    const headingEnds = [...headings.map(h => h.offset), text.length];
+    const paragraphEnds = [...boundaries, text.length];
+    let sentenceEnds: number[] | undefined, wordEnds: number[] | undefined;
+    const sentences = () => sentenceEnds ??= Array.from(new Intl.Segmenter(undefined, { granularity: 'sentence' }).segment(text), s => s.index + s.segment.length);
+    const words = () => wordEnds ??= Array.from(new Intl.Segmenter(undefined, { granularity: 'word' }).segment(text), s => s.index + s.segment.length);
     let start = 0;
     let covered = 0;
     let headingIndex = -1;
     let oversizedRowEnd = 0;
     while (start < last) {
       while (headingIndex + 1 < headings.length && headings[headingIndex + 1].offset <= offsets[start]) headingIndex++;
-      const nextHeading = headings[headingIndex + 1]?.offset ?? text.length;
+      const nextHeading = section.softHeadingBoundaries ? text.length : headings[headingIndex + 1]?.offset ?? text.length;
       let ceiling = Math.min(last, start + maxTokens * 8, lowerBound(offsets, nextHeading));
       const countTo = (end: number) => countTokens(header + text.slice(offsets[start], offsets[end]), counter);
       let end = start;
@@ -103,10 +108,49 @@ export function chunkSections(sections: readonly TextSection[], options: Chunkin
         end = start + 1;
         if (countTo(end) > maxTokens) throw new Error('A source character cannot fit max token budget');
       }
-      const boundaryIndex = lowerBound(boundaries, offsets[end] + 1) - 1;
-      const boundary = boundaries[boundaryIndex];
-      if (!section.tableHeader && offsets[end] < nextHeading && boundary > offsets[start] && boundary >= offsets[start] + (offsets[end] - offsets[start]) / 2) {
-        end = lowerBound(offsets, boundary);
+      if (!section.tableHeader) {
+        const preferredEnd = end;
+        const fence = lowerBound(offsets, nextHeading);
+        // A complete chapter/remainder is preferable to cutting it only to hit target.
+        if (fence <= ceiling && countTo(fence) <= maxTokens) end = fence;
+        else {
+          const choose = (points: readonly number[]): number | undefined => {
+            const at = lowerBound(points, offsets[preferredEnd] + 1);
+            const candidates = [points[at - 1], points[at]];
+            let best: number | undefined, distance = Infinity;
+            for (const point of candidates) {
+              if (point === undefined || point <= offsets[start] || point > nextHeading) continue;
+              const candidate = lowerBound(offsets, point);
+              if (candidate > ceiling || candidate <= covered) continue;
+              const tokens = countTo(candidate);
+              if (tokens > maxTokens) continue;
+              if (point < offsets[preferredEnd] && tokens < targetTokens / 2) {
+                const following = points[at];
+                // Leaving a shorter chunk is better than breaking the next intact unit.
+                if (following === undefined || following > offsets[Math.min(last, candidate + maxTokens * 8)]
+                  || countTokens(header + text.slice(point, following), counter) > maxTokens) continue;
+              }
+              const score = Math.abs(tokens - targetTokens);
+              if (score <= distance) { best = candidate; distance = score; }
+            }
+            return best;
+          };
+          // Smaller units are considered only when the enclosing unit cannot fit.
+          const levels = [...(section.softHeadingBoundaries ? [() => headingEnds] : []), () => paragraphEnds, sentences, words];
+          let dropOverlap = false;
+          for (const level of levels) {
+            const points = level(), semantic = choose(points);
+            if (semantic !== undefined) { end = semantic; break; }
+            const point = points[lowerBound(points, offsets[covered] + 1)];
+            if (start < covered && point !== undefined && point <= nextHeading
+              && point <= offsets[Math.min(last, covered + maxTokens * 8)]
+              && countTokens(header + text.slice(offsets[covered], point), counter) <= maxTokens) {
+              dropOverlap = true; break;
+            }
+          }
+          // Do not sacrifice a complete next unit just to retain optional overlap.
+          if (dropOverlap) { start = covered; continue; }
+        }
       }
       // An unusual injected counter must never make overlapping windows stop progressing.
       if (end <= covered) { start = covered; continue; }
@@ -118,10 +162,30 @@ export function chunkSections(sections: readonly TextSection[], options: Chunkin
       if (section.paragraphOffsets?.length) {
         const firstText = offsets[start] + Math.max(0, sourceText.search(/\S/));
         const paragraphIndex = lowerBound(paragraphStarts, firstText + 1) - 1;
-        if (paragraphIndex >= 0) locator.paragraph = section.paragraphOffsets[paragraphIndex].paragraph;
+        if (paragraphIndex >= 0) {
+          locator.paragraph = section.paragraphOffsets[paragraphIndex].paragraph;
+          const lastText = offsets[start] + sourceText.trimEnd().length - 1;
+          const lastParagraphIndex = lowerBound(paragraphStarts, lastText + 1) - 1;
+          const lastParagraph = section.paragraphOffsets[lastParagraphIndex]?.paragraph;
+          if (lastParagraph !== undefined && lastParagraph > locator.paragraph) locator.paragraphEnd = lastParagraph;
+        }
       }
       const path = headings[headingIndex]?.path ?? section.headingPath ?? section.locator.headingPath;
       if (path) locator.headingPath = [...path];
+      if (section.softHeadingBoundaries) {
+        const paths: string[][] = [];
+        if (path?.length) paths.push([...path]);
+        for (let i = headingIndex + 1; i < headings.length && headings[i].offset < offsets[end]; i++) {
+          if (headings[i].offset >= offsets[start]) paths.push([...headings[i].path]);
+        }
+        if (paths.length) {
+          const seenPaths = new Set<string>();
+          locator.headingPaths = paths.filter(p => { const key = JSON.stringify(p); if (seenPaths.has(key)) return false; seenPaths.add(key); return true; });
+          const common = [...paths[0]];
+          for (const p of paths.slice(1)) { let n=0; while(n<common.length && n<p.length && common[n]===p[n]) n++; common.length=n; }
+          locator.headingPath = common;
+        }
+      }
       if (section.tableHeader && section.locator.rowStart !== undefined) {
         locator.rowStart = section.locator.rowStart + lowerBound(newlines, offsets[start]);
         locator.rowEnd = section.locator.rowStart + lowerBound(newlines, offsets[end] - 1);
@@ -144,7 +208,18 @@ export function chunkSections(sections: readonly TextSection[], options: Chunkin
           nextStart = mid; high = mid - 1;
         } else low = mid + 1;
       }
-      start = nextStart;
+      // Overlap is a ceiling, not a reason to start halfway through a sentence.
+      // Prefer whole heading/paragraph units, then complete sentences; omit overlap
+      // when none fits. The main source range still progresses without any gap.
+      const align = (points: readonly number[]): number | undefined => {
+        for (let i = lowerBound(points, offsets[nextStart]); i < points.length && points[i] < offsets[end]; i++) {
+          const candidate = lowerBound(offsets, points[i]);
+          if (candidate > start && countTokens(text.slice(offsets[candidate], offsets[end]), counter) <= overlapTokens) return candidate;
+        }
+        return undefined;
+      };
+      start = (section.softHeadingBoundaries ? align(headingEnds) : undefined)
+        ?? align(paragraphEnds) ?? align(sentences()) ?? end;
     }
   }
   return result;

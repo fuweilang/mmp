@@ -5,7 +5,7 @@
         :model-value="keyword"
         class="keyword-input"
         clearable
-        placeholder="搜索名称、标识、ID 或简介"
+        placeholder="搜索专家名称 / 完整标识 / ID"
         :prefix-icon="Search"
         @update:model-value="emit('update:keyword', $event)"
         @input="emit('search-input')"
@@ -28,11 +28,20 @@
       <el-button
         v-if="canAuthor"
         type="warning"
-        :disabled="!selectedCount"
+        :disabled="!selectedCount || bulkPublishLoading"
         :loading="bulkOfflineLoading"
         @click="emit('bulk-offline')"
       >
         批量下架（{{ selectedCount }}）
+      </el-button>
+      <el-button
+        v-if="canAuthor"
+        type="primary"
+        :disabled="!selectedPublishCount || bulkOfflineLoading || Boolean(publishingId || offlineId || deletingId)"
+        :loading="bulkPublishLoading"
+        @click="emit('bulk-publish')"
+      >
+        一键发布（{{ selectedPublishCount }}）
       </el-button>
     </div>
 
@@ -58,7 +67,7 @@
       :row-class-name="rowClassName"
       @selection-change="onSelectionChange"
     >
-      <el-table-column v-if="canAuthor" type="selection" width="48" :selectable="canSelectOffline" />
+      <el-table-column v-if="canAuthor" type="selection" width="48" />
       <el-table-column label="专家" min-width="260">
         <template #default="{ row }">
           <div class="agent-identity">
@@ -118,6 +127,7 @@
               type="primary"
               v-if="canAuthor"
               :loading="publishingId === row.id"
+              :disabled="bulkPublishLoading"
               @click="emit('publish', row)"
             >
               发布
@@ -127,6 +137,7 @@
               text
               type="warning"
               :loading="offlineId === row.id"
+              :disabled="bulkPublishLoading"
               @click="emit('offline', row)"
             >
               下架
@@ -136,6 +147,7 @@
               type="danger"
               v-if="canAuthor"
               :loading="deletingId === row.id"
+              :disabled="bulkPublishLoading"
               @click="emit('delete', row)"
             >
               删除
@@ -172,7 +184,7 @@ import { Search, UserRound } from 'lucide-vue-next';
 import type { OfficialAgentKind, OfficialAgentRow, OfficialAgentStatus, OfficialAgentStatusCounts } from '../../../api/admin';
 import { formatDate, kindLabel, statusLabel, statusType } from '../../../components/admin/official-agents/agent-display';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   rows: OfficialAgentRow[];
   total: number;
   loading: boolean;
@@ -186,11 +198,13 @@ const props = defineProps<{
   canAuthor: boolean;
   highlightedId: string;
   selectedCount: number;
+  selectedPublishCount?: number;
   bulkOfflineLoading: boolean;
+  bulkPublishLoading?: boolean;
   publishingId: string;
   offlineId: string;
   deletingId: string;
-}>();
+}>(), { selectedPublishCount: 0, bulkPublishLoading: false });
 
 const emit = defineEmits<{
   'update:keyword': [value: string];
@@ -201,6 +215,7 @@ const emit = defineEmits<{
   reset: [];
   create: [];
   'bulk-offline': [];
+  'bulk-publish': [];
   viewer: [row: OfficialAgentRow];
   edit: [row: OfficialAgentRow];
   'publish-records': [row: OfficialAgentRow];
@@ -236,10 +251,6 @@ function onKindChange(value: OfficialAgentKind | '' | undefined) {
 
 function onAvatarError(row: OfficialAgentRow) {
   brokenAvatarIds[avatarCacheKey(row)] = true;
-}
-
-function canSelectOffline(row: OfficialAgentRow) {
-  return row.status === 'PUBLISHED';
 }
 
 function onSelectionChange(rowsSelected: OfficialAgentRow[]) {

@@ -9,6 +9,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateOfficialAgentDto {
   @IsOptional() @IsObject() executionConfig?: Record<string, unknown>;
@@ -22,9 +23,10 @@ export class CreateOfficialAgentDto {
   @IsIn(['GENERAL', 'KNOWLEDGE'])
   kind!: 'GENERAL' | 'KNOWLEDGE';
 
-  @IsString()
-  @MinLength(2)
-  @MaxLength(80)
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsString({ message: '请输入专家名称' })
+  @MinLength(2, { message: '名称至少需要2个字' })
+  @MaxLength(80, { message: '名称最多80个字' })
   name!: string;
 
   @IsString()
@@ -74,9 +76,10 @@ export class CreateOfficialAgentDto {
 export class UpdateOfficialAgentDto {
   @IsOptional() @IsObject() executionConfig?: Record<string, unknown>;
   @IsOptional()
-  @IsString()
-  @MinLength(2)
-  @MaxLength(80)
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsString({ message: '请输入专家名称' })
+  @MinLength(2, { message: '名称至少需要2个字' })
+  @MaxLength(80, { message: '名称最多80个字' })
   name?: string;
 
   @IsOptional()

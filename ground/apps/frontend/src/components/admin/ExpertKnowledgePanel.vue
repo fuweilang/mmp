@@ -45,7 +45,7 @@
     <input ref="fileInput" class="expert-knowledge-file-input" type="file" accept=".txt,.md,.markdown,.pdf,.docx,.pptx,.xlsx,.csv" aria-label="选择知识库文件" :disabled="disabled || uploadBusy || !!activeOperation" @change="chooseFile" />
     <div class="expert-knowledge-upload-options">
       <span v-if="usableProfiles.length">支持 PDF、Word、PPT、Excel、文本，单文件不超过 20 MiB</span>
-      <span v-else>尚未配置可用语义服务。<a href="/admin/official-knowledge" target="_blank" rel="noopener">配置检索服务</a><button type="button" class="expert-knowledge-link" @click="refresh(true)">配置后刷新</button></span>
+      <span v-else>尚未配置可用语义服务。<a href="/admin/knowledge-services" target="_blank" rel="noopener">配置检索服务</a><button type="button" class="expert-knowledge-link" @click="refresh(true)">配置后刷新</button></span>
     </div>
     <div v-if="viewReleaseId" class="expert-knowledge-bound-context"><span>当前专家使用的资料</span><button type="button" class="expert-knowledge-link" @click="viewReleaseId = ''">管理知识库</button></div>
     <p v-if="documentError" class="expert-knowledge-error" role="alert">{{ documentError }}</p>

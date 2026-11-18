@@ -109,10 +109,10 @@ test('DOCX paragraphs survive; expanded XML and entity declarations are bounded'
   const out = await parseKnowledgeBytes('x.docx', bytes);
   assert.deepEqual(
     out.sections.map((s) => s.text),
-    ['甲', '乙'],
+    ['甲\n\n乙'],
   );
   assert.deepEqual(
-    out.sections.map((s) => s.locator.paragraph),
+    out.sections.flatMap((s) => s.paragraphOffsets?.map(p=>p.paragraph) ?? []),
     [1, 2],
   );
   assert.equal(
@@ -339,7 +339,7 @@ test('markdown headings carry into later paragraph sections for citation locator
   );
   const chunks = chunkSections(out.sections);
   assert.ok(chunks.some(chunk => chunk.text.includes('正文') && chunk.locator.headingPath?.includes('一章')));
-  assert.ok(chunks.some(chunk => chunk.locator.headingPath?.join('/') === '一章/二节'));
+  assert.ok(chunks.some(chunk => chunk.locator.headingPaths?.some(path=>path.join('/') === '一章/二节')));
 });
 test('content addressed storage atomically publishes complete bytes for concurrent duplicates', async () => {
   const { KnowledgeBlobStorage } = await import(
@@ -460,9 +460,10 @@ test('index configuration rejects invented versions and non-object option contai
 test('Markdown chunks use headings active at section entry, then local transitions', async () => {
   const parsed = await parseKnowledgeBytes('headings.md', Buffer.from('# A\n\nIntro\n## B\nBody\n\nTail'));
   const chunks = chunkSections(parsed.sections);
-  assert.deepEqual(chunks.find(c => c.sourceText.startsWith('Intro'))?.locator.headingPath, ['A']);
-  assert.deepEqual(chunks.find(c => c.sourceText.startsWith('## B'))?.locator.headingPath, ['A', 'B']);
-  assert.deepEqual(chunks.find(c => c.sourceText.includes('Tail'))?.locator.headingPath, ['A', 'B']);
+  assert.equal(chunks.length,1);
+  assert.deepEqual(chunks[0].locator.headingPath, ['A']);
+  assert.deepEqual(chunks[0].locator.headingPaths, [['A'],['A','B']]);
+  assert.equal(chunks[0].sourceText, '# A\n\nIntro\n## B\nBody\n\nTail');
 });
 test('embedding rejects float32 all-zero underflow at the provider boundary', () => {
   assert.throws(() => validateEmbeddingVector([1e-50, 0], 2), { code: 'UPSTREAM_INVALID_RESPONSE' });
@@ -476,10 +477,11 @@ test('DOCX inherited heading and outline paths survive actual chunking and new p
   zip.file('word/document.xml', '<w:document xmlns:w="urn:word"><w:body><w:p><w:pPr><w:pStyle w:val="RefundTitle"/></w:pPr><w:r><w:t>Refund policy</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>Deadlines</w:t></w:r></w:p><w:p><w:r><w:t>Refund within three days.</w:t></w:r></w:p><w:p><w:pPr><w:outlineLvl w:val="0"/></w:pPr><w:r><w:t>Other</w:t></w:r></w:p></w:body></w:document>');
   const result = await parseKnowledgeBytes('headings.docx', await zip.generateAsync({type:'nodebuffer'}));
   assert.equal(result.status, 'READY');
-  assert.deepEqual(result.sections.map(s=>s.locator.headingPath), [['Refund policy'],['Refund policy','Deadlines'],['Refund policy','Deadlines'],['Other']]);
+  assert.deepEqual(result.sections.map(s=>s.locator.headingPath), [['Refund policy'],['Refund policy','Deadlines'],['Other']]);
   const chunks = chunkSections(result.sections, {targetTokens:40,maxTokens:80,overlapTokens:0});
   assert.ok(chunks.some(c=>c.text.includes('three days') && c.locator.headingPath?.join('/') === 'Refund policy/Deadlines'));
-  assert.equal(KNOWLEDGE_PARSER_VERSION, 'knowledge-parser-v4');
+  assert.equal(KNOWLEDGE_PARSER_VERSION, 'knowledge-parser-v9');
+  assert.deepEqual(result.sections[1].paragraphOffsets?.map(p=>p.paragraph), [2,3]);
 });
 
 
@@ -500,14 +502,15 @@ test('publication and request dependency validation reject invalid immutable cap
  for(const batchSize of [0,129,1.5])assert.throws(()=>validateKnowledgeProfileDependency({...profile,task:'RERANK',adapter:'COMPATIBLE_RERANK',enabled:true,endpoint:'https://supplier.invalid/rerank',batchSize} as any,{enabled:false,apiKeyEnc:null},'RERANK'),(e:any)=>e.code==='PROFILE_INVALID_CONFIGURATION');
 });
 
-test('Markdown keeps a named method and its short paragraphs together without crossing the next heading', async () => {
+test('Markdown keeps a complete named method and its title metadata when packing neighboring sections', async () => {
   const source = '# 文案库\n\n## AIDA模型 🦣\n\nAttention：吸引注意。\n\nInterest：培养兴趣。\n\nDesire：激发欲望。\n\nAction：促成行动。\n\n## PAS方法\n\n这是另一种方法。';
   const parsed = await parseKnowledgeBytes('methods.md', Buffer.from(source));
   const chunks = chunkSections(parsed.sections, { targetTokens: 192, maxTokens: 256, overlapTokens: 0 });
   const method = chunks.find(chunk => chunk.text.includes('AIDA模型') && chunk.text.includes('Action：促成行动'));
   assert.ok(method, 'Heading-only and single-step fragments must not replace the complete short method');
   assert.ok(method.text.includes('Attention：吸引注意') && method.text.includes('Desire：激发欲望'));
-  assert.ok(!method.text.includes('PAS方法'));
+  assert.ok(method.locator.headingPaths?.some(path=>path.includes('AIDA模型 🦣')));
+  if (method.text.includes('PAS方法')) assert.ok(method.locator.headingPaths?.some(path=>path.includes('PAS方法')));
   assert.ok(source.includes(method.sourceText));
   const canonical = parsed.sections.map(section => section.text).join('');
   for (const chunk of chunks) assert.equal(canonical.slice(chunk.sourceStart, chunk.sourceEnd), chunk.sourceText);

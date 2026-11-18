@@ -5,20 +5,25 @@ export interface SourceLocator {
   sectionId?: string;
   page?: number;
   paragraph?: number;
+  paragraphEnd?: number;
   rowStart?: number;
   rowEnd?: number;
   headingPath?: string[];
+  /** All headings covered by a packed Markdown chunk; primary path is their common ancestor. */
+  headingPaths?: string[][];
 }
 
 export interface TextSection {
   text: string;
   locator: SourceLocator;
   sourceOffset?: number;
-  /** Paragraph starts within grouped Markdown text, in UTF-16 code units. */
+  /** Paragraph starts within grouped canonical text, in UTF-16 code units. */
   paragraphOffsets?: { offset: number; paragraph: number }[];
   headingPath?: string[];
   /** Separate original table header; text contains data rows with newline delimiters. */
   tableHeader?: string;
+  /** Markdown headings guide packing without forcing tiny standalone chunks. */
+  softHeadingBoundaries?: boolean;
 }
 
 export interface KnowledgeChunkInput {

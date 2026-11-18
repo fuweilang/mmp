@@ -70,6 +70,17 @@ export class KnowledgeBasePatchDto {
 }
 export class KnowledgeIndexConfigDto {
   @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  ocrModelId?: string;
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  ocrRouteHash?: string;
+  @IsOptional()
+  @IsIn(['text', 'ocr', 'auto'])
+  parseMode?: 'text' | 'ocr' | 'auto';
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(8192)
@@ -84,6 +95,23 @@ export class KnowledgeIndexConfigDto {
   @Min(0)
   @Max(8191)
   overlapTokens?: number;
+}
+export class KnowledgePreparationPreviewDto {
+  @ValidateNested()
+  @Type(() => KnowledgeIndexConfigDto)
+  config!: KnowledgeIndexConfigDto;
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(250)
+  textPage = 1;
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  chunkPage = 1;
 }
 export class KnowledgeReindexDto {
   @IsString()

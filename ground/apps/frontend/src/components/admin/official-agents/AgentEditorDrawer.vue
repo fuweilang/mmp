@@ -42,8 +42,8 @@
       <el-form-item label="专家头像" class="expert-metadata-avatar">
         <CatalogIconEditor profile="expert" v-model="pendingIcon" v-model:removed="removeIcon" :current-url="formAvatarUrl" :disabled="editorBusy || editorPreviewBusy" @validating="iconValidating=$event" @preview-change="draftAvatarUrl=$event" />
       </el-form-item>
-      <el-form-item label="名称" prop="name" required>
-        <el-input v-model="form.name" aria-label="专家名称" maxlength="80" show-word-limit />
+      <el-form-item label="名称" prop="name" required :error="nameError">
+        <el-input v-model="form.name" aria-label="专家名称" maxlength="80" show-word-limit :validate-event="false" @input="validateEditorName" @blur="validateEditorName" />
       </el-form-item>
       <el-form-item label="描述（选填）" prop="summary">
         <el-input
@@ -100,7 +100,7 @@
 
           </el-collapse-item>
           <el-collapse-item title="标识" name="identifier">
-            <el-form-item label="标识" prop="key"><el-input v-model="form.key" :disabled="editorBusy || editorPreviewBusy || Boolean(editingId)" maxlength="64" placeholder="可留空自动生成；创建后只读" /></el-form-item>
+            <el-form-item prop="key"><el-input v-model="form.key" aria-label="标识" :disabled="editorBusy || editorPreviewBusy || Boolean(editingId)" maxlength="64" placeholder="可留空自动生成；创建后只读" /></el-form-item>
             <el-form-item v-if="form.toolScope.length" label="已有工具权限" prop="toolScope">
               <p class="form-hint">保留历史配置；取消勾选可移除已有权限。</p>
               <el-checkbox-group v-model="form.toolScope" class="expert-tool-options">
@@ -109,7 +109,7 @@
             </el-form-item>
           </el-collapse-item>
         </el-collapse>
-        <template #footer><el-button type="primary" :disabled="editorBusy || iconValidating" @click="metadataOpen=false">确认</el-button></template>
+        <template #footer><el-button type="primary" :disabled="editorBusy || iconValidating" @click="confirmMetadata">确认</el-button></template>
         </el-dialog>
       </section>
       <section class="expert-capabilities-panel" aria-label="专家能力配置">
@@ -200,6 +200,7 @@ const removeIcon = ref(false);
 const iconValidating = ref(false);
 const editorBaseline = ref('');
 const metadataOpen = ref(false);
+const nameError = ref('');
 const metadataSections = ref<string[]>([]);
 const executionBlockers = ref<string[]>([]);
 const editorPreviewBusy = ref(false);
@@ -281,7 +282,10 @@ const rules: FormRules = {
       trigger: 'blur',
     },
   ],
-  name: [{ required: true, message: '请输入专家名称', trigger: 'blur' }],
+  name: [{ validator: (_rule, value, callback) => {
+    const issue = editorNameIssue(String(value ?? ''));
+    callback(issue ? new Error(issue) : undefined);
+  }, trigger: 'blur' }],
   openingQuestionsText: [{ validator: (_rule, value, callback) => {
     const lines = splitLines(String(value ?? ''));
     if (lines.length > 4) callback(new Error('开场白最多填写4条'));
@@ -310,6 +314,23 @@ function editorPreviewFields() {
 function openMetadata() {
   metadataSections.value = [];
   metadataOpen.value = true;
+}
+
+function editorNameIssue(value: string) {
+  const name = value.trim();
+  const length = [...name].length;
+  return !name ? '请输入专家名称'
+    : length < 2 ? '名称至少需要2个字'
+    : length > 80 ? '名称最多80个字' : '';
+}
+
+function validateEditorName() {
+  nameError.value = editorNameIssue(form.name);
+  return !nameError.value;
+}
+
+function confirmMetadata() {
+  if (validateEditorName()) metadataOpen.value = false;
 }
 
 function onEditorCommand(command: string) {
@@ -432,6 +453,7 @@ async function loadEnabledSkills() {
 }
 
 function resetEditor() {
+  nameError.value = '';
   form.executionConfig = editableExecutionConfig({ route: 'KNOWLEDGE_CORE' });
   metadataSections.value = [];
   metadataOpen.value = false;
@@ -506,6 +528,10 @@ async function revealEditorField(prop: string | null) {
 }
 
 async function validateEditorForm(): Promise<boolean> {
+  if (!validateEditorName()) {
+    await revealEditorField('name');
+    return false;
+  }
   if (!formRef.value) return true;
   // Prefer callback form so invalidFields are available across Element Plus versions.
   return await new Promise<boolean>((resolve) => {

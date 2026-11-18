@@ -23,8 +23,10 @@ describe('skill form validation', () => {
     assert.deepEqual(skillFormIssues(base), {});
   });
 
-  it('saves an incomplete first draft before enable instead of rejecting the write', () => {
-    assert.deepEqual(skillFormIssues({ ...base, enable: true }), {});
+  it('rejects incomplete enable before any draft write', () => {
+    assert.deepEqual(skillFormIssues({ ...base, enable: true }), {
+      summary: '请填写一句话介绍', instruction: '请填写技能指令',
+    });
     const kept = keepStoredExecution({
       enable: true,
       summary: '',
@@ -60,7 +62,7 @@ describe('skill form validation', () => {
       zipSelected: false,
     });
     assert.equal(issues.instruction, undefined);
-    assert.equal(issues.zip, undefined);
+    assert.equal(issues.zip, '请上传并通过校验的技能包');
     assert.equal(skillFormIssues({
       ...base,
       editing: true,

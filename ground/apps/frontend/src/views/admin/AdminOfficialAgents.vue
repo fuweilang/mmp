@@ -25,8 +25,10 @@
       :page-size="pageSize"
       :can-author="canAuthor"
       :highlighted-id="highlightedId"
-      :selected-count="selectedRows.length"
+      :selected-count="selectedPublishedRows.length"
+      :selected-publish-count="selectedPublishableRows.length"
       :bulk-offline-loading="bulkOfflineLoading"
+      :bulk-publish-loading="bulkPublishLoading"
       :publishing-id="publishingId"
       :offline-id="offlineId"
       :deleting-id="deletingId"
@@ -35,6 +37,7 @@
       @reset="onReset"
       @create="goCreate"
       @bulk-offline="onBulkOffline"
+      @bulk-publish="onBulkPublish"
       @viewer="openViewer"
       @edit="goEdit"
       @publish-records="openPublishRecords"
@@ -135,8 +138,11 @@ const {
   offlineId,
   deletingId,
   bulkOfflineLoading,
+  bulkPublishLoading,
   selectedRows,
+  selectedPublishableRows,
   publish,
+  bulkPublish,
   offline,
   remove,
   viewerOpen,
@@ -160,6 +166,7 @@ const {
 
 const listRef = ref<InstanceType<typeof AdminOfficialAgentsList> | null>(null);
 const editorRef = ref<InstanceType<typeof AgentEditorDrawer> | null>(null);
+const selectedPublishedRows = computed(() => selectedRows.value.filter((row) => row.status === 'PUBLISHED'));
 let bypassLeaveGuard = false;
 
 function editorTarget(): { kind: 'new' } | { kind: 'edit'; id: string } | null {
@@ -272,8 +279,15 @@ async function onDelete(row: OfficialAgentRow) {
   }
 }
 
+async function onBulkPublish() {
+  if (!await bulkPublish()) return;
+  selectedRows.value = [];
+  listRef.value?.clearSelection?.();
+}
+
 async function onBulkOffline() {
-  const ids = selectedRows.value.map((row) => row.id);
+  if (bulkPublishLoading.value) return;
+  const ids = selectedPublishedRows.value.map((row) => row.id);
   if (!ids.length) return;
   try {
     await ElMessageBox.confirm(

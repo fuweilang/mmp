@@ -5,7 +5,7 @@ import ElementPlus from 'element-plus';
 import KnowledgeFolderManager from '../src/components/admin/KnowledgeFolderManager.vue';
 import KnowledgeCoreAdmin from '../src/components/admin/KnowledgeCoreAdmin.vue';
 import ExpertKnowledgeFilesPanel from '../src/components/admin/ExpertKnowledgeFilesPanel.vue';
-const api=vi.hoisted(()=>({bases:vi.fn(),documents:vi.fn(),releases:vi.fn(),profiles:vi.fn(),providers:vi.fn(),health:vi.fn(),test:vi.fn(),release:vi.fn(),chunks:vi.fn(),usage:vi.fn(),createBase:vi.fn(),originalUrl:()=>'/original',extracted:vi.fn()}));
+const api=vi.hoisted(()=>({bases:vi.fn(),documents:vi.fn(),upload:vi.fn(),releases:vi.fn(),profiles:vi.fn(),providers:vi.fn(),health:vi.fn(),jobAction:vi.fn(),test:vi.fn(),release:vi.fn(),chunks:vi.fn(),usage:vi.fn(),createBase:vi.fn(),originalUrl:()=>'/original',extracted:vi.fn()}));
 vi.mock('../src/api/admin',async original=>({...await original<typeof import('../src/api/admin')>(),adminKnowledgeCoreApi:api}));
 let app:App|undefined,root:HTMLElement|undefined,router:Router|undefined;
 const ready:any={id:'file-ready',title:'可用资料.md',enabled:true,revisions:[{id:'rev-ready',createdAt:'2026-11-10',originalName:'可用资料.md',parserFormat:'.md',indexes:[{id:'index-ready',status:'READY',profileId:'profile',chunkCount:1}]}]};
@@ -20,3 +20,50 @@ it('file selection excludes unprocessed files and saves only checked files from 
 it('advanced knowledge settings lead with plain language',async()=>{api.profiles.mockResolvedValue([{id:'p1',providerId:'prov',task:'EMBEDDING',model:'BAAI/bge-m3',dimension:1024,enabled:true}]);api.providers.mockResolvedValue([{id:'prov',name:'sf',displayName:'SiliconFlow 知识库',hasApiKey:true,apiKeyMasked:'••••sfuo',enabled:true,models:[],baseUrl:'https://api.siliconflow.cn/v1'}]);api.health.mockResolvedValue({configured:true,providerProbed:false});await mount(KnowledgeCoreAdmin,{settingsOnly:true});await vi.waitFor(()=>expect(root!.querySelector('.service-status')?.textContent).toContain('可以搜索'));expect(root!.querySelector('.service-status')?.textContent).toContain('SiliconFlow 知识库 · BAAI/bge-m3');expect(root!.querySelector('.service-status')?.textContent).not.toContain('证据预算');expect([...root!.querySelectorAll('.el-collapse')].some(el=>el.textContent?.includes('证据预算'))).toBe(true);const find=[...root!.querySelectorAll('button')].find(el=>el.textContent?.trim()==='查找');expect(find).toBeTruthy();expect((find as HTMLButtonElement).disabled).toBe(true);await click('更换密钥');await vi.waitFor(()=>expect([...document.querySelectorAll('button')].some(el=>el.textContent?.trim()==='测试')).toBe(true));await click('取消');await click('管理凭据');await vi.waitFor(()=>expect([...document.querySelectorAll('button')].some(el=>el.textContent?.trim()==='测试')).toBe(true));await click('取消');await click('新建供应商凭据');await vi.waitFor(()=>expect([...document.querySelectorAll('button')].some(el=>el.textContent?.trim()==='测试')).toBe(true));});
 it('shows markdown text before indexing finishes',async()=>{api.documents.mockResolvedValue([{id:'file-md',title:'1.md',enabled:true,revisions:[{id:'rev-md',createdAt:'2026-11-16',originalName:'1.md',parserFormat:'.md',indexes:[{id:'index-md',status:'PENDING',profileId:'profile',chunkCount:0}]}]}]);const fetchMock=vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response('# 标题\n正文',{status:200}));await mount(KnowledgeFolderManager);await vi.waitFor(()=>expect(root!.querySelector('.folder-list .el-table__row')).toBeTruthy());await click('查看');await vi.waitFor(()=>expect(root!.querySelector('.file-name')).toBeTruthy());root!.querySelector<HTMLButtonElement>('.file-name')!.click();await vi.waitFor(()=>expect(document.querySelector('.file-preview')).toBeTruthy());[...document.querySelectorAll<HTMLElement>('[role="tab"]')].find(el=>el.textContent==='原文件')!.click();await vi.waitFor(()=>expect(document.querySelector('.file-original')?.textContent).toContain('正文'));expect(fetchMock).toHaveBeenCalledWith('/original',{credentials:'same-origin'});expect(document.body.textContent).not.toContain('加载更多原文');fetchMock.mockRestore();});
 it('file preview opens the read-only chunk tab first',async()=>{await mount(KnowledgeFolderManager);await vi.waitFor(()=>expect(root!.querySelector('.folder-list .el-table__row')).toBeTruthy());await click('查看');await vi.waitFor(()=>expect(root!.querySelector('.file-name')).toBeTruthy());root!.querySelector<HTMLButtonElement>('.file-name')!.click();await vi.waitFor(()=>expect(document.querySelector('.file-segment')?.textContent).toContain('实际知识分段'));expect(document.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe('知识分段');expect(document.querySelector('.file-segment textarea')).toBeNull();});
+
+it('knowledge list exposes document processing instead of service settings',async()=>{await mount(KnowledgeFolderManager);expect(root!.textContent).not.toContain('高级设置');await click('查看');await vi.waitFor(()=>expect(root!.textContent).toContain('处理设置'));});
+it('service-only settings omit the separate retrieval test',async()=>{api.providers.mockResolvedValue([]);await mount(KnowledgeCoreAdmin,{settingsOnly:true,serviceOnly:true});expect(root!.textContent).not.toContain('试着提问');expect(root!.textContent).not.toContain('运行检索测试');});
+
+it('image original preview shows the image for comparison with OCR text',async()=>{
+ api.documents.mockResolvedValue([{...ready,title:'scan.png',revisions:[{...ready.revisions[0],originalName:'scan.png',parserFormat:'.png'}]}]);
+ await mount(KnowledgeFolderManager);await vi.waitFor(()=>expect(root!.querySelector('.folder-list .el-table__row')).toBeTruthy());await click('查看');await vi.waitFor(()=>expect(root!.querySelector('.file-name')).toBeTruthy());root!.querySelector<HTMLButtonElement>('.file-name')!.click();await vi.waitFor(()=>expect(document.querySelector('.file-segment')).toBeTruthy());
+ [...document.querySelectorAll<HTMLElement>('[role="tab"]')].find(el=>el.textContent==='原文件')!.click();
+ await vi.waitFor(()=>expect(document.querySelector<HTMLImageElement>('.file-image')?.getAttribute('src')).toBe('/original'));expect(api.extracted).not.toHaveBeenCalled();
+});
+
+it('shows durable OCR page progress and retry for an interrupted long scan',async()=>{
+ api.documents.mockResolvedValue([{...pending,revisions:[{...pending.revisions[0],indexes:[{...pending.revisions[0].indexes[0],status:'FAILED',job:{id:'long-job',status:'FAILED',progress:{completedPages:65,totalPages:120,nextPage:66,batchSize:5}}}]}]}]);
+ await mount(KnowledgeFolderManager);await vi.waitFor(()=>expect(root!.querySelector('.folder-list .el-table__row')).toBeTruthy());await click('查看');await vi.waitFor(()=>expect(root!.textContent).toContain('已识别 65 / 120 页'));expect(root!.textContent).toContain('第 66 页待重试');expect(root!.textContent).toContain('重试');
+});
+
+it('refreshes the replacement filename in the list and preview and keeps it after reopening',async()=>{
+ let saved={...ready};
+ api.documents.mockImplementation(async()=>[saved]);
+ api.upload.mockImplementation(async(_baseId:string,body:FormData)=>{
+  const file=body.get('file') as File;
+  expect(body.get('documentId')).toBe(ready.id);
+  saved={...saved,title:file.name,revisions:[{...ready.revisions[0],originalName:file.name}]};
+  return {id:'replacement-job'};
+ });
+ await mount(KnowledgeFolderManager);
+ await click('查看');
+ await vi.waitFor(()=>expect(root!.querySelector('.file-name')?.textContent).toContain('可用资料.md'));
+ await click('替换');
+ const input=root!.querySelector<HTMLInputElement>('input[aria-label="替换知识文件"]')!;
+ Object.defineProperty(input,'files',{configurable:true,value:[new File(['更新后的内容'],'替换后的新名称.md',{type:'text/markdown'})]});
+ input.dispatchEvent(new Event('change',{bubbles:true}));
+ await vi.waitFor(()=>expect(root!.querySelector('.file-name')?.textContent).toContain('替换后的新名称.md'));
+ expect(root!.querySelector('.folder-file-list')?.textContent).not.toContain('可用资料.md');
+ await click('查看');
+ await vi.waitFor(()=>expect(document.querySelector('.el-dialog__title')?.textContent).toBe('替换后的新名称.md'));
+ await click('关闭');
+ app!.unmount();root!.remove();app=undefined;root=undefined;
+ await mount(KnowledgeFolderManager,{embedded:true,initialBaseId:'folder-a'});
+ await vi.waitFor(()=>expect(root!.querySelector('.file-name')?.textContent).toContain('替换后的新名称.md'));
+});
+
+it('obsolete indexes show a retry instruction and duplicate clicks submit only one upgrade',async()=>{
+ const obsolete={...pending,revisions:[{...pending.revisions[0],indexes:[{...pending.revisions[0].indexes[0],status:'FAILED',reasonCode:'INDEX_VERSION_UNSUPPORTED',job:{id:'obsolete-job',status:'FAILED'}}]}]};api.documents.mockResolvedValue([obsolete]);
+ let done!:(v:any)=>void;api.jobAction.mockReturnValue(new Promise(r=>{done=r;}));await mount(KnowledgeFolderManager);await vi.waitFor(()=>expect(root!.querySelector('.folder-list .el-table__row')).toBeTruthy());await click('查看');await vi.waitFor(()=>expect(root!.textContent).toContain('待重新处理'));expect(root!.textContent).not.toContain('INDEX_VERSION_UNSUPPORTED');expect(root!.textContent).toContain('点击重试自动重建');
+ const retry=[...root!.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.textContent?.trim()==='重试')!;retry.click();retry.click();await nextTick();expect(api.jobAction).toHaveBeenCalledTimes(1);expect(retry.disabled).toBe(true);api.documents.mockResolvedValue([pending]);done({id:'upgraded-job',status:'QUEUED'});await vi.waitFor(()=>expect(root!.textContent).not.toContain('待重新处理'));
+});

@@ -1,3 +1,5 @@
+import { knowledgeUploadLimit } from './parser';
+import { OcrPageStore } from './ocr-progress';
 import { Injectable } from '@nestjs/common';
 import type { KnowledgeBase, Prisma } from '@prisma/client';
 import { effectiveFileIndexes } from './live-files';
@@ -11,9 +13,10 @@ import { KnowledgeJobsService } from './jobs.service';
 import { KnowledgeCoreError } from './errors';
 import type { KnowledgeScope } from './types';
 import {
-  normalizeKnowledgeIndexConfig,
+  normalizeKnowledgeIndexConfig, KNOWLEDGE_PARSER_VERSION, KNOWLEDGE_CHUNKER_VERSION,
   type KnowledgeIndexConfiguration,
 } from './index-config';
+import { KnowledgeOcrService, isKnowledgeImage, supportsKnowledgeOcr, KNOWLEDGE_IMAGE_MAX_BYTES } from './vision-ocr';
 export interface KnowledgeUploadInput {
   originalName: string;
   bytes: Buffer;
@@ -78,6 +81,7 @@ export class KnowledgeCoreService {
     private readonly profiles: KnowledgeProfilesService,
     private readonly blobs: KnowledgeBlobStorage,
     private readonly jobs: KnowledgeJobsService,
+    private readonly ocr?: KnowledgeOcrService,
   ) {}
   async createBase(
     scope: KnowledgeScope,
@@ -267,10 +271,32 @@ export class KnowledgeCoreService {
     }
     return { releases, ownsKnowledge: bases.some(b => b.ownerAgentId === agentId), selectionPolicy };
   }
+  async resolveIndexConfiguration(originalName: string, config?: KnowledgeIndexConfiguration): Promise<KnowledgeIndexConfiguration | undefined> {
+    const parseMode = config?.parseMode ?? (isKnowledgeImage(originalName) ? 'ocr' : extname(originalName).toLowerCase()==='.pdf' ? 'auto' : 'text');
+    if (isKnowledgeImage(originalName) && parseMode !== 'ocr') throw new KnowledgeCoreError('OCR_REQUIRED_FOR_IMAGE');
+    if (parseMode === 'text') return config;
+    if(parseMode==='auto'&&extname(originalName).toLowerCase()!=='.pdf')throw new KnowledgeCoreError('OCR_UNSUPPORTED_FORMAT');
+    if (!supportsKnowledgeOcr(originalName)) throw new KnowledgeCoreError('OCR_UNSUPPORTED_FORMAT');
+    if(parseMode==='auto'&&config?.ocrModelId&&config.ocrRouteHash)return {...config,parseMode};
+    if (!this.ocr) {if(parseMode==='auto'&&!config?.ocrModelId)return {...config,parseMode};throw new KnowledgeCoreError('OCR_UNAVAILABLE');}
+    let model;
+    try{model=await this.ocr.resolveModel(config?.ocrModelId);}catch(error){if(parseMode==='auto'&&!config?.ocrModelId&&error instanceof KnowledgeCoreError&&error.code==='OCR_UNAVAILABLE')return {...config,parseMode};throw error;}
+    if (config?.ocrRouteHash && config.ocrRouteHash !== model.revision) throw new KnowledgeCoreError('OCR_CONFIGURATION_CHANGED');
+    return {...config,parseMode,ocrModelId:model.id,ocrRouteHash:model.revision};
+  }
   async upload(
     baseId: string,
     scope: KnowledgeScope,
     input: KnowledgeUploadInput,
+  ) {
+    return this.acceptUpload(baseId, scope, input, 'replace');
+  }
+  private async acceptUpload(
+    baseId: string,
+    scope: KnowledgeScope,
+    input: KnowledgeUploadInput,
+    intent: 'replace' | 'reprocess',
+    expectedRequestedIndexId?: string,
   ) {
     await this.getBase(baseId, scope);
     if (
@@ -282,12 +308,15 @@ export class KnowledgeCoreService {
       input.originalName.length > 500
     )
       throw new KnowledgeCoreError('INVALID_UPLOAD_INPUT');
+    if (input.bytes.length > knowledgeUploadLimit(input.originalName)) throw new KnowledgeCoreError('UPLOAD_SIZE_LIMIT');
+    if (isKnowledgeImage(input.originalName) && input.bytes.length > KNOWLEDGE_IMAGE_MAX_BYTES) throw new KnowledgeCoreError('OCR_IMAGE_LIMIT');
+    const indexConfig = await this.resolveIndexConfiguration(input.originalName, input.indexConfig);
     const profile = await this.profiles.resolveForRequest(
       input.profileId,
       'EMBEDDING',
     );
     const configuration = normalizeKnowledgeIndexConfig(
-      input.indexConfig,
+      indexConfig,
       profile.maxInputTokens,
     );
     const originalName = basename(input.originalName.replace(/\\/g, '/'))
@@ -337,8 +366,14 @@ export class KnowledgeCoreService {
         : null;
       if (input.documentId && (!document || document.baseId !== baseId))
         throw new KnowledgeCoreError('KNOWLEDGE_DOCUMENT_NOT_FOUND');
-      if (document && !document.enabled)
+      if (document && (!document.enabled || document.deletedAt))
         throw new KnowledgeCoreError('KNOWLEDGE_DOCUMENT_DISABLED');
+      if(expectedRequestedIndexId&&document){
+        if(document.requestedIndexId&&document.requestedIndexId!==expectedRequestedIndexId)throw new KnowledgeCoreError('INGESTION_RETRY_SUPERSEDED');
+        await tx.$queryRaw`SELECT id FROM kc_ingestion_job WHERE index_revision_id=${expectedRequestedIndexId} FOR UPDATE`;
+        const sourceJob=await tx.knowledgeIngestionJob.findUnique({where:{indexRevisionId:expectedRequestedIndexId}});
+        if(!sourceJob||!['FAILED','CANCELLED'].includes(sourceJob.status))throw new KnowledgeCoreError('INGESTION_RETRY_NOT_ALLOWED');
+      }
       if (!document)
         document = await tx.knowledgeDocument.create({
           data: { baseId, title: (input.title ?? originalName).slice(0, 200) },
@@ -405,7 +440,13 @@ export class KnowledgeCoreService {
           jobId: acceptedJob.id,
         },
       });
-      await tx.knowledgeDocument.update({ where: { id: document.id }, data: { requestedIndexId: acceptedJob.indexRevisionId } });
+      await tx.knowledgeDocument.update({
+        where: { id: document.id },
+        data: {
+          ...(intent === 'replace' ? { title: (input.title ?? originalName).slice(0, 200) } : {}),
+          requestedIndexId: acceptedJob.indexRevisionId,
+        },
+      });
       if (index?.status === 'READY') await this.synchronizeLiveRelease(baseId, tx);
       return acceptedJob;
     });
@@ -426,14 +467,16 @@ export class KnowledgeCoreService {
       include: { document: true },
     });
     if (!revision) throw new KnowledgeCoreError('KNOWLEDGE_REVISION_NOT_FOUND');
+    if (revision.document.deletedAt) throw new KnowledgeCoreError('KNOWLEDGE_REVISION_NOT_FOUND');
+    if (!revision.document.enabled) throw new KnowledgeCoreError('KNOWLEDGE_DOCUMENT_DISABLED');
     await this.getBase(revision.document.baseId, scope);
-    return this.upload(revision.document.baseId, scope, {
+    return this.acceptUpload(revision.document.baseId, scope, {
       ...input,
       documentId: revision.documentId,
       originalName: revision.originalName,
       mediaType: revision.mediaType,
       bytes: await this.blobs.read(revision.storageKey),
-    });
+    }, 'reprocess');
   }
   async inspectJob(id: string, scope: KnowledgeScope) {
     const job = await this.prisma.knowledgeIngestionJob.findUnique({
@@ -444,7 +487,8 @@ export class KnowledgeCoreService {
     await this.getBase(job.baseId, scope);
     // Lease fencing tokens are internal worker capabilities, never part of HTTP/public inspection.
     const { leaseToken: _leaseToken, ...safe } = job;
-    return safe;
+    const progress=['ocr','auto'].includes((job.index.chunkerConfig as KnowledgeIndexConfiguration)?.parseMode||'')?await new OcrPageStore().progress(job.indexRevisionId).catch(()=>undefined):undefined;
+    return {...safe,...(progress?{progress}:{})};
   }
   async cancelJob(id: string, scope: KnowledgeScope) {
     await this.inspectJob(id, scope);
@@ -475,10 +519,23 @@ export class KnowledgeCoreService {
   }
   async retryJob(id: string, scope: KnowledgeScope) {
     const original = await this.inspectJob(id, scope);
-    await this.profiles.resolveForRequest(
-      original.index.profileId,
-      'EMBEDDING',
-    );
+    if(!['FAILED','CANCELLED'].includes(original.status))throw new KnowledgeCoreError('INGESTION_RETRY_NOT_ALLOWED');
+    const profile=await this.profiles.resolveForRequest(original.index.profileId,'EMBEDDING');
+    if(original.index.parserVersion!==KNOWLEDGE_PARSER_VERSION||original.index.chunkerVersion!==KNOWLEDGE_CHUNKER_VERSION){
+      const revision=await this.prisma.knowledgeDocumentRevision.findUnique({where:{id:original.index.revisionId},include:{document:true}});
+      if(!revision||revision.document.deletedAt)throw new KnowledgeCoreError('KNOWLEDGE_REVISION_NOT_FOUND');
+      if(!revision.document.enabled)throw new KnowledgeCoreError('KNOWLEDGE_DOCUMENT_DISABLED');
+      await this.getBase(revision.document.baseId,scope);
+      const raw=original.index.chunkerConfig&&typeof original.index.chunkerConfig==='object'&&!Array.isArray(original.index.chunkerConfig)?original.index.chunkerConfig as Record<string,unknown>:{};
+      const saved=Object.fromEntries(['parseMode','targetTokens','maxTokens','overlapTokens','ocrModelId','ocrRouteHash'].filter(key=>raw[key]!==undefined).map(key=>[key,raw[key]])) as KnowledgeIndexConfiguration;
+      const indexConfig=await this.resolveIndexConfiguration(revision.originalName,saved);
+      const configuration=normalizeKnowledgeIndexConfig(indexConfig,profile.maxInputTokens);
+      const idempotencyKey='retry-upgrade-'+createHash('sha256').update(JSON.stringify([original.id,configuration.indexConfigHash])).digest('hex');
+      return this.acceptUpload(revision.document.baseId,scope,{
+        documentId:revision.documentId,originalName:revision.originalName,mediaType:revision.mediaType,
+        bytes:await this.blobs.read(revision.storageKey),profileId:original.index.profileId,indexConfig,idempotencyKey,
+      },'reprocess',original.index.id);
+    }
     await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM kc_ingestion_job WHERE id=${id} FOR UPDATE`;
       const job = await tx.knowledgeIngestionJob.findUniqueOrThrow({

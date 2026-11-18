@@ -1,3 +1,4 @@
+import { KnowledgeOcrService } from './vision-ocr';
 import { Module } from '@nestjs/common';
 import { LibraryDomainModule } from '../library/library-domain.module';
 import { KnowledgeLibrarySourceAdapter } from './library-source.adapter';
@@ -14,7 +15,7 @@ import { KnowledgeIngestionWorker } from './ingestion.worker';
   imports: [PrismaModule, LibraryDomainModule],
   providers: [
     KnowledgeLibrarySourceAdapter, KnowledgeCandidateStore, KnowledgeRetrievalService,
-    KnowledgeProfilesService,
+    KnowledgeOcrService, KnowledgeProfilesService,
     KnowledgeCoreService,
     KnowledgeBlobStorage,
     KnowledgeJobsService,
@@ -24,7 +25,7 @@ import { KnowledgeIngestionWorker } from './ingestion.worker';
   exports: [
     KnowledgeLibrarySourceAdapter,
     KnowledgeRetrievalService,
-    KnowledgeProfilesService,
+    KnowledgeOcrService, KnowledgeProfilesService,
     KnowledgeCoreService,
     KnowledgeHttpAdapter,
     KnowledgeJobsService,

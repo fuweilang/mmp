@@ -108,7 +108,8 @@
     </div>
   </el-tab-pane>
   <el-tab-pane label="搜索服务" name="profiles">
-    <p class="plain-lead">给专家用哪些文件，在专家配置里选。这里只确认上传的文件能不能被按问题找到。</p>
+    <p v-if="serviceOnly" class="plain-lead">给专家用哪些文件，在专家配置里选。这里管理文件处理和检索使用的服务；实际效果请在专家调试中验证。</p>
+    <p v-else class="plain-lead">给专家用哪些文件，在专家配置里选。这里只确认上传的文件能不能被按问题找到。</p>
     <div class="service-status">
       <p v-if="activeEmbedding">可以搜索。新上传的文件会用「{{ embeddingLabel }}」整理成可搜索的内容。</p>
       <p v-else>还不能按问题搜索。文件可以上传并保存，但专家问到这些资料时找不到。</p>
@@ -155,7 +156,7 @@
       </el-collapse-item>
     </el-collapse>
 </el-tab-pane>
-<el-tab-pane label="试着提问" name="test">
+<el-tab-pane v-if="!serviceOnly" label="试着提问" name="test">
   <p class="plain-lead">选一个文件夹，输入可能会问到的问题。下面出现的段落，就是专家能引用的内容。</p>
   <el-form label-width="88px">
     <el-form-item label="文件夹">
@@ -332,7 +333,7 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { adminKnowledgeCoreApi as api, adminLlmProviderApi, type AdminLlmProviderRow, type KnowledgeProfile, type KnowledgeBase, type KnowledgeDocument, type KnowledgeRelease, type KnowledgeJob, type KnowledgeEvidence, type KnowledgeTestResult } from '../../api/admin';
 import { knowledgeStateLabel as stateLabel, profileCreatePayload, releaseEligibleIndexes } from '../../utils/knowledge-admin';
-const props = withDefaults(defineProps<{settingsOnly?:boolean}>(),{settingsOnly:false});
+const props = withDefaults(defineProps<{settingsOnly?:boolean;serviceOnly?:boolean}>(),{settingsOnly:false,serviceOnly:false});
 
 const tab = ref(props.settingsOnly ? 'profiles' : 'bases'), busy = ref(false), error = ref('');
 const profiles = ref<KnowledgeProfile[]>([]), providers = ref<AdminLlmProviderRow[]>([]), bases = ref<KnowledgeBase[]>([]), baseId = ref(''), documents = ref<KnowledgeDocument[]>([]), releases = ref<KnowledgeRelease[]>([]), allReleases = ref<Array<KnowledgeRelease & {

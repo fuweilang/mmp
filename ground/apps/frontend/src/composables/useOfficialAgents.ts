@@ -10,6 +10,7 @@ import {
 } from '../api/admin';
 import { useAdminSearch, useAdminTable } from './useAdminTable';
 import { collectPublishMissing } from '../components/admin/official-agents/agent-display';
+import { formatPublishMissingToast } from '../utils/admin-official-agent-form-errors';
 
 export type PublishRowResult =
   | { status: 'missing'; missing: string[] }
@@ -129,19 +130,27 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
   const offlineId = ref('');
   const deletingId = ref('');
   const bulkOfflineLoading = ref(false);
+  const bulkPublishLoading = ref(false);
   const selectedRows = ref<OfficialAgentRow[]>([]);
+  const selectedPublishableRows = computed(() => selectedRows.value.filter(
+    (row) => row.status === 'DRAFT' || row.status === 'OFFLINE',
+  ));
 
-  async function publish(row: OfficialAgentRow): Promise<PublishRowResult> {
-    if (!canAuthor() || publishingId.value || isSaving()) return { status: 'cancelled' };
+  function publishMissing(row: OfficialAgentRow) {
     const def = row.draft.expertDefinition ?? {};
     const profile = def.profile && typeof def.profile === 'object' ? def.profile as { role?: string } : {};
-    const missing = collectPublishMissing({
+    return collectPublishMissing({
       name: row.draft.name || '',
       summary: row.draft.summary || '',
       expertRole: String(profile.role || ''),
       systemPrompt: row.draft.systemPrompt || '',
       toolScope: row.draft.toolScope || [],
     });
+  }
+
+  async function publish(row: OfficialAgentRow): Promise<PublishRowResult> {
+    if (!canAuthor() || publishingId.value || bulkPublishLoading.value || isSaving()) return { status: 'cancelled' };
+    const missing = publishMissing(row);
     if (missing.length) return { status: 'missing', missing };
     try {
       await ElMessageBox.confirm(
@@ -166,6 +175,58 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
     }
   }
 
+  async function bulkPublish(): Promise<boolean> {
+    if (!canAuthor() || isSaving() || publishingId.value || offlineId.value || deletingId.value
+      || bulkOfflineLoading.value || bulkPublishLoading.value) return false;
+    const targets = [...selectedPublishableRows.value];
+    if (!targets.length) return false;
+    bulkPublishLoading.value = true;
+    try {
+      try {
+        await ElMessageBox.confirm(
+          `将发布选中的 ${targets.length} 个专家，使用各专家当前已保存的配置。确定发布？`,
+          '一键发布官方专家',
+          { type: 'warning', confirmButtonText: '发布' },
+        );
+      } catch {
+        return false;
+      }
+      let published = 0;
+      const failures: Array<{ name: string; reason: string }> = [];
+      for (const row of targets) {
+        const name = row.draft.name || row.key || row.id;
+        const missing = publishMissing(row);
+        if (missing.length) {
+          failures.push({ name, reason: formatPublishMissingToast(missing) });
+          continue;
+        }
+        publishingId.value = row.id;
+        try {
+          replaceRow(await adminOfficialAgentApi.publish(row.id));
+          published += 1;
+        } catch (error) {
+          failures.push({ name, reason: error instanceof Error ? error.message : '发布失败' });
+        }
+      }
+      await load();
+      const summary = `一键发布完成：成功 ${published} · 失败 ${failures.length}`;
+      if (failures.length) {
+        await ElMessageBox.alert(
+          h('div', { style: { maxHeight: '50vh', overflowY: 'auto' } }, failures.map(({ name, reason }) =>
+            h('p', { style: { overflowWrap: 'anywhere' } }, `${name}：${reason}`))),
+          summary,
+          { type: 'warning', confirmButtonText: '知道了' },
+        ).catch(() => {});
+      } else {
+        ElMessage.success(summary);
+      }
+      return true;
+    } finally {
+      publishingId.value = '';
+      bulkPublishLoading.value = false;
+    }
+  }
+
   async function offline(row: OfficialAgentRow) {
     try {
       await ElMessageBox.confirm(
@@ -179,6 +240,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
     offlineId.value = row.id;
     try {
       replaceRow(await adminOfficialAgentApi.offline(row.id));
+      await load();
       ElMessage.success('已下架');
     } catch (error) {
       ElMessage.error(error instanceof Error ? error.message : '下架失败');
@@ -370,8 +432,11 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
     offlineId,
     deletingId,
     bulkOfflineLoading,
+    bulkPublishLoading,
     selectedRows,
+    selectedPublishableRows,
     publish,
+    bulkPublish,
     offline,
     remove,
     viewerOpen,

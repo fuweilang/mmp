@@ -18,8 +18,8 @@ export type SkillFormInput = {
 
 /**
  * Errors that must stop the write.
- * 「保存并启用」缺介绍或指令时不在这里拦截：先存草稿，再由启用接口拒绝并保持停用。
- * 已启用技能仍须在写入前保持完整，避免把线上配置改成残缺。
+ * 保存并启用、编辑已启用技能必须在写入前检查完整性。
+ * 普通停用草稿可以只保存名称。
  */
 export function skillFormIssues(input: SkillFormInput): Partial<Record<SkillField, string>> {
   const issues: Partial<Record<SkillField, string>> = {};
@@ -27,7 +27,7 @@ export function skillFormIssues(input: SkillFormInput): Partial<Record<SkillFiel
   if (input.replacingZip && input.zipSelected && !input.zipReady) {
     issues.zip = input.zipError || '请先等技能包校验通过';
   }
-  if (!input.enabled) return issues;
+  if (!input.enabled && !input.enable) return issues;
   if (!input.summary.trim()) issues.summary = '请填写一句话介绍';
   if (input.replacingZip) {
     const ready = input.zipReady || (input.hasPackage && !input.zipSelected);

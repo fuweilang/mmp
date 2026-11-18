@@ -74,10 +74,9 @@ export class AdminOfficialAgentsService {
       ...(keyword
         ? {
             OR: [
-              { id: { contains: keyword, mode: 'insensitive' } },
+              { id: { equals: keyword, mode: 'insensitive' } },
               { name: { contains: keyword, mode: 'insensitive' } },
-              { key: { contains: keyword, mode: 'insensitive' } },
-              { summary: { contains: keyword, mode: 'insensitive' } },
+              { key: { equals: keyword, mode: 'insensitive' } },
             ],
           }
         : {}),
