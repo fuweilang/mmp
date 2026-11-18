@@ -119,7 +119,7 @@ const cards = computed(() => {
       label: 'AI币余额',
       value: data ? String(aiBalance) : '-',
       hint: !data
-        ? '企业钱包'
+        ? '企业 AI 币'
         : aiBalanceEmpty
           ? (canBilling.value ? '暂无余额 · 点击去充值' : '暂无余额')
           : `累计消耗 ${data.aiTotalDebited ?? 0}`,

@@ -2,8 +2,6 @@ import type { AdminUserRow } from '@/api/admin';
 
 export type RoleTag = { label: string; color: string };
 
-export const TENANT_COLORS = ['#7c3aed', '#0891b2', '#c2410c', '#15803d', '#be123c', '#4f46e5', '#a16207', '#0f766e'];
-
 export const ROLE_COLORS: Record<string, string> = {
   super_admin: '#7c3aed',
   platform_admin: '#3E468C',
@@ -36,6 +34,22 @@ export function roleTags(row: AdminUserRow): RoleTag[] {
   return [];
 }
 
+export function isPlatformIdentity(row: AdminUserRow) {
+  const keys = row.roleKeys ?? [];
+  return keys.includes('super_admin') || keys.includes('platform_admin')
+    || row.platformRoleKey === 'super_admin' || row.platformRoleKey === 'platform_admin';
+}
+
+export function membershipRoleLabel(role: string) {
+  if (role === 'ADMIN' || role === 'OWNER') return '企业管理员';
+  if (role === 'MEMBER') return '企业成员';
+  return role;
+}
+
+export function membershipRoleColor(role: string) {
+  return role === 'MEMBER' ? ROLE_COLORS.org_member : ROLE_COLORS.org_admin;
+}
+
 export function roleLabel(row: AdminUserRow) {
   const tags = roleTags(row);
   return tags.length ? tags.map((tag) => tag.label).join(' · ') : '普通用户';
@@ -66,10 +80,4 @@ export function roleTagStyle(color: string) {
     borderColor: color,
     color,
   };
-}
-
-export function tenantColor(id: string) {
-  let hash = 0;
-  for (const character of id) hash = ((hash * 31) + character.charCodeAt(0)) >>> 0;
-  return TENANT_COLORS[hash % TENANT_COLORS.length];
 }

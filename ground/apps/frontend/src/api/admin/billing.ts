@@ -197,6 +197,7 @@ export type AdminWalletRow = {
   totalCredited: number;
   totalDebited: number;
   updatedAt: string;
+  admins: Array<{ id: string; name: string; phone: string }>;
 };
 
 export type AdminWalletDetail = {

@@ -190,7 +190,7 @@ export class EnterpriseTokenStatsService {
     };
     if (modelFilter) where.model = modelFilter;
 
-    const [turnTotals, turnByTenant, turnByModel, turnMembers, tenants, modelRows] = await Promise.all([
+    const [turnTotals, turnByTenant, turnByModel, turnMembers, modelRows] = await Promise.all([
       this.prisma.tokenUsageTurn.aggregate({
         where,
         _sum: { inputTokens: true, outputTokens: true, totalTokens: true, modelCalls: true },
@@ -212,12 +212,6 @@ export class EnterpriseTokenStatsService {
         by: ['tenantId', 'userId'],
         where,
       }),
-      this.prisma.tenant.findMany({
-        where: { type: { not: 'PLATFORM' } },
-        select: { id: true, name: true, slug: true, type: true, status: true },
-        orderBy: { name: 'asc' },
-        take: 500,
-      }),
       this.prisma.tokenUsageTurn.findMany({
         where: {
           occurredAt: { gte: range.start, lt: range.end },
@@ -231,6 +225,13 @@ export class EnterpriseTokenStatsService {
       }),
     ]);
     const modelFilterOptions = this.support.buildModelFilterOptions(modelRows.map((m) => m.model || '(unknown)'));
+    const usageTenantIds = [...new Set(turnByTenant.map((row) => row.tenantId).filter((id): id is string => Boolean(id)))];
+    const tenants = usageTenantIds.length
+      ? await this.prisma.tenant.findMany({
+          where: { id: { in: usageTenantIds }, type: { not: 'PLATFORM' } },
+          select: { id: true, name: true, slug: true, type: true, status: true },
+        })
+      : [];
 
     type EntAcc = {
       tenantId: string;
@@ -353,8 +354,8 @@ export class EnterpriseTokenStatsService {
     }));
     enterprises.sort(
       (a, b) =>
-        b.consumedAiCoins - a.consumedAiCoins ||
         b.totalTokens - a.totalTokens ||
+        b.turns - a.turns ||
         a.tenantName.localeCompare(b.tenantName, 'zh'),
     );
 
@@ -363,20 +364,8 @@ export class EnterpriseTokenStatsService {
         ...m,
         consumedAiCoins: coinsByModel.get(m.model) ?? 0,
       }))
-      .sort((a, b) => b.totalTokens - a.totalTokens);
-    // 仅 ledger 有、token_usage_turn 无的模型也补一行（实扣可对账）
-    for (const [modelName, coins] of coinsByModel) {
-      if (byModelMap.has(modelName)) continue;
-      byModel.push({
-        model: modelName,
-        inputTokens: 0,
-        outputTokens: 0,
-        totalTokens: 0,
-        turns: 0,
-        consumedAiCoins: coins,
-      });
-    }
-    byModel.sort((a, b) => b.consumedAiCoins - a.consumedAiCoins || b.totalTokens - a.totalTokens);
+      .filter((m) => m.totalTokens > 0)
+      .sort((a, b) => b.totalTokens - a.totalTokens || b.turns - a.turns);
 
     return {
       source: 'ground_token_usage_turn+ledger_chat_consume',
@@ -409,7 +398,7 @@ export class EnterpriseTokenStatsService {
       related: {
         ledgerUsagePath: '/admin/enterprise-wallets',
         note:
-          'Token 来自 token_usage_turn；AI币来自同时间窗 tenant_ai_ledger.chat_consume 实扣，与企业钱包流水合计对齐。不再使用写死 1000/1:1 旧口径。',
+          'Token 来自 token_usage_turn；AI币来自同时间窗 tenant_ai_ledger.chat_consume 实扣，与企业 AI 币流水合计对齐。不再使用写死 1000/1:1 旧口径。',
       },
     };
   }
@@ -627,8 +616,8 @@ export class EnterpriseTokenStatsService {
     const memberRows = memberRowsBase;
     memberRows.sort(
       (a, b) =>
-        b.consumedAiCoins - a.consumedAiCoins ||
         b.totalTokens - a.totalTokens ||
+        b.turns - a.turns ||
         a.name.localeCompare(b.name, 'zh'),
     );
 
@@ -663,7 +652,7 @@ export class EnterpriseTokenStatsService {
       members: memberRows,
       related: {
         ledgerUsagePath: '/admin/enterprise-wallets',
-        note: 'Token 来自 token_usage_turn；AI币来自同时间窗 tenant_ai_ledger.chat_consume 实扣，与企业钱包流水合计对齐。不再使用写死 1000/1:1 旧口径。',
+        note: 'Token 来自 token_usage_turn；AI币来自同时间窗 tenant_ai_ledger.chat_consume 实扣，与企业 AI 币流水合计对齐。不再使用写死 1000/1:1 旧口径。',
       },
     };
   }

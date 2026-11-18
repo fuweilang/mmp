@@ -173,7 +173,7 @@ import { useAdminSearch, useAdminTable } from '../../composables/useAdminTable';
 import { adminEnterpriseApi, adminPermissionApi, adminRoleApi, adminUserApi, type AdminEnterpriseRow, type AdminRoleRow, type AdminUserRow, type PermissionCatalogGroup, type RolePermSource } from '../../api/admin';
 import { useAuthStore } from '../../stores/auth';
 import UserTable from '@/components/admin/users/UserTable.vue';
-import UserFormDialog from '@/components/admin/users/UserFormDialog.vue';
+import UserFormDialog, { type MembershipEdit } from '@/components/admin/users/UserFormDialog.vue';
 import UserPermViewDialog from '@/components/admin/users/UserPermViewDialog.vue';
 import { canChangePassword, canDeleteUser } from '@/components/admin/users/userDisplay';
 
@@ -259,6 +259,7 @@ const form = reactive({
   /** 用户角色（多选）；空数组 = 无角色。 */
   roleKeys: [] as string[],
   tenantId: '',
+  memberships: [] as MembershipEdit[],
 });
 
 function onRoleKeyChange() {
@@ -362,6 +363,7 @@ function resetForm() {
   form.passwordConfirm = '';
   form.roleKeys = [];
   form.tenantId = '';
+  form.memberships = [];
   userFormDialogRef.value?.clearValidate?.();
 }
 
@@ -435,6 +437,12 @@ function openEdit(row: AdminUserRow) {
     ?? (tenant?.role === 'ADMIN' || tenant?.role === 'OWNER' ? 'org_admin' : tenant?.role === 'MEMBER' ? 'org_member' : '');
   form.roleKeys = row.roleKeys?.length ? [...row.roleKeys] : (legacyKey ? [legacyKey] : []);
   form.tenantId = row.tenants[0]?.id ?? '';
+  form.memberships = row.tenants.map((tenant) => ({
+    tenantId: tenant.id,
+    name: tenant.name,
+    role: tenant.role === 'MEMBER' ? 'MEMBER' : 'ADMIN',
+    original: tenant.role,
+  }));
   initialTenantId.value = form.tenantId;
   open.value = true;
   clearFormError();
@@ -482,25 +490,42 @@ async function loadRoles() {
   }
 }
 
+function changedMembershipRoles(rows: MembershipEdit[]) {
+  return rows
+    .filter((row) => {
+      if (row.role === 'ADMIN' && (row.original === 'ADMIN' || row.original === 'OWNER')) return false;
+      if (row.role === 'MEMBER' && row.original === 'MEMBER') return false;
+      return true;
+    })
+    .map((row) => ({ tenantId: row.tenantId, role: row.role }));
+}
+
 async function onSave() {
   // UserFormDialog 已校验
   saving.value = true;
   try {
     // 多角色：权限取并集；只有全部是超级管理员/平台管理员时才可以不绑企业。
-    const isPlatformAccount = form.roleKeys.every((key) => ['super_admin', 'platform_admin'].includes(key));
+    const platformKeys = ['super_admin', 'platform_admin'];
+    const isPlatformAccount = form.roleKeys.every((key) => platformKeys.includes(key));
+    const editsPerEnterprise = form.roleKeys.every((key) => !platformKeys.includes(key));
     if (editingId.value) {
       const payload: Parameters<typeof adminUserApi.update>[1] = {
         name: form.name.trim(),
       };
-      // super_admin edit: do not send roleKeys / isPlatformAdmin
-      const hideRoleSelect = Boolean(editingId.value) && form.roleKeys.includes('super_admin');
-      if (!hideRoleSelect) {
-        payload.isPlatformAdmin = isPlatformAccount;
-        payload.roleKeys = [...form.roleKeys];
-        if (!initialPlatformAccount.value || !form.roleKeys.some(key => ['super_admin', 'platform_admin'].includes(key))) payload.tenantId = form.tenantId || null;
-      }
-      if (initialPlatformAccount.value && form.roleKeys.some(key => ['super_admin', 'platform_admin'].includes(key)) && form.tenantId && form.tenantId !== initialTenantId.value) {
-        payload.addMemberTenantId = form.tenantId;
+      if (editsPerEnterprise) {
+        const membershipRoles = changedMembershipRoles(form.memberships);
+        if (membershipRoles.length) payload.membershipRoles = membershipRoles;
+      } else {
+        // super_admin edit: do not send roleKeys / isPlatformAdmin
+        const hideRoleSelect = form.roleKeys.includes('super_admin');
+        if (!hideRoleSelect) {
+          payload.isPlatformAdmin = isPlatformAccount;
+          payload.roleKeys = [...form.roleKeys];
+          if (!initialPlatformAccount.value || !form.roleKeys.some(key => platformKeys.includes(key))) payload.tenantId = form.tenantId || null;
+        }
+        if (initialPlatformAccount.value && form.roleKeys.some(key => platformKeys.includes(key)) && form.tenantId && form.tenantId !== initialTenantId.value) {
+          payload.addMemberTenantId = form.tenantId;
+        }
       }
       await adminUserApi.update(editingId.value, payload);
       ElMessage.success('已保存');

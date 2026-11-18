@@ -63,6 +63,8 @@ export type AdminUserUpdate = {
   tenantId?: string | null;
   /** 历史字段，仅企业控制台内部使用；总后台按角色 key 分配。 */
   memberRole?: 'ADMIN' | 'MEMBER';
+  /** 只改已加入企业的角色，不增删企业。 */
+  membershipRoles?: Array<{ tenantId: string; role: 'ADMIN' | 'MEMBER' }>;
 };
 
 export const adminUserApi = {

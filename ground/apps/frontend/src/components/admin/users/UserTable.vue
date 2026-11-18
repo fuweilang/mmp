@@ -28,9 +28,9 @@
         </template>
       </el-table-column>
       <el-table-column prop="phone" label="手机号" width="120" />
-      <el-table-column label="角色" min-width="180">
+      <el-table-column label="所属企业" min-width="280">
         <template #default="{ row }">
-          <div class="role-tags">
+          <div v-if="isPlatformIdentity(row)" class="role-tags">
             <el-tag
               v-for="tag in roleTags(row)"
               :key="tag.label"
@@ -38,24 +38,22 @@
               size="small"
               :style="roleTagStyle(tag.color)"
             >
-              <span class="visual-dot" :style="{ backgroundColor: tag.color }" />
               {{ tag.label }}
             </el-tag>
-            <span v-if="roleTags(row).length === 0" class="muted">普通用户</span>
           </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="所属企业" min-width="220">
-        <template #default="{ row }">
-          <span v-if="row.tenants.length === 0" class="muted">-</span>
-          <span
-            v-for="tenant in row.tenants"
-            :key="tenant.id"
-            class="subject-label"
-          >
-            <span class="visual-dot" :style="{ backgroundColor: tenantColor(tenant.id) }" />
-            <span>{{ tenant.name }}</span>
-          </span>
+          <span v-else-if="row.tenants.length === 0" class="muted">普通用户</span>
+          <div v-else class="membership-lines">
+            <div v-for="tenant in row.tenants" :key="tenant.id" class="membership-line">
+              <span class="membership-name">{{ tenant.name }}</span>
+              <el-tag
+                class="identity-tag"
+                size="small"
+                :style="roleTagStyle(membershipRoleColor(tenant.role))"
+              >
+                {{ membershipRoleLabel(tenant.role) }}
+              </el-tag>
+            </div>
+          </div>
         </template>
       </el-table-column>
       <el-table-column label="账号状态" width="100">
@@ -149,11 +147,13 @@ import type { AdminUserRow } from '@/api/admin';
 import {
   canChangePassword,
   canDeleteUser,
+  isPlatformIdentity,
   isSuperAdminRow,
+  membershipRoleColor,
+  membershipRoleLabel,
   roleTagStyle,
   roleTags,
   statusLabel,
-  tenantColor,
 } from './userDisplay';
 
 defineProps<{
@@ -199,11 +199,10 @@ defineEmits<{
   color: #98a2b3;
 }
 
-.subject-label,
 .identity-tag {
   align-items: center;
   display: inline-flex;
-  gap: 7px;
+  flex: none;
 }
 
 .role-tags {
@@ -213,15 +212,31 @@ defineEmits<{
   gap: 6px;
 }
 
-.subject-label + .subject-label {
-  margin-left: 10px;
+.membership-lines {
+  display: flex;
+  flex-direction: column;
 }
 
-.visual-dot {
-  border-radius: 50%;
-  flex: 0 0 7px;
-  height: 7px;
-  width: 7px;
+.membership-line {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 6px 0;
+}
+
+.membership-line + .membership-line {
+  border-top: 1px solid #eef0f4;
+}
+
+.membership-name {
+  flex: 0 1 auto;
+  max-width: calc(100% - 92px);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .operation-buttons {

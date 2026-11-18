@@ -22,6 +22,16 @@
           @input="onSearchInput"
           @keyup.enter="onSearchNow"
         />
+        <el-input
+          v-model="adminDraft"
+          class="enterprise-search-admin"
+          clearable
+          placeholder="搜索管理员姓名或手机"
+          :prefix-icon="Search"
+          @clear="onSearchNow"
+          @input="onSearchInput"
+          @keyup.enter="onSearchNow"
+        />
         <el-select
           v-model="statusFilter"
           class="status-filter"
@@ -67,13 +77,6 @@
           <el-tag v-else size="small" type="primary" effect="plain">企业</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="上级" width="120">
-        <template #default="{ row }">
-          <el-tag v-if="row.parentName" size="small" type="warning" effect="plain">{{ row.parentName }}</el-tag>
-          <span v-else-if="row.type === 'PLATFORM'" class="admin-empty">—</span>
-          <span v-else class="admin-empty">猛犸总部</span>
-        </template>
-      </el-table-column>
       <el-table-column label="管理员" min-width="180">
         <template #default="{ row }">
           <div v-if="row.admins.length" class="admin-list">
@@ -87,6 +90,21 @@
             </div>
           </div>
           <span v-else class="admin-empty">未设置</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="企业成员" min-width="180">
+        <template #default="{ row }">
+          <div v-if="row.members.length" class="admin-list">
+            <div
+              v-for="member in row.members"
+              :key="member.id"
+              class="admin-item"
+            >
+              <span class="admin-name">{{ member.name }}</span>
+              <span class="admin-phone">{{ member.phone }}</span>
+            </div>
+          </div>
+          <span v-else class="admin-empty">无</span>
         </template>
       </el-table-column>
       <el-table-column label="账号状态" width="90">
@@ -106,7 +124,7 @@
           {{ row.memberCount }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="400" fixed="right" align="center">
+      <el-table-column label="操作" width="510" fixed="right" align="center">
         <template #default="{ row }">
           <div class="operation-buttons">
             <el-button text type="primary" @click="openView(row)">
@@ -118,7 +136,7 @@
               type="primary"
               @click="openTokenStats(row)"
             >
-              Token/AI币
+              Token用量
             </el-button>
             <el-button
               v-if="row.type !== 'PLATFORM'"
@@ -126,7 +144,7 @@
               type="primary"
               @click="openFunds(row)"
             >
-              资金
+              AI币明细
             </el-button>
             <el-button
               v-if="row.type !== 'PLATFORM'"
@@ -184,7 +202,7 @@
         :page-size="pageSize"
         background
         layout="total, sizes, prev, pager, next, jumper"
-        :page-sizes="[10, 20, 50]"
+        :page-sizes="[10, 20, 50, 100]"
         :total="filteredRows.length"
         @current-change="onPageChange"
         @size-change="onPageSizeChange"
@@ -250,16 +268,6 @@
               <el-radio value="AGENCY">代理商</el-radio>
             </el-radio-group>
           </el-form-item>
-          <el-form-item v-if="isPlatformAdmin && form.type === 'ENTERPRISE'" label="上级" prop="parentId">
-            <el-select v-model="form.parentId" clearable placeholder="猛犸总部（直属）" style="width: 100%">
-              <el-option
-                v-for="a in agencyOptions"
-                :key="a.id"
-                :label="a.name"
-                :value="a.id"
-              />
-            </el-select>
-          </el-form-item>
         </template>
       </el-form>
       <template #footer>
@@ -267,15 +275,19 @@
         <el-button type="primary" :loading="saving" @click="onSave">保存</el-button>
       </template>
     </el-dialog>
+
+    <EnterpriseUsageDrawer ref="usageDrawer" />
+    <EnterpriseFundsDrawer ref="fundsDrawer" />
   </section>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
 import { computed, h, onBeforeUnmount, onMounted, reactive, ref, type VNode } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { Search } from 'lucide-vue-next';
 import { adminEnterpriseApi, type AdminEnterpriseRow } from '../../api/admin';
+import EnterpriseUsageDrawer from '@/components/admin/EnterpriseUsageDrawer.vue';
+import EnterpriseFundsDrawer from '@/components/admin/wallets/EnterpriseFundsDrawer.vue';
 import { useAuthStore } from '../../stores/auth';
 import { sanitizeText } from '../../utils/sanitizeText';
 import { useAdminSearch, useAdminTable } from '../../composables/useAdminTable';
@@ -283,7 +295,8 @@ import { useAdminSearch, useAdminTable } from '../../composables/useAdminTable';
 const ENTERPRISE_COLORS = ['#7c3aed', '#0891b2', '#c2410c', '#15803d', '#be123c', '#4f46e5', '#a16207', '#0f766e'];
 
 const auth = useAuthStore();
-const router = useRouter();
+const usageDrawer = ref<{ open: (tenantId: string, title?: string) => void; close: () => void } | null>(null);
+const fundsDrawer = ref<{ open: (tenantId: string, title?: string) => void; close: () => void } | null>(null);
 const rows = ref<AdminEnterpriseRow[]>([]);
 const open = ref(false);
 const saving = ref(false);
@@ -297,6 +310,7 @@ const viewOpen = ref(false);
 const viewingRow = ref<AdminEnterpriseRow | null>(null);
 const nameDraft = ref('');
 const slugDraft = ref('');
+const adminDraft = ref('');
 const statusFilter = ref('');
 const formRef = ref<FormInstance>();
 
@@ -304,12 +318,7 @@ const form = reactive({
   name: '',
   slug: '',
   type: 'ENTERPRISE' as 'ENTERPRISE' | 'AGENCY',
-  parentId: '' as string,
 });
-
-const isPlatformAdmin = computed(() => Boolean(auth.session?.user.isPlatformAdmin));
-/** 上级下拉：当前列表里的代理商（仅平台管理员需要选）。 */
-const agencyOptions = computed(() => rows.value.filter((row) => row.type === 'AGENCY'));
 
 const rules: FormRules = {
   name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
@@ -317,7 +326,7 @@ const rules: FormRules = {
 };
 
 const hasActiveFilters = computed(() =>
-  Boolean(nameDraft.value || slugDraft.value || statusFilter.value),
+  Boolean(nameDraft.value || slugDraft.value || adminDraft.value || statusFilter.value),
 );
 
 const {
@@ -338,8 +347,14 @@ const {
   filter: (row) => {
     const name = nameDraft.value.trim().toLowerCase();
     const slug = slugDraft.value.trim().toLowerCase();
+    const admin = adminDraft.value.trim().toLowerCase();
+    const adminPhone = admin.replace(/\s+/g, '');
     if (name && !row.name.toLowerCase().includes(name)) return false;
     if (slug && !row.slug.toLowerCase().includes(slug)) return false;
+    if (admin && !row.admins.some((person) => {
+      if (person.name.toLowerCase().includes(admin)) return true;
+      return adminPhone.length > 0 && person.phone.replace(/\s+/g, '').includes(adminPhone);
+    })) return false;
     if (statusFilter.value && row.status !== statusFilter.value) return false;
     return true;
   },
@@ -359,6 +374,7 @@ const {
   clearFilters: () => {
     nameDraft.value = '';
     slugDraft.value = '';
+    adminDraft.value = '';
     statusFilter.value = '';
   },
 });
@@ -395,7 +411,6 @@ function resetForm() {
   form.name = '';
   form.slug = '';
   form.type = 'ENTERPRISE';
-  form.parentId = '';
   formRef.value?.clearValidate();
 }
 
@@ -433,7 +448,6 @@ async function onSave() {
         name: form.name.trim(),
         slug: form.slug.trim(),
         type: form.type,
-        parentId: form.parentId || undefined,
       });
       ElMessage.success('已创建');
     }
@@ -449,11 +463,13 @@ async function onSave() {
 
 
 function openTokenStats(row: AdminEnterpriseRow) {
-  router.push({ path: '/admin/enterprise-token-stats', query: { tenantId: row.id } });
+  fundsDrawer.value?.close();
+  usageDrawer.value?.open(row.id, row.name);
 }
 
 function openFunds(row: AdminEnterpriseRow) {
-  router.push({ path: '/admin/enterprise-wallets', query: { tenantId: row.id, tab: 'funds' } });
+  usageDrawer.value?.close();
+  fundsDrawer.value?.open(row.id, row.name);
 }
 
 async function openWorkbench(row: AdminEnterpriseRow) {
@@ -635,6 +651,7 @@ onBeforeUnmount(() => {
 
 .enterprise-search,
 .enterprise-search-keyword,
+.enterprise-search-admin,
 .status-filter {
   flex: 0 0 auto;
   min-width: 0;
@@ -643,6 +660,10 @@ onBeforeUnmount(() => {
 
 .enterprise-search-keyword {
   width: 210px;
+}
+
+.enterprise-search-admin {
+  width: 220px;
 }
 
 .status-filter {
@@ -772,6 +793,7 @@ onBeforeUnmount(() => {
 
   .enterprise-search,
   .enterprise-search-keyword,
+  .enterprise-search-admin,
   .status-filter,
   .toolbar-button {
     width: 100%;

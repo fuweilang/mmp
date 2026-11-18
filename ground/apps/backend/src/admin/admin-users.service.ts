@@ -189,6 +189,20 @@ export class AdminUsersService {
       }
     }
 
+    if (dto.membershipRoles?.length && dto.tenantId !== undefined) {
+      throw new BadRequestException('修改各企业角色时不能同时更换所属企业');
+    }
+    if (dto.membershipRoles?.length) {
+      const ids = dto.membershipRoles.map((row) => row.tenantId);
+      if (new Set(ids).size !== ids.length) throw new BadRequestException('同一企业不能重复设置角色');
+      for (const tenantId of ids) await this.support.assertTenantInScope(scope, tenantId);
+      const joined = await this.prisma.orgMember.findMany({
+        where: { userId: id, tenantId: { in: ids } },
+        select: { tenantId: true },
+      });
+      if (joined.length !== ids.length) throw new BadRequestException('只能修改已加入的企业角色');
+    }
+
     const demotingPlatform = currentlyPlatform && !nextHasAdmin;
     if (actor.id === id && demotingPlatform) {
       throw new BadRequestException('不能取消自己的平台管理员身份');
@@ -229,6 +243,24 @@ export class AdminUsersService {
           });
         }
       }
+      if (dto.membershipRoles?.length) {
+        for (const row of dto.membershipRoles) {
+          const current = await tx.orgMember.findUnique({
+            where: { userId_tenantId: { userId: id, tenantId: row.tenantId } },
+            select: { role: true },
+          });
+          if (!current) throw new BadRequestException('只能修改已加入的企业角色');
+          const next = row.role === 'ADMIN' ? MemberRole.ADMIN : MemberRole.MEMBER;
+          // 未改动的所有者保持 OWNER，不降成 ADMIN。
+          if (current.role === MemberRole.OWNER && next === MemberRole.ADMIN) continue;
+          if (current.role === next) continue;
+          await tx.orgMember.update({
+            where: { userId_tenantId: { userId: id, tenantId: row.tenantId } },
+            data: { role: next },
+          });
+        }
+        await this.syncOrgRolesFromMemberships(tx, id);
+      }
     });
     await this.prisma.auditLog.create({
       data: {
@@ -239,10 +271,26 @@ export class AdminUsersService {
           ...(roleChangeRequested ? { roleKeys: nextKeys } : {}),
           ...(dto.tenantId !== undefined ? { tenantId: dto.tenantId } : {}),
           ...(dto.addMemberTenantId ? { addedMemberTenantId: dto.addMemberTenantId, requestedMemberRole: 'MEMBER', existingMembershipPreserved: true } : {}),
+          ...(dto.membershipRoles?.length ? { membershipRoles: dto.membershipRoles } : {}),
         },
       },
     });
     return this.support.getUser(id);
+  }
+
+  /** 全局企业角色按全部成员档重算：任一管理员保留企业管理员，任一成员保留企业成员。平台角色不动。 */
+  private async syncOrgRolesFromMemberships(tx: Prisma.TransactionClient, userId: string) {
+    const memberships = await tx.orgMember.findMany({ where: { userId }, select: { role: true } });
+    const orgKeys: string[] = [];
+    if (memberships.some((row) => row.role === MemberRole.ADMIN || row.role === MemberRole.OWNER)) orgKeys.push('org_admin');
+    if (memberships.some((row) => row.role === MemberRole.MEMBER)) orgKeys.push('org_member');
+    const current = await tx.userRole.findMany({
+      where: { userId },
+      select: { role: { select: { id: true, key: true, permissions: { select: { permKey: true } } } } },
+    });
+    const kept = current.map((row) => row.role).filter((role) => role.key !== 'org_admin' && role.key !== 'org_member');
+    const orgRoles = orgKeys.length > 0 ? await this.support.loadRoles(orgKeys) : [];
+    await this.support.setUserRoles(tx, userId, [...kept, ...orgRoles]);
   }
 
   /** 查看用户：在租户上下文下的有效权限并集（只读）。可传 tenantId；缺省时单企业自动选中，多企业需选择。 */

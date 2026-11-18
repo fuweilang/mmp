@@ -25,7 +25,7 @@
       <div class="wallet-card">
         <div class="label">累计消耗 AI币</div>
         <div class="value">{{ formatNum(walletTotalDebited) }}</div>
-        <div class="hint">与企业钱包同一口径</div>
+        <div class="hint">与企业 AI 币同一口径</div>
       </div>
     </div>
 

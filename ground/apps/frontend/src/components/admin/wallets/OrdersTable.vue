@@ -8,7 +8,7 @@
       header-cell-class-name="billing-table-header"
       empty-text="暂无充值记录"
     >
-      <el-table-column prop="tenantName" label="企业" min-width="140" show-overflow-tooltip />
+      <el-table-column v-if="showEnterprise" prop="tenantName" label="企业" min-width="140" show-overflow-tooltip />
       <el-table-column prop="orderNo" label="单号" min-width="160" show-overflow-tooltip />
       <el-table-column prop="amountYuan" label="金额(元)" width="100">
         <template #default="{ row }">¥{{ row.amountYuan }}</template>
@@ -55,7 +55,7 @@ import {
   rechargeStatusTagType,
 } from '@/views/billing/billingDisplay';
 
-defineProps<{
+withDefaults(defineProps<{
   rows: Array<{
     id: string;
     orderNo: string;
@@ -70,7 +70,10 @@ defineProps<{
   page: number;
   pageSize: number;
   total: number;
-}>();
+  showEnterprise?: boolean;
+}>(), {
+  showEnterprise: false,
+});
 
 defineEmits<{
   (e: 'update:page', v: number): void;

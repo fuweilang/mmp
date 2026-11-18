@@ -161,7 +161,7 @@ describe('admin 列表公共层 · 页面挂载', () => {
   it('AdminEnterprises: 渲染/分页/筛选/空态', async () => {
     api.listEnterprises.mockResolvedValue(Array.from({ length: 25 }, (_, i) => ({
       id: `e-${i}`, name: `企业${i}`, slug: `slug-${i}`, type: 'ENTERPRISE', status: 'active',
-      memberCount: 1, createdAt: '2026-11-01T00:00:00Z', admins: [], adminCount: 0, parentId: null, parentName: null,
+      memberCount: 1, createdAt: '2026-11-01T00:00:00Z', admins: [], adminCount: 0, members: [], parentId: null, parentName: null,
     })));
     mount(() => h(AdminEnterprises));
     await flush();
@@ -181,6 +181,38 @@ describe('admin 列表公共层 · 页面挂载', () => {
     button('重置')!.click();
     await flush();
     expect(document.querySelector('.enterprise-table .el-table__empty-text')?.textContent).toContain('还没有企业');
+  });
+
+  it('AdminEnterprises: 管理员搜索只匹配管理员姓名或手机号', async () => {
+    const base = {
+      type: 'ENTERPRISE', status: 'active', memberCount: 2, createdAt: '2026-11-01T00:00:00Z',
+      adminCount: 0, parentId: null, parentName: null,
+    };
+    api.listEnterprises.mockResolvedValue([
+      { ...base, id: 'team', name: '测试团队', slug: 'slug-team', admins: [{ id: 'u1', name: '杨泽昆', phone: '18552375428' }], members: [] },
+      { ...base, id: 'strategy', name: '猛犸战略部', slug: 'slug-strategy', admins: [{ id: 'u1', name: '杨泽昆', phone: '18552375428' }], members: [] },
+      { ...base, id: 'member-only', name: '只有成员', slug: 'slug-member', admins: [], members: [{ id: 'u1', name: '杨泽昆', phone: '18552375428' }] },
+    ]);
+    mount(() => h(AdminEnterprises));
+    await flush();
+
+    const adminInput = document.querySelector<HTMLInputElement>('.enterprise-search-admin input')!;
+    typeInto(adminInput, '5428');
+    await wait(400);
+    expect(rowsOf('.enterprise-table')).toHaveLength(2);
+    expect(document.body.textContent).toContain('测试团队');
+    expect(document.body.textContent).toContain('猛犸战略部');
+    expect(document.body.textContent).not.toContain('只有成员');
+
+    typeInto(adminInput, '杨泽昆');
+    await wait(400);
+    expect(rowsOf('.enterprise-table')).toHaveLength(2);
+
+    const nameInput = document.querySelector<HTMLInputElement>('.enterprise-search-keyword input')!;
+    typeInto(nameInput, '战略');
+    await wait(400);
+    expect(rowsOf('.enterprise-table')).toHaveLength(1);
+    expect(document.body.textContent).toContain('猛犸战略部');
   });
 
   it('AdminOfficialSkills: 渲染/分页/筛选/空态', async () => {

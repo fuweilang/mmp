@@ -57,16 +57,9 @@ export const enterpriseSelect = {
   _count: { select: { members: true } },
   parents: { select: { parent: { select: { id: true, name: true } } }, take: 1 },
   aiWallet: { select: { balanceCoins: true, totalCredited: true, totalDebited: true } },
-  // 企业管理员 = 组织成员中角色为 ADMIN（含历史 OWNER）的用户，可多人
+  // 列表按本企业成员档拆开，不看用户身上的全局 org_admin 角色。
   members: {
-    // 企业管理员 = 拥有「企业管理员」角色的成员。猛犸总部没有企业管理员角色，绑定的超级管理员显示在这里。
-    where: {
-      OR: [
-        { user: { roles: { some: { role: { key: 'org_admin' } } } } },
-        { tenant: { type: 'PLATFORM' }, user: { roles: { some: { role: { key: 'super_admin' } } } } },
-      ],
-    },
-    select: { user: { select: { id: true, name: true, phone: true } } },
+    select: { role: true, user: { select: { id: true, name: true, phone: true } } },
     orderBy: { createdAt: 'asc' as const },
   },
 } satisfies Prisma.TenantSelect;
@@ -227,7 +220,9 @@ export class AdminSupportService {
   }
 
   presentEnterprise(tenant: EnterpriseRow) {
-    const admins = tenant.members.map((member) => member.user);
+    const person = (member: EnterpriseRow['members'][number]) => member.user;
+    const admins = tenant.members.filter((member) => member.role === 'ADMIN' || member.role === 'OWNER').map(person);
+    const members = tenant.members.filter((member) => member.role === 'MEMBER').map(person);
     const parent = tenant.parents[0]?.parent ?? null;
     return {
       id: tenant.id,
@@ -239,6 +234,7 @@ export class AdminSupportService {
       memberCount: tenant._count.members,
       admins,
       adminCount: admins.length,
+      members,
       /** 上级：直属企业为 null（页面显示「猛犸总部」）；代理商二期显示代理商名。 */
       parentId: parent?.id ?? null,
       parentName: parent?.name ?? null,

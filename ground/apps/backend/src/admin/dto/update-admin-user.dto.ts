@@ -1,4 +1,15 @@
-import { IsArray, IsBoolean, IsIn, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsOptional, IsString, MinLength, ValidateIf, ValidateNested } from 'class-validator';
+
+/** 只改这个人已经加入的某一家企业里的成员档。 */
+export class MembershipRoleUpdateDto {
+  @IsString()
+  @MinLength(1)
+  tenantId!: string;
+
+  @IsIn(['ADMIN', 'MEMBER'])
+  role!: 'ADMIN' | 'MEMBER';
+}
 
 export class UpdateAdminUserDto {
   @IsOptional()
@@ -42,4 +53,12 @@ export class UpdateAdminUserDto {
   @IsOptional()
   @IsIn(['ADMIN', 'MEMBER'])
   memberRole?: 'ADMIN' | 'MEMBER';
+
+  /** 按企业改角色。不新增、不移除企业。 */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => MembershipRoleUpdateDto)
+  membershipRoles?: MembershipRoleUpdateDto[];
 }

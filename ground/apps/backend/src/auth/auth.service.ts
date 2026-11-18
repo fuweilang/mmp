@@ -15,7 +15,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SessionMe } from '@mammoth/shared';
 import { computeEffectivePermissions } from '../permissions/effective';
 import { JwtPayload } from './jwt.guard';
-import { creditSignupGiftInTx } from '../billing/welcome-gift';
+import { creditSignupGiftForTenant, creditSignupGiftInTx } from '../billing/welcome-gift';
 import { removeStoredFile } from '../knowledge/storage';
 import { saveUserAvatar, userAvatarPublicUrl } from './user-avatar';
 import { SmsCodes, smsError, type SmsCodeStore, type SmsScene } from './sms';
@@ -300,6 +300,9 @@ export class AuthService {
       throw new ForbiddenException('企业已停用，无法登录');
     }
     const tenantId = current?.id ?? null;
+    if (tenantId) {
+      await creditSignupGiftForTenant(this.prisma, { tenantId, actorUserId: user.id });
+    }
     await this.prisma.auditLog.create({
       data: { userId: user.id, tenantId, action, ip },
     });
@@ -322,6 +325,7 @@ export class AuthService {
       tenant = found;
     }
     if (tenant && tenant.status !== 'active') throw new ForbiddenException('企业已停用，无法进入');
+    await creditSignupGiftForTenant(this.prisma, { tenantId, actorUserId: user.id });
     // 平台代运营只针对业务租户；猛犸总部（PLATFORM）没有「工作台」语义。
     if (user.isPlatformAdmin && tenant && tenant.type === TenantType.PLATFORM) {
       throw new ForbiddenException('平台租户无需进入工作台');
@@ -448,6 +452,9 @@ export class AuthService {
     if (!user || user.status !== 'active') throw new UnauthorizedException('账号不可用');
     this.usedBrowserSsoJti.add(payload.jti);
     const tenantId = await this.resolveSsoTenant(user, payload.tenantId ?? null);
+    if (tenantId) {
+      await creditSignupGiftForTenant(this.prisma, { tenantId, actorUserId: user.id });
+    }
     // 控制台在新标签打开时保留同账号、同企业的现有登录，避免使原 Web 页的已验证凭证失效。
     if (!await this.matchesBrowserSession(browserCookies[this.cookieName()], user.id, tenantId)) {
       this.setCookie(res, { sub: user.id, tenantId });

@@ -11,6 +11,8 @@ export type AdminEnterpriseRow = {
   createdAt: string;
   admins: Array<{ id: string; name: string; phone: string }>;
   adminCount: number;
+  /** 本企业普通成员，不含管理员。 */
+  members: Array<{ id: string; name: string; phone: string }>;
   /** 上级：null = 直属企业（猛犸总部）。 */
   parentId: string | null;
   parentName: string | null;

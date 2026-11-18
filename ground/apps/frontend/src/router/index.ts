@@ -34,7 +34,7 @@ const router = createRouter({
         },
         {
           path: 'enterprise-token-stats',
-          meta: { title: '企业token用量' },
+          meta: { title: 'token用量统计' },
           component: () => import('../views/admin/AdminEnterpriseTokenStats.vue'),
         },
         {
@@ -90,7 +90,7 @@ const router = createRouter({
         },
         {
           path: 'enterprise-wallets',
-          meta: { title: '企业钱包' },
+          meta: { title: '企业 AI 币' },
           component: () => import('../views/admin/AdminEnterpriseWallets.vue'),
         },
         {

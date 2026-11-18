@@ -1,4 +1,10 @@
 <template>
+  <Teleport to="body">
+    <div v-if="probingIds.length || bulkRunning" class="probe-toast" role="status">
+      <span class="probe-spinner" aria-hidden="true" />
+      <span>{{ probeToastText }}</span>
+    </div>
+  </Teleport>
   <section class="models-page">
     <div class="page-head">
       <div>
@@ -285,6 +291,18 @@ const flatRows = computed<FlatRow[]>(() => {
     }
   }
   return out.sort((a, b) => rowPositions.get(a.key)! - rowPositions.get(b.key)!);
+});
+
+const probeToastText = computed(() => {
+  const names = probingIds.value
+    .map((id) => {
+      const row = flatRows.value.find((item) => item.model.id === id);
+      return row?.model.displayName || row?.model.modelId || '';
+    })
+    .filter(Boolean);
+  if (names.length === 1) return `正在测试 ${names[0]}`;
+  if (names.length > 1) return `正在测试 ${names.length} 个模型`;
+  return '正在测试…';
 });
 
 const filteredRows = computed(() => {
@@ -741,6 +759,40 @@ onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of pr
 </script>
 
 <style scoped>
+.probe-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 4000;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(480px, calc(100vw - 32px));
+  padding: 10px 16px;
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+  color: #333946;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.probe-spinner {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border: 2px solid #d9deff;
+  border-top-color: #4A53A3;
+  border-radius: 50%;
+  animation: probe-spin 0.8s linear infinite;
+}
+
+@keyframes probe-spin {
+  to { transform: rotate(360deg); }
+}
+
 .models-page {
   display: flex;
   flex-direction: column;

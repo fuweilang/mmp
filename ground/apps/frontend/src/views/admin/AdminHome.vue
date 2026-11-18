@@ -116,8 +116,8 @@ const shortcuts = [
   },
   {
     path: '/admin/enterprise-token-stats',
-    title: '企业token用量',
-    desc: '企业物理 Token 与 AI币（1:1）用量：全平台 → 企业 → 成员',
+    title: 'token用量统计',
+    desc: '各企业、各模型用了多少 Token',
     icon: BarChart3,
   },
   {
@@ -128,7 +128,7 @@ const shortcuts = [
   },
   {
     path: '/admin/enterprise-wallets',
-    title: '企业钱包',
+    title: '企业 AI 币',
     desc: '企业余额、充值记录、详情流水与调账',
     icon: Wallet,
   },

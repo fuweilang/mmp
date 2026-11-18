@@ -6,37 +6,36 @@
       border
       class="billing-table"
       header-cell-class-name="billing-table-header"
-      empty-text="暂无企业钱包"
+      empty-text="暂无企业 AI 币"
     >
       <el-table-column label="企业" min-width="180" show-overflow-tooltip>
+        <template #default="{ row }">{{ row.tenantName }}</template>
+      </el-table-column>
+      <el-table-column label="企业管理员" min-width="180">
         <template #default="{ row }">
-          <span class="enterprise-cell">
-            <span class="enterprise-dot" :style="{ backgroundColor: enterpriseColor(row.tenantId) }" />
-            <span>{{ row.tenantName }}</span>
-          </span>
+          <div v-if="row.admins?.length" class="admin-list">
+            <div v-for="admin in row.admins" :key="admin.id" class="admin-item">
+              <span class="admin-name">{{ admin.name }}</span>
+              <span class="admin-phone">{{ admin.phone }}</span>
+            </div>
+          </div>
+          <span v-else class="admin-empty">未设置</span>
         </template>
       </el-table-column>
-      <el-table-column prop="tenantSlug" label="品牌" min-width="120" show-overflow-tooltip />
-      <el-table-column prop="balanceCoins" label="余额 AI币" width="120">
+      <el-table-column label="余额" width="140">
         <template #default="{ row }">
-          <span class="wallet-num-blue">{{ row.balanceCoins }}</span>
+          <span class="balance-num">{{ row.balanceCoins.toLocaleString('zh-CN') }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="totalCredited" label="累计入账" width="110">
-        <template #default="{ row }">
-          <span>{{ row.totalCredited }}</span>
-        </template>
+      <el-table-column label="最近变动" width="160">
+        <template #default="{ row }">{{ row.updatedAt ? formatDateTime(row.updatedAt) : '—' }}</template>
       </el-table-column>
-      <el-table-column prop="totalDebited" label="累计消耗" width="110">
-        <template #default="{ row }">
-          <span>{{ row.totalDebited }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right" align="center">
+      <el-table-column label="操作" width="210" fixed="right" align="center">
         <template #default="{ row }">
           <div class="operation-buttons">
-            <el-button text type="primary" @click="$emit('open-funds', row)">详情</el-button>
-            <el-button text type="primary" @click="$emit('open-adjust', row, 'credit')">调账</el-button>
+            <el-button text type="primary" @click="$emit('open-funds', row)">明细</el-button>
+            <el-button text type="primary" @click="$emit('open-adjust', row)">调账</el-button>
+            <el-button text type="primary" @click="$emit('open-orders', row)">充值记录</el-button>
           </div>
         </template>
       </el-table-column>
@@ -46,7 +45,7 @@
         :current-page="page"
         :page-size="pageSize"
         :total="total"
-        :page-sizes="[10, 20, 50]"
+        :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next"
         background
         @update:current-page="$emit('update:page', $event)"
@@ -60,7 +59,7 @@
 
 <script setup lang="ts">
 import type { AdminWalletRow } from '@/api/admin';
-import { enterpriseColor } from './walletDisplay';
+import { formatDateTime } from '@/utils/format';
 
 defineProps<{
   rows: AdminWalletRow[];
@@ -72,7 +71,8 @@ defineProps<{
 
 defineEmits<{
   'open-funds': [row: AdminWalletRow];
-  'open-adjust': [row: AdminWalletRow, mode: 'credit' | 'debit'];
+  'open-adjust': [row: AdminWalletRow];
+  'open-orders': [row: AdminWalletRow];
   'update:page': [page: number];
   'update:pageSize': [size: number];
   'page-change': [];
@@ -81,41 +81,49 @@ defineEmits<{
 </script>
 
 <style scoped>
-.enterprise-option,
-.enterprise-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
+.admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.enterprise-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: 0 0 auto;
+.admin-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.35;
+}
+
+.admin-name {
+  color: #333946;
+}
+
+.admin-phone {
+  color: #667085;
+  font-size: 12px;
+}
+
+.admin-empty {
+  color: #98a2b3;
+}
+
+.balance-num {
+  color: var(--app-primary-color, #4A53A3);
 }
 
 .operation-buttons {
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  display: inline-flex;
   gap: 2px;
-  font-size: 0;
+  justify-content: center;
 }
 
-.operation-buttons :deep(.el-button) {
-  margin: 0;
-  min-height: 28px;
-  padding: 4px 6px;
+.operation-buttons :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .billing-table {
   width: 100%;
-}
-
-.wallet-num-blue {
-  color: var(--app-primary-color, #4A53A3);
 }
 
 :deep(.billing-table-header) {
@@ -131,15 +139,19 @@ defineEmits<{
   font-size: 13px;
 }
 
-.table-pager,
-.ledger-pager {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 10px;
+:deep(.el-button) {
+  margin: 0;
+  min-height: 28px;
+  padding: 4px 6px;
 }
 
-.table-pager :deep(.el-pagination),
-.ledger-pager :deep(.el-pagination) {
+.table-pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.table-pager :deep(.el-pagination) {
   flex-wrap: wrap;
   justify-content: flex-end;
   row-gap: 6px;

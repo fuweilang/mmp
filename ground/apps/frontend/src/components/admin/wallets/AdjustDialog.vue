@@ -1,26 +1,26 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    :title="adjustMode === 'debit' ? '减少余额' : '增加余额'"
-    width="480px"
+    :title="adjustMode === 'debit' ? '减少 AI 币' : '增加 AI 币'"
+    width="520px"
     destroy-on-close
     :close-on-click-modal="false"
     class="adjust-dialog"
     @update:model-value="$emit('update:modelValue', $event)"
   >
-    <el-form label-width="88px" class="adjust-form" @submit.prevent>
+    <el-form label-width="96px" class="adjust-form" @submit.prevent>
       <el-form-item label="企业">
         <span class="adjust-enterprise">{{ target?.tenantName }}</span>
       </el-form-item>
-      <el-form-item label="当前余额">
+      <el-form-item label="当前 AI 币">
         <span>{{ (target?.balanceCoins ?? 0).toLocaleString('zh-CN') }} AI币</span>
       </el-form-item>
-      <el-form-item label="调账数量" required>
+      <el-form-item label="AI币数量" required>
         <div class="direction-badge" :class="adjustMode === 'debit' ? 'is-minus' : 'is-plus'">
           <span class="direction-sign">{{ adjustMode === 'debit' ? '−' : '+' }}</span>
           <div>
-            <strong>{{ adjustMode === 'debit' ? '减少余额' : '增加余额' }}</strong>
-            <p>{{ adjustMode === 'debit' ? '将从企业钱包扣减下方 AI币。' : '将向企业钱包增加下方 AI币。' }}</p>
+            <strong>{{ adjustMode === 'debit' ? '减少 AI 币' : '增加 AI 币' }}</strong>
+            <p>{{ adjustMode === 'debit' ? '扣减下方数量的 AI 币。' : '增加下方数量的 AI 币。' }}</p>
           </div>
         </div>
         <div class="amount-options">
@@ -37,6 +37,7 @@
           >
             <small>{{ adjustMode === 'debit' ? '−' : '+' }}</small>
             <span>{{ amount.toLocaleString('zh-CN') }}</span>
+            <span class="amount-unit">AI币</span>
           </button>
         </div>
         <el-input
@@ -66,7 +67,7 @@
           show-word-limit
           type="textarea"
           :rows="2"
-          :placeholder="adjustMode === 'debit' ? '选填，如冲正、退款' : '选填，如对公到账、商务补偿'"
+          placeholder="选填，如补偿、冲正"
           @update:model-value="$emit('update:remark', String($event ?? ''))"
         />
       </el-form-item>
@@ -74,7 +75,7 @@
     <template #footer>
       <el-button @click="$emit('update:modelValue', false)">取消</el-button>
       <el-button type="primary" :loading="adjusting" @click="$emit('submit')">
-        {{ adjustMode === 'debit' ? '确认调减' : '确认入账' }}
+        {{ adjustMode === 'debit' ? '确认减少' : '确认增加' }}
       </el-button>
     </template>
   </el-dialog>
@@ -186,8 +187,8 @@ defineEmits<{
   color: #333946;
   cursor: pointer;
   display: inline-flex;
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
   gap: 2px;
   height: 42px;
   justify-content: center;
@@ -196,7 +197,8 @@ defineEmits<{
   padding: 0;
 }
 
-.amount-card small {
+.amount-card small,
+.amount-unit {
   color: #98a2b3;
   font-size: 12px;
   font-weight: 700;
@@ -207,7 +209,8 @@ defineEmits<{
   color: #4A53A3;
 }
 
-.amount-card:hover:not(.active) small {
+.amount-card:hover:not(.active) small,
+.amount-card:hover:not(.active) .amount-unit {
   color: #4A53A3;
 }
 
@@ -217,7 +220,8 @@ defineEmits<{
   color: #ffffff;
 }
 
-.amount-card.active small {
+.amount-card.active small,
+.amount-card.active .amount-unit {
   color: rgba(255, 255, 255, 0.78);
 }
 
@@ -228,6 +232,11 @@ defineEmits<{
 
 .amount-card.is-debit:hover:not(.active) {
   border-color: #f04438;
+  color: #b42318;
+}
+
+.amount-card.is-debit:hover:not(.active) small,
+.amount-card.is-debit:hover:not(.active) .amount-unit {
   color: #b42318;
 }
 
