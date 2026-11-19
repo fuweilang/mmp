@@ -1,7 +1,7 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createApp, h, nextTick, type App} from 'vue';
 import ElementPlus from 'element-plus';
-const api=vi.hoisted(()=>({list:vi.fn()}));
+const api=vi.hoisted(()=>({list:vi.fn(),removeModel:vi.fn(),updateModel:vi.fn()}));
 vi.mock('../src/api/admin',()=>({adminLlmProviderApi:api}));
 import AdminModels from '../src/views/admin/AdminModels.vue';
 let app:App|undefined;
@@ -23,6 +23,15 @@ async function choose(label:string,text:string){
  expect(option).toBeDefined();option!.click();await flush();
 }
 function rowText(root:HTMLElement){return [...root.querySelectorAll('.el-table__body tr')].map(n=>n.textContent).join('\n');}
+it.each(['模型筛选','厂商筛选'])('%s only allows choosing options, including while open',async(label)=>{
+ const root=await mount();
+ const input=root.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+ expect(input.readOnly).toBe(true);
+ input.closest('.el-select')!.querySelector<HTMLElement>('.el-select__wrapper')!.click();await flush();
+ expect(input.readOnly).toBe(true);
+ expect([...document.querySelectorAll('.el-select-dropdown__item')].some(option=>option.textContent?.trim()===(label==='模型筛选'?'DeepSeek':'极客智坊'))).toBe(true);
+ expect(root.querySelector<HTMLInputElement>('.page-search input')!.readOnly).toBe(false);
+});
 it('filters model families across vendors and combines with vendor and keyword',async()=>{
  const root=await mount();
  await choose('模型筛选','DeepSeek');
@@ -47,4 +56,30 @@ it('resets pagination when a filter changes',async()=>{
  expect(root.querySelector('.el-pager .is-active')?.textContent?.trim()).toBe('2');
  await choose('模型筛选','Claude');
  expect(root.querySelector('.el-pager .is-active')?.textContent?.trim()).toBe('1');expect(rowText(root)).toContain('claude-last');
+});
+it('uses the shared model deletion dialog and sends no request on cancel',async()=>{
+ const root=await mount();api.removeModel.mockClear();
+ const row=[...root.querySelectorAll('.el-table__body tr')].find(node=>node.textContent?.includes('claude-fable-5'))!;
+ const remove=[...row.querySelectorAll<HTMLButtonElement>('button')].find(node=>node.textContent?.trim()==='删除')!;
+ remove.click();await flush();
+ const box=document.querySelector('.el-message-box.delete-confirm')!;
+ expect(box.querySelector('.delete-confirm__objects')?.textContent).toBe('claude-fable-5');
+ [...box.querySelectorAll<HTMLButtonElement>('button')].find(node=>node.textContent?.trim()==='取消')!.click();await flush();
+ expect(api.removeModel).not.toHaveBeenCalled();
+ await vi.waitFor(()=>expect(document.querySelector('.el-message-box.delete-confirm')).toBeNull());
+ remove.click();await flush();
+ [...document.querySelectorAll<HTMLButtonElement>('.delete-confirm button')].find(node=>node.textContent?.trim()==='删除模型')!.click();await flush();
+ await vi.waitFor(()=>expect(api.removeModel).toHaveBeenCalledExactlyOnceWith('claude-fable-5'));
+});
+it('shows image purpose and hides chat-only controls for image rows',async()=>{
+ await mount();app!.unmount();document.body.innerHTML='';
+ api.list.mockResolvedValue([{id:'sf',name:'siliconflow',displayName:'SiliconFlow 知识库',models:[{...model('Kwai-Kolors/Kolors'),purpose:'image'},model('deepseek-flash')]}]);
+ const root=document.createElement('div');document.body.append(root);app=createApp({render:()=>h(AdminModels)}).use(ElementPlus);app.mount(root);await flush();
+ const image=[...root.querySelectorAll('.el-table__body tr')].find(n=>n.textContent?.includes('Kwai-Kolors/Kolors'))!;
+ api.updateModel.mockResolvedValue({});
+ image.querySelector<HTMLElement>('.el-switch__core')!.click();await flush();
+ expect(api.updateModel).toHaveBeenCalledWith('Kwai-Kolors/Kolors',{enabled:false});
+ expect(image.textContent).toContain('生成图片');expect(image.textContent).not.toContain('设为默认');expect(image.querySelectorAll('.el-switch')).toHaveLength(1);expect(image.textContent).toContain('预览生成');
+ await choose('用途筛选','生成图片');expect(rowText(root)).toContain('Kolors');expect(rowText(root)).not.toContain('deepseek-flash');
+ const vendor=document.querySelector<HTMLButtonElement>('button[aria-label="设置供应商 SiliconFlow 知识库"]');expect(vendor).toBeTruthy();vendor!.click();await flush();expect(document.querySelector('.models-dialog')?.textContent).toContain('API Key');
 });

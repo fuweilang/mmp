@@ -28,8 +28,7 @@ export class OfficialSkillPublicService {
   /** Public enabled directory for both clients. */
   async publicList(query: { q?: string; category?: string; taxonomy?: 'industry' | 'facets' }) {
     const q = query.q?.trim();
-    const category =
-      query.category && isOfficialSkillCategory(query.category) ? query.category : undefined;
+    const category = query.category || undefined;
     const rows = await this.prisma.officialSkill.findMany({
       where: {
         deletedAt: null,
@@ -59,7 +58,7 @@ export class OfficialSkillPublicService {
     });
     return rows.map((row) => {
       const card = this.host.publicCard(row, query.taxonomy === 'industry' || query.taxonomy === 'facets');
-      const discovery = query.taxonomy === 'facets' ? skillDiscovery(row.key) : undefined;
+      const discovery = query.taxonomy === 'facets' ? { ...(skillDiscovery(row.key) ?? { industries: [] }), capability: row.categories[0] ?? 'uncategorized' } : undefined;
       return discovery ? { ...card, discovery } : card;
     });
   }

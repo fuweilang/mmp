@@ -11,7 +11,7 @@ const general: OfficialAgentCard = {
   versionId: 'general-v1', version: 1,
   name: '文案润色', summary: '改善中文表达', openingQuestions: [],
   capabilities: ['表达优化'], avatarUrl: null, executionGranted: true,
-  discovery: { capability: 'marketing', industries: [] },
+  discovery: { capability: 'content', industries: [] },
 }
 
 const knowledge: OfficialAgentCard = {
@@ -19,7 +19,7 @@ const knowledge: OfficialAgentCard = {
   versionId: 'knowledge-v2', version: 2,
   name: '企业问答', summary: '检索内部发布资料', openingQuestions: ['内部发布日期是什么？'],
   capabilities: ['企业资料'], avatarUrl: null, executionGranted: true,
-  discovery: { capability: 'development', industries: [] },
+  discovery: { capability: 'expertise', industries: [] },
 }
 
 const locked: OfficialAgentCard = {
@@ -97,6 +97,78 @@ async function loaded(): Promise<void> {
 }
 
 describe('GalleryPage', () => {
+  it('uses managed expert category names and order, including custom keys and refreshed names', async () => {
+    const custom = { ...general, category: 'cat-custom', discovery: { capability: 'cat-custom', industries: [] } }
+    const pageExperts = vi.fn(async (query: CatalogQuery) => pageOf([custom, knowledge], query, item => item.name))
+    let renamed = false
+    const expertFacets = async () => ({ total: 2, capabilities: [
+      { id: 'expertise', count: 1, name: '专业分类新名字', sortOrder: 2 },
+      { id: 'cat-custom', count: 1, name: renamed ? '新分类名称' : '财务管理', sortOrder: 0 },
+      { id: 'empty-custom', count: 0, name: '空分类', sortOrder: 1 },
+    ], industries: [] })
+    render(<GalleryPage t={t} catalogDetail={detail} pageExperts={pageExperts}
+      pageSkills={async () => ({ items: [], total: 0, hasMore: false, nextCursor: null })}
+      expertFacets={expertFacets} skillFacets={async () => ({ total: 0, capabilities: [], industries: [] })}
+      startAgent={async () => undefined} requestSkill={async () => undefined} />)
+    await loaded()
+    const panel = screen.getByRole('tabpanel', { name: '专家' })
+    await waitFor(() => expect(panel.querySelector('[data-capability="cat-custom"]')?.textContent).toContain('财务管理'))
+    const more = within(panel).queryByRole('button', { name: /更多能力/ })
+    if (more) fireEvent.click(more)
+    expect([...panel.querySelectorAll('[data-capability]')].map(node => node.getAttribute('data-capability'))).toEqual(['all', 'cat-custom', 'expertise'])
+    expect(within(panel).queryByText('空分类')).toBeNull()
+    const card = panel.querySelector('[data-catalog-key="general"]') as HTMLElement
+    expect(within(card).getByText('财务管理')).toBeTruthy()
+    fireEvent.click(panel.querySelector('[data-capability="cat-custom"]') as HTMLElement)
+    await waitFor(() => expect(pageExperts).toHaveBeenLastCalledWith(expect.objectContaining({ capability: 'cat-custom' })))
+    renamed = true
+    fireEvent.click(within(panel).getByRole('button', { name: '刷新' }))
+    await waitFor(() => expect(panel.querySelector('[data-capability="cat-custom"]')?.textContent).toContain('新分类名称'))
+  })
+
+  it('shows custom skill categories from its own managed directory', async () => {
+    const skill: OfficialSkillCard = { id: 'custom-skill', key: 'custom-skill', name: '财务技能', summary: '分析财务', category: 'skill-finance-custom', enabledAt: '2026-11-19', packageRevision: 1,
+      discovery: { capability: 'skill-finance-custom', industries: [] } }
+    const pageSkills = vi.fn(async (query: CatalogQuery) => pageOf([skill], query, item => item.name))
+    render(<GalleryPage t={t} catalogDetail={detail}
+      pageExperts={async () => ({ items: [], total: 0, hasMore: false, nextCursor: null })} pageSkills={pageSkills}
+      expertFacets={async () => ({ total: 0, capabilities: [], industries: [] })}
+      skillFacets={async () => ({ total: 1, capabilities: [{ id: 'skill-finance-custom', count: 1, name: '财务技能分类', sortOrder: 0 }], industries: [] })}
+      startAgent={async () => undefined} requestSkill={async () => undefined} />)
+    fireEvent.click(screen.getByRole('tab', { name: '技能' }))
+    const panel = screen.getByRole('tabpanel', { name: '技能' })
+    await waitFor(() => expect(within(panel).getByText('财务技能')).toBeTruthy())
+    const chip = await waitFor(() => within(panel).getByRole('button', { name: /财务技能分类/ }))
+    expect(within(panel.querySelector('[data-catalog-key="custom-skill"]') as HTMLElement).getByText('财务技能分类')).toBeTruthy()
+    fireEvent.click(chip)
+    await waitFor(() => expect(pageSkills).toHaveBeenLastCalledWith(expect.objectContaining({ capability: 'skill-finance-custom' })))
+  })
+
+  it('recovers a selected category removed while the gallery remains open', async () => {
+    let removed = false
+    const managed = { ...general, category: 'cat-managed', discovery: { capability: 'cat-managed', industries: [] } }
+    const all = () => ({ total: 1, capabilities: removed ? [] : [{ id: 'cat-managed', count: 1, name: '待删除分类', sortOrder: 0 }], industries: [] })
+    const pageExperts = async (query: CatalogQuery) => pageOf([managed], query, item => item.name)
+    const openExperts = vi.fn(async (query: CatalogQuery) => {
+      if (removed && query.capability === 'cat-managed') throw new Error('HTTP 400 分类不存在')
+      return { facets: all(), page: await pageExperts(query) }
+    })
+    render(<GalleryPage t={t} catalogDetail={detail} openExperts={openExperts} pageExperts={pageExperts}
+      pageSkills={async () => ({ items: [], total: 0, hasMore: false, nextCursor: null })}
+      expertFacets={async () => all()} skillFacets={async () => ({ total: 0, capabilities: [], industries: [] })}
+      startAgent={async () => undefined} requestSkill={async () => undefined} />)
+    await loaded()
+    const panel = screen.getByRole('tabpanel', { name: '专家' })
+    fireEvent.click(await waitFor(() => within(panel).getByRole('button', { name: /待删除分类/ })))
+    await waitFor(() => expect(openExperts).toHaveBeenLastCalledWith(expect.objectContaining({ capability: 'cat-managed' })))
+    await waitFor(() => expect(within(panel).getByRole('button', { name: '刷新' }).hasAttribute('disabled')).toBe(false))
+    removed = true
+    fireEvent.click(within(panel).getByRole('button', { name: '刷新' }))
+    await waitFor(() => expect(openExperts).toHaveBeenLastCalledWith(expect.objectContaining({ capability: 'all' })))
+    await loaded()
+    await waitFor(() => expect(within(panel).queryByRole('alert')).toBeNull())
+  })
+
   it('loads cards, filters by name or summary, and renders a distinct no-match state', async () => {
     mount(vi.fn(async () => [general, knowledge]))
     await loaded()
@@ -118,19 +190,51 @@ describe('GalleryPage', () => {
     expect(screen.getByRole('button', { name: /全部\s*2/, pressed: true })).toBeTruthy()
     const more = screen.queryByRole('button', { name: /更多能力/ })
     if (more) fireEvent.click(more)
-    expect(screen.getByRole('button', { name: /营销与内容/ })).toBeTruthy()
-    const developmentChip = screen.getByRole('button', { name: /开发与架构/ })
-    fireEvent.click(developmentChip)
+    expect(screen.getByRole('button', { name: /内容营销/ })).toBeTruthy()
+    const expertiseChip = screen.getByRole('button', { name: /专业知识/ })
+    fireEvent.click(expertiseChip)
     await waitFor(() => { expect(screen.queryByText('文案润色')).toBeNull() })
     await waitFor(() => { expect(screen.getByText('企业问答')).toBeTruthy() })
   })
 
-  it('omits capability chips, version, and detail panel on expert cards', async () => {
+  it('renders capability tags on expert cards but not version or inline detail', async () => {
     mount(vi.fn(async () => [knowledge]))
     await waitFor(() => { expect(screen.getByText('企业问答')).toBeTruthy() })
-    expect(screen.queryByText('企业资料')).toBeNull()
+    expect(screen.getByText('企业资料')).toBeTruthy()
     expect(screen.queryByText('v2')).toBeNull()
     expect(screen.queryByText('试试这些问题')).toBeNull()
+  })
+
+  it('shows up to three capability tags on a card and every tag in the detail panel', async () => {
+    // jsdom lacks <dialog>.showModal/close; gallery uses native modal for focus/top-layer.
+    if (typeof HTMLDialogElement !== 'undefined') {
+      HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) { this.setAttribute('open', '') }
+      HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) { this.removeAttribute('open') }
+    }
+    const tagged = { ...general, capabilities: ['A标签', 'B标签', 'C标签', 'D标签'] }
+    mount(vi.fn(async () => [tagged]))
+    await loaded()
+    const card = document.querySelector('[data-catalog-key="general"]') as HTMLElement
+    expect(within(card).getByText('A标签')).toBeTruthy()
+    expect(within(card).getByText('C标签')).toBeTruthy()
+    expect(within(card).queryByText('D标签')).toBeNull()
+
+    fireEvent.click(within(card).getByRole('button', { name: '查看详情 文案润色' }))
+    const dialog = await waitFor(() => screen.getByRole('dialog'))
+    await waitFor(() => { expect(within(dialog).getByText('能力标签')).toBeTruthy() })
+    expect(within(dialog).getByText('D标签')).toBeTruthy()
+  })
+
+  it('groups experts without a category under 未分类', async () => {
+    const uncategorized = {
+      ...general, id: 'u1', key: 'u1', name: '未分类助手', category: null,
+      discovery: { capability: 'uncategorized', industries: [] },
+    }
+    mount(vi.fn(async () => [uncategorized]))
+    await waitFor(() => { expect(screen.getByText('未分类助手')).toBeTruthy() })
+    const panel = screen.getByRole('tabpanel', { name: '专家' })
+    await waitFor(() => { expect(panel.querySelector('[data-capability="uncategorized"]')).toBeTruthy() })
+    expect(panel.querySelector('[data-capability="uncategorized"]')?.textContent).toContain('未分类')
   })
 
   it('shows the empty published catalog state', async () => {
@@ -334,12 +438,12 @@ describe('GalleryPage', () => {
 
   it('keeps capability chip order stable when selecting 3rd and 5th facets', async () => {
     const experts: OfficialAgentCard[] = [
-      { ...general, id: 'e1', key: 'e1', name: 'E1', discovery: { capability: 'product-project', industries: [] } },
-      { ...general, id: 'e2', key: 'e2', name: 'E2', discovery: { capability: 'development', industries: [] } },
-      { ...general, id: 'e3', key: 'e3', name: 'E3', discovery: { capability: 'design', industries: [] } },
-      { ...general, id: 'e4', key: 'e4', name: 'E4', discovery: { capability: 'marketing', industries: [] } },
-      { ...general, id: 'e5', key: 'e5', name: 'E5', discovery: { capability: 'sales-customer', industries: [] } },
-      { ...general, id: 'e6', key: 'e6', name: 'E6', discovery: { capability: 'business', industries: [] } },
+      { ...general, id: 'e1', key: 'e1', name: 'E1', discovery: { capability: 'common', industries: [] } },
+      { ...general, id: 'e2', key: 'e2', name: 'E2', discovery: { capability: 'productivity', industries: [] } },
+      { ...general, id: 'e3', key: 'e3', name: 'E3', discovery: { capability: 'content', industries: [] } },
+      { ...general, id: 'e4', key: 'e4', name: 'E4', discovery: { capability: 'sales', industries: [] } },
+      { ...general, id: 'e5', key: 'e5', name: 'E5', discovery: { capability: 'expertise', industries: [] } },
+      { ...general, id: 'e6', key: 'e6', name: 'E6', discovery: { capability: 'analytics', industries: [] } },
     ]
     const skills: OfficialSkillCard[] = [
       { id: 's1', key: 's1', name: 'S1', summary: 'a', category: 'common', enabledAt: '2026-11-07T00:00:00Z', packageRevision: 1, discovery: { capability: 'file-processing', industries: [] } },

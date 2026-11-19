@@ -1,3 +1,4 @@
+import { modelPurpose, type ModelPurpose } from './model-purpose';
 import {
   BadRequestException,
   ConflictException,
@@ -23,6 +24,7 @@ import {
 } from './dto/llm-provider.dto';
 
 export type LlmModelView = {
+  purpose: ModelPurpose;
   id: string;
   providerId: string;
   modelId: string;
@@ -89,6 +91,7 @@ export class LlmProvidersService {
       id: m.id,
       providerId: m.providerId,
       modelId: m.modelId,
+      purpose: modelPurpose(m),
       displayName: m.displayName,
       enabled: m.enabled,
       thinkingEnabled: m.thinkingEnabled,
@@ -218,7 +221,7 @@ export class LlmProvidersService {
           meta: { providerId: created.id, name: created.name, modelCount: created.models.length, hasApiKey: Boolean(apiKey) },
         },
       });
-      for(const m of created.models)if(m.enabled)this.health.requestProbe(m.id);
+      for(const m of created.models)if(m.enabled && modelPurpose(m)==='chat')this.health.requestProbe(m.id);
       return this.toProviderView(created);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -267,7 +270,7 @@ export class LlmProvidersService {
     });
     if(dto.apiKey!==undefined||dto.baseUrl!==undefined||dto.enabled===true){
       await this.health.reset(id);
-      for(const m of updated.models)if(m.enabled)this.health.requestProbe(m.id);
+      for(const m of updated.models)if(m.enabled && modelPurpose(m)==='chat')this.health.requestProbe(m.id);
     }
     await this.prisma.auditLog.create({
       data: {
@@ -355,7 +358,7 @@ export class LlmProvidersService {
           meta: { providerId, modelId: created.modelId, id: created.id },
         },
       });
-      if(created.enabled)this.health.requestProbe(created.id);
+      if(created.enabled && modelPurpose(created)==='chat')this.health.requestProbe(created.id);
       return this.toModelView(created);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -369,6 +372,7 @@ export class LlmProvidersService {
     this.requirePlatformAdmin(actor);
     const existing = await this.prisma.llmModel.findUnique({ where: { id: modelRowId } });
     if (!existing) throw new NotFoundException('模型不存在');
+    if(modelPurpose(existing)!=='chat' && (dto.isPreferred!==undefined || dto.thinkingEnabled!==undefined || dto.supportsTools!==undefined || dto.supportsVision!==undefined))throw new BadRequestException('生图模型不支持对话设置');
 
     const updated = await this.prisma.$transaction(async (tx) => {
       if (dto.isPreferred === true) {
@@ -400,7 +404,7 @@ export class LlmProvidersService {
         meta: { id: modelRowId, providerId: existing.providerId, modelId: existing.modelId, fields: Object.keys(dto) },
       },
     });
-    if(dto.enabled===true&&!existing.enabled){await this.health.reset(existing.providerId,existing.id);this.health.requestProbe(existing.id);}
+    if(dto.enabled===true&&!existing.enabled && modelPurpose(existing)==='chat'){await this.health.reset(existing.providerId,existing.id);this.health.requestProbe(existing.id);}
     return this.toModelView(updated);
   }
 
@@ -493,6 +497,7 @@ export class LlmProvidersService {
         include: { provider: true },
       });
       if (!model) throw new NotFoundException('模型不存在');
+      if(modelPurpose(model)!=='chat')return {ok:false,latencyMs:0,message:'该模型不是对话模型，请使用头像生图预览'};
       if (!baseUrl) baseUrl = (model.provider.baseUrl || '').trim();
       if (!modelId) modelId = model.modelId;
       if (!apiKey) {
@@ -536,6 +541,7 @@ export class LlmProvidersService {
 
     try {
       if (modelId) {
+        if(modelPurpose({modelId})!=='chat')return {ok:false,latencyMs:0,message:'该模型不是对话模型，请使用头像生图预览'};
         const url = this.buildUpstreamPath(baseUrl, 'chat');
         const resp = await axios.post(
           url,
@@ -707,6 +713,7 @@ export class LlmProvidersService {
     for (const p of providers) {
       if (!p.apiKeyEnc) continue;
       for (const m of p.models) {
+        if(modelPurpose(m)!=='chat')continue;
         models.push({
           providerId: p.id,
           providerName: p.name,
@@ -745,6 +752,8 @@ export class LlmProvidersService {
   ) {
     const modelId = m.modelId.trim();
     const fact = geekAi?.get(modelId);
+    const purpose=modelPurpose({modelId});
+    if(purpose!=='chat' && (m.isPreferred || m.thinkingEnabled))throw new BadRequestException('生图模型不支持对话设置');
     const custom = m.displayName?.trim();
     const displayName = (custom && custom !== modelId ? custom : fact?.displayName || custom || modelId).slice(0, 128);
     return {
@@ -754,7 +763,7 @@ export class LlmProvidersService {
       thinkingEnabled: Boolean(m.thinkingEnabled),
       isPreferred: Boolean(m.isPreferred),
       sortOrder: m.sortOrder ?? index,
-      ...(fact?.contextWindow ? { meta: { contextWindow: fact.contextWindow } } : {}),
+      meta: {purpose,...(fact?.contextWindow?{contextWindow:fact.contextWindow}:{})},
     };
   }
 }

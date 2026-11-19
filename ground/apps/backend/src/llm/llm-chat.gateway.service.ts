@@ -1,3 +1,4 @@
+import { modelPurpose } from './model-purpose';
 import { ExpertRuntimeService } from '../official-agent/expert-runtime.service';
 import type { ModelPricingSnapshot } from '../billing/model-pricing';
 import type { TokenUsageSettlementMark } from '../billing/token-usage.service';
@@ -121,6 +122,7 @@ export class LlmChatGatewayService {
     });
     const states=await this.health.states();
     const checks=await Promise.all(rows.map(async row=>{
+      if(modelPurpose(row)!=='chat')return false;
       if(!this.health.available({id:row.id,providerId:row.providerId},states))return false;
       const capabilities=modelCapabilities(row);
       if(body&&requestHasTools(body)&&!capabilities.tools)return false;
@@ -166,20 +168,21 @@ export class LlmChatGatewayService {
           models: { where: { modelId, enabled: true }, take: 1 },
         },
       });
-      if (!provider || !provider.models[0]) {
+      if (!provider || !provider.models[0] || modelPurpose(provider.models[0])!=='chat') {
         throw new NotFoundException(`模型不可用或不在平台池：${raw}`);
       }
       resolved = this.toResolved(provider, provider.models[0]);
     } else {
-      const matches = await this.prisma.llmModel.findMany({
+      const allMatches = await this.prisma.llmModel.findMany({
         where: {
           modelId,
           enabled: true,
           provider: { enabled: true, apiKeyEnc: { not: null } },
         },
         include: { provider: true },
-        take: 3,
+
       });
+      const matches=allMatches.filter(m=>modelPurpose(m)==='chat');
       if (matches.length === 0) {
         throw new NotFoundException(`模型不可用或不在平台池：${raw}`);
       }

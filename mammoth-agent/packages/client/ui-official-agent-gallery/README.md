@@ -19,6 +19,8 @@ The `expertPreview` URL entry consumes the immutable admin preview through the n
 
 The preview entry retries missing workspace initialization for up to ten seconds and creates at most one successful session per entry lifetime. An embedded preview announces `mmp.expert-preview.ready` after its retained session input becomes available. It accepts `mmp.expert-preview.submit` only from the same-origin parent window with the captured `agentId`, `previewId`, a nonblank `requestId` of at most 128 characters, and nonblank `text` of at most 16,000 UTF-16 code units. It preserves existing drafts and submits through the standard composer. The `accepted` reply acknowledges composer handoff; normal input guards and Host acceptance still determine execution. Duplicate request ids replay their original reply without resubmission. Input readiness polling stops after ten seconds; plugin disposal removes the listener and timers. Questions never enter the launch URL.
 
+Category names and ordering come from Ground catalog facets for experts and skills independently. Custom category keys remain stable when administrators rename a category. Empty categories stay out of the filter bar; refreshing the gallery reloads category metadata.
+
 ## Model Experience
 
 Indirectly, through the Host gallery service that configures the selected official Agent and starts its Session.

@@ -19,8 +19,10 @@
         <div class="expert-header-avatar" aria-hidden="true"><img v-if="editorAvatarUrl" :src="editorAvatarUrl" alt="" /><UserRound v-else :size="22" /></div>
         <div class="expert-workspace-identity">
           <h1 :id="titleId" class="expert-sr-only">{{ editingId ? '编辑专家' : '新建官方专家' }}</h1>
-          <button type="button" class="expert-name-button" :disabled="editorBusy" @click="openMetadata"><span>{{ form.name || '未命名专家' }}</span><SquarePen :size="14" /></button>
-          <p>{{ form.summary || '添加专家简介' }}</p>
+          <template v-if="!metadataOpen">
+            <button type="button" class="expert-name-button" :disabled="editorBusy" @click="openMetadata"><span>{{ form.name || '未命名专家' }}</span><SquarePen :size="14" /></button>
+            <p>{{ form.summary || '添加专家简介' }}</p>
+          </template>
         </div>
         <div class="expert-workspace-save">
           <span role="status">{{ editorDirty ? '有未保存修改' : editingId ? '草稿已保存' : '尚未保存草稿' }}</span>
@@ -58,14 +60,9 @@
       </el-form-item>
         <el-collapse v-model="metadataSections" class="expert-metadata-sections">
           <el-collapse-item title="分类" name="category">
-      <el-form-item label="分类" prop="category">
-        <el-select v-model="form.category" clearable placeholder="未设置" style="width: 100%">
-          <el-option label="常用" value="common" />
-          <el-option label="工作提效" value="productivity" />
-          <el-option label="内容营销" value="content" />
-          <el-option label="销售增长" value="sales" />
-          <el-option label="专业知识" value="expertise" />
-          <el-option label="数据分析" value="analytics" />
+      <el-form-item prop="category">
+        <el-select v-model="form.category" aria-label="分类" clearable placeholder="未设置" style="width: 100%">
+          <el-option v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item label="能力标签" prop="capabilitiesText">
@@ -80,28 +77,8 @@
 
 
           </el-collapse-item>
-          <el-collapse-item title="角色" name="role">
-      <el-form-item label="类型" prop="kind">
-        <el-radio-group v-model="form.kind" :disabled="editorBusy || editorPreviewBusy || Boolean(editingId)">
-          <el-radio value="GENERAL">通用型</el-radio>
-          <el-radio value="KNOWLEDGE">资料型</el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item label="角色定位" prop="expertRole">
-        <div class="form-hint field-req-hint">发布必填；保存草稿可暂空。</div>
-        <el-input v-model="form.expertRole" placeholder="例如：负责关账计划与财务报告复核的财务负责人" maxlength="200" />
-      </el-form-item>
-      <el-form-item label="流程">
-        <el-input v-model="form.workflowText" type="textarea" :rows="3" placeholder="每行一步；可留空" />
-      </el-form-item>
-      <el-form-item label="交付标准">
-        <el-input v-model="form.deliverablesText" type="textarea" :rows="3" placeholder="每行一项交付物或验收标准" />
-      </el-form-item>
-
-          </el-collapse-item>
-          <el-collapse-item title="标识" name="identifier">
-            <el-form-item prop="key"><el-input v-model="form.key" aria-label="标识" :disabled="editorBusy || editorPreviewBusy || Boolean(editingId)" maxlength="64" placeholder="可留空自动生成；创建后只读" /></el-form-item>
-            <el-form-item v-if="form.toolScope.length" label="已有工具权限" prop="toolScope">
+          <el-collapse-item v-if="form.toolScope.length" title="工具权限" name="identifier">
+            <el-form-item label="已有工具权限" prop="toolScope">
               <p class="form-hint">保留历史配置；取消勾选可移除已有权限。</p>
               <el-checkbox-group v-model="form.toolScope" class="expert-tool-options">
                 <el-checkbox v-for="tool in existingToolOptions" :key="tool.value" :value="tool.value">{{ tool.label }}</el-checkbox>
@@ -144,6 +121,7 @@
 </template>
 
 <script setup lang="ts">
+import { useCatalogCategories } from '../../../composables/useCatalogCategories';
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { ArrowLeft, Box, CircleHelp, EllipsisVertical, FileText, SquarePen, Trash2, UserRound } from 'lucide-vue-next';
@@ -226,10 +204,10 @@ const skillDetail = ref<OfficialSkillRow | null>(null);
 let skillDetailRequest = 0;
 let queuedEditorPreview: { question: string; requestId: string } | undefined;
 
+const { options: categoryOptions } = useCatalogCategories('expert');
 const form = reactive({
   executionConfig: editableExecutionConfig(),
   key: '',
-  kind: 'GENERAL' as OfficialAgentKind,
   name: '',
   summary: '',
   openingQuestionsText: '',
@@ -238,9 +216,6 @@ const form = reactive({
   category: '' as '' | OfficialAgentCategory,
   capabilitiesText: '',
   linkedSkillIds: [] as string[],
-  expertRole: '',
-  workflowText: '',
-  deliverablesText: '',
 });
 
 const editorBusy = computed(() => saving.value || publishingFromEditor.value);
@@ -264,24 +239,6 @@ const executionSkillDependencies = computed(() => form.linkedSkillIds.map(id => 
 }));
 
 const rules: FormRules = {
-  key: [
-    {
-      validator: (_rule, value, callback) => {
-        const text = typeof value === 'string' ? value.trim() : '';
-        // 新建可留空自动生成；仅在手动填写时校验格式。
-        if (!text) {
-          callback();
-          return;
-        }
-        if (!/^[a-z][a-z0-9-]{1,63}$/.test(text)) {
-          callback(new Error('使用小写字母、数字和连字符，并以字母开头'));
-          return;
-        }
-        callback();
-      },
-      trigger: 'blur',
-    },
-  ],
   name: [{ validator: (_rule, value, callback) => {
     const issue = editorNameIssue(String(value ?? ''));
     callback(issue ? new Error(issue) : undefined);
@@ -463,7 +420,6 @@ function resetEditor() {
   formAvatarUrl.value = null;
   clearIconDraft();
   form.key = '';
-  form.kind = 'GENERAL';
   form.name = '';
   form.summary = '';
   form.openingQuestionsText = '';
@@ -472,9 +428,6 @@ function resetEditor() {
   form.category = '';
   form.capabilitiesText = '';
   form.linkedSkillIds = [];
-  form.expertRole = '';
-  form.workflowText = '';
-  form.deliverablesText = '';
   baseDefinition.value = {};
   retainedSkillOptions.value = [];
   void nextTick(() => formRef.value?.clearValidate());
@@ -484,7 +437,6 @@ function hydrateEditor(row: OfficialAgentRow) {
   editingId.value = row.id;
   formAvatarUrl.value = row.avatarUrl;
   form.key = row.key;
-  form.kind = row.kind;
   form.name = row.draft.name;
   form.executionConfig = editableExecutionConfig(row.draft.executionConfig);
   form.summary = row.draft.summary;
@@ -496,9 +448,6 @@ function hydrateEditor(row: OfficialAgentRow) {
   form.linkedSkillIds = Array.isArray(row.linkedSkillIds) ? [...row.linkedSkillIds] : [];
   retainedSkillOptions.value = (row.linkedSkills ?? []).map(skill => ({ ...skill, category: skill.category as OfficialSkillOption['category'] }));
   baseDefinition.value = JSON.parse(JSON.stringify(row.draft.expertDefinition ?? {})) as ExpertDefinition;
-  form.expertRole = baseDefinition.value.profile?.role || row.draft.name;
-  form.workflowText = (baseDefinition.value.workflow ?? []).join('\n');
-  form.deliverablesText = (baseDefinition.value.deliverables ?? []).join('\n');
 }
 
 function initEditor() {
@@ -513,7 +462,6 @@ async function revealEditorField(prop: string | null) {
   if (prop === 'openingQuestionsText') executionEditor.value?.revealOpening();
   if (prop && !['systemPrompt', 'openingQuestionsText'].includes(prop)) metadataOpen.value = true;
   const section = ['category', 'capabilitiesText'].includes(prop ?? '') ? 'category'
-    : ['kind', 'expertRole'].includes(prop ?? '') ? 'role'
     : ['key', 'toolScope'].includes(prop ?? '') ? 'identifier' : '';
   if (section && !metadataSections.value.includes(section)) metadataSections.value = [...metadataSections.value, section];
   await nextTick();
@@ -550,6 +498,13 @@ async function validateEditorForm(): Promise<boolean> {
   });
 }
 
+/** 类型不再是可编辑字段：有知识绑定的新建专家派生为资料型，其余为通用型；已有专家保持原类型。 */
+function derivedKind(): OfficialAgentKind {
+  return form.toolScope.includes('enterprise_knowledge') || form.executionConfig.releaseIds.length > 0
+    ? 'KNOWLEDGE'
+    : 'GENERAL';
+}
+
 async function persistEditorDraft(): Promise<OfficialAgentRow | null> {
   const valid = await validateEditorForm();
   if (!valid) return null;
@@ -566,14 +521,13 @@ async function persistEditorDraft(): Promise<OfficialAgentRow | null> {
     summary: form.summary.trim(),
     systemPrompt: form.systemPrompt.trim(),
     toolScope: [...form.toolScope],
-    ...(form.category ? { category: form.category } : {}),
+    category: form.category || '',
     capabilities: splitLines(form.capabilitiesText),
     linkedSkillIds: form.linkedSkillIds,
     expertDefinition: {
       ...baseDefinition.value,
       discoveryDetail: { ...discovery, starters },
-      profile: { ...baseDefinition.value.profile, role: form.expertRole.trim(), mission: form.summary.trim() },
-      workflow: splitLines(form.workflowText), deliverables: splitLines(form.deliverablesText),
+      profile: { ...baseDefinition.value.profile, mission: form.summary.trim() },
     },
   };
   const wasNew = !editingId.value;
@@ -584,7 +538,7 @@ async function persistEditorDraft(): Promise<OfficialAgentRow | null> {
       : await adminOfficialAgentApi.create({
           ...draft,
           key: form.key.trim() || `expert-${crypto.randomUUID().slice(0, 12)}`,
-          kind: form.kind,
+          kind: derivedKind(),
         });
     editingId.value = next.id;
     editorBaseline.value = submittedFields;
@@ -612,7 +566,6 @@ function focusPublishMissingField(missing: string[]) {
   const map: Record<string, string> = {
     专家名称: 'name',
     一句话介绍: 'summary',
-    角色定位: 'expertRole',
     专家指令: 'systemPrompt',
     '可用工具（存在无效标识）': 'toolScope',
   };

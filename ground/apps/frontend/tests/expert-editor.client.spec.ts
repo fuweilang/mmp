@@ -1,3 +1,4 @@
+vi.mock('../src/api/admin/avatar-generation',()=>({avatarGenerationApi:{models:async()=>({models:[],unavailableProviders:0})}}));
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createApp, h, nextTick, ref, type App } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
@@ -60,7 +61,7 @@ async function click(text: string, where: ParentNode = document) {
     [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(node => node.textContent?.trim() === text)!.click();
     return;
   }
-  if (['基本信息', '角色', '标识'].includes(text) && !document.querySelector('.expert-metadata-dialog')) {
+  if (['基本信息', '角色', '工具权限'].includes(text) && !document.querySelector('.expert-metadata-dialog')) {
     document.querySelector<HTMLButtonElement>('.expert-name-button')!.click();
     await nextTick();
   }
@@ -298,7 +299,8 @@ it('reset clears the conversation immediately without saving or preparing until 
   const deliver=(data:object)=>window.dispatchEvent(new MessageEvent('message',{origin:'http://127.0.0.1:5201',source:frame.contentWindow,data:{agentId:'expert-one',previewId:'preview-one',...data}}));
   deliver({type:'mmp.expert-preview.ready'});await nextTick();deliver({...post.mock.calls[0][0],type:'mmp.expert-preview.accepted'});deliver({type:'mmp.expert-preview.content',hasMessages:true,userCount:1});await nextTick();
   await click('重新试聊',dialog());await nextTick();
-  expect(dialog().querySelector('.expert-preview-profile')?.textContent).toContain('测试专家');
+  expect(dialog().querySelector('.expert-preview-profile')).toBeTruthy();
+  expect(dialog().querySelector('textarea[aria-label="预览问题"]')).toBeTruthy();
   expect(dialog().querySelector('iframe')).toBeNull();expect(fixture.preview).toHaveBeenCalledTimes(1);
   await click('保存并试聊',dialog());await vi.waitFor(()=>expect(fixture.preview).toHaveBeenCalledTimes(2));
 });
@@ -389,21 +391,31 @@ it('expired preview shows an actionable restart without silently replacing the c
   expect(root.querySelector('iframe')!.src).toContain('expired');
 });
 
-it('preview persistence locks explicit avatar, new-expert kind and key controls too', async () => {
+it('preview persistence locks explicit avatar controls too', async () => {
   await mount(true);
   await prompt('新专家测试指令');
   const name = document.querySelector<HTMLInputElement>('input[aria-label="专家名称"]')!;
   name.value = '新专家'; name.dispatchEvent(new Event('input', { bubbles: true })); await nextTick();
-  await click('角色', dialog()); await click('标识', dialog()); await nextTick();
   let finish!: (value: any) => void;
   fixture.create.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   await click('保存并试聊', dialog()); await vi.waitFor(() => expect(fixture.create).toHaveBeenCalled());
   try {
     const upload = document.querySelector<HTMLButtonElement>('.expert-metadata-dialog [aria-label="编辑头像"]')!;
     expect.soft(upload.disabled, 'avatar must not override the disabled form').toBe(true);
-    expect.soft([...document.querySelectorAll<HTMLInputElement>('.expert-metadata-dialog input[type="radio"]')].every(r => r.disabled), 'new-expert kind must stay frozen').toBe(true);
-    expect.soft(document.querySelector<HTMLInputElement>('input[placeholder="可留空自动生成；创建后只读"]')!.disabled, 'new-expert key must stay frozen').toBe(true);
   } finally { finish(row); await vi.waitFor(() => expect(dialog().querySelector('iframe')).toBeTruthy()); }
+});
+
+it('hides the manual type control and leaves an existing kind untouched on save', async () => {
+  await mount();
+  await click('基本信息', dialog());
+  const metadata = document.querySelector('.expert-metadata-dialog')!;
+  expect(metadata.textContent).not.toContain('资料型');
+  const name = document.querySelector<HTMLInputElement>('input[aria-label="专家名称"]')!;
+  name.value = '测试专家改名'; name.dispatchEvent(new Event('input', { bubbles: true })); await nextTick();
+  await click('确认'); await click('保存草稿', dialog());
+  await vi.waitFor(() => expect(fixture.update).toHaveBeenCalled());
+  const [, draft] = fixture.update.mock.calls.at(-1)!;
+  expect(draft.kind).toBeUndefined();
 });
 
 it('avatar click offers upload and AI entry without remove, and unconfigured generation is explicit', async () => {
@@ -414,7 +426,7 @@ it('avatar click offers upload and AI entry without remove, and unconfigured gen
   await vi.waitFor(()=>expect(document.querySelector('.catalog-avatar-menu')).toBeTruthy());
   const menu=document.querySelector('.catalog-avatar-menu')!;
   expect(menu.textContent).toContain('上传图片');await click('AI 生成',menu);
-  await vi.waitFor(()=>expect(document.querySelector('.catalog-avatar-generation')?.textContent).toContain('尚未配置生图模型'));
+  await vi.waitFor(()=>expect(document.querySelector('.catalog-avatar-generation')?.textContent).toContain('暂无可用生图模型'));
   expect(fixture.removeAvatar).not.toHaveBeenCalled();
 });
 
@@ -441,7 +453,7 @@ it('existing tool aliases and unavailable IDs stay visible and can be removed in
   row.draft.toolScope = ['delegate', 'retired-tool'];
   await mount();
   expect(dialog().querySelector('[aria-label="专家能力配置"]')!.textContent).not.toContain('已有工具权限');
-  await click('标识',dialog());
+  await click('工具权限',dialog());
   const controls = () => [...document.querySelectorAll<HTMLInputElement>('.expert-metadata-dialog .expert-tool-options input[type="checkbox"]')];
   const alias = controls().find(input => input.value === 'delegate');
   const retired = controls().find(input => input.value === 'retired-tool');
@@ -878,4 +890,20 @@ it('knowledge controls inside the expert form never submit or navigate the outer
   const add=root.querySelector<HTMLButtonElement>('.expert-knowledge-add')!;
   expect(add.type).toBe('button');await click('添加知识库',root);
   expect(submit).not.toHaveBeenCalled();expect(document.querySelector('.expert-knowledge-picker')).toBeTruthy();
+});
+
+it('clearing an expert category sends an explicit empty category so its old assignment is removed', async () => {
+  row.category = 'productivity';
+  await mount();
+  await click('基本信息');
+  await click('分类', document.querySelector('.expert-metadata-dialog')!);
+  const select=document.querySelector<HTMLElement>('.expert-metadata-dialog .el-select')!;
+  expect(select).toBeTruthy();
+  select.dispatchEvent(new MouseEvent('mouseenter',{bubbles:true}));
+  await nextTick();
+  const clear=select.querySelector<HTMLElement>('.el-select__clear')!;
+  expect(clear).toBeTruthy();
+  clear.click();await nextTick();
+  await click('确认');await click('保存草稿',dialog());
+  await vi.waitFor(()=>expect(fixture.update).toHaveBeenCalledWith('expert-one',expect.objectContaining({category:''})));
 });

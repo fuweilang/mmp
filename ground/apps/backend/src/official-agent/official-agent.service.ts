@@ -1,3 +1,4 @@
+import { categoryFacets } from '../catalog-category/catalog-category';
 import { ExpertRuntimeService } from './expert-runtime.service';
 import { expertDiscoveryDetail } from './discovery-detail';
 import { catalogQuery, catalogFacets, catalogDiscoveryWhere, discoveryOf, displaySummary, DESCRIPTIONS, nextCatalogCursor, type CatalogQuery } from './catalog-discovery';
@@ -134,7 +135,12 @@ export class OfficialAgentService {
     };
   }
 
-  async catalogFacets(user:User){this.requireActiveAccount(user);const rows=await this.prisma.officialAgent.findMany({where:{status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}},select:{key:true,category:true}});return catalogFacets('expert',rows.map(x=>({key:x.key,category:x.category})));}
+  async catalogFacets(user: User) {
+    this.requireActiveAccount(user);
+    const rows = await this.prisma.officialAgent.findMany({ where: { status: OfficialAgentStatus.PUBLISHED, onlineVersionId: { not: null } }, select: { key: true, category: true } });
+    const facets = catalogFacets('expert', rows);
+    return { ...facets, capabilities: await categoryFacets(this.prisma, 'expert', Object.fromEntries(facets.capabilities.map(item => [item.id, item.count]))) };
+  }
   async catalogHome(user:User,query:CatalogQuery){const [facets,page]=await Promise.all([this.catalogFacets(user),this.catalogPage(user,query)]);return {facets,page};}
   async catalogCard(user:User,id:string){this.requireActiveAccount(user);const row=await this.prisma.officialAgent.findFirst({where:{id,status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}},select:CATALOG_EXPERT_SELECT});if(!row?.onlineVersion)throw new NotFoundException('专家不可用');return {...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),linkedSkills:await this.versionLinkedSkills(row.id,row.onlineVersion)};}
   async catalogDetail(user:User,id:string){
@@ -530,7 +536,7 @@ export class OfficialAgentService {
       id: string;
       key: string;
       kind: OfficialAgentKind;
-      category: import('@prisma/client').OfficialAgentCategory | null;
+      category: string | null;
       capabilities: Prisma.JsonValue;
       customAvatarPath?: string | null;
       onlineVersion: {

@@ -3,7 +3,7 @@ import { Button, IconAppsAddOutlineRegular, IconSearchOutlineRegular, Input, Too
 import type { Translate } from '@mammoth-ai/mmp-client-ui-slots';
 import type { CatalogQuery, CatalogFacets, ExpertCatalogPage, SkillCatalogPage, OfficialAgentCard, OfficialSkillCard, CatalogDetail } from '@mammoth-ai/mmp-official-agent-gallery/types';
 import type { OfficialAgentGalleryLocaleKey } from './locales.ts';
-import { CAPABILITIES, EXPERT_CAPABILITIES, INDUSTRIES } from './skill-facets.ts';
+import { CAPABILITIES, EXPERT_CATEGORIES } from './skill-facets.ts';
 import { CatalogIcon } from './CatalogIcon.tsx';
 import css from './GalleryPage.module.css';
 export type StartAgentFailure = 'workspaceRequired' | 'startFailed' | 'notGranted' | 'executionUnavailable' | 'draftFailed';
@@ -59,7 +59,8 @@ export function GalleryPage({ t, preferences, favourite, catalogDetail, pageExpe
     useEffect(()=>{let active=true;if(preferences)void Promise.all([preferences('expert','favourites'),preferences('skill','favourites')]).then(([experts,skills])=>{if(active)setFavourites(new Set([...experts.map(row=>`expert:${row.resourceId}`),...skills.map(row=>`skill:${row.resourceId}`)]))}).catch(()=>{});return()=>{active=false}},[preferences]);
     const toggleFavourite=async(item:Item)=>{if(!favourite)return;const kind='executionGranted' in item?'expert':'skill',key=`${kind}:${item.id}`;if(favouriteLock.current.has(key))return;favouriteLock.current.add(key);setFavBusy(new Set(favouriteLock.current));try{const value=!favourites.has(key);await favourite(kind,item.id,value);setFavourites(old=>{const next=new Set(old);if(value)next.add(key);else next.delete(key);return next})}catch{setNotice(t('loadFailed'))}finally{favouriteLock.current.delete(key);setFavBusy(new Set(favouriteLock.current))}};
     const favouriteButton=(item:Item)=>{const key=`${'executionGranted'in item?'expert':'skill'}:${item.id}`;if(!favourite)return null;const on=favourites.has(key);const busy=favBusy.has(key);const label=t(on?'selectorUnfavourite':'selectorFavourite');const button=<Button className={`${css.favouriteAction}${on?` ${css.favouriteOn}`:''}`} variant="ghost" size="sm" disabled={busy} aria-pressed={on} aria-label={label} title={on?t('selectorUnfavourite'):undefined} icon={<FavouriteStar filled={on}/>} onClick={()=>{void toggleFavourite(item)}}>{t(on?'selectorFavourited':'selectorFavourite')}</Button>;return on?<Tooltip label={t('selectorUnfavourite')} side="top" delayMs={200}>{button}</Tooltip>:button;};
-    const [selected,setSelected]=useState<Item|null>(null);
+    const [selected,setSelected]=useState<{item:Item;categoryNames:readonly string[]}|null>(null);
+    const selectDetail=(item:Item,categoryNames:readonly string[])=>setSelected({item,categoryNames});
     const [tab, setTab] = useState<GalleryTab>('experts');
     const [starting, setStarting] = useState<string | undefined>();
     const [notice, setNotice] = useState<string | undefined>();
@@ -108,10 +109,10 @@ export function GalleryPage({ t, preferences, favourite, catalogDetail, pageExpe
   <div className={css.tabWrap}><div className={css.tabs} role="tablist" aria-label={t('title')}>
    {(['experts', 'skills'] as const).map(id => <button key={id} id={`gallery-tab-${id}`} type="button" role="tab" data-tab={id} className={`${css.tab} ${tab === id ? css.tabActive : ''}`} aria-controls={`gallery-panel-${id}`} aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} onKeyDown={tabKey} onClick={() => { setTab(id); setNotice(undefined); }}>{t(id === 'experts' ? 'tabExperts' : 'tabSkills')}</button>)}
   </div></div>
-  <CatalogPanel kind="experts" active={tab === 'experts'} loadPage={pageExperts} loadHome={openExperts} loadFacets={expertFacets} starting={starting} onStart={start} onDetail={setSelected} renderFavourite={favouriteButton} t={t}/>
-  <CatalogPanel kind="skills" active={tab === 'skills'} loadPage={pageSkills} loadHome={openSkills} loadFacets={skillFacets} starting={starting} onStart={start} onDetail={setSelected} renderFavourite={favouriteButton} t={t}/>
+  <CatalogPanel kind="experts" active={tab === 'experts'} loadPage={pageExperts} loadHome={openExperts} loadFacets={expertFacets} starting={starting} onStart={start} onDetail={selectDetail} renderFavourite={favouriteButton} t={t}/>
+  <CatalogPanel kind="skills" active={tab === 'skills'} loadPage={pageSkills} loadHome={openSkills} loadFacets={skillFacets} starting={starting} onStart={start} onDetail={selectDetail} renderFavourite={favouriteButton} t={t}/>
   <p className={css.notice}>{t('selectorScopeHint')}</p>
-  {selected ? <CatalogDetails key={selected.id} item={selected} load={catalogDetail} onClose={()=>setSelected(null)} onStart={start} busy={starting!==undefined} t={t}/> : null}
+  {selected ? <CatalogDetails key={selected.item.id} item={selected.item} categoryNames={selected.categoryNames} load={catalogDetail} onClose={()=>setSelected(null)} onStart={start} busy={starting!==undefined} t={t}/> : null}
   {notice ? <p className={css.notice} role="alert">{notice}</p> : null}
  </main>;
 }
@@ -123,7 +124,7 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
     readonly loadFacets: () => Promise<CatalogFacets>;
     readonly starting: string | undefined;
     readonly onStart: (item: Item) => Promise<void>;
-    readonly onDetail:(item:Item)=>void;
+    readonly onDetail:(item:Item,categoryNames:readonly string[])=>void;
     readonly renderFavourite:(item:Item)=>ReactNode;
     readonly t: Translate<OfficialAgentGalleryLocaleKey>;
 }): ReactNode {
@@ -136,7 +137,16 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
     current.current = state;
     activeRef.current = active;
     const signature = JSON.stringify([query, capability, industry, refresh]);
-    const labels = kind === 'experts' ? EXPERT_CAPABILITIES : CAPABILITIES;
+    const defaults = kind === 'experts' ? EXPERT_CATEGORIES : CAPABILITIES;
+    const labels = useMemo(() => (facets?.capabilities ?? []).map((facet, index) => {
+        const fallback = defaults.find(label => label.id === facet.id);
+        return { id: facet.id, count: facet.count, name: facet.name ?? (fallback ? t(fallback.label) : facet.id),
+            icon: fallback?.icon ?? (kind === 'experts' ? 'case' : 'file'),
+            order: facet.sortOrder ?? (fallback ? defaults.findIndex(label => label.id === fallback.id) : defaults.length + index) };
+    }).sort((a, b) => a.order - b.order), [facets, defaults, kind, t]);
+    useEffect(() => {
+        if (facets && capability !== 'all' && !facets.capabilities.some(item => item.id === capability)) setCapability('all');
+    }, [facets, capability]);
     useEffect(() => { mounted.current = true; return () => { mounted.current = false; generation.current++; facetGeneration.current++; loadedSignature.current = ''; facetsLoaded.current = false; }; }, []);
     const composing = useRef(false);
     const [composeTick, setComposeTick] = useState(0);
@@ -194,6 +204,7 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
                 if (!append && loadHome) {
                     setFacetError(true);
                     facetsLoaded.current = false;
+                    void fetchFacets();
                 }
             }
         }
@@ -201,7 +212,7 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
             if (request === generation.current)
                 lock.current = false;
         }
-    }, [query, capability, industry, signature, loadPage, loadHome]);
+    }, [query, capability, industry, signature, loadPage, loadHome, fetchFacets]);
     useEffect(() => {
         if (!active)
             return;
@@ -231,8 +242,8 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
         observer.observe(element);
         return () => observer.disconnect();
     }, [active, facets]);
-    const available = useMemo(() => labels.map(label => ({ ...label, count: facets?.capabilities.find(item => item.id === label.id)?.count ?? 0 })).filter(item => item.count > 0), [facets, labels]);
-    // Keep predefined facet order; selection only toggles chipActive — never reorder.
+    const available = useMemo(() => labels.filter(item => item.count > 0), [labels]);
+    // The managed directory controls ordering independently of the selected filter.
     const shown = expanded ? available : available.slice(0, visibleCount);
     // Industry dropdown temporarily hidden (sparse data); keep industry='all' so lists stay unfiltered.
     const filtered = Boolean(input.trim() || query || capability !== 'all' || industry !== 'all');
@@ -258,22 +269,25 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
    </div>
    {available.length ? <div className={css.filters}><span className={css.filterLabel}>{t('capabilityLabel')}</span><div className={css.facetList} ref={facetList} role="group" aria-label={t('capabilityLabel')}>
     <button type="button" className={`${css.chip} ${capability === 'all' ? css.chipActive : ''}`} aria-pressed={capability === 'all'} data-capability="all" onKeyDown={chipKey} onClick={() => setCapability('all')}>{t('categoryAll')}<span>{facets?.total ?? 0}</span></button>
-    {shown.map(item => <button key={item.id} type="button" className={`${css.chip} ${capability === item.id ? css.chipActive : ''}`} aria-pressed={capability === item.id} data-capability={item.id} onKeyDown={chipKey} onClick={() => setCapability(item.id)}><span className={css.chipText}>{t(item.label)}</span><span>{item.count}</span></button>)}
+    {shown.map(item => <button key={item.id} type="button" className={`${css.chip} ${capability === item.id ? css.chipActive : ''}`} aria-pressed={capability === item.id} data-capability={item.id} onKeyDown={chipKey} onClick={() => setCapability(item.id)}><span className={css.chipText}>{item.name}</span><span>{item.count}</span></button>)}
    </div>{available.length > visibleCount ? <button className={`${css.chip} ${css.more}`} type="button" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{t(expanded ? 'lessCapabilities' : 'moreCapabilities')}</button> : null}</div> : null}
    {facetError ? <p className={css.feedback}>{t('facetFailed')} <button type="button" onClick={() => { if (loadHome) void fetchPage(false); else void fetchFacets(); }}>{t('retry')}</button></p> : null}
    <div className={css.resultBar}><p role="status" aria-live="polite">{state.loaded ? t(kind === 'experts' ? 'expertsFound' : 'skillsFound', { count: String(state.total) }) : t(kind === 'experts' ? 'loadingExperts' : 'loadingSkills')}</p>{filtered ? <Button variant="ghost" size="sm" onClick={clear}>{t('clearSkillFilters')}</Button> : null}</div>
    {!state.loaded && state.loading ? <ul className={css.cards} aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <li key={index} className={`${css.card} ${css.skeleton}`}><span /><span /><span /></li>)}</ul> : null}
    {state.items.length ? <ul className={css.cards}>
     {state.items.map(item => {
-                const primary = labels.find(label => label.id === item.discovery?.capability);
-                const domain = INDUSTRIES.find(label => item.discovery?.industries.includes(label.id));
+                const category = item.discovery?.capability ?? item.category;
+                const primary = labels.find(label => label.id === category);
+                const categoryKeys = 'executionGranted' in item ? (category ? [category] : []) : item.categories?.length ? item.categories : category ? [category] : [];
+                const categoryNames = categoryKeys.map(key => labels.find(label => label.id === key)?.name ?? key);
                 const expert = 'executionGranted' in item ? item : undefined;
+                const capabilityTags = expert ? expert.capabilities.slice(0, 3) : [];
                 const isStarting = starting === item.id;
                 const summaryText = expert || (item.summary.trim() && !/^[- >|]+$/.test(item.summary.trim())) ? item.summary : t('skillSummaryMissing');
                 return <li key={item.id} className={css.card} data-catalog-key={item.key}>
-      <button type="button" className={`${css.cardAction} ${css.expertAction}`} disabled={starting !== undefined} aria-busy={isStarting} aria-label={`${t('viewDetails')} ${item.name}`} aria-describedby={`catalog-summary-${kind}-${item.id}`} onClick={() => { onDetail(item); }}>
+      <button type="button" className={`${css.cardAction} ${css.expertAction}`} disabled={starting !== undefined} aria-busy={isStarting} aria-label={`${t('viewDetails')} ${item.name}`} aria-describedby={`catalog-summary-${kind}-${item.id}`} onClick={() => { onDetail(item,categoryNames); }}>
        <span className={css.cardBody}><CatalogIcon catalogKey={item.key} kind={primary?.icon ?? (expert ? 'case' : 'file')} src={item.avatarUrl}/><span className={css.cardText}><span className={css.cardTitle} title={item.name}>{item.name}</span><span id={`catalog-summary-${kind}-${item.id}`} className={css.expertSummary} title={summaryText}>{summaryText}</span></span></span>
-       <span className={css.cardFooter}><span className={css.tags}>{primary ? <span className={css.tag}>{t(primary.label)}</span> : null}{domain ? <span className={`${css.tag} ${css.tagMuted}`}>{t(domain.label)}</span> : null}</span></span>
+       <span className={css.cardFooter}><span className={css.tags}>{categoryNames.map(name => <span key={name} className={css.tag}>{name}</span>)}{capabilityTags.map(label => <span key={label} className={`${css.tag} ${css.tagMuted}`} title={label}>{label}</span>)}</span></span>
       </button>
       <div className={css.directStart}>
         <Button className={css.startAction} variant="primary" size="sm" disabled={starting!==undefined} data-agent-key={item.key} aria-label={`${t(expert?'start':'useSkill')} ${item.name}`} onClick={()=>{void onStart(item);}}>{t(isStarting?'starting':expert?'start':'useSkill')}</Button>
@@ -303,9 +317,10 @@ function starterChoices(starters: readonly { readonly text: string }[]): string[
   return starters.map(starter => starter.text.trim()).filter(text => text !== '')
 }
 
-function CatalogDetails({item,load,onClose,onStart,busy,t}:{readonly item:Item;readonly load:(kind:'expert'|'skill',id:string)=>Promise<CatalogDetail>;readonly onClose:()=>void;readonly onStart:(item:Item,draft?:string)=>Promise<void>;readonly busy:boolean;readonly t:Translate<OfficialAgentGalleryLocaleKey>}):ReactNode {
+function CatalogDetails({item,categoryNames,load,onClose,onStart,busy,t}:{readonly item:Item;readonly categoryNames:readonly string[];readonly load:(kind:'expert'|'skill',id:string)=>Promise<CatalogDetail>;readonly onClose:()=>void;readonly onStart:(item:Item,draft?:string)=>Promise<void>;readonly busy:boolean;readonly t:Translate<OfficialAgentGalleryLocaleKey>}):ReactNode {
  const dialog=useRef<HTMLDialogElement>(null),backdropDown=useRef(false);const [data,setData]=useState<CatalogDetail|null>(null),[error,setError]=useState(false),[retry,setRetry]=useState(0);
  const kind='executionGranted' in item?'expert':'skill';
+ const expertCapabilities = kind === 'expert' && 'capabilities' in item ? item.capabilities : [];
  // Native showModal keeps the card in the top layer (not the gallery stacking context),
  // owns inert/focus/ESC semantics; lock page scroll without replacing shared modal infrastructure.
  useEffect(()=>{
@@ -333,8 +348,10 @@ function CatalogDetails({item,load,onClose,onStart,busy,t}:{readonly item:Item;r
    onClick={event=>{const dismiss=backdropDown.current&&event.target===event.currentTarget&&outside(event.currentTarget,event.clientX,event.clientY);backdropDown.current=false;if(dismiss&&!busy)onClose();}}>
    <header className={css.detailHeader}><CatalogIcon catalogKey={item.key} kind={kind==='expert'?'case':'file'} src={data?.avatarUrl??item.avatarUrl}/><h2 id="catalog-detail-heading">{data?.name??item.name}</h2><Button variant="ghost" size="sm" disabled={busy} aria-label={t('closeDetails')} onClick={onClose}>{t('closeDetails')}</Button></header>
    <div className={css.detailBody} aria-busy={!data&&!error}>
+   {categoryNames.length?<div className={css.detailTags}>{categoryNames.map(name=><span key={name} className={css.tag}>{name}</span>)}</div>:null}
    {error?<p className={css.detailFeedback} role="alert">{t('loadFailed')} <Button variant="outline" size="sm" onClick={()=>setRetry(v=>v+1)}>{t('retry')}</Button></p>:!data?<p className={css.detailFeedback} role="status">{t('loadingDetails')}</p>:kind==='expert'?<>
    {summary?<p className={css.detailSummary}>{summary}</p>:null}
+   {expertCapabilities.length?<section className={css.detailSection}><h3>{t('capabilityTagsLabel')}</h3><div className={css.detailTags}>{expertCapabilities.map(label=><span key={label} className={css.tag}>{label}</span>)}</div></section>:null}
    {showIntro?<section className={css.detailSection}><h3>{t('expertIntroductionLabel')}</h3><p>{intro}</p></section>:null}
    {starters.length?<section className={css.detailSection}><h3>{t('expertStartersLabel')}</h3><div className={css.starterRows} role="list">{starters.map((starter,index)=>{const text=(('text' in starter?starter.text:String(starter))||'').trim();if(!text)return null;return <button key={index} type="button" role="listitem" className={css.starterRow} disabled={busy||!data||error} onClick={()=>{void onStart(item,text);}}><span className={css.starterRowText}>{text}</span><span className={css.starterRowArrow} aria-hidden="true">›</span></button>;})}</div></section>:null}
    {hasMore?<details className={`${css.detailSection} ${css.moreDetails}`}><summary>{t('expertMoreLabel')}</summary><div className={css.morePanel}>{moreFields.map(({field,items})=><section key={field} className={css.moreBlock}><h4 className={css.moreBlockTitle}>{t(field==='outputs'?'expertOutputsLabel':field==='materials'?'expertMaterialsLabel':'expertBoundariesLabel')}</h4><div className={css.moreBlockBody}>{items.map((text,index)=><p key={index}>{text}</p>)}</div></section>)}</div></details>:null}

@@ -143,14 +143,6 @@ export function assertPublishable(agent: {
   if (!agent.name.trim()) missing.push('专家名称');
   if (!agent.summary.trim()) missing.push('一句话介绍');
   if (!agent.systemPrompt.trim()) missing.push('专家指令');
-  const definition = normalizeExpertDefinition(agent.expertDefinition, agent);
-  const profile =
-    definition.profile && typeof definition.profile === 'object' && !Array.isArray(definition.profile)
-      ? (definition.profile as Record<string, unknown>)
-      : {};
-  // Storage may fill role from name on save; frontend still requires an explicit 角色定位 before publish.
-  const role = typeof profile.role === 'string' ? profile.role.trim() : '';
-  if (!role) missing.push('角色定位');
   const tools = Array.isArray(agent.toolScope)
     ? agent.toolScope.filter((item): item is string => typeof item === 'string')
     : [];

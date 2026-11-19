@@ -12,6 +12,7 @@ type AgentSeed = {
   summary: string;
   status: OfficialAgentStatus;
   kind?: 'GENERAL' | 'KNOWLEDGE';
+  category?: string | null;
   createdAt: Date;
 };
 
@@ -25,6 +26,7 @@ function createListService(agents: AgentSeed[]) {
         where?: {
           status?: OfficialAgentStatus;
           kind?: 'GENERAL' | 'KNOWLEDGE';
+          category?: string;
           OR?: Array<Record<string, { contains?: string; equals?: string; mode?: string }>>;
         };
         orderBy?: Array<Record<string, 'asc' | 'desc'>> | Record<string, 'asc' | 'desc'>;
@@ -34,6 +36,8 @@ function createListService(agents: AgentSeed[]) {
         if (status) rows = rows.filter((row) => row.status === status);
         const kind = args.where?.kind;
         if (kind) rows = rows.filter((row) => (row.kind ?? 'GENERAL') === kind);
+        const category = args.where?.category;
+        if (category) rows = rows.filter((row) => row.category === category);
         const or = args.where?.OR;
         if (or?.length) {
           rows = rows.filter((row) => or.some(clause => Object.entries(clause).some(([field, condition]) => {
@@ -64,7 +68,7 @@ function createListService(agents: AgentSeed[]) {
         return rows.map((row) => ({
           ...row,
           kind: row.kind ?? 'GENERAL',
-          category: null,
+          category: row.category ?? null,
           capabilities: [],
           openingQuestions: [],
           systemPrompt: 'prompt',
@@ -81,12 +85,15 @@ function createListService(agents: AgentSeed[]) {
       groupBy: async (args: {
         where?: {
           kind?: 'GENERAL' | 'KNOWLEDGE';
+          category?: string;
           OR?: Array<Record<string, { contains?: string; equals?: string; mode?: string }>>;
         };
       }) => {
         let rows = [...agents];
         const kind = args.where?.kind;
         if (kind) rows = rows.filter((row) => (row.kind ?? 'GENERAL') === kind);
+        const category = args.where?.category;
+        if (category) rows = rows.filter((row) => row.category === category);
         const or = args.where?.OR;
         if (or?.length) {
           rows = rows.filter((row) => or.some(clause => Object.entries(clause).some(([field, condition]) => {
@@ -206,6 +213,22 @@ describe('admin official agent list ordering and filters', () => {
     const drafts = await service.list(actor, { kind: 'GENERAL', status: 'DRAFT' });
     assert.deepEqual(drafts.items.map((row) => row.id), ['expert-01526387-d75', 'agent-same-time-b']);
     assert.deepEqual(drafts.statusCounts, { all: 3, DRAFT: 2, PUBLISHED: 0, OFFLINE: 1 });
+  });
+
+  it('filters by category and keeps status counts inside that category', async () => {
+    const service = createListService(seed.map((row) => ({
+      ...row,
+      category: row.id === 'agent-old' ? 'content' : 'sales',
+    })));
+    const content = await service.list(actor, { category: 'content' });
+    assert.deepEqual(content.items.map((row) => row.id), ['agent-old']);
+    assert.deepEqual(content.statusCounts, { all: 1, DRAFT: 0, PUBLISHED: 1, OFFLINE: 0 });
+    assert.equal(content.items[0]?.status, 'PUBLISHED');
+
+    const sales = await service.list(actor, { category: 'sales' });
+    assert.ok(sales.items.length > 0);
+    assert.ok(sales.items.every((row) => row.category === 'sales'));
+    assert.equal(sales.statusCounts.all, seed.length - 1);
   });
 
   it('keeps non-draft newest agents first under createdAt desc', async () => {

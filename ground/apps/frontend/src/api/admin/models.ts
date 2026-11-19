@@ -1,6 +1,7 @@
 import { adminHttp } from '../http';
 
 export type AdminLlmModelRow = {
+  purpose?: 'chat' | 'image';
   health?: {status:'unchecked'|'healthy'|'degraded'|'limited'|'unavailable';reason:string|null;checkedAt:string|null;retryAt:string|null;latencyMs:number|null};
   supportsTools?: boolean;
   supportsVision?: boolean;

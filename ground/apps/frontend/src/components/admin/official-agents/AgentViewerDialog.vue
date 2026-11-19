@@ -45,7 +45,6 @@
 
       <div class="form-section-title">基本信息</div>
       <el-descriptions :column="1" border class="viewer-descriptions" size="small">
-        <el-descriptions-item label="专家名称">{{ display.name || '未填写' }}</el-descriptions-item>
         <el-descriptions-item label="一句话介绍">{{ display.summary || '未填写' }}</el-descriptions-item>
         <el-descriptions-item label="分类">{{ categoryLabel(agent.category) }}</el-descriptions-item>
         <el-descriptions-item label="能力标签">
@@ -60,15 +59,6 @@
       <div class="form-section-title">执行配置</div>
       <el-descriptions :column="1" border class="viewer-descriptions" size="small">
         <el-descriptions-item label="类型">{{ kindLabel(agent.kind) }}</el-descriptions-item>
-        <el-descriptions-item label="角色定位">{{ definition.profile?.role || '未填写' }}</el-descriptions-item>
-        <el-descriptions-item label="流程">
-          <ol v-if="definition.workflow?.length"><li v-for="step in definition.workflow" :key="step">{{ step }}</li></ol>
-          <span v-else class="muted">未填写</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="交付标准">
-          <ul v-if="definition.deliverables?.length"><li v-for="item in definition.deliverables" :key="item">{{ item }}</li></ul>
-          <span v-else class="muted">未填写</span>
-        </el-descriptions-item>
         <el-descriptions-item label="专家指令（仅管理员）">
           <pre class="viewer-prompt">{{ display.systemPrompt || '未填写' }}</pre>
         </el-descriptions-item>
@@ -94,18 +84,6 @@
           <ol v-if="discovery?.starters?.length" class="viewer-questions">
             <li v-for="(starter, index) in discovery.starters" :key="index">{{ starter.text }}</li>
           </ol>
-          <span v-else class="muted">未填写</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="你能得到什么">
-          <ul v-if="discovery?.outputs?.length"><li v-for="item in discovery.outputs" :key="item">{{ item }}</li></ul>
-          <span v-else class="muted">未填写</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="建议提供的信息">
-          <ul v-if="discovery?.materials?.length"><li v-for="item in discovery.materials" :key="item">{{ item }}</li></ul>
-          <span v-else class="muted">未填写</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="不适合处理什么">
-          <ul v-if="discovery?.boundaries?.length"><li v-for="item in discovery.boundaries" :key="item">{{ item }}</li></ul>
           <span v-else class="muted">未填写</span>
         </el-descriptions-item>
       </el-descriptions>
@@ -220,7 +198,9 @@ function onAvatarError(agent: OfficialAgentRow) {
 }
 
 .form-section-title {
-  margin: 4px 0 12px;
+  margin: 0 0 12px;
+  padding-top: 16px;
+  border-top: 1px solid #ededf0;
   font-size: 13px;
   font-weight: 600;
   color: var(--el-text-color-primary);
@@ -251,14 +231,16 @@ function onAvatarError(agent: OfficialAgentRow) {
 }
 
 .agent-avatar-lg {
-  border-radius: 10px;
-  font-size: 22px;
-  height: 56px;
-  width: 56px;
+  border-radius: 16px;
+  font-size: 26px;
+  height: 72px;
+  width: 72px;
 }
 
 .agent-name {
   color: #333946;
+  font-size: 18px;
+  line-height: 26px;
   font-weight: 600;
 }
 
@@ -271,11 +253,16 @@ function onAvatarError(agent: OfficialAgentRow) {
 .viewer-hero {
   align-items: center;
   display: flex;
-  gap: 14px;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 22px;
+  text-align: center;
 }
 
 .viewer-hero-text {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
@@ -286,6 +273,7 @@ function onAvatarError(agent: OfficialAgentRow) {
   flex-wrap: wrap;
   font-size: 12px;
   gap: 8px;
+  justify-content: center;
   margin-top: 8px;
 }
 
@@ -401,4 +389,30 @@ function onAvatarError(agent: OfficialAgentRow) {
 }
 
 .el-dialog.official-agent-dialog { border-radius: 10px; }
+
+/* 查看弹窗对齐技能编辑：大圆角、无分隔线头部、居中身份区 */
+.el-dialog.official-agent-viewer {
+  border-radius: 16px;
+  box-shadow: 0 18px 56px #20202526;
+}
+
+.official-agent-viewer .el-dialog__header {
+  padding: 24px 52px 16px 24px;
+  border: 0;
+}
+
+.official-agent-viewer .el-dialog__title {
+  color: #29292f;
+  font-size: 18px;
+}
+
+.official-agent-viewer .el-dialog__body {
+  padding: 4px 24px 24px;
+}
+
+.official-agent-viewer .el-dialog__footer {
+  padding: 16px 24px 20px;
+  border: 0;
+  box-shadow: 0 -1px 0 #f0f0f3;
+}
 </style>

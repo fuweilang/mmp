@@ -56,12 +56,12 @@ describe('官方专家单个下架后的实时列表', () => {
         agents = useOfficialAgents();
         agents.statusFilter.value = initialStatus;
         agents.keyword.value = '销冠';
-        agents.kindFilter.value = 'KNOWLEDGE';
+        agents.categoryFilter.value = 'content';
         return () => h(AdminOfficialAgentsList, {
           rows: agents.pagedRows.value, total: agents.rows.value.length,
           loading: agents.loading.value, statusCounts: agents.statusCounts.value,
           keyword: agents.keyword.value, statusFilter: agents.statusFilter.value,
-          kindFilter: agents.kindFilter.value, hasFilters: agents.hasFilters.value,
+          categoryFilter: agents.categoryFilter.value, hasFilters: agents.hasFilters.value,
           currentPage: agents.currentPage.value, pageSize: agents.pageSize.value,
           canAuthor: true, highlightedId: '', selectedCount: 0, bulkOfflineLoading: false,
           publishingId: '', offlineId: agents.offlineId.value, deletingId: '',
@@ -90,7 +90,7 @@ describe('官方专家单个下架后的实时列表', () => {
     if (initialStatus === 'ALL') expect(tableRows()[0].textContent).toContain('已下架');
     expect(agents.statusFilter.value).toBe(initialStatus);
     expect(agents.keyword.value).toBe('销冠');
-    expect(agents.kindFilter.value).toBe('KNOWLEDGE');
+    expect(agents.categoryFilter.value).toBe('content');
 
     const offlineTab = Array.from(root.querySelectorAll<HTMLElement>('.el-radio-button'))
       .find((node) => node.textContent?.includes('已下架'))!;

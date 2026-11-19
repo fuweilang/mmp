@@ -258,9 +258,11 @@
 </template>
 
 <script setup lang="ts">
+import { confirmDelete } from '../../utils/confirm-delete';
+
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import { Search } from 'lucide-vue-next';
 import {
   adminEnterpriseApi,
@@ -589,11 +591,7 @@ async function onSave() {
 
 async function onDelete(row: RoleRow) {
   try {
-    await ElMessageBox.confirm(
-      `删除后不可恢复，确定删除角色「${row.name}」？`,
-      '删除角色',
-      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
-    );
+    await confirmDelete({ title: '删除角色？', name: row.name, description: '删除后不可恢复。', confirmText: '删除角色' });
   } catch {
     return;
   }

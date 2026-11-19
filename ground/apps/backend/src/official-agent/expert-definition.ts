@@ -19,7 +19,7 @@ export function normalizeExpertDefinition(value: unknown, fallback: { name: stri
   const extensions = object({ ...object(raw.extensions), ...Object.fromEntries(Object.entries(raw).filter(([k]) => !known.has(k))) });
   return {
     schemaVersion: 1,
-    profile: { ...profile, role: text(profile.role) || fallback.name, mission: text(profile.mission) || fallback.summary },
+    profile: { ...profile, mission: text(profile.mission) || fallback.summary },
     workflow: list(raw.workflow), deliverables: list(raw.deliverables),
     source: object(raw.source), license: object(raw.license),
     dependencies: Array.isArray(raw.dependencies) ? JSON.parse(JSON.stringify(raw.dependencies)).slice(0,64) : [],
@@ -28,10 +28,9 @@ export function normalizeExpertDefinition(value: unknown, fallback: { name: stri
   };
 }
 
-/** Compose only curated role/workflow text. Provenance and foreign config are not executable instructions. */
+/** Compose only the curated mission text. Provenance and foreign config are not executable instructions. */
 export function expertExecutionPrompt(systemPrompt: string, definition: Prisma.JsonValue): string {
   if (!definition || typeof definition !== 'object' || Array.isArray(definition) || definition.schemaVersion !== 1) return systemPrompt;
   const profile = definition.profile && typeof definition.profile === 'object' && !Array.isArray(definition.profile) ? definition.profile : {};
-  const lines = (v: Prisma.JsonValue | undefined) => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').map(x => `- ${x}`).join('\n') : '';
-  return [systemPrompt, typeof profile.role === 'string' ? `角色定位：${profile.role}` : '', typeof profile.mission === 'string' ? `使命：${profile.mission}` : '', lines(definition.workflow) ? `工作流程：\n${lines(definition.workflow)}` : '', lines(definition.deliverables) ? `交付标准：\n${lines(definition.deliverables)}` : ''].filter(Boolean).join('\n\n');
+  return [systemPrompt, typeof profile.mission === 'string' ? `使命：${profile.mission}` : ''].filter(Boolean).join('\n\n');
 }

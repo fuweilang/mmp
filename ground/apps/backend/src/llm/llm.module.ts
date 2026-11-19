@@ -1,3 +1,5 @@
+import { AdminAvatarController } from './admin-avatar.controller';
+import { AvatarGenerationService } from './avatar-generation.service';
 import { Module, forwardRef } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { BillingModule } from '../billing/billing.module';
@@ -15,11 +17,12 @@ import { OfficialAgentModule } from '../official-agent/official-agent.module';
 @Module({
   imports: [AuthModule, forwardRef(() => BillingModule), OfficialAgentModule],
   controllers: [
+    AdminAvatarController,
     AdminLlmProvidersController,
     AdminLlmModelsController,
     LlmChatController,
   ],
-  providers: [LlmHealthService, LlmConcurrencyService, LlmProvidersService, LlmChatGatewayService],
+  providers: [AvatarGenerationService, LlmHealthService, LlmConcurrencyService, LlmProvidersService, LlmChatGatewayService],
   exports: [LlmProvidersService, LlmChatGatewayService],
 })
 export class LlmModule {}

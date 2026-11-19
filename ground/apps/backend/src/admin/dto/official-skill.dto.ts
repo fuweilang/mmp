@@ -41,8 +41,9 @@ export class CreateOfficialSkillFormDto {
   summary?: string;
 
   @IsOptional()
-  @IsIn(['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle'])
-  category?: 'common' | 'content' | 'analytics' | 'office' | 'education' | 'expertise' | 'business' | 'ecommerce' | 'sales' | 'hr' | 'legal' | 'finance' | 'consulting' | 'research' | 'files' | 'search' | 'writing' | 'lifestyle';
+  @IsString()
+  @MaxLength(64)
+  category?: string;
 
   @IsOptional()
   @Allow()
@@ -67,8 +68,9 @@ export class UpdateOfficialSkillDto {
   summary?: string;
 
   @IsOptional()
-  @IsIn(['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle', ''])
-  category?: 'common' | 'content' | 'analytics' | 'office' | 'education' | 'expertise' | 'business' | 'ecommerce' | 'sales' | 'hr' | 'legal' | 'finance' | 'consulting' | 'research' | 'files' | 'search' | 'writing' | 'lifestyle' | '';
+  @IsString()
+  @MaxLength(64)
+  category?: string;
 
   @IsOptional()
   @Allow()
@@ -97,8 +99,9 @@ export class OfficialSkillZipMetaDto {
   summary?: string;
 
   @IsOptional()
-  @IsIn(['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle', ''])
-  category?: 'common' | 'content' | 'analytics' | 'office' | 'education' | 'expertise' | 'business' | 'ecommerce' | 'sales' | 'hr' | 'legal' | 'finance' | 'consulting' | 'research' | 'files' | 'search' | 'writing' | 'lifestyle' | '';
+  @IsString()
+  @MaxLength(64)
+  category?: string;
 
   @IsOptional()
   @Allow()

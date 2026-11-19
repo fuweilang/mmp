@@ -1,3 +1,4 @@
+export { catalogCategoryNameError, catalogCategoryNameKey } from './catalog-category-name';
 export { APP_VERSION } from './version';
 export const APP_NAME = '猛犸专家';
 

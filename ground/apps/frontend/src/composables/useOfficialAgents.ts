@@ -1,8 +1,9 @@
+import { confirmDelete } from '../utils/confirm-delete';
 import { computed, h, onBeforeUnmount, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   adminOfficialAgentApi,
-  type OfficialAgentKind,
+  type OfficialAgentCategory,
   type OfficialAgentRow,
   type OfficialAgentStatus,
   type OfficialAgentStatusCounts,
@@ -38,11 +39,11 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
   const statusCounts = ref<OfficialAgentStatusCounts>({ all: 0, DRAFT: 0, PUBLISHED: 0, OFFLINE: 0 });
   const keyword = ref('');
   const statusFilter = ref<OfficialAgentStatus | 'ALL'>('ALL');
-  const kindFilter = ref<OfficialAgentKind | ''>('');
+  const categoryFilter = ref<OfficialAgentCategory | ''>('');
   const highlightedId = ref('');
   let highlightTimer = 0;
 
-  const hasFilters = computed(() => Boolean(keyword.value.trim() || statusFilter.value !== 'ALL' || kindFilter.value));
+  const hasFilters = computed(() => Boolean(keyword.value.trim() || statusFilter.value !== 'ALL' || categoryFilter.value));
 
   const table = useAdminTable<OfficialAgentRow>({
     rows: () => rows.value,
@@ -62,7 +63,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
     clearFilters: () => {
       keyword.value = '';
       statusFilter.value = 'ALL';
-      kindFilter.value = '';
+      categoryFilter.value = '';
     },
   });
   const { loading } = search;
@@ -73,7 +74,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
         const result = await adminOfficialAgentApi.list({
           keyword: keyword.value.trim(),
           status: statusFilter.value === 'ALL' ? '' : statusFilter.value,
-          kind: kindFilter.value,
+          category: categoryFilter.value,
         });
         if (!isCurrent()) return;
         rows.value = result.items;
@@ -94,7 +95,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
   function focusCreatedAgent(id: string) {
     keyword.value = '';
     statusFilter.value = 'ALL';
-    kindFilter.value = '';
+    categoryFilter.value = '';
     currentPage.value = 1;
     highlightedId.value = id;
     window.clearTimeout(highlightTimer);
@@ -137,12 +138,9 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
   ));
 
   function publishMissing(row: OfficialAgentRow) {
-    const def = row.draft.expertDefinition ?? {};
-    const profile = def.profile && typeof def.profile === 'object' ? def.profile as { role?: string } : {};
     return collectPublishMissing({
       name: row.draft.name || '',
       summary: row.draft.summary || '',
-      expertRole: String(profile.role || ''),
       systemPrompt: row.draft.systemPrompt || '',
       toolScope: row.draft.toolScope || [],
     });
@@ -252,31 +250,11 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
   async function remove(row: OfficialAgentRow) {
     const expertName = (row.draft.name || row.key || '').trim() || '未命名专家';
     try {
-      // Safe VNodes only — never concatenate unsanitized HTML for the highlighted name.
-      await ElMessageBox.confirm(
-        h('span', { class: 'official-agent-delete-confirm' }, [
-          '确定永久删除专家',
-          h(
-            'span',
-            {
-              class: 'official-agent-delete-confirm__name',
-              style: {
-                color: 'var(--el-color-primary)',
-                fontWeight: '600',
-              },
-            },
-            `「${expertName}」`,
-          ),
-          '吗？将删除该专家的配置、版本与授权记录；不会清除用户历史对话，共享技能也不会被删除。删除后不可恢复。',
-        ]),
-        '删除官方专家',
-        {
-          type: 'warning',
-          confirmButtonText: '确认删除',
-          cancelButtonText: '取消',
-          confirmButtonClass: 'el-button--danger',
-        },
-      );
+      await confirmDelete({
+        title: '删除官方专家？', name: expertName,
+        description: ['将删除该专家的配置、版本与授权记录，删除后不可恢复。', '不会清除用户历史对话，共享技能也不会被删除。'],
+        confirmText: '删除专家',
+      });
     } catch {
       return false;
     }
@@ -406,7 +384,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
     statusCounts,
     keyword,
     statusFilter,
-    kindFilter,
+    categoryFilter,
     highlightedId,
     hasFilters,
     loading,

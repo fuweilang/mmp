@@ -14,7 +14,7 @@ export const SKILL_NAME_MAX_CHARS = 40;
 export const SKILL_SUMMARY_MAX_CHARS = 140;
 
 export const OFFICIAL_SKILL_CATEGORIES = ['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle'] as const;
-export type OfficialSkillCategoryKey = (typeof OFFICIAL_SKILL_CATEGORIES)[number];
+export type OfficialSkillCategoryKey = string;
 export const MAX_SKILL_CATEGORIES = 3;
 
 export function primarySkillCategory(categories: readonly OfficialSkillCategoryKey[]): OfficialSkillCategoryKey | null {
@@ -122,7 +122,7 @@ export type ParsedSkillPackage = {
 };
 
 export function isOfficialSkillCategory(value: unknown): value is OfficialSkillCategoryKey {
-  return typeof value === 'string' && (OFFICIAL_SKILL_CATEGORIES as readonly string[]).includes(value);
+  return typeof value === 'string' && ((OFFICIAL_SKILL_CATEGORIES as readonly string[]).includes(value) || /^cat-[a-f0-9-]{36}$/.test(value));
 }
 
 export function skillPackageError(code: string, message: string, status: number = HttpStatus.BAD_REQUEST) {

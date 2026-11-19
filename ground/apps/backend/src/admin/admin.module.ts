@@ -1,3 +1,5 @@
+import { CatalogCategoryController, AdminCatalogCategoryController } from '../catalog-category/catalog-category.controller';
+import { CatalogCategoryService } from '../catalog-category/catalog-category.service';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { AdminService } from './admin.service';
@@ -21,7 +23,7 @@ import { AdminOfficialSkillsService } from './admin-official-skills.service';
 
 @Module({
   imports: [AuthModule, OfficialAgentModule, OfficialSkillModule],
-  controllers: [
+  controllers: [CatalogCategoryController, AdminCatalogCategoryController,
     AdminUserController,
     AdminEnterpriseController,
     AdminPermissionsController,
@@ -31,7 +33,7 @@ import { AdminOfficialSkillsService } from './admin-official-skills.service';
     AdminOfficialKnowledgeController,
     AdminOfficialSkillsController,
   ],
-  providers: [
+  providers: [CatalogCategoryService,
     AdminSupportService,
     AdminUsersService,
     AdminEnterprisesService,

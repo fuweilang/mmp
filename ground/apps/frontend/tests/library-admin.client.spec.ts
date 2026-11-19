@@ -33,8 +33,8 @@ it('recycle confirms into the existing bin and keeps the current owner filter',a
   await mount('/admin/library/a?member=owner-a');
   await vi.waitFor(()=>expect(fixture.items).toHaveBeenCalled());
   await menu('回收');
-  const d=await dialog('回收');
-  click('确认',d);
+  const d=await dialog('移入回收站？');
+  click('移入回收站',d);
   await vi.waitFor(()=>expect(fixture.command.mock.calls.at(-1)?.[1]).toMatchObject({action:'recycle',nodeId:'file-a'}));
   const notice=await vi.waitFor(()=>{
     const node=[...document.querySelectorAll('.el-message')].find(item=>item.textContent?.includes('已放入回收站'));
@@ -47,7 +47,40 @@ it('recycle confirms into the existing bin and keeps the current owner filter',a
   expect(root!.textContent).toContain('所有者A');
 });
 
-it('cancelled impact request cannot later pollute a reopened rename dialog for the same node',async()=>{await mount();let reject:(error:Error)=>void=()=>{};fixture.impact.mockImplementationOnce(()=>new Promise((_resolve,r)=>{reject=r;}));await menu('回收');let d=await dialog('回收');click('取消',d);await menu('重命名');d=await dialog('重命名');reject(new Error('stale impact failure fixture'));await new Promise(r=>setTimeout(r,10));expect(d.textContent).not.toContain('stale impact failure fixture');expect(fixture.command).not.toHaveBeenCalled();});
+it('cancelled impact request cannot later pollute a reopened rename dialog for the same node',async()=>{await mount();let reject:(error:Error)=>void=()=>{};fixture.impact.mockImplementationOnce(()=>new Promise((_resolve,r)=>{reject=r;}));await menu('回收');let d=await dialog('移入回收站？');click('取消',d);await menu('重命名');d=await dialog('重命名');reject(new Error('stale impact failure fixture'));await new Promise(r=>setTimeout(r,10));expect(d.textContent).not.toContain('stale impact failure fixture');expect(fixture.command).not.toHaveBeenCalled();});
+
+it('shared purge styling preserves impact and explicit confirmation before one delete request',async()=>{
+ fixture.items.mockResolvedValue({items:[{...item(),kind:'FOLDER',state:'RECYCLED',purgeBlockedReason:null,currentVersion:null}],total:1});
+ fixture.impact.mockResolvedValue({versionCount:2,bytes:8,children:0,referenceStatus:'UNVERIFIED',activeUseStatus:'UNVERIFIED',canPurge:true,blockedReason:null});
+ await mount();await menu('彻底删除');let d=await dialog('永久删除资料？');
+ await vi.waitFor(()=>expect(d.textContent).toContain('2个版本'));
+ expect(d.classList.contains('delete-confirm')).toBe(true);
+ expect(d.querySelector('.delete-confirm__objects')?.textContent).toBe('资料.md');
+ expect(buttons('永久删除',d)[0].disabled).toBe(true);
+ click('取消',d);expect(fixture.command).not.toHaveBeenCalled();
+ await menu('彻底删除');d=await dialog('永久删除资料？');
+ await vi.waitFor(()=>expect(d.textContent).toContain('2个版本'));
+ expect((d.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(false);
+ (d.querySelector('input[type="checkbox"]') as HTMLInputElement).click();await nextTick();
+ expect(buttons('永久删除',d)[0].disabled).toBe(false);
+ click('永久删除',d);
+ await vi.waitFor(()=>expect(fixture.command).toHaveBeenCalledTimes(1));
+ expect(fixture.command.mock.calls[0][1]).toMatchObject({action:'purge',nodeId:'file-a',confirmPurge:true});
+});
+
+it.each(['回收','彻底删除'])('%s focuses cancel every time its confirmation opens',async(action)=>{
+ if(action==='彻底删除'){
+  fixture.items.mockResolvedValue({items:[{...item(),kind:'FOLDER',state:'RECYCLED',purgeBlockedReason:null,currentVersion:null}],total:1});
+  fixture.impact.mockResolvedValue({versionCount:1,bytes:4,children:0,canPurge:true,blockedReason:null});
+ }
+ await mount();
+ for(let attempt=0;attempt<2;attempt++){
+  await menu(action);const d=await dialog(action==='回收'?'移入回收站？':'永久删除资料？');
+  await vi.waitFor(()=>expect(document.activeElement).toBe(buttons('取消',d)[0]));
+  click('取消',d);await nextTick();
+ }
+ expect(fixture.command).not.toHaveBeenCalled();
+});
 
 it('admin visibility dialog includes all descendants and submits the confirmed revision', async () => {
  fixture.items.mockResolvedValue({items:[{...item(),kind:'FOLDER',currentVersion:null}],total:1});

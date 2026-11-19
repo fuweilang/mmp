@@ -17,7 +17,7 @@ const skillSummarySchema = z.object({
   key: z.string().min(1),
   name: z.string().min(1),
   summary: z.string(),
-  category: z.enum(['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle']).nullable(),
+  category: z.string().min(1).nullable(),
   packageRevision: z.number().int().nonnegative(),
   enabledAt: z.string().nullable(),
 }).strict()
@@ -60,7 +60,8 @@ const skillCardSchema = z.object({
   key: z.string().min(1),
   name: z.string().min(1),
   summary: z.string(),
-  category: z.enum(['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle']).nullable(),
+  category: z.string().min(1).nullable(),
+  categories: z.array(z.string().min(1)).max(3).optional(),
   enabledAt: z.string().nullable(),
   packageRevision: z.number().int().nonnegative(),
 }).strict()

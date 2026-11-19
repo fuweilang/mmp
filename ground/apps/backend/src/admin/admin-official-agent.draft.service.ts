@@ -1,3 +1,4 @@
+import { assertCategoryKeys } from '../catalog-category/catalog-category';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { assertSuperAdmin } from '../auth/super-admin';
@@ -45,6 +46,7 @@ export class AdminOfficialAgentDraftService {
     const existing = await prisma.officialAgent.findUnique({ where: { key: dto.key } });
     if (existing) throw new ConflictException('专家标识已存在');
 
+    if (dto.category) await assertCategoryKeys(prisma, 'expert', [dto.category]);
     const draft = this.normalizeDraft(dto);
     const created = await prisma.$transaction(async (tx) => {
       const created = await tx.officialAgent.create({
@@ -78,8 +80,9 @@ export class AdminOfficialAgentDraftService {
     const { prisma, officialSkills } = this.deps();
     await assertSuperAdmin(prisma, actor.id);
     const existing = await requireAgentRow(prisma, id);
-    const data: Prisma.OfficialAgentUpdateInput = {};
+    const data: Prisma.OfficialAgentUncheckedUpdateInput = {};
     if (dto.executionConfig !== undefined) data.executionConfig = normalizeExecutionConfig(dto.executionConfig) as unknown as Prisma.InputJsonValue;
+    if (dto.kind !== undefined) data.kind = dto.kind;
     if (dto.name !== undefined) data.name = this.requiredText(dto.name, '名称');
     if (dto.summary !== undefined) data.summary = dto.summary.trim();
     if (dto.openingQuestions !== undefined) {
@@ -90,10 +93,11 @@ export class AdminOfficialAgentDraftService {
     }
     if (dto.toolScope !== undefined) data.toolScope = this.normalizeList(dto.toolScope);
     if (dto.category !== undefined) {
-      if (!isOfficialAgentCategory(dto.category)) {
+      if (dto.category && !isOfficialAgentCategory(dto.category)) {
         throw new BadRequestException('分类无效');
       }
-      data.category = dto.category;
+      if (dto.category) await assertCategoryKeys(prisma, 'expert', [dto.category]);
+      data.category = dto.category || null;
     }
     if (dto.capabilities !== undefined) {
       data.capabilities = normalizeCapabilities(dto.capabilities);

@@ -1,0 +1,96 @@
+/* Shared modal chrome, based on the delete confirmation. Keep feature-specific
+   widths and custom content layouts; the full-screen expert workspace is a page. */
+.el-overlay-dialog:has(> .el-dialog:not(.is-fullscreen):not(.expert-workspace)) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.el-overlay .el-message-box,
+.el-overlay .el-dialog:not(.is-fullscreen):not(.expert-workspace) {
+  --el-text-color-primary: #333946;
+  --el-border-radius-base: 8px;
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: column;
+  max-width: calc(100vw - 32px) !important;
+  max-height: calc(100dvh - 32px) !important;
+  padding: 24px !important;
+  border: 1px solid var(--el-border-color-lighter, #ebeef5) !important;
+  border-radius: 12px !important;
+  background: var(--el-bg-color, #fff);
+  box-shadow: 0 16px 48px #1d243329 !important;
+  text-align: left;
+}
+.el-overlay .el-message-box {
+  --el-messagebox-width: 440px;
+  --el-messagebox-border-radius: 12px;
+  width: 440px;
+}
+.el-overlay .el-dialog:not(.is-fullscreen):not(.expert-workspace) {
+  flex: 0 0 auto;
+  margin: auto !important;
+}
+.el-overlay .el-message-box > .el-message-box__header,
+.el-overlay .el-dialog:not(.is-fullscreen):not(.expert-workspace) > .el-dialog__header {
+  flex: 0 0 auto;
+  height: auto;
+  margin: 0 !important;
+  padding: 0 28px 18px 0 !important;
+  border: 0 !important;
+}
+.el-overlay .el-message-box .el-message-box__title,
+.el-overlay .el-dialog:not(.is-fullscreen):not(.expert-workspace) > .el-dialog__header .el-dialog__title {
+  color: #333946;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+.el-overlay .el-message-box .el-message-box__headerbtn,
+.el-overlay .el-dialog:not(.is-fullscreen):not(.expert-workspace) > .el-dialog__header .el-dialog__headerbtn {
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+}
+.el-overlay .el-message-box > .el-message-box__content,
+.el-overlay .el-dialog:not(.is-fullscreen):not(.expert-workspace) > .el-dialog__body {
+  min-height: 0;
+  padding: 0 !important;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  color: var(--el-text-color-regular, #606266);
+  font-size: 14px;
+  line-height: 22px;
+}
+.el-overlay .el-message-box .el-message-box__message { padding: 0; }
+.el-overlay .el-message-box > .el-message-box__btns,
+.el-overlay .el-dialog:not(.is-fullscreen):not(.expert-workspace) > .el-dialog__footer {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 0;
+  padding: 24px 0 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.el-overlay .el-message-box > .el-message-box__btns .el-button,
+.el-overlay .el-dialog:not(.is-fullscreen):not(.expert-workspace) > .el-dialog__footer .el-button {
+  min-width: 76px;
+  height: 36px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: 8px !important;
+  font-size: 14px;
+}
+.el-overlay .el-message-box .el-input__wrapper,
+.el-overlay .el-dialog:not(.is-fullscreen):not(.expert-workspace) .el-input__wrapper {
+  border-radius: 8px !important;
+}
+@media (max-width: 480px) {
+  .el-overlay .el-message-box,
+  .el-overlay .el-dialog:not(.is-fullscreen):not(.expert-workspace) { padding: 20px !important; }
+}

@@ -208,6 +208,8 @@
 </template>
 
 <script setup lang="ts">
+import { confirmDelete } from '../utils/confirm-delete';
+
 import LibraryUploadDialog from '../components/LibraryUploadDialog.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { consoleLibraryNav, consoleLibraryView } from '../utils/libraryNavigation';
@@ -728,7 +730,7 @@ function noticeRecycled() {
 }
 
 async function recycleOne(row: LibraryItem) {
-  if (!await confirmRecycle()) return;
+  if (!await confirmRecycle(row.name)) return;
   if (await act(() => recycleLibrary(row.id))) noticeRecycled();
 }
 
@@ -755,7 +757,7 @@ function unshareFolder(id: string) {
 async function recycleFolder(id: string) {
   const folder = treeFolders.value.find((row) => row.id === id);
   if (!folder?.canManage) return;
-  if (!await confirmRecycle()) return;
+  if (!await confirmRecycle(folder.name)) return;
   const inside = parentId.value !== null && descendantFolderIds(id, treeFolders.value).has(parentId.value);
   try {
     await recycleLibrary(id);
@@ -773,17 +775,24 @@ async function restoreOne(row: LibraryItem) {
 }
 
 async function purgeOne(row: LibraryItem) {
-  if (!await confirmAction('彻底删除后，旧引用会显示来源不可用，不会改指向其它版本。', '彻底删除')) return;
+  if (!await confirmLibraryDelete(row.name, '彻底删除后，旧引用会显示来源不可用，不会改指向其它版本。', '彻底删除资料？', '彻底删除')) return;
   if (await act(() => purgeLibrary(row.id))) ElMessage.success('已彻底删除');
 }
 
-function confirmRecycle() {
-  return confirmAction('移入回收站后可以恢复。文件夹会连同里面的资料一起回收。', '确认回收', '确认');
+async function confirmLibraryDelete(name: string | string[], description: string, title: string, confirmText: string) {
+  try {
+    await confirmDelete({ name, description, title, confirmText, customClass: 'library-message-box' });
+    return true;
+  } catch { return false; }
+}
+
+function confirmRecycle(name: string | string[]) {
+  return confirmLibraryDelete(name, '移入回收站后可以恢复。文件夹会连同里面的资料一起回收。', '移入回收站？', '移入回收站');
 }
 
 async function runBatch(action: 'recycle' | 'restore' | 'purge') {
-  if (action === 'recycle' && !await confirmRecycle()) return;
-  if (action === 'purge' && !await confirmAction('彻底删除后不能再下载这些版本。', '彻底删除')) return;
+  if (action === 'recycle' && !await confirmRecycle(selected.value.map(row => row.name))) return;
+  if (action === 'purge' && !await confirmLibraryDelete(selected.value.map(row => row.name), '彻底删除后不能再下载这些版本。', '彻底删除所选资料？', '彻底删除')) return;
   try {
     const result = await batchLibrary(selected.value.map((row) => row.id), action);
     if (result.skipped) ElMessage.warning(`${result.skipped} 项当前不可见，已跳过`);

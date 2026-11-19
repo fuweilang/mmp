@@ -2,25 +2,59 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { BadRequestException } from '@nestjs/common';
 
-// Lightweight harness: import service class and call private assert via any cast is brittle.
-// Instead validate through discovery + normalizeExpertDefinition contracts already covered,
-// and assert CATEGORY_TO_CAPABILITY wiring for new experts.
-import { CATEGORY_TO_CAPABILITY, discoveryOf, catalogDiscoveryWhere } from '../src/official-agent/catalog-discovery';
+// Lightweight harness: importing the service class and calling private asserts via any casts is brittle.
+// Validate the discovery contract that the catalog query and facets depend on instead.
+import {
+  UNCATEGORIZED_EXPERT_CAPABILITY,
+  catalogDiscoveryWhere,
+  discoveryOf,
+} from '../src/official-agent/catalog-discovery';
 
-describe('catalog category data-driven discovery', () => {
-  it('maps Admin categories to gallery capabilities for unmapped keys', () => {
-    assert.equal(discoveryOf('expert', 'expert-brand-new-key', 'content').capability, 'marketing');
-    assert.equal(discoveryOf('expert', 'expert-brand-new-key', 'analytics').capability, 'research-data');
-    assert.equal(discoveryOf('expert', 'expert-brand-new-key', null).capability, 'business');
+describe('catalog category-driven discovery', () => {
+  it('uses the Admin category verbatim, including built-in keys', () => {
+    assert.equal(discoveryOf('expert', 'boss', 'productivity').capability, 'productivity');
+    assert.equal(discoveryOf('expert', 'agency-backend-architect', 'content').capability, 'content');
+    assert.equal(discoveryOf('expert', 'expert-brand-new-key', 'analytics').capability, 'analytics');
   });
 
-  it('includes category OR branch for unmapped expert keys', () => {
-    const where = catalogDiscoveryWhere('expert', 'marketing', 'all') as {
+  it('groups experts without a usable category separately', () => {
+    assert.equal(
+      discoveryOf('expert', 'expert-brand-new-key', null).capability,
+      UNCATEGORIZED_EXPERT_CAPABILITY,
+    );
+    assert.equal(
+      discoveryOf('expert', 'expert-brand-new-key', 'featured').capability,
+      UNCATEGORIZED_EXPERT_CAPABILITY,
+    );
+  });
+
+  it('keeps curated industries from the key map', () => {
+    assert.deepEqual(discoveryOf('expert', 'agency-backend-architect', 'content').industries, ['it']);
+    assert.deepEqual(discoveryOf('expert', 'expert-brand-new-key', 'content').industries, []);
+  });
+
+  it('filters experts by category in the database query', () => {
+    assert.deepEqual(
+      catalogDiscoveryWhere('expert', 'content', 'all'),
+      { AND: [{ category: 'content' }] },
+    );
+    assert.deepEqual(
+      catalogDiscoveryWhere('expert', UNCATEGORIZED_EXPERT_CAPABILITY, 'all'),
+      { AND: [{ category: null }] },
+    );
+    // Unknown ids must not reach Prisma as an invalid enum value.
+    assert.deepEqual(
+      catalogDiscoveryWhere('expert', 'not-a-category', 'all'),
+      { AND: [{ id: { in: [] } }] },
+    );
+  });
+
+  it('keeps the skill discovery query key-driven', () => {
+    const where = catalogDiscoveryWhere('skill', 'writing', 'all') as {
       OR: Array<Record<string, unknown>>;
     };
     assert.ok(Array.isArray(where.OR));
-    assert.ok(where.OR.some((clause) => 'AND' in clause));
-    assert.ok(CATEGORY_TO_CAPABILITY.content === 'marketing');
+    assert.ok(where.OR.some((clause) => 'key' in clause));
   });
 });
 

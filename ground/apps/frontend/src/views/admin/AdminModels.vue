@@ -9,9 +9,6 @@
     <div class="page-head">
       <div>
         <h1>模型管理</h1>
-        <p>
-          自动模式先用默认模型，故障时按优先级切换备选（数字越小越优先，0 最高）。已正常的模型 24 小时内不再自动探测；失败后 6 小时内不再自动重试。手动禁用需手动开启。
-        </p>
       </div>
       <div class="page-head-actions">
         <el-input
@@ -25,7 +22,7 @@
           class="page-filter"
           popper-class="models-filter-popper"
           aria-label="模型筛选"
-          filterable
+          :filterable="false"
           :options="familySelectOptions"
           placeholder="全部模型"
         />
@@ -34,22 +31,30 @@
           class="page-filter"
           popper-class="models-filter-popper"
           aria-label="厂商筛选"
-          filterable
+          :filterable="false"
           :options="providerSelectOptions"
           placeholder="全部厂商"
+        />
+        <el-select-v2
+          v-model="selectedPurpose"
+          class="page-filter"
+          popper-class="models-filter-popper"
+          aria-label="用途筛选"
+          placeholder="全部用途"
+          :filterable="false"
+          :options="purposeOptions"
         />
         <el-select-v2
           v-model="selectedStatus"
           class="page-filter"
           popper-class="models-filter-popper"
           aria-label="运行状态"
-          filterable
+          :filterable="false"
           :options="statusSelectOptions"
           placeholder="全部状态"
         />
         <el-button @click="testEnabled">{{ bulkRunning ? '停止' : '测试已启用' }}</el-button>
         <el-button @click="$router.push('/admin/knowledge-services')">检索服务</el-button>
-        <el-button @click="openGeekAi">接入极客智坊</el-button>
         <el-button type="primary" @click="openCreate">新建模型</el-button>
       </div>
     </div>
@@ -67,7 +72,6 @@
       v-if="!loading && !error && flatRows.length === 0"
       description="暂无模型，请点击「新建模型」"
     >
-      <el-button @click="openGeekAi">接入极客智坊</el-button>
       <el-button type="primary" @click="openCreate">新建模型</el-button>
     </el-empty>
 
@@ -87,23 +91,24 @@
         <el-table-column label="显示名" min-width="140" show-overflow-tooltip>
           <template #default="{ row }">{{ row.model.displayName }}</template>
         </el-table-column>
+        <el-table-column label="用途" width="105" align="center"><template #default="{row}"><el-tag :type="isImage(row.model)?'warning':'info'">{{isImage(row.model)?'生成图片':'对话'}}</el-tag></template></el-table-column>
         <el-table-column label="厂商" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">
-            <span class="prov-name">{{ row.provider.displayName }}</span>
+            <el-button link class="prov-name" :aria-label="`设置供应商 ${row.provider.displayName}`" @click="openEditProvider(row.provider)">{{ row.provider.displayName }}</el-button>
             <span class="prov-sub">{{ row.provider.name }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="默认" width="120" align="center">
-          <template #default="{ row }"><el-tag v-if="row.model.isPreferred" type="success">默认模型</el-tag><el-button v-else link type="primary" :disabled="!row.model.enabled" :loading="busyModelId === row.model.id" @click="onRoutingChange(row.model,{isPreferred:true})">设为默认</el-button></template>
+        <el-table-column v-if="selectedPurpose!=='image'" label="默认" width="120" align="center">
+          <template #default="{ row }"><span v-if="isImage(row.model)">—</span><el-tag v-else-if="row.model.isPreferred" type="success">默认模型</el-tag><el-button v-else link type="primary" :disabled="!row.model.enabled" :loading="busyModelId === row.model.id" @click="onRoutingChange(row.model,{isPreferred:true})">设为默认</el-button></template>
         </el-table-column>
-        <el-table-column label="优先级（小优先）" width="165"><template #default="{ row }"><el-input-number :model-value="row.model.sortOrder" :min="0" :max="10000" :precision="0" :disabled="busyModelId === row.model.id" @change="(value: number | undefined) => value !== undefined && onRoutingChange(row.model,{sortOrder:value})" /></template></el-table-column>
+        <el-table-column v-if="selectedPurpose!=='image'" label="优先级（小优先）" width="165"><template #default="{ row }"><span v-if="isImage(row.model)">—</span><el-input-number v-else :model-value="row.model.sortOrder" :min="0" :max="10000" :precision="0" :disabled="busyModelId === row.model.id" @change="(value: number | undefined) => value !== undefined && onRoutingChange(row.model,{sortOrder:value})" /></template></el-table-column>
         <el-table-column label="运行状态" min-width="195"><template #default="{ row }">
-          <el-tag :type="!row.model.enabled ? 'info' : row.model.health?.status === 'healthy' ? 'success' : 'warning'">{{ !row.model.enabled ? '手动禁用' : healthLabel(row.model.health?.status) }}</el-tag>
-          <div class="prov-sub">{{ row.model.health?.reason }}</div>
-          <div v-if="row.model.health?.checkedAt" class="prov-sub">{{ new Date(row.model.health.checkedAt).toLocaleString('zh-CN') }} · {{ row.model.health.latencyMs ?? '—' }}ms</div>
+          <el-tag :type="!row.model.enabled ? 'info' : row.model.health?.status === 'healthy' ? 'success' : 'warning'">{{ !row.model.enabled ? '手动禁用' : isImage(row.model)?'已启用':healthLabel(row.model.health?.status) }}</el-tag>
+          <div v-if="!isImage(row.model)" class="prov-sub">{{ row.model.health?.reason }}</div>
+          <div v-if="!isImage(row.model) && row.model.health?.checkedAt" class="prov-sub">{{ new Date(row.model.health.checkedAt).toLocaleString('zh-CN') }} · {{ row.model.health.latencyMs ?? '—' }}ms</div>
         </template></el-table-column>
-        <el-table-column label="工具调用" width="90" align="center"><template #default="{ row }"><el-switch :model-value="row.model.supportsTools" :disabled="busyModelId === row.model.id" @change="(value: boolean) => onRoutingChange(row.model,{supportsTools:value})" /></template></el-table-column>
-        <el-table-column label="图片输入" width="90" align="center"><template #default="{ row }"><el-switch :model-value="row.model.supportsVision" :disabled="busyModelId === row.model.id" @change="(value: boolean) => onRoutingChange(row.model,{supportsVision:value})" /></template></el-table-column>
+        <el-table-column v-if="selectedPurpose!=='image'" label="工具调用" width="90" align="center"><template #default="{ row }"><el-switch v-if="!isImage(row.model)" :model-value="row.model.supportsTools" :disabled="busyModelId === row.model.id" @change="(value: boolean) => onRoutingChange(row.model,{supportsTools:value})" /></template></el-table-column>
+        <el-table-column v-if="selectedPurpose!=='image'" label="图片输入" width="90" align="center"><template #default="{ row }"><el-switch v-if="!isImage(row.model)" :model-value="row.model.supportsVision" :disabled="busyModelId === row.model.id" @change="(value: boolean) => onRoutingChange(row.model,{supportsVision:value})" /></template></el-table-column>
         <el-table-column label="启用" width="90" align="center">
           <template #default="{ row }">
             <el-switch
@@ -113,7 +118,7 @@
             />
           </template>
         </el-table-column>
-        <el-table-column label="普通对话思考" width="150" align="center">
+        <el-table-column v-if="selectedPurpose!=='image'" label="普通对话思考" width="150" align="center">
           <template #header>
             <el-tooltip content="默认关闭。开启后普通对话和工具调用都会启用深度思考，通常响应更慢。关闭后都不强制思考。实际效果取决于模型支持。" placement="top" :show-after="200">
               <span class="thinking-header" tabindex="0">普通对话思考 ⓘ</span>
@@ -121,17 +126,18 @@
           </template>
           <template #default="{ row }">
             <el-switch
-              :model-value="row.model.thinkingEnabled"
+              v-if="!isImage(row.model)" :model-value="row.model.thinkingEnabled"
               :loading="busyModelId === row.model.id"
               @change="(v: boolean) => onToggleThinking(row.model, v)"
             />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right" align="center">
+        <el-table-column label="操作" width="240" fixed="right" align="center">
           <template #default="{ row }">
             <div class="op-row">
+              <el-button v-if="isImage(row.model)" text type="primary" :disabled="!row.model.enabled || !row.provider.enabled" @click="openImagePreview(row)">预览生成</el-button>
               <el-button
-                text
+                v-else text
                 type="primary"
                 @click="onProbeSaved(row.model)"
               >
@@ -280,10 +286,18 @@
         <el-button type="primary" :loading="dialog.saving" @click="onSave">保存</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="imageEdit.visible" title="编辑生图模型" width="420px" align-center :close-on-click-modal="false">
+      <el-form label-position="top"><el-form-item label="模型名称"><el-input v-model="imageEdit.name" maxlength="128" /></el-form-item></el-form>
+      <template #footer><el-button @click="imageEdit.visible=false">取消</el-button><el-button type="primary" :loading="imageEdit.saving" :disabled="!imageEdit.name.trim()" @click="saveImageName">保存修改</el-button></template>
+    </el-dialog>
+    <AvatarGenerationDialog v-model="imagePreviewOpen" :initial-model="imagePreviewModel" preview-only />
   </section>
 </template>
 
 <script setup lang="ts">
+import AvatarGenerationDialog from '../../components/AvatarGenerationDialog.vue';
+import { confirmDelete } from '../../utils/confirm-delete';
+
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
@@ -305,7 +319,35 @@ const error = ref('');
 const keyword = ref('');
 const selectedFamily = ref('');
 const selectedProvider = ref('');
+const selectedPurpose = ref('');
 const selectedStatus = ref('');
+const purposeOptions = [
+  { value: '', label: '全部用途' },
+  { value: 'chat', label: '对话' },
+  { value: 'image', label: '生成图片' },
+];
+const isImage = (model: AdminLlmModelRow) => model.purpose === 'image';
+const imageEdit = reactive({ visible: false, id: '', name: '', saving: false });
+const imagePreviewOpen = ref(false);
+const imagePreviewModel = ref<{ providerId: string; model: string }>();
+function openImagePreview(row: FlatRow) {
+  imagePreviewModel.value = { providerId: row.provider.id, model: row.model.modelId };
+  imagePreviewOpen.value = true;
+}
+async function saveImageName() {
+  if (!imageEdit.name.trim()) return;
+  imageEdit.saving = true;
+  try {
+    await adminLlmProviderApi.updateModel(imageEdit.id, { displayName: imageEdit.name.trim() });
+    imageEdit.visible = false;
+    await reload(true);
+    ElMessage.success('已保存');
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '保存失败');
+  } finally {
+    imageEdit.saving = false;
+  }
+}
 const providers = ref<AdminLlmProviderRow[]>([]);
 // Preserve initial positions across settings changes and health refreshes.
 const rowPositions = new Map<string, number>();
@@ -359,6 +401,7 @@ const probeToastText = computed(() => {
 const filteredRows = computed(() => {
   const q = keyword.value.trim().toLowerCase();
   return flatRows.value.filter((r) => {
+    if(selectedPurpose.value && (r.model.purpose || 'chat')!==selectedPurpose.value)return false;
     if (selectedFamily.value && modelFamily(r.model.modelId, r.model.displayName) !== selectedFamily.value) return false;
     if (selectedProvider.value && r.provider.id !== selectedProvider.value) return false;
     if (selectedStatus.value && rowStatus(r) !== selectedStatus.value) return false;
@@ -373,7 +416,7 @@ const pagedRows = computed(() => {
   const start = (page.value - 1) * pageSize.value;
   return filteredRows.value.slice(start, start + pageSize.value);
 });
-watch([keyword, selectedFamily, selectedProvider, selectedStatus, pageSize], () => { page.value = 1; });
+watch([keyword, selectedFamily, selectedProvider, selectedPurpose, selectedStatus, pageSize], () => { page.value = 1; });
 watch(filteredRows, (rows) => {
   const last = Math.max(1, Math.ceil(rows.length / pageSize.value));
   if (page.value > last) page.value = last;
@@ -450,7 +493,6 @@ const nameConflictProvider = computed(() => {
   return providers.value.find((p) => p.name.toLowerCase() === n) || null;
 });
 
-const GEEKAI_BASE = 'https://geekai.co/api/v1';
 function isGeekAiBase(baseUrl: string | null | undefined) {
   try {
     const url = new URL(baseUrl || '');
@@ -464,19 +506,6 @@ const visibleRemoteModels = computed(() =>
   geekAiDialog.value ? dialog.remoteModels.filter((m) => !m.type || m.type === 'chat') : dialog.remoteModels,
 );
 const hiddenRemoteCount = computed(() => dialog.remoteModels.length - visibleRemoteModels.value.length);
-
-function openGeekAi() {
-  const existing = providers.value.find((p) => p.name.toLowerCase() === 'geekai' || isGeekAiBase(p.baseUrl));
-  if (existing) {
-    openEditProvider(existing);
-    ElMessage.info('极客智坊已经在列表里。勾选要启用的对话模型后保存。');
-    return;
-  }
-  openCreate();
-  dialog.form.name = 'geekai';
-  dialog.form.displayName = '极客智坊';
-  dialog.form.baseUrl = GEEKAI_BASE;
-}
 
 function openCreate() {
   dialog.mode = 'create';
@@ -509,6 +538,7 @@ function openEditProvider(provider: AdminLlmProviderRow, preferModelId?: string)
 }
 
 function openEdit(row: FlatRow) {
+  if(isImage(row.model)){Object.assign(imageEdit,{visible:true,id:row.model.id,name:row.model.displayName});return;}
   openEditProvider(row.provider, row.model.modelId);
 }
 
@@ -703,7 +733,7 @@ async function testEnabled() {
     bulkStop?.abort();
     return;
   }
-  const models = flatRows.value.filter((row) => row.model.enabled).map((row) => row.model);
+  const models = flatRows.value.filter((row) => row.model.enabled && !isImage(row.model)).map((row) => row.model);
   if (!models.length) {
     ElMessage.info('没有已启用的模型');
     return;
@@ -777,13 +807,13 @@ async function onDeleteModel(m: AdminLlmModelRow) {
   const provider = providers.value.find((p) => p.models.some((x) => x.id === m.id));
   const lastOfProvider = Boolean(provider && provider.models.length <= 1);
   try {
-    await ElMessageBox.confirm(
-      lastOfProvider
-        ? `确认删除模型「${m.modelId}」？这是该厂商最后一个模型，将移除模型的企业分配；若厂商「${provider?.displayName || provider?.name}」仍被检索配置引用，将保留厂商。`
-        : `确认删除模型「${m.modelId}」？`,
-      '删除模型',
-      { type: 'warning' },
-    );
+    await confirmDelete({
+      title: '删除模型？', name: m.modelId,
+      description: lastOfProvider
+        ? ['这是该厂商最后一个模型，将移除模型的企业分配。', `若厂商「${provider?.displayName || provider?.name}」仍被检索配置引用，将保留厂商。`]
+        : '将从模型列表中删除此模型。',
+      confirmText: '删除模型',
+    });
   } catch {
     return;
   }
@@ -808,7 +838,7 @@ async function onRoutingChange(model: AdminLlmModelRow, changes: Parameters<type
   finally{busyModelId.value=null;}
 }
 let healthTimer: ReturnType<typeof setInterval> | undefined;
-onMounted(()=>{void reload();healthTimer=setInterval(()=>{if(dialog.visible||loading.value||busyModelId.value)return;void reload(probingIds.value.length>0||bulkRunning.value);},15000);});
+onMounted(()=>{void reload();healthTimer=setInterval(()=>{if(dialog.visible||imageEdit.visible||imagePreviewOpen.value||loading.value||busyModelId.value)return;void reload(probingIds.value.length>0||bulkRunning.value);},15000);});
 onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of probes.values())ac.abort();});
 </script>
 
@@ -871,17 +901,6 @@ onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of pr
   font-weight: 600;
   color: #333946;
 }
-.page-head p {
-  margin: 0;
-  color: #667085;
-  font-size: 13px;
-  line-height: 1.8;
-  max-width: 880px;
-  padding: 12px 16px;
-  background: #f6f7fc;
-  border-left: 3px solid #4A53A3;
-  border-radius: 0 6px 6px 0;
-}
 .page-link {
   margin-left: 8px;
   color: #4A53A3;
@@ -895,7 +914,9 @@ onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of pr
 .page-head-actions {
   display: flex;
   gap: 8px;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
   flex-wrap: wrap;
   align-items: center;
 }
@@ -961,7 +982,10 @@ onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of pr
   white-space: nowrap;
 }
 .op-row :deep(.el-button) {
+  flex: 0 0 auto;
+  min-width: 0;
   margin: 0;
+  padding-inline: 8px;
 }
 .prov-name {
   font-weight: 500;

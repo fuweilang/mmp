@@ -179,7 +179,9 @@ model OfficialAgent {
   key              String                    @unique
   kind             OfficialAgentKind
   /// 广场主分类；挂在可编辑父级，改分类不发新版本。
-  category         OfficialAgentCategory?
+  category         String?
+  categoryKind     String @default("expert") @map("category_kind")
+  categoryEntry    CatalogCategory? @relation(fields: [categoryKind, category], references: [kind, key], onDelete: Restrict, onUpdate: NoAction)
   /// 内容向能力标签（中文）；工具能力由线上 version.toolScope 派生后合并，最多展示 3 个。
   capabilities     Json                      @default("[]")
   status           OfficialAgentStatus       @default(DRAFT)
@@ -333,7 +335,7 @@ model OfficialSkill {
   key              String                 @unique
   name             String
   summary          String                 @default("") @db.Text
-  categories       OfficialSkillCategory[] @default([])
+  categories       String[] @default([])
   /// null = 停用/未启用；非空 = 启用时间（全员可见目录）。
   enabledAt        DateTime?              @map("enabled_at")
   /// 非空 = 已从管理列表和新使用入口移除；包、专家关联和历史读取仍保留。
@@ -1261,4 +1263,23 @@ model SmsVerificationCode {
   // 部分唯一索引 (phone, scene) WHERE consumed_at IS NULL 由迁移手工维护
   // （Prisma schema 不支持部分索引）；发码前会先 retireExpired 释放槽位。
   @@map("sms_verification_code")
+}
+
+model CatalogCategoryDirectory {
+  kind String @id
+  version Int @default(0)
+  items CatalogCategory[]
+  @@map("catalog_category_directory")
+}
+
+model CatalogCategory {
+  kind String
+  key String
+  name String
+  sortOrder Int @map("sort_order")
+  directory CatalogCategoryDirectory @relation(fields: [kind], references: [kind], onDelete: Restrict, onUpdate: NoAction)
+  agents OfficialAgent[]
+  @@id([kind, key])
+  @@unique([kind, name])
+  @@map("catalog_category")
 }

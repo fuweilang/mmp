@@ -166,7 +166,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { confirmDelete } from '../../utils/confirm-delete';
+
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { Search } from 'lucide-vue-next';
 import { useAdminSearch, useAdminTable } from '../../composables/useAdminTable';
@@ -627,19 +629,7 @@ async function onDeactivate(row: AdminUserRow) {
 async function onDelete(row: AdminUserRow) {
   if (!canDeleteUser(row)) return;
   try {
-    await ElMessageBox.confirm(
-      h('span', null, [
-        '删除“',
-        h('span', { style: { color: '#4A53A3', fontWeight: 600 } }, row.name),
-        '”后账号不可恢复，确认删除？',
-      ]),
-      '删除用户',
-      {
-        type: 'warning',
-        confirmButtonText: '确认删除',
-        confirmButtonClass: 'el-button--danger',
-      },
-    );
+    await confirmDelete({ title: '删除用户？', name: row.name, description: '删除后账号不可恢复。', confirmText: '删除用户' });
   } catch {
     return;
   }

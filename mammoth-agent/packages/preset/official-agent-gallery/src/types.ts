@@ -1,34 +1,11 @@
 import type { ExpertExecutionConfig, ExpertPreview } from './knowledge-protocol.ts'
 import type { WorkspaceId } from '@mammoth-ai/mmp-workspace/types'
 
-export type OfficialAgentCategory =
-  | 'common'
-  | 'productivity'
-  | 'content'
-  | 'sales'
-  | 'expertise'
-  | 'analytics'
+/** Stable key in the Ground-managed expert category directory. */
+export type OfficialAgentCategory = string
 
-/** Skill categories for the public skill directory (Ground-managed, one-level taxonomy). */
-export type OfficialSkillCategory =
-  | 'common'
-  | 'content'
-  | 'analytics'
-  | 'office'
-  | 'education'
-  | 'expertise'
-  | 'business'
-  | 'ecommerce'
-  | 'sales'
-  | 'hr'
-  | 'legal'
-  | 'finance'
-  | 'consulting'
-  | 'research'
-  | 'files'
-  | 'search'
-  | 'writing'
-  | 'lifestyle'
+/** Stable key in the separate Ground-managed skill category directory. */
+export type OfficialSkillCategory = string
 
 /** Browser-safe summary of an enabled skill linked to an official expert. */
 export interface OfficialSkillSummary {
@@ -72,6 +49,8 @@ export interface OfficialSkillCard {
   readonly name: string
   readonly summary: string
   readonly category: OfficialSkillCategory | null
+  /** All managed categories, in the administrator-selected order. */
+  readonly categories?: readonly OfficialSkillCategory[] | undefined
   readonly enabledAt: string | null
   readonly packageRevision: number
   /** Display-only facets; never permissions or a frozen content revision. */
@@ -224,7 +203,14 @@ declare module '@mammoth-ai/mmp-session-projection/types' {
 
 /** Additive paged catalog contracts; legacy list methods remain available. */
 export interface CatalogQuery { readonly q?:string | undefined; readonly capability?:string | undefined; readonly industry?:string | undefined; readonly cursor?:string | undefined }
-export interface CatalogCount { readonly id:string; readonly count:number }
+export interface CatalogCount {
+  readonly id: string
+  readonly count: number
+  /** Managed category display name; omitted by older servers and industry facets. */
+  readonly name?: string | undefined
+  /** Directory order, independent of counts and active selection. */
+  readonly sortOrder?: number | undefined
+}
 export interface CatalogFacets { readonly total:number; readonly capabilities:readonly CatalogCount[]; readonly industries:readonly CatalogCount[] }
 export interface ExpertCatalogPage { readonly items:readonly OfficialAgentCard[]; readonly total:number; readonly hasMore:boolean; readonly nextCursor:string|null }
 export interface SkillCatalogPage { readonly items:readonly OfficialSkillCard[]; readonly total:number; readonly hasMore:boolean; readonly nextCursor:string|null }

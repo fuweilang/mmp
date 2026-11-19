@@ -71,6 +71,7 @@ export class AdminOfficialAgentsService {
     const keyword = query.keyword?.trim();
     const scopeWhere: Prisma.OfficialAgentWhereInput = {
       ...(query.kind ? { kind: query.kind } : {}),
+      ...(query.category ? { category: query.category } : {}),
       ...(keyword
         ? {
             OR: [

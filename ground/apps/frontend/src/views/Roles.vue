@@ -288,8 +288,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
+import { confirmDelete } from '../utils/confirm-delete';
+
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import { Search } from 'lucide-vue-next';
 import { isOrgAdmin } from '@mammoth/shared';
 import { useAdminTable, useDebouncedCallback } from '../composables/useAdminTable';
@@ -524,19 +526,10 @@ async function onSave() {
 
 async function onRemove(row: TenantRoleRow) {
   if (!isOrgAdminUser.value || !canDeleteRole(row)) return;
-  await ElMessageBox.confirm(
-    h('div', [
-      '确定删除角色「',
-      h('span', { style: 'color: var(--app-primary-color); font-weight: 600;' }, row.name),
-      '」？',
-    ]),
-    '删除角色',
-    {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    },
-  );
+  try {
+    await confirmDelete({ title: '删除角色？', name: row.name, description: '将删除此角色。', confirmText: '删除角色' });
+  } catch { return; }
+
   try {
     await tenantRoleApi.remove(row.id);
     ElMessage.success('已删除');

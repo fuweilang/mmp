@@ -1,5 +1,6 @@
-import { computed, h, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import { ElMessage, ElMessageBox, type FormRules } from 'element-plus';
+import { confirmDelete } from '../../utils/confirm-delete';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { ElMessage, type FormRules } from 'element-plus';
 import { Search } from 'lucide-vue-next';
 import { isOrgAdmin } from '@mammoth/shared';
 import { tenantApi, type MemberRow, type RolePermSource } from '@/api/tenants';
@@ -265,15 +266,11 @@ export function useMembersPage() {
   async function onRemove(row: MemberRow) {
     if (!isOrgAdminUser.value) return;
     try {
-      await ElMessageBox.confirm(
-        h('div', [
-          '删除后「',
-          h('span', { style: 'color: var(--app-primary-color); font-weight: 600;' }, row.user.name),
-          '」将不再是本企业成员；若其未加入其他企业、无平台角色，账号将被一并删除且不可恢复。确定删除？',
-        ]),
-        '删除成员',
-        { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
-      );
+      await confirmDelete({
+        title: '删除成员？', name: row.user.name,
+        description: ['删除后，此用户将不再是本企业成员。', '若其未加入其他企业、无平台角色，账号将被一并删除且不可恢复。'],
+        confirmText: '删除成员',
+      });
     } catch {
       return;
     }

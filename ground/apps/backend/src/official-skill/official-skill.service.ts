@@ -1,3 +1,4 @@
+import { categoryFacets } from '../catalog-category/catalog-category';
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { existsSync } from 'fs';
@@ -80,15 +81,24 @@ export class OfficialSkillService {
 
   // ---- 管理端列表/详情/发现/目录（保留在门面） ----
 
-  async catalogFacets(){const rows=await this.prisma.officialSkill.findMany({where:{deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}},select:{key:true}});return catalogFacets('skill',rows.map(x=>x.key));}
+  async catalogFacets() {
+    const rows = await this.prisma.officialSkill.findMany({ where: { deletedAt: null, enabledAt: { not: null }, currentRevision: { gt: 0 } }, select: { key: true, categories: true } });
+    const counts: Record<string, number> = {};
+    for (const row of rows) for (const key of row.categories.length ? row.categories : ['uncategorized']) counts[key] = (counts[key] ?? 0) + 1;
+    return { total: rows.length, capabilities: await categoryFacets(this.prisma, 'skill', counts), industries: catalogFacets('skill', rows.map(row => row.key)).industries };
+  }
   async catalogHome(query:CatalogQuery){const [facets,page]=await Promise.all([this.catalogFacets(),this.catalogPage(query)]);return {facets,page};}
   async catalogPage(query:CatalogQuery){
     const f=catalogQuery(query,'skill');const filters:Prisma.OfficialSkillWhereInput[]=[{deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}}];
-    if(f.capability!=='all'||f.industry!=='all')filters.push(catalogDiscoveryWhere('skill',f.capability,f.industry));
+    if (f.capability !== 'all') {
+      if (f.capability === 'uncategorized') filters.push({ categories: { isEmpty: true } });
+      else filters.push({ categories: { has: f.capability } });
+    }
+    if (f.industry !== 'all') filters.push(catalogDiscoveryWhere('skill', 'all', f.industry));
     if(f.q)filters.push({OR:[...['name','summary','key'].map(field=>({[field]:{contains:f.q,mode:'insensitive' as const}})),...Object.entries(DESCRIPTIONS).filter(([,v])=>v.summary.toLocaleLowerCase().includes(f.q.toLocaleLowerCase())).map(([key,v])=>({key,summary:v.expectedOriginal}))]});
     const where:Prisma.OfficialSkillWhereInput={AND:filters};
     const [total,rows]=await Promise.all([this.prisma.officialSkill.count({where}),this.prisma.officialSkill.findMany({where:{AND:[where,...f.after?[{key:{gt:f.after}}]:[]]},orderBy:{key:'asc'},take:21,select:{id:true,key:true,name:true,summary:true,categories:true,enabledAt:true,currentRevision:true,customAvatarPath:true}})]);
-    const page=rows.slice(0,20);return {items:page.map(row=>({id:row.id,key:row.key,name:row.name,summary:displaySummary(row.key,row.summary),category:primarySkillCategory(row.categories),enabledAt:row.enabledAt?.toISOString()??null,packageRevision:row.currentRevision,avatarUrl:uploadedCatalogIconUrl(row.customAvatarPath),discovery:discoveryOf('skill',row.key)})),total,hasMore:rows.length>20,nextCursor:rows.length>20?nextCatalogCursor(page[page.length-1]!.key,f.signature):null};
+    const page=rows.slice(0,20);return {items:page.map(row=>({id:row.id,key:row.key,name:row.name,summary:displaySummary(row.key,row.summary),category:primarySkillCategory(row.categories),categories:row.categories,enabledAt:row.enabledAt?.toISOString()??null,packageRevision:row.currentRevision,avatarUrl:uploadedCatalogIconUrl(row.customAvatarPath),discovery:{...discoveryOf('skill',row.key),capability:primarySkillCategory(row.categories)??'uncategorized'}})),total,hasMore:rows.length>20,nextCursor:rows.length>20?nextCatalogCursor(page[page.length-1]!.key,f.signature):null};
   }
 
   async discovery(id:string){const row=await this.requireSkill(id);return {id:row.id,name:row.name,enabled:Boolean(row.enabledAt),updatedAt:row.updatedAt.toISOString(),discoveryDetail:publicDiscoveryDetail(row.discoveryDetail)};}
@@ -128,7 +138,7 @@ export class OfficialSkillService {
     this.requireActiveAccount(user);
     const row=await this.prisma.officialSkill.findFirst({where:{id,deletedAt:null,enabledAt:{not:null},currentRevision:{gt:0}},select:{id:true,key:true,name:true,summary:true,categories:true,enabledAt:true,currentRevision:true,customAvatarPath:true,discoveryDetail:true}});
     if(!row)throw new NotFoundException('技能不可用');
-    return {kind:'skill' as const,id:row.id,key:row.key,name:row.name,summary:displaySummary(row.key,row.summary),avatarUrl:uploadedCatalogIconUrl(row.customAvatarPath),packageRevision:row.currentRevision,discovery:discoveryOf('skill',row.key),detail:publicDiscoveryDetail(row.discoveryDetail),linkedSkills:[]};
+    return {kind:'skill' as const,id:row.id,key:row.key,name:row.name,summary:displaySummary(row.key,row.summary),avatarUrl:uploadedCatalogIconUrl(row.customAvatarPath),packageRevision:row.currentRevision,discovery:{...discoveryOf('skill',row.key),capability:primarySkillCategory(row.categories)??'uncategorized'},detail:publicDiscoveryDetail(row.discoveryDetail),linkedSkills:[]};
   }
 
   async adminList(query: { keyword?: string; enabled?: 'true' | 'false' | '' }) {
@@ -160,7 +170,8 @@ export class OfficialSkillService {
     const row = await this.requireSkill(id);
     const presented = this.presentAdmin(row);
     if (!opts.includeInstruction) return presented;
-    const instruction = await this.readInstruction(row);
+    // Editing must stay possible when a package file is missing; saving an instruction rebuilds it.
+    const instruction = await this.readInstructionIfAny(row);
     return { ...presented, instruction };
   }
 
@@ -377,8 +388,10 @@ export class OfficialSkillService {
 
   /** internal */
   async readInstructionFromPath(storagePath: string) {
-    const abs = join(absoluteUploadPath(storagePath), 'SKILL.md');
-    if (!existsSync(abs)) {
+    const dir = absoluteUploadPath(storagePath);
+    // Legacy rows may point at the package root while format-2 files live under content/.
+    const abs = [join(dir, 'SKILL.md'), join(dir, 'content', 'SKILL.md')].find((path) => existsSync(path));
+    if (!abs) {
       throw skillPackageError('SKILL_PACKAGE_INVALID', '技能说明缺失');
     }
     return readFile(abs, 'utf8');
@@ -399,10 +412,5 @@ export class OfficialSkillService {
   /** internal */
   async auditTx(tx: Prisma.TransactionClient, actorUserId: string, action: string, meta: Prisma.InputJsonObject) {
     await tx.auditLog.create({ data: { userId: actorUserId, action, tenantId: null, meta } });
-  }
-
-  private async readInstruction(row: SkillRow) {
-    if (!row.currentPackage) return '';
-    return this.readInstructionFromPath(row.currentPackage.storagePath);
   }
 }

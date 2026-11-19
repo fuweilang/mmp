@@ -3,7 +3,7 @@ import { executionConfigSchema, previewSchema, knowledgeResultSchema, openedSour
 import type { CatalogQuery } from './types.ts'
 import { z } from 'zod'
 
-const skillCategorySchema = z.enum(['common', 'content', 'analytics', 'office', 'education', 'expertise', 'business', 'ecommerce', 'sales', 'hr', 'legal', 'finance', 'consulting', 'research', 'files', 'search', 'writing', 'lifestyle']).nullable()
+const skillCategorySchema = z.string().min(1).nullable()
 
 const skillSummarySchema = z.object({
   id: z.string().min(1),
@@ -21,6 +21,7 @@ const skillCardSchema = z.object({
   name: z.string().min(1),
   summary: z.string(),
   category: skillCategorySchema,
+  categories: z.array(z.string().min(1)).max(3).optional(),
   enabledAt: z.string().nullable(),
   packageRevision: z.number().int().nonnegative(),
   discovery: z.object({
@@ -105,7 +106,7 @@ const cardSchema = z.object({
   id: z.string().min(1),
   key: z.string().min(1),
   kind: z.enum(['GENERAL', 'KNOWLEDGE']),
-  category: z.enum(['common', 'productivity', 'content', 'sales', 'expertise', 'analytics']).nullable(),
+  category: z.string().min(1).nullable(),
   versionId: z.string().min(1),
   version: z.number().int().positive(),
   name: z.string().min(1),
@@ -120,7 +121,7 @@ const cardSchema = z.object({
 const discoverySchema=z.object({capability:z.string(),industries:z.array(z.string())}).strict()
 const expertPageSchema=z.object({items:z.array(cardSchema.extend({discovery:discoverySchema.optional()})),total:z.number(),hasMore:z.boolean(),nextCursor:z.string().nullable()}).strict()
 const skillPageSchema=z.object({items:z.array(skillCardSchema.extend({avatarUrl:z.string().nullable().optional()})),total:z.number(),hasMore:z.boolean(),nextCursor:z.string().nullable()}).strict()
-const facetSchema=z.object({total:z.number(),capabilities:z.array(z.object({id:z.string(),count:z.number()}).strict()),industries:z.array(z.object({id:z.string(),count:z.number()}).strict())}).strict()
+const facetSchema=z.object({total:z.number(),capabilities:z.array(z.object({id:z.string(),count:z.number(),name:z.string().min(1).optional(),sortOrder:z.number().int().nonnegative().optional()}).strict()),industries:z.array(z.object({id:z.string(),count:z.number()}).strict())}).strict()
 const expertHomeSchema=z.object({facets:facetSchema,page:expertPageSchema}).strict()
 const skillHomeSchema=z.object({facets:facetSchema,page:skillPageSchema}).strict()
 

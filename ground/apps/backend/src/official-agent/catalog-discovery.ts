@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { isOfficialAgentCategory } from './gallery-presentation';
 import { skillDiscovery, OFFICIAL_SKILL_DISCOVERY } from '../official-skill/skill-discovery';
 export const EXPERT_DISCOVERY = {
     "agency-project-planner": {
@@ -236,15 +237,8 @@ export const EXPERT_DISCOVERY = {
     }
 } as const;
 
-/** Admin OfficialAgentCategory → gallery capability id. New experts filter without key map edits. */
-export const CATEGORY_TO_CAPABILITY: Record<string, string> = {
-  common: 'business',
-  productivity: 'product-project',
-  content: 'marketing',
-  sales: 'sales-customer',
-  expertise: 'development',
-  analytics: 'research-data',
-};
+/** Experts without an Admin category get their own gallery bucket instead of a misleading default. */
+export const UNCATEGORIZED_EXPERT_CAPABILITY = 'uncategorized';
 
 export const DESCRIPTIONS: Record<string, {
     expectedOriginal: string;
@@ -364,11 +358,14 @@ export type CatalogQuery = {
 };
 export const discoveryOf = (kind: CatalogKind, key: string, category?: string | null) => {
   if (kind === 'skill') return skillDiscovery(key) ?? { capability: 'general', industries: [] as const };
-  if (Object.prototype.hasOwnProperty.call(EXPERT_DISCOVERY, key)) {
-    return EXPERT_DISCOVERY[key as keyof typeof EXPERT_DISCOVERY];
-  }
-  const mapped = category ? CATEGORY_TO_CAPABILITY[category] : undefined;
-  return { capability: mapped ?? 'business', industries: [] as const };
+  // The Admin category is the single source of truth for plaza grouping; the key map only adds industries.
+  const base = Object.prototype.hasOwnProperty.call(EXPERT_DISCOVERY, key)
+    ? EXPERT_DISCOVERY[key as keyof typeof EXPERT_DISCOVERY]
+    : undefined;
+  return {
+    capability: isOfficialAgentCategory(category) ? category : UNCATEGORIZED_EXPERT_CAPABILITY,
+    industries: base?.industries ?? ([] as const),
+  };
 };
 export const discoveryKeys = (kind: CatalogKind) => kind === 'skill' ? Object.keys(OFFICIAL_SKILL_DISCOVERY) : Object.keys(EXPERT_DISCOVERY);
 export function displaySummary(key: string, original: string) { const entry = Object.prototype.hasOwnProperty.call(DESCRIPTIONS, key) ? DESCRIPTIONS[key] : undefined; return entry && original === entry.expectedOriginal ? entry.summary : original; }
@@ -418,8 +415,24 @@ export function catalogFacets(
     industries: Object.entries(industries).map(([id, count]) => ({ id, count })),
   };
 }
-/** Prefer key map; fall back to OfficialAgent.category for Admin-created experts. */
+/** Experts filter by their Admin category; the legacy key map only narrows industries. */
 export function catalogDiscoveryWhere(kind: CatalogKind, capability: string, industry: string) {
+  if (kind === 'expert') {
+    const filters: Array<Record<string, unknown>> = [];
+    if (capability !== 'all') {
+      if (capability === UNCATEGORIZED_EXPERT_CAPABILITY) filters.push({ category: null });
+      else if (isOfficialAgentCategory(capability)) filters.push({ category: capability });
+      // Unknown buckets must not reach Prisma as an invalid enum value.
+      else filters.push({ id: { in: [] } });
+    }
+    if (industry !== 'all') {
+      const keys = Object.keys(EXPERT_DISCOVERY).filter((key) =>
+        (EXPERT_DISCOVERY[key as keyof typeof EXPERT_DISCOVERY].industries as readonly string[]).includes(industry),
+      );
+      filters.push({ key: { in: keys } });
+    }
+    return filters.length ? { AND: filters } : {};
+  }
   const keys = discoveryKeys(kind);
   const accepts = (key: string, category?: string | null) => {
     const d = discoveryOf(kind, key, category);
@@ -428,15 +441,6 @@ export function catalogDiscoveryWhere(kind: CatalogKind, capability: string, ind
   };
   const mapped = keys.filter((key) => accepts(key));
   const or: Array<Record<string, unknown>> = [{ key: { in: mapped } }];
-  if (kind === 'expert' && capability !== 'all') {
-    const cats = Object.entries(CATEGORY_TO_CAPABILITY)
-      .filter(([, cap]) => cap === capability)
-      .map(([cat]) => cat);
-    if (cats.length) {
-      or.push({ AND: [{ key: { notIn: keys } }, { category: { in: cats } }] });
-    }
-  } else if (accepts('')) {
-    or.push({ key: { notIn: keys } });
-  }
+  if (accepts('')) or.push({ key: { notIn: keys } });
   return { OR: or };
 }

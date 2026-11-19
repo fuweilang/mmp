@@ -60,6 +60,7 @@ function createHarness() {
       update: async ({ data }: { data: Record<string, unknown> }) => {
         if (typeof data.status === 'string') agent.status = data.status as OfficialAgentStatus;
         if (typeof data.name === 'string') agent.name = data.name;
+        if (typeof data.kind === 'string') agent.kind = data.kind as typeof agent.kind;
         if (typeof data.summary === 'string') agent.summary = data.summary;
         if (typeof data.systemPrompt === 'string') agent.systemPrompt = data.systemPrompt;
         if(data.executionConfig)agent.executionConfig=data.executionConfig as Record<string,unknown>;
@@ -166,6 +167,13 @@ function createHarness() {
   );
   return { service, agent, versions, grants, audit };
 }
+
+test('已创建的专家可以修改类型并落库', async () => {
+  const { service, agent } = createHarness();
+  const updated = await service.update(actor, agent.id, { kind: 'KNOWLEDGE' });
+  assert.equal(updated.kind, 'KNOWLEDGE');
+  assert.equal((await service.detail(actor, agent.id)).kind, 'KNOWLEDGE');
+});
 
 test('发布冻结独立快照，后续草稿和新版本不改变历史版本或企业固定版本', async () => {
   const { service, agent, versions, grants } = createHarness();

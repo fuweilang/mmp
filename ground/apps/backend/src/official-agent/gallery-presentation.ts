@@ -10,7 +10,7 @@ export const OFFICIAL_AGENT_CATEGORIES = [
   'analytics',
 ] as const satisfies readonly OfficialAgentCategory[];
 
-export type OfficialAgentCategoryKey = (typeof OFFICIAL_AGENT_CATEGORIES)[number];
+export type OfficialAgentCategoryKey = string;
 
 /** Tool → Chinese capability label. Derived at read time from frozen toolScope. */
 export const TOOL_CAPABILITY_LABELS: Record<string, string> = {
@@ -31,11 +31,14 @@ const TOOL_ORDER = [
   'delegate',
 ] as const;
 
-/** Max capability chips shown on a public card. */
-export const MAX_PUBLIC_CAPABILITIES = 3;
+/**
+ * Max capability labels returned to clients. Cards truncate to 3; detail views show the rest.
+ * Stored content labels come first so an Admin-entered tag is never hidden by tool labels.
+ */
+export const MAX_PUBLIC_CAPABILITIES = 8;
 
 export function isOfficialAgentCategory(value: unknown): value is OfficialAgentCategoryKey {
-  return typeof value === 'string' && (OFFICIAL_AGENT_CATEGORIES as readonly string[]).includes(value);
+  return typeof value === 'string' && ((OFFICIAL_AGENT_CATEGORIES as readonly string[]).includes(value) || /^cat-[a-f0-9-]{36}$/.test(value));
 }
 
 export function stringList(value: Prisma.JsonValue | null | undefined): string[] {
@@ -51,7 +54,7 @@ export function stringList(value: Prisma.JsonValue | null | undefined): string[]
 }
 
 /**
- * Merge tool-derived labels first, then stored content capabilities.
+ * Merge stored content capabilities first, then tool-derived labels.
  * Never invent tools that are not declared on the frozen version.
  */
 export function buildPublicCapabilities(
@@ -70,19 +73,16 @@ export function buildPublicCapabilities(
     seen.add(text);
     out.push(text);
   };
-  for (const tool of TOOL_ORDER) {
-    if (tools.includes(tool)) push(TOOL_CAPABILITY_LABELS[tool] ?? tool);
-  }
-  for (const tool of tools) {
-    if ((TOOL_ORDER as readonly string[]).includes(tool)) continue;
-    // Unknown tools stay out of public chips (do not invent marketing labels).
-  }
   for (const label of stringList(
     Array.isArray(storedCapabilities)
       ? (storedCapabilities as unknown as Prisma.JsonValue)
       : (storedCapabilities as Prisma.JsonValue),
   )) {
     push(label);
+  }
+  // Unknown tools stay out of public chips (do not invent marketing labels).
+  for (const tool of TOOL_ORDER) {
+    if (tools.includes(tool)) push(TOOL_CAPABILITY_LABELS[tool] ?? tool);
   }
   return out;
 }

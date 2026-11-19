@@ -19,7 +19,7 @@ test('summarizeInvalidFields dedupes and labels Chinese fields', () => {
 });
 
 test('formatPublishMissingToast stays one line', () => {
-  assert.equal(formatPublishMissingToast(['一句话介绍', '角色定位', '角色定位']), '发布前请完善：一句话介绍、角色定位');
+  assert.equal(formatPublishMissingToast(['一句话介绍', '专家指令', '专家指令']), '发布前请完善：一句话介绍、专家指令');
 });
 
 test('empty invalid fields still produce a toast line', () => {

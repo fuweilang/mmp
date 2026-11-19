@@ -1,3 +1,4 @@
+import { modelPurpose } from './model-purpose';
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import axios from 'axios';
 import { Prisma } from '@prisma/client';
@@ -80,7 +81,7 @@ export class LlmHealthService implements OnModuleInit,OnModuleDestroy {
     for(const provider of providers){
       const channel=states.get('p:'+provider.id);
       if(channel?.retryAt&&channel.retryAt.getTime()>now&&!['healthy','degraded'].includes(channel.status))continue;
-      for(const model of provider.models){if(healthProbeDue(states.get('m:'+model.id),now,this.fresh))due.push({id:model.id,providerId:provider.id});}
+      for(const model of provider.models){if(modelPurpose(model)!=='chat')continue;if(healthProbeDue(states.get('m:'+model.id),now,this.fresh))due.push({id:model.id,providerId:provider.id});}
     }
     const blocked=new Set<string>();
     let cursor=0;
@@ -111,6 +112,7 @@ export class LlmHealthService implements OnModuleInit,OnModuleDestroy {
   private async performProbe(modelId:string,cancel:AbortSignal):Promise<{ok:boolean;latencyMs:number;message:string;statusCode?:number}>{
     const model=await this.prisma.llmModel.findUnique({where:{id:modelId},include:{provider:true}});
     if(!model)return{ok:false,latencyMs:0,message:'模型不存在'};
+    if(modelPurpose(model)!=='chat')return{ok:false,latencyMs:0,message:'该模型不是对话模型，请使用头像生图预览'};
     const target={id:model.id,providerId:model.providerId},start=Date.now();
     if(!model.enabled||!model.provider.enabled)return{ok:false,latencyMs:0,message:'管理员已禁用，未发起探测'};
     let apiKey:string;
