@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-subagent-claude-code",
   "description": "One-shot Claude Code subagent provider over the official Agent SDK",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "publishConfig": {
     "access": "public"
   },

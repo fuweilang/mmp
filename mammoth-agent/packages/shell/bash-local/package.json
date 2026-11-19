@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-bash-local",
   "description": "Local-subprocess implementation of the DeepSeek Harness bash executor seam",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "publishConfig": {
     "access": "public"
   },
