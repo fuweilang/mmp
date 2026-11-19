@@ -8,8 +8,8 @@
  * ([rationale](../../.agents/notes/implemented/process/2026-08-10-npm-release-sequences.md)).
  */
 
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { existsSync, globSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { pnpmInvocation } from '../pnpm-invocation.ts'
 import { releaseFamily, tarballName, type MemberSelection, type ReleaseFamily, type ReleaseMember } from './families.ts'
@@ -105,17 +105,26 @@ export async function packFamilyMembers(
 /** Pack the family named by `--family` into `--out`. */
 async function main(): Promise<void> {
   const { values } = parseArgs({
-    options: { family: { type: 'string' }, out: { type: 'string' }, concurrency: { type: 'string' } },
+    options: { family: { type: 'string' }, out: { type: 'string' }, concurrency: { type: 'string' }, 'include-private': { type: 'boolean' } },
     allowPositionals: false,
   })
-  if (values.family === undefined) throw new Error('usage: pack.ts --family <mmp|vendor> [--out dist/npm] [--concurrency 1]')
+  if (values.family === undefined) throw new Error('usage: pack.ts --family <mmp|vendor> [--out dist/npm] [--concurrency 1] [--include-private]')
   const concurrency = parsePackConcurrency(values.concurrency)
 
   const family = releaseFamily(values.family)
   const root = process.cwd()
   const destination = resolve(root, values.out ?? DEFAULT_OUTPUT)
+  // Desktop installers bundle workspace packages that are private on purpose (the Ground
+  // adapter), so their dependency closure needs those tarballs even though npm publication omits them.
+  const selection: MemberSelection = values['include-private'] === true
+    ? {
+        includePrivate: globSync('packages/*/*/package.json', { cwd: root })
+          .filter(path => (JSON.parse(readFileSync(join(root, path), 'utf8')) as { private?: unknown }).private === true)
+          .map(path => dirname(path).replaceAll('\\', '/')),
+      }
+    : {}
   family.verifyBuildArtifacts(root)
-  const order = await packFamilyMembers(root, family, destination, concurrency)
+  const order = await packFamilyMembers(root, family, destination, concurrency, selection)
   writeFileSync(join(destination, PUBLISH_ORDER_FILE), `${order.join('\n')}\n`)
 
   console.log(`release pack: family ${family.id}, ${String(order.length)} tarball(s) in ${values.out ?? DEFAULT_OUTPUT}`)

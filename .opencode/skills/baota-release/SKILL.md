@@ -11,7 +11,7 @@ description: >-
 
 **讨论、整理材料、完善Skill、预检，不等于构建/发布授权。** 只有用户明确批准执行路线、最终版本/通道、源码快照、生产窗口后才进入执行阶段。下方“一句话授权”、开跑命令及并行建议不适用于仅讨论/只读预检；第一阶段禁止运行发布/打包/doctor/smoke脚本，连dry-run也先读源码。不得因聊天历史曾发版就自动执行。
 
-本轮用户已确认范围：**3.0全部新版代码**，包括Ground API、Admin/Console前端、mammoth-agent终端Web，以及mac-arm64和mac-x64两款桌面客户端；**Windows不构建、不上传、不删除旧包、不更新Windows feed/manifest子项**。不是“只发两个DMG、不更新中台”。此处是计划范围，不是现在发布授权。林杰/浪哥/秋池/李庚/王总/甜甜的审查任务不在本次自动投递范围；DeepSeek收到文案后也先报告等批准。
+本轮（2026-11-08）确认范围：**3.0全部新版代码**，包括Ground API、Admin/Console前端、mammoth-agent终端Web，以及mac-arm64和mac-x64两款桌面客户端；~~Windows不构建、不上传、不删除旧包、不更新Windows feed/manifest子项~~ —— **该 Windows 结论已作废**：2026-11-13 起恢复三平台；2026-11-19 起 Windows 默认仍打**未签名**包、必须上传并合并 manifest 的 `windows-amd64` 子项、保留旧包，只有 Windows 自动更新暂不启用（见 4K/4R）。不是“只发两个DMG、不更新中台”。此处是计划范围，不是现在发布授权。林杰/浪哥/秋池/李庚/王总/甜甜的审查任务不在本次自动投递范围；DeepSeek收到文案后也先报告等批准。
 
 ### 源码冻结与当前事实
 - 最新事实补充（2026-11-08，Asia/Shanghai）：用户t65u报告已自行将3.0最新代码push到GitHub，代码备份已完成，不再要求先push。本轮只读本机HEAD与现有refs/remotes/origin/3.0，二者均为43bd7f6d898687cc11d4d50a84073d0e18b866eb；3.0未配置upstream。此为本机追踪ref一致，不是独立远端live核实；未fetch/pull或连接远端。两份发布文档的本轮补充仍分别是tracked修改和untracked新文件，未包含于当前HEAD，不能称已一并推送。已有GitHub备份不代表CI可用，也不授权dispatch/tag/再次push/部署；最终发布commit仍须在版本与阻塞处理后冻结。
@@ -1300,6 +1300,82 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 | 未验 | 全部 unsigned（无自动更新）、真 Intel 实机、桌面 GUI 人工点检、真实短信/支付 |
 
 > 客户端每次发布都要先看线上 `mammoth-latest.json` 与 `release/desktop-*.json`：同一天可能已经发过 0.3.8，别用同一个版本号覆盖。
+
+## 4R. 2026-11-19 5.6 全栈 + 三平台 + 老猛犸数据迁移：实测坑与门禁（本轮第一次做“数据上线”）
+
+> 范围：Ground `5.5.0→5.6.0`、桌面 `0.3.9→0.3.10`；中台 api+web+pg+knowledge、官网、mac-arm64 / mac-x64（**首次签名+公证+自动更新**）、win-x64（未签名）；并把本地导入的老猛犸企业/用户/角色/专家/技能/资料库数据合并到生产。
+
+### 4R.1 实测时间分布（09:44 预检 → 10:55 全量 smoke 通过，约 71 分钟，其中返工约 35 分钟）
+
+| 节点 | 实测 | 性质 |
+|---|---|---|
+| 版本 bump（Ground + mmp 家族 385 个 manifest）+ push | ~4 min | 必要 |
+| `ground verify` + `build --profile local` | ~3 min | 必要 |
+| 前端 + 官网 | 11 s | 必要 |
+| api 镜像（正确尺寸 1.68GB，压缩 341MB） | 1.5 min | 必要 |
+| api 镜像**误打包本地数据**（6.89GB / 压缩 2.6GB）后重做 | **~15 min** | 返工 |
+| 服务器 web 镜像 | **808 s** | 关键路径 |
+| 发布包 + 镜像上传（341MB，实测 ~3.7MB/s） | ~1.5 min | 必要 |
+| deploy + 迁移 + nginx + 快速 smoke | ~6 min | 必要 |
+| mac-arm64 签名+公证（DMG 393s、ZIP 750s，含两次独立公证） | ~17 min | 必要 |
+| mac-x64 签名+公证（首次因 commit 漂移失败，重跑） | **~20 min** | 返工 10 min |
+| 老猛犸 DB 导出 332MB → 上传/装载/合并/校验 | ~10 min | 必要 |
+| 资料库文件 2.6G / 10,575 个 rsync（实测 3.7MB/s） | ~13 min | 必要 |
+| 三平台上传 + feed + manifest（arm64 5 / x64 6 / win 2 min） | ~13 min | 必要 |
+| 全量 smoke（三平台真实下载 875MB + sha） | 5.5 min | 必要 |
+
+### 4R.2 本轮 11 个真坑（按损失排序）
+
+| # | 现象 | 根因 | 损失 | 已固化 |
+|---|---|---|---|---|
+| 1 | api 镜像 6.89GB、压缩后 2.6GB，传了 1.7GB 才发现 | `ground/.dockerignore` 没排除 `apps/backend/library-data`（2.6G 老猛犸资料库）和 `uploads`，`COPY apps/backend` 全进镜像 | ~15 min + 带宽 | ✅ 已加两行排除；门禁 47 |
+| 2 | 签名探针 `codesign --force failed`（unable to build chain） | p12 只含叶证书+私钥，登录钥匙串缺 **Developer ID Certification Authority (G2)** 中间证书；`find-identity` 为 0 | ~10 min | 门禁 48 |
+| 3 | 补中间证书后 `codesign --timestamp` 卡死 | `timestamp.apple.com`（17.157.80.35）与 `ocsp.apple.com` 在本机被墙；codesign 只支持 **HTTP** TSA，DigiCert/Sectigo 自建 URL 均被拒 | ~25 min | ✅ 门禁 49：无时间戳签名 → 公证 `Accepted` → staple → `spctl` 通过（小样已验证） |
+| 4 | 签名打包 `prepare:packages` 报 `requires unpacked package @mammoth-ai/mmp-llm-ground` | `release:pack --family mmp` 只打公开包，而 `apps/cli` 依赖 **private** 的 `mmp-llm-ground`；unsigned 走 `pack-local-packages.ts` 才会带私有包 | ~10 min | ✅ `pack.ts` 新增 `--include-private`，`package-target.ts` 签名分支已传 |
+| 5 | mac-x64 首次打包报 `client build environment differs ... MMP_CLIENT_COMMIT_HASH` | 打包窗口内我提交了 commit(2c71b06→e4efda1)，`.mmp-build/client-build-environment.json` 记录与 HEAD 不一致 | ~10 min | ✅ 门禁 50：打包/上传窗口内禁止 commit、push、改版本 |
+| 6 | `release.sh --from api` 又跑了一遍 web 镜像（808s） | `--from` 是“从这步开始跑完剩下全部”，不是“只跑这几步” | ~5 min | ✅ 门禁 51：续跑只用 `--only` |
+| 7 | 中断 release.sh 后锁没释放、远端 rsync 仍在传、`bash release.sh` 变孤儿 | `pkill` 只杀了外层 wrapper；脚本 trap 未执行到 | ~3 min | ✅ 门禁 52：中断后必须核对进程+锁+远端传输 |
+| 8 | 数据合并 SQL 第一版整体回滚 | dump 里没有 `library_recent`（本地 0 行），但表清单硬编码了它 | ~2 min | ✅ 门禁 53：表清单从 dump 的 `COPY ` 行生成，不手写 |
+| 9 | 合并撞二级唯一键：`role_permission(role_id,perm_key)`、`official_agent(key)` | 只按 `ON CONFLICT (id)` upsert，二级唯一键冲突直接报错 | ~3 min | ✅ 门禁 54：先 `ON CONFLICT DO NOTHING` 再按主键 `UPDATE ... FROM stage` |
+| 10 | 导入 `user` 表后超管 401，`release-private` 里的密码失效 | 本地 user 行覆盖生产超管，密码哈希随之变 | ~5 min | ✅ 门禁 55：导入后重置并回写 `admin-credentials.txt`，实测 200 |
+| 11 | 短信测试返回 `SMS_UNAVAILABLE`，差点判定通道坏 | 阿里云对**单号码天级 40 条**限流（`isv.BUSINESS_LIMIT_CONTROL`）；换号即可，通道本身正常 | ~5 min | ✅ 门禁 56：先用阿里云 `QuerySendDetails` 看 `ErrCode=DELIVERED`，别只看接口 400 |
+
+### 4R.3 新增门禁（续 4Q.3，编号 47–56）
+
+47. **构建上下文不含本地数据**：`ground/.dockerignore` 必须排除 `apps/backend/library-data`、`apps/backend/uploads`；api 镜像正常应 ~1.7GB（压缩 ~350MB）。构建后 `docker images | grep mmp-api` 超过 2.5GB 立即停，检查 `docker history` 里 `COPY apps/backend` 的体积。
+48. **签名前置**：`security find-identity -v -p codesigning` 至少 1 个有效 identity；若 `codesign` 报 `unable to build chain`，先给登录钥匙串补 `Developer ID Certification Authority` 中间证书（`security import DeveloperIDG2CA.cer -k ~/Library/Keychains/login.keychain-db`），再重试。
+49. **Apple TSA 探测与降级**：`curl --max-time 8 https://timestamp.apple.com/tsr` 必须 200；不通则设 `MMP_DESKTOP_MACOS_SKIP_TIMESTAMP=1`（`macos-signing-keychain.mjs`、`verify-macos-signature.mjs`、`@electron/osx-sign` 均支持）。降级后**必须**满足：notarytool `Accepted`、`stapler validate` 通过、`spctl --type execute` 显示 `Notarized Developer ID`。`@electron/osx-sign` 的改动目前只在 `node_modules`，`pnpm install` 会丢；下次要并入 `patches/@electron__osx-sign@1.3.3.patch`。
+50. **打包窗口冻结**：出 mac-arm64 开始到 manifest 切完，禁止 commit、push、改版本号、改 `.mmp-build` 产物；否则 build record 的 `MMP_CLIENT_COMMIT_HASH` 与 HEAD 不一致，必须重跑。
+51. **续跑用 `--only`**：`release.sh --only api,deploy,nginx,smoke`；`--from` 会把后续所有步骤重跑（含 13 分钟的 web 镜像）。
+52. **中断清理三件事**：`pkill -f ground/infra/production/release.sh` 后核对 `pgrep -fl release.sh`、`pgrep -fl rsync`（含远端）、以及 `/www/mmp-prod/.release.lock`；三者清干净再续跑。
+53. **数据表清单从 dump 生成**：`pg_dump --data-only -t ...` 后按 `grep '^COPY '` 的真实表建 stage 表，禁止手写清单；跨库导入用 `stage` schema + `INSERT..SELECT`，一个事务里 `SET session_replication_role = replica`。
+54. **跨环境合并按唯一键分级**：主键 `ON CONFLICT DO NOTHING` + `UPDATE ... FROM stage WHERE 主键相等`，不要 `ON CONFLICT (id) DO UPDATE`（会被二级唯一键打断）；`UPDATE` 的 SET 右侧必须写 `stage."表"."列"`。
+55. **导入 user 后回写凭据**：覆盖 `"user"` 表后立刻把生产超管密码重置为随机值并写 `release-private/admin-credentials.txt`（600），再用 `node ground/infra/production/check-admin-login.mjs` 验证 200。
+56. **短信验收看回执不看接口码**：`POST /api/auth/sms/send` 400 可能是单号码天级 40 条限流；用阿里云 `QuerySendDetails`（`Action=QuerySendDetails`，`SendDate=YYYYMMDD`）确认最近一条 `ErrCode=DELIVERED`。
+
+### 4R.4 数据上线小抄（下次直接照抄）
+
+1. 冻结本地写入 → `pg_dump --data-only -t <表...>`（一个事务快照）→ gzip。
+2. 生产先 `pg_dump -Fc` 全库备份，并做隔离库恢复演练。
+3. 建 `stage` schema + `CREATE TABLE stage.x (LIKE public.x)`（按 dump 实际表）。
+4. `SET session_replication_role=replica` 单事务：
+   - 整表替换（企业/用户/成员/角色关系/钱包/资料库）：`DELETE` 后 `INSERT`；
+   - 目录类（专家/技能/知识库/角色权限）：`INSERT ... ON CONFLICT DO NOTHING` + 主键 `UPDATE`，保留生产新增项。
+5. 校验：行数对齐、孤儿 0（`library_chunk→version→node→tenant/user`、`org_member→user/tenant`、`kc_*`）、`library_version.storage_key` 缺失数（本地缺失的 13 条属历史脏数据）。
+6. 文件：`rsync -a --partial --inplace` 到 `data/library`、`data/uploads`，**不加 `--delete`**；`data/api-state` 永不覆盖。
+7. 收尾：`DROP SCHEMA stage`、删临时 dump、回写凭据、`kc_base` 计数回到发布前。
+
+### 4R.5 本轮基线（`5.6.0-20261119-0944` / 桌面 `0.3.10`）
+
+| 项 | 值 |
+|---|---|
+| 源码 | `5.6` @ `e4efda16`（`3dfc6367` 桌面 0.3.10、`2c71b068` Ground 5.6.0、`e4efda16` 发版工具修复） |
+| 镜像 | api/web `5.6.0-20261119-0944`；上一版 `5.5.0-20261118-0041` |
+| DB | 备份 `backups/20261119-094459/mammoth_core.dump`；迁移 60/60（无新增）；合并 user 910 / tenant 1000 / org_member 1063 / user_role 937 / official_agent 166 / official_skill 125 / library_node 12165 / library_version 10588 / library_chunk 1805356 / kc_base 67 |
+| 桌面 | arm64 `9d3f5ecd…` 270,461,318B（signed+notarized）；x64 `5bdcf04a…` 291,315,807B（signed+notarized）；win `2e869fa1…` 314,400,830B（unsigned）；feed `nightly-mac.yml` ×2 + ZIP + blockmap |
+| Windows CI | run `44344617528` 成功（`source_ref=5.6`，artifact `mammoth-agent-win-x64-unsigned`） |
+| 回滚 | `.env.bak-20261119-101858`、`middle-web.bak-20261119-101858`、`website.bak-20261119-101858`、nginx `20261119-101858`；数据库回滚需用上面的 dump |
+| 遗留 | Mac 签名无 Apple 安全时间戳（TSA 被墙，已公证+staple+Gatekeeper 通过）；真实跨版本自动更新未实测；Windows 无签名/无自动更新；桌面 GUI 未人工点检 |
 
 ## 5. 网络与下载（最容易吃掉几小时）
 
