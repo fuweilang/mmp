@@ -492,7 +492,7 @@ export async function packageTarget(
     await executePreparation([
       ...(invocation.unsigned
         ? ['exec', 'tsx', 'apps/desktop/scripts/pack-local-packages.ts']
-        : ['run', 'release:pack', '--family', 'mmp']),
+        : ['run', 'release:pack', '--family', 'mmp', '--include-private']),
       '--out', buildPaths.packedMmp, ...packArguments,
     ], buildEnv, REPOSITORY_ROOT)
     await executePreparation([

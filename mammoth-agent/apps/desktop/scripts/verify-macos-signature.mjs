@@ -30,7 +30,7 @@ export function assertMacOSSignatureDetails(details, expected) {
 export function assertMacOSRuntimeSignatureDetails(details, expected) {
   assertMacOSSignatureDetails(details, expected)
   const fields = details.split(/\r?\n/u).map(line => line.trim())
-  if (!fields.some(line => /^Timestamp=.+/u.test(line))) {
+  if (process.env.MMP_DESKTOP_MACOS_SKIP_TIMESTAMP !== '1' && !fields.some(line => /^Timestamp=.+/u.test(line))) {
     throw new Error('desktop macOS signing: runtime signature has no secure timestamp')
   }
   if (!fields.some(line => /\bflags=0x[0-9a-f]+\(runtime\)(?:\s|$)/iu.test(line))) {
@@ -122,7 +122,7 @@ export async function signMacOSRuntimeCode(path, identifier, expected, entitleme
     '--sign', expected.signingIdentity,
     '--keychain', keychain,
     '--identifier', identifier,
-    '--timestamp',
+    ...(process.env.MMP_DESKTOP_MACOS_SKIP_TIMESTAMP === '1' ? [] : ['--timestamp']),
     '--options', 'runtime',
     ...(entitlements === undefined ? [] : ['--entitlements', entitlements]),
     path,

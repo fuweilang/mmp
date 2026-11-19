@@ -4,6 +4,9 @@
 **/dist
 **/.turbo
 apps/frontend
+# 本地开发数据（老猛犸导入的资料库与上传件）不得进入镜像，也不得进构建上下文
+apps/backend/library-data
+apps/backend/uploads
 docs
 openspec
 *.log

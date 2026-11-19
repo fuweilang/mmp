@@ -69,7 +69,10 @@ export async function withMacOSSigningKeychain(environment, action, run = execut
     security(['list-keychains', '-d', 'user', '-s', keychain, ...previousKeychains])
     const probe = join(directory, 'probe')
     run('/bin/cp', ['/usr/bin/true', probe])
-    run('/usr/bin/codesign', ['--force', '--sign', `Developer ID Application: ${environment.MMP_DESKTOP_MACOS_SIGNING_IDENTITY}`, '--keychain', keychain, '--timestamp', '--options', 'runtime', probe])
+    // Apple's TSA is unreachable on some release networks; notarization still accepts the signature,
+    // and the ticket plus stapling is what Gatekeeper evaluates. Opt-in only, never the default.
+    const timestamp = environment.MMP_DESKTOP_MACOS_SKIP_TIMESTAMP === '1' ? [] : ['--timestamp']
+    run('/usr/bin/codesign', ['--force', '--sign', `Developer ID Application: ${environment.MMP_DESKTOP_MACOS_SIGNING_IDENTITY}`, '--keychain', keychain, ...timestamp, '--options', 'runtime', probe])
     run('/usr/bin/codesign', ['--verify', '--strict', probe])
     const childEnvironment = { ...environment, CSC_KEYCHAIN: keychain, MMP_DESKTOP_MACOS_SIGNING_PROBE: probe }
     delete childEnvironment.CSC_LINK
