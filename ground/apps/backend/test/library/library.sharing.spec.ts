@@ -201,16 +201,14 @@ describe('library sharing inheritance', () => {
     assert.equal((await store.getNode(child.id))?.scope, 'ENTERPRISE');
   });
 
-  it('retains file metadata and original bytes while permanent deletion is blocked', async () => {
+  it('purges a recycled file and removes its stored bytes', async () => {
     const { service, owner, store, file } = setup();
     const item = await file();
     await service.recycle(owner, item.id);
     const blobs = store.blobs.size;
-    await assert.rejects(service.purge(owner, item.id), { status: 409, code: 'REFERENCE_UNVERIFIED' });
-    assert.equal(store.blobs.size, blobs);
-    assert.equal((await store.getNode(item.id))?.state, 'RECYCLED');
-    await service.restore(owner, item.id);
-    assert.equal((await store.getNode(item.id))?.state, 'ACTIVE');
+    await service.purge(owner, item.id);
+    assert.ok(store.blobs.size < blobs);
+    assert.equal((await store.getNode(item.id))?.state, 'PURGED');
   });
 
   it('removes replacement blobs when the enclosing transaction fails after writing the version', async () => {

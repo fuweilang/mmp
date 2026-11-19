@@ -106,6 +106,25 @@ GitHub代码备份已完成；CI路线仍需另行批准并补齐单仓workflow�
 默认范围：**中台 api + web + pg + knowledge**，只替换 `https://www.mmai.vip`。
 默认不做：Octop、客户端 dmg、GitHub PR、commit/push。
 
+### 网页超级管理员身份（下次发 www.mmai.vip 必须带上）
+
+线上智能体页是 `https://www.mmai.vip/agent/`，由 mammoth-agent 的 web 镜像提供。平台管理员登录后，Ground 的 `currentTenant` 是 `null`。旧网页校验用 cookie 里的企业 id 对这个字段，对不上就整页 403，文案是「Ground 企业身份不一致，请重新登录。」。浏览器还会请求 `/favicon.ico`，旧路由没有这个文件，控制台也是 403。
+
+下次发版用的 Git 提交必须已经包含下面两处。只发旧的 5.6 镜像，生产会再出现这两条 403。
+
+1. `mammoth-agent/packages/credentials/deepseek-account-platform/src/web-sso.ts`：平台管理员跟随 Ground 报的当前企业，包括没有企业（身份里的 `tenantId` 为 null）。其他账号仍要求 cookie 企业与 `currentTenant` 一致，否则 403。停用企业的 403 只留给非平台管理员。
+2. `mammoth-agent/scripts/ground-web-router.ts`：未登录也可以取 `/favicon.ico`、`/favicon.svg`、`/favicon-dark.svg`。`/favicon.ico` 回 `apps/web/public/favicon.svg`，类型 `image/svg+xml`。
+
+web 镜像按 Dockerfile 用 tsdown 从 `scripts/` 重建。不要把 `mammoth-agent/runtime/serve-ground-web.mjs` 拷到生产。
+
+发版前在该提交上跑：
+
+`cd mammoth-agent && pnpm exec vitest run packages/credentials/deepseek-account-platform/tests/web-sso.spec.ts scripts/ground-web-router.spec.ts`
+
+发版后用超级管理员打开 `https://www.mmai.vip/agent/`。页面不能出现「Ground 企业身份不一致，请重新登录。」。`https://www.mmai.vip/agent/favicon.ico` 应是 200。
+
+侧栏点开一条任务后，「展开其余 N 个任务」少 1、刷新又回来：只定位过，代码没改。这次发版记录不把它当成已修复。
+
 ### 知识库处理容器（发版必须带上）
 
 知识库分段不在 API 进程里跑，`worker-main.ts` 也不会被 HTTP 服务引用。`compose.yml` 若只有 pg、api、web，上传的文件会一直停在「处理中」。发版时在同一 compose 增加服务 `knowledge`：

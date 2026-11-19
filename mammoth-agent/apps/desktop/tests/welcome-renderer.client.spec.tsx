@@ -247,6 +247,23 @@ it('localizes the old-client registration code without retrying', async () => {
   expect(view.api.signInWithPassword).not.toHaveBeenCalled()
 })
 
+it('toasts when registration finds the phone is already registered', async () => {
+  const view = mount('zh')
+  fireEvent.click(view.document.querySelector('#tab-register')!)
+  fireEvent.change(view.document.querySelector('#register-name')!, { target: { value: '张三' } })
+  fireEvent.change(view.document.querySelector('#login-phone')!, { target: { value: '13800138000' } })
+  fireEvent.change(view.document.querySelector('#register-enterprise')!, { target: { value: '小米' } })
+  fireEvent.change(view.document.querySelector('#register-slug')!, { target: { value: 'xiaomi' } })
+  fireEvent.change(view.document.querySelector('#login-password')!, { target: { value: 'secret' } })
+  fireEvent.change(view.document.querySelector('#sms-code')!, { target: { value: '123456' } })
+  view.api.registerWithPassword.mockResolvedValueOnce({ ok: false, reason: 'forbidden', code: 'PHONE_ALREADY_REGISTERED' })
+  fireEvent.submit(view.document.querySelector('#login-form')!)
+  await vi.waitFor(() => {
+    expect(screen.getByText(view.api.messages.welcomePhoneAlreadyRegistered)).toBeTruthy()
+  })
+  expect(view.document.querySelector('#login-error')!.textContent).toBe('')
+})
+
 it('registers an enterprise in the client without opening a browser', async () => {
   const view = mount()
   fireEvent.click(view.document.querySelector('#tab-register')!)

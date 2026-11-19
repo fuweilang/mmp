@@ -8,12 +8,12 @@
     </div>
     <p class="library-upload-note">{{ note }}</p>
     <p v-if="running" role="status">上传期间请保持窗口打开；关闭页面不会撤销已发送的请求。</p>
-    <p v-if="error" class="library-upload-error" role="alert">{{ error }}</p>
+
     <ul class="library-upload-list" aria-label="上传队列">
       <li v-for="row in rows" :key="row.id">
         <div><strong>{{ row.file.name }}</strong><span class="library-upload-side"><span>{{ formatBytes(row.file.size) }}</span><el-button v-if="row.status === 'queued'" link :aria-label="`移出 · ${row.file.name}`" :disabled="running" @click="remove(row.id)">×</el-button></span></div>
         <span role="status">{{ label(row) }}</span>
-        <p v-if="row.message" :class="{ 'library-upload-error': row.status === 'failed' }">{{ row.message }}</p>
+        <p v-if="row.message">{{ row.message }}</p>
         <el-button v-if="row.status === 'failed'" size="small" :disabled="running" @click="start([row])">重试此文件</el-button>
       </li>
     </ul>
@@ -26,6 +26,7 @@
 </template>
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { ElMessage } from 'element-plus';
 import { formatBytes } from '../utils/format';
 import '../styles/libraryDialogs.css';
 import { runLibraryUploads, type UploadRow, type UploadLimits } from '../utils/libraryUploadQueue';
@@ -49,20 +50,21 @@ const note = computed(() => {
 });
 let alive = true;
 onBeforeUnmount(() => { alive = false; });
-onMounted(() => { void props.loadLimits().then(value => { currentLimits.value = value; }).catch(cause => { error.value = cause instanceof Error ? cause.message : '无法获取上传限制'; }); });
+function notify(message: string) { error.value = message; ElMessage.error(message); }
+onMounted(() => { void props.loadLimits().then(value => { currentLimits.value = value; }).catch(cause => { notify(cause instanceof Error ? cause.message : '无法获取上传限制'); }); });
 function close() { if (!running.value) emit('close'); }
 function add(files: File[]) {
   if (running.value) return;
-  if (!props.multiple && (files.length > 1 || rows.value.length > 0)) { error.value = '替换一次只选一个文件；关闭后可重新选择。'; return; }
+  if (!props.multiple && (files.length > 1 || rows.value.length > 0)) { notify('替换一次只选一个文件；关闭后可重新选择。'); return; }
   const unique = files.filter(file => !rows.value.some(row => row.file.name === file.name && row.file.size === file.size && row.file.lastModified === file.lastModified));
-  if (rows.value.length + unique.length > 50) { error.value = '每批最多50个文件，请分批上传。'; return; }
+  if (rows.value.length + unique.length > 50) { notify('每批最多50个文件，请分批上传。'); return; }
   rows.value.push(...unique.map(file => ({ id: crypto.randomUUID(), file, status: 'queued' as const })));
   error.value = '';
 }
 function remove(id: string) { if (!running.value) rows.value = rows.value.filter(row => row.id !== id); }
 function choose(event: Event) { const element = event.target as HTMLInputElement; add(Array.from(element.files ?? [])); element.value = ''; }
 function drop(event: DragEvent) {
-  if (Array.from(event.dataTransfer?.items ?? []).some(item => item.webkitGetAsEntry?.()?.isDirectory)) { error.value = '暂不支持上传文件夹，请选择文件。'; return; }
+  if (Array.from(event.dataTransfer?.items ?? []).some(item => item.webkitGetAsEntry?.()?.isDirectory)) { notify('暂不支持上传文件夹，请选择文件。'); return; }
   add(Array.from(event.dataTransfer?.files ?? []));
 }
 function label(row: UploadRow) {
@@ -76,9 +78,10 @@ async function start(jobs: UploadRow[]) {
     if (!locked.value) await props.prepare?.(jobs.map(row => row.file));
     const limits = await props.loadLimits(); currentLimits.value = limits; locked.value = true;
     const successes = await runLibraryUploads(jobs, limits, props.uploadFile, () => alive);
+    if (alive) for (const row of jobs) if (row.status === 'failed' && row.message) ElMessage.error(`${row.file.name}：${row.message}`);
     if (alive) emit('complete', successes);
     if (alive && rows.value.length > 0 && rows.value.every(row => row.status === 'success')) emit('close');
-  } catch (cause) { error.value = cause instanceof Error ? cause.message : '无法开始上传'; }
+  } catch (cause) { notify(cause instanceof Error ? cause.message : '无法开始上传'); }
   finally { running.value = false; }
 }
 </script>
@@ -86,7 +89,6 @@ async function start(jobs: UploadRow[]) {
 .library-upload-drop { border:1px dashed var(--el-border-color); border-radius:12px; background:var(--el-fill-color-light); text-align:center; padding:24px 16px; }
 .library-upload-drop p { margin:0 0 12px; }
 .library-upload-note { font-size:12px; line-height:1.6; color:var(--el-text-color-secondary); }
-.library-upload-error { color:var(--el-color-danger); overflow-wrap:anywhere; }
 .library-upload-list { list-style:none; padding:0; margin:12px 0 0; }
 .library-upload-list li { padding:12px 0; border-bottom:1px solid var(--el-border-color-lighter); font-size:13px; }
 .library-upload-list li > div { display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center; }

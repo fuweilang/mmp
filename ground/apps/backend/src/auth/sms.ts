@@ -99,6 +99,12 @@ function mockCodeAllowed(provider: SmsProvider): boolean {
   return provider === 'mock' && !isProductionRuntime();
 }
 
+/** 生产始终按 IP 和手机号限每小时次数。本地默认放开，单测设 SMS_RATE_LIMIT=on 才收回。 */
+function smsSendLimitsEnabled(): boolean {
+  if (isProductionRuntime()) return true;
+  return (process.env.SMS_RATE_LIMIT ?? '').trim().toLowerCase() === 'on';
+}
+
 function templateId(scene: SmsScene): string {
   const specific = scene === 'login'
     ? process.env.TENCENT_SMS_TEMPLATE_ID_LOGIN
@@ -344,25 +350,27 @@ export class SmsCodes {
     const now = new Date();
     const since = new Date(now.getTime() - 60 * 60 * 1000);
     const ip = (sendIp || '').trim();
-    // 双维度限流：单 IP 防全站被打停，单手机号防跨 IP 轰炸。
-    if (ip && await this.store.countSince(ip, since) >= IP_HOURLY_LIMIT) {
-      throw smsError('SMS_RATE_LIMITED', '验证码发送过于频繁，请稍后再试');
-    }
-    if (await this.store.countPhoneSince(phone, since) >= PHONE_HOURLY_LIMIT) {
-      throw smsError('SMS_RATE_LIMITED', '验证码发送过于频繁，请稍后再试');
+    // 双维度限流：单 IP 防全站被打停，单手机号防跨 IP 轰炸。本地开发不拦这两条。
+    if (smsSendLimitsEnabled()) {
+      if (ip && await this.store.countSince(ip, since) >= IP_HOURLY_LIMIT) {
+        throw smsError('SMS_RATE_LIMITED', '验证码发送过于频繁，请稍后再试');
+      }
+      if (await this.store.countPhoneSince(phone, since) >= PHONE_HOURLY_LIMIT) {
+        throw smsError('SMS_RATE_LIMITED', '验证码发送过于频繁，请稍后再试');
+      }
     }
 
     const registered = await this.store.phoneRegistered(phone);
-    const deliverable = scene === 'register' ? !registered : registered;
-    if (!deliverable) {
-      // 未鉴权接口不得区分手机号是否已注册：静默成功、不发码，避免被用来枚举号码。
+    // 登录发码对未注册号码静默成功，避免匿名接口枚举号码。
+    // 注册发码对已注册号码照常下发；用户填完验证码再点注册时，再告知号码已注册。
+    if (scene === 'login' && !registered) {
       return { ok: true, retryAfterSeconds: COOLDOWN_SECONDS };
     }
 
     const recent = await this.store.findCooldown(phone, scene, new Date(now.getTime() - COOLDOWN_SECONDS * 1000));
     if (recent) {
-      // 冷却分支必须与上面的静默分支逐字段一致：真实剩余秒数/是否带 mockCode 都会泄露
-      // 「这个号码已注册且刚发过码」。固定回满冷却时间，前端只拿它做倒计时。
+      // 登录静默分支与冷却分支必须逐字段一致：真实剩余秒数或 mockCode 会泄露号码是否已注册。
+      // 固定回满冷却时间，前端只拿它做倒计时。
       return { ok: true, retryAfterSeconds: COOLDOWN_SECONDS };
     }
 

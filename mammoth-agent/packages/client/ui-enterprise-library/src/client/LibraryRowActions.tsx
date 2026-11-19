@@ -9,7 +9,7 @@ import css from './LibraryPanel.module.css'
 /** @param props - authorized item, selected category, busy state and operation callback. @returns the permitted item menu. */
 export function RowActions({ item, view, busy, t, onAction }: { item: LibraryChoice; view: LibraryView; busy: boolean; t: LibraryPanelProps['t']; onAction: (action: string, item: LibraryChoice) => void }) {
   const [open, setOpen] = useState(false)
-  const purgeReason = item.purgeBlockedReason || (item.kind === 'FILE' ? t('filePurgeBlocked') : undefined)
+  const purgeReason = item.purgeBlockedReason || undefined
   const entries = view === 'trash'
     ? (item.canManage ? [{ id: 'restore', label: t('restore') }, { id: 'purge', label: t('purge'), danger: true, disabled: !!purgeReason }] : [])
     : [

@@ -356,6 +356,43 @@ for (const desktop of [false, true]) it(`uses the browser or Desktop login carri
   await expect(actions.signOut()).rejects.toBe(failure.error)
 }, 60_000)
 
+it('replaces this tab with Ground login after a successful web sign-out', async ({ start, mock }) => {
+  const c = await start()
+  const actions = operations(c)
+  const assign = vi.fn()
+  vi.stubGlobal('location', { assign, href: 'http://127.0.0.1:5201/agent/', origin: 'http://127.0.0.1:5201' })
+  const open = vi.spyOn(window, 'open').mockReturnValue(null)
+  const logoutUrl = 'http://127.0.0.1:3080/auth/ground/logout'
+  const signedIn: AccountView = { ...stored, links: { ...stored.links, logoutUrl } }
+  c.mock.streams.push('account/watch', signedIn)
+  await vi.waitFor(() => { expect(actions.hooks.account.getSnapshot().view?.links.logoutUrl).toBe(logoutUrl) })
+  mock.remote.account.signOut.mockResolvedValueOnce(ok(signedIn))
+  await actions.signOut()
+  expect(assign).toHaveBeenCalledExactlyOnceWith(logoutUrl)
+  expect(open).not.toHaveBeenCalled()
+  assign.mockClear()
+  const failure = { ok: false as const, error: new RemoteError('gateway/internal', 'offline', {}) }
+  mock.remote.account.signOut.mockResolvedValueOnce(failure)
+  await expect(actions.signOut()).rejects.toBe(failure.error)
+  expect(assign).not.toHaveBeenCalled()
+})
+
+it('leaves the Desktop window in place after sign-out', async ({ start, mock }) => {
+  vi.stubGlobal('mmpDesktop', {})
+  const c = await start()
+  const actions = operations(c)
+  const assign = vi.fn()
+  vi.stubGlobal('location', { assign })
+  const open = vi.spyOn(window, 'open').mockReturnValue(null)
+  const signedIn: AccountView = { ...stored, links: { ...stored.links, logoutUrl: 'http://127.0.0.1:5201/auth/ground/logout' } }
+  c.mock.streams.push('account/watch', signedIn)
+  await vi.waitFor(() => { expect(actions.hooks.account.getSnapshot().view?.links.logoutUrl).toBe(signedIn.links.logoutUrl) })
+  mock.remote.account.signOut.mockResolvedValueOnce(ok(signedIn))
+  await actions.signOut()
+  expect(assign).not.toHaveBeenCalled()
+  expect(open).not.toHaveBeenCalled()
+})
+
 it('maps a rejected Desktop password sign-in to the localized dialog key', async ({ start, mock }) => {
   vi.stubGlobal('mmpDesktop', {})
   const c = await start()

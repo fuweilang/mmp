@@ -163,7 +163,7 @@ describe('library panel', () => {
     const fetchImpl = vi.fn(async (url: string) => url.endsWith('/config') ? config : Response.json({ message: '缺少企业上下文', code: 'NO_TENANT' }, { status: 403 }))
     const guidance = '资料库属于企业能力：请先在控制台进入企业工作台，再打开资料库'
     render(<Panel clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
-    expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual(['/ground-library/context', '/ground-library/config'])
+    expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual(['ground-library/context', 'ground-library/config'])
     expect(screen.queryByText(zh.empty)).toBeNull()
     expect(screen.getAllByRole('button', { name: `${zh.new} · ${zh.mine}` }).every(button => (button as HTMLButtonElement).disabled)).toBe(true)
     resolveConfig(Response.json({ enabled: false, reason: 'NO_TENANT', message: guidance }))
@@ -257,7 +257,7 @@ describe('library panel', () => {
     await preview().findByRole('heading', { name: '单段.md' })
     expect(await preview().findByText('授权原文')).toBeTruthy()
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(fetchImpl).toHaveBeenCalledWith('/ground-library/nodes/n1/preview?versionId=v9', expect.objectContaining({ credentials: 'include' }))
+    expect(fetchImpl).toHaveBeenCalledWith('ground-library/nodes/n1/preview?versionId=v9', expect.objectContaining({ credentials: 'include' }))
     fireEvent.click(screen.getAllByRole('button', { name: zh.close }).at(-1)!)
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
@@ -274,7 +274,7 @@ describe('library panel', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: zh.folder }))
     fireEvent.change(screen.getByRole('textbox', { name: zh.name }), { target: { value: '补充' } })
     fireEvent.click(screen.getByRole('button', { name: zh.save }))
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/folders', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '补充', parentId: 'folder-1', scope: 'PRIVATE', confirmShare: false }) })))
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('ground-library/folders', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '补充', parentId: 'folder-1', scope: 'PRIVATE', confirmShare: false }) })))
     fireEvent.click(screen.getByRole('button', { name: zh.recent }))
     fireEvent.click(screen.getByRole('button', { name: zh.new }))
     fireEvent.click(await screen.findByRole('menuitem', { name: zh.folder }))
@@ -282,7 +282,7 @@ describe('library panel', () => {
     expect(within(dialog).getByText(zh.privateSaveHint)).toBeTruthy()
     fireEvent.change(within(dialog).getByRole('textbox', { name: zh.name }), { target: { value: '最近新建' } })
     fireEvent.click(within(dialog).getByRole('button', { name: zh.save }))
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/folders', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '最近新建', parentId: null, scope: 'PRIVATE', confirmShare: false }) })))
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('ground-library/folders', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '最近新建', parentId: null, scope: 'PRIVATE', confirmShare: false }) })))
   })
 
   it('opens New folder through the secondary menu and saves with the existing mmp modal', async () => {
@@ -294,7 +294,7 @@ describe('library panel', () => {
     await screen.findByRole('dialog', { name: zh.folder })
     fireEvent.change(screen.getByRole('textbox', { name: zh.name }), { target: { value: '验收目录' } })
     fireEvent.click(screen.getByRole('button', { name: zh.save }))
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/folders', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '验收目录', parentId: null, scope: 'PRIVATE', confirmShare: false }), credentials: 'include' })))
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('ground-library/folders', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '验收目录', parentId: null, scope: 'PRIVATE', confirmShare: false }), credentials: 'include' })))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
@@ -314,7 +314,7 @@ describe('library panel', () => {
     expect(within(dialog).getByText(zh.sharedSaveHint)).toBeTruthy()
     fireEvent.change(within(dialog).getByRole('textbox', { name: zh.name }), { target: { value: '共享新目录' } })
     fireEvent.click(within(dialog).getByRole('button', { name: zh.save }))
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/folders', expect.objectContaining({ body: JSON.stringify({ name: '共享新目录', parentId: null, scope: 'ENTERPRISE', confirmShare: true }) })))
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('ground-library/folders', expect.objectContaining({ body: JSON.stringify({ name: '共享新目录', parentId: null, scope: 'ENTERPRISE', confirmShare: true }) })))
     await listing().findByRole('button', { name: '共享新目录' })
     expect(screen.getByRole('button', { name: zh.shared }).getAttribute('aria-current')).toBe('page')
   })
@@ -335,7 +335,7 @@ describe('library panel', () => {
     expect(within(dialog).getByText(zh.confirmShareTree.replace('{count}', '4'))).toBeTruthy()
     expect(confirm).not.toHaveBeenCalled()
     fireEvent.click(within(dialog).getByRole('button', { name: zh.share }))
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/nodes/folder/scope', expect.objectContaining({ body: JSON.stringify({ scope: 'ENTERPRISE', confirmShare: true, confirmUnshare: false, expectedTreeRevision: treeRevision }) })))
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('ground-library/nodes/folder/scope', expect.objectContaining({ body: JSON.stringify({ scope: 'ENTERPRISE', confirmShare: true, confirmUnshare: false, expectedTreeRevision: treeRevision }) })))
     confirm.mockRestore()
   })
 
@@ -370,7 +370,7 @@ describe('library panel', () => {
     render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     fireEvent.click(await listing().findByRole('button', { name: '参考链接' }))
     await screen.findByText('授权已撤销')
-    expect(fetchImpl).toHaveBeenCalledWith('/ground-library/nodes/link1/preview?versionId=', expect.objectContaining({ credentials: 'include' }))
+    expect(fetchImpl).toHaveBeenCalledWith('ground-library/nodes/link1/preview?versionId=', expect.objectContaining({ credentials: 'include' }))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.queryByText('https://example.test/reference')).toBeNull()
   })
@@ -410,7 +410,7 @@ describe('library panel', () => {
     render(<Panel useSourceRequest={selectSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
     await preview().findByRole('heading', { name: '原始完整版本' })
     expect(screen.queryByText('部分摘录')).toBeNull()
-    expect(fetchImpl).toHaveBeenCalledWith('/ground-library/nodes/n1/download?versionId=v9', expect.objectContaining({ credentials: 'include' }))
+    expect(fetchImpl).toHaveBeenCalledWith('ground-library/nodes/n1/download?versionId=v9', expect.objectContaining({ credentials: 'include' }))
     expect(screen.queryByText(zh.truncatedExcerpt)).toBeNull()
   })
 
@@ -553,7 +553,7 @@ describe('t188 lazy tree, media and upload feedback', () => {
     expect(screen.queryByRole('checkbox')).toBeNull();
     fireEvent.click(within(dialog).getAllByRole('button', { name: zh.close }).at(-1)!);
     await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:private-fixture'));
-    expect(fetchImpl).toHaveBeenCalledWith('/ground-library/nodes/pic/download?versionId=vp', expect.objectContaining({ credentials: 'include' }));
+    expect(fetchImpl).toHaveBeenCalledWith('ground-library/nodes/pic/download?versionId=vp', expect.objectContaining({ credentials: 'include' }));
   });
   it('lists zip names and sizes without downloading the archive', async () => {
     const fetchImpl = vi.fn(async (url: string) => {
@@ -608,7 +608,38 @@ describe('t188 lazy tree, media and upload feedback', () => {
   });
 });
 
-it('clamps a now-empty later page back to the current last page without stranding visible files', async () => {
+it('loads the next recent page when its end is visible and keeps the first page', async () => {
+  class ImmediateObserver {
+    constructor(private readonly callback: IntersectionObserverCallback) {}
+    observe(target: Element) { this.callback([{ isIntersecting: true, target } as IntersectionObserverEntry], this as unknown as IntersectionObserver) }
+    unobserve() {}
+    disconnect() {}
+    takeRecords(): IntersectionObserverEntry[] { return [] }
+  }
+  vi.stubGlobal('IntersectionObserver', ImmediateObserver)
+  const fetchImpl = vi.fn(async (url: string) => {
+    if (url.endsWith('/config')) return Response.json({ maxFileBytes: 1000, allowedExtensions: ['.md'] });
+    if (url.includes('page=2')) return Response.json({ items: [{ id: 'more', name: '下一页.md', kind: 'FILE', currentVersion: { id: 'v2', versionNo: 1, parseStatus: 'READY' } }], total: 21 });
+    return Response.json({ items: [{ id: 'keep', name: '仍可见.md', kind: 'FILE', currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'READY' } }], total: 21 });
+  });
+  render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: zh.recent }));
+  await listing().findByRole('button', { name: '仍可见.md' });
+  await listing().findByRole('button', { name: '下一页.md' });
+  expect(screen.queryByRole('button', { name: zh.nextPage })).toBeNull();
+  expect(fetchImpl.mock.calls.filter(([url]) => String(url).includes('page=3'))).toHaveLength(0);
+  vi.unstubAllGlobals();
+});
+
+it('clamps a now-empty later recent page back without stranding visible files', async () => {
+  class ImmediateObserver {
+    constructor(private readonly callback: IntersectionObserverCallback) {}
+    observe(target: Element) { this.callback([{ isIntersecting: true, target } as IntersectionObserverEntry], this as unknown as IntersectionObserver) }
+    unobserve() {}
+    disconnect() {}
+    takeRecords(): IntersectionObserverEntry[] { return [] }
+  }
+  vi.stubGlobal('IntersectionObserver', ImmediateObserver)
   let shortened = false;
   const fetchImpl = vi.fn(async (url: string) => {
     if (url.endsWith('/config')) return Response.json({ maxFileBytes: 1000, allowedExtensions: ['.md'] });
@@ -616,8 +647,11 @@ it('clamps a now-empty later page back to the current last page without strandin
     return Response.json({ items: [{ id: 'keep', name: '仍可见.md', kind: 'FILE', currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'READY' } }], total: shortened ? 1 : 21 });
   });
   render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
-  fireEvent.click(screen.getByRole('button', { name: zh.recent })); await listing().findByText('仍可见.md'); fireEvent.click(screen.getByRole('button', { name: zh.nextPage }));
+  fireEvent.click(screen.getByRole('button', { name: zh.recent }));
+  await listing().findByRole('button', { name: '仍可见.md' });
+  await waitFor(() => expect(fetchImpl.mock.calls.some(([url]) => String(url).includes('page=2'))).toBe(true));
   await waitFor(() => { expect(screen.queryByRole('button', { name: zh.nextPage })).toBeNull(); expect(listing().getByRole('button', { name: '仍可见.md' })).toBeTruthy(); });
+  vi.unstubAllGlobals();
 });
 
 describe('t190 direct mine root navigation', () => {
@@ -882,17 +916,18 @@ it('opens the only membership through the protected Host without Admin auth swit
  render(<Panel t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} clearSourceRequest={() => {}} />)
  await waitFor(()=>expect(fetchImpl.mock.calls.filter(([,init])=>init?.method==='POST')).toHaveLength(1))
  expect(screen.queryByRole('button',{name:'本人加入的企业'})).toBeNull()
- expect(fetchImpl.mock.calls.every(([url])=>url.startsWith('/ground-library/'))).toBe(true)
+ expect(fetchImpl.mock.calls.every(([url])=>url.startsWith('ground-library/'))).toBe(true)
  await waitFor(()=>expect(screen.queryByText(zh.memberContextHint)).toBeNull())
 })
-it('shows the enterprise switch when more than one membership is available', async () => {
- const fetchImpl = vi.fn(async (url: string) => Response.json(url.endsWith('/context')
+it('keeps the signed-in enterprise and does not list every membership', async () => {
+ const fetchImpl = vi.fn(async (url: string, _init?: RequestInit) => Response.json(url.endsWith('/context')
   ? {tenants:[{id:'a',name:'甲企业'},{id:'b',name:'乙企业'}],selectedTenantId:'a'}
   : url.endsWith('/config') ? {enabled:true,maxFileBytes:1000,allowedExtensions:['.md']} : {items:[],total:0}))
  render(<Panel t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} clearSourceRequest={() => {}} />)
- expect(await screen.findByRole('button',{name:'甲企业'})).toBeTruthy()
- expect(screen.getByRole('button',{name:'乙企业'}).getAttribute('aria-pressed')).toBe('false')
- expect(screen.getByRole('button',{name:'甲企业'}).getAttribute('aria-pressed')).toBe('true')
+ await waitFor(() => expect(fetchImpl.mock.calls.some(([url]) => String(url).endsWith('/config'))).toBe(true))
+ expect(screen.queryByRole('button', { name: '甲企业' })).toBeNull()
+ expect(screen.queryByRole('button', { name: '乙企业' })).toBeNull()
+ expect(fetchImpl.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
 })
 it('keeps an unbound account empty without auto-selecting or opening Console', async () => {
  const fetchImpl = vi.fn(async (url: string) => Response.json(url.endsWith('/context') ? {tenants:[],selectedTenantId:null} : url.endsWith('/config') ? {enabled:false,message:zh.memberContextHint} : {items:[],total:0}))
@@ -903,10 +938,10 @@ it('keeps an unbound account empty without auto-selecting or opening Console', a
 })
 
 describe('file purge protection', () => {
-  for (const withServerReason of [true, false]) it('keeps restore available and blocks FILE purge ' + (withServerReason ? 'with the server reason' : 'with an older server'), async () => {
+  for (const withServerReason of [true, false]) it('keeps restore available and allows FILE purge ' + (withServerReason ? 'when an older reason is still present' : 'without a server reason'), async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
-      if (init?.method === 'DELETE') throw new Error('A protected file must never be deleted')
+      if (init?.method === 'DELETE') return Response.json({ ok: true })
       return Response.json({ items: [{ id: 'protected', name: 'protected.md', kind: 'FILE', canManage: true,
         ...(withServerReason ? { purgeBlockedReason: 'File purge is temporarily unavailable' } : {}),
         currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'READY' } }] })
@@ -918,12 +953,8 @@ describe('file purge protection', () => {
       await listing().findByText('protected.md')
       fireEvent.click(listing().getByRole('button', { name: `${zh.more} · protected.md` }))
       const purge = await screen.findByRole('menuitem', { name: zh.purge })
-      expect((purge as HTMLButtonElement).disabled).toBe(true)
+      expect((purge as HTMLButtonElement).disabled).toBe(withServerReason)
       expect(screen.getByRole('menuitem', { name: zh.restore }).getAttribute('aria-disabled')).not.toBe('true')
-      fireEvent.click(purge)
-      expect(fetchImpl.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false)
-      expect(listing().getByText('protected.md')).toBeTruthy()
-      expect(confirm).not.toHaveBeenCalled()
     } finally { confirm.mockRestore() }
   })
 })
@@ -1007,7 +1038,7 @@ describe('inline citation navigation', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
     const init = fetchImpl.mock.calls.find(([url]) => url.endsWith('/open'))?.[1]
     expect(JSON.parse(String(init?.body))).toEqual(request)
-    expect(fetchImpl).toHaveBeenCalledWith('/ground-library/nodes/n/download?versionId=old-v', expect.objectContaining({ credentials: 'include' }))
+    expect(fetchImpl).toHaveBeenCalledWith('ground-library/nodes/n/download?versionId=old-v', expect.objectContaining({ credentials: 'include' }))
   })
 
   it('keeps a source refusal when a slower list succeeds and recovers on the next request', async () => {

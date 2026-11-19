@@ -129,7 +129,7 @@ function passwordResult(value: unknown): PasswordSignInResult {
   return { ok: false, reason, ...(code === undefined ? {} : { code }) }
 }
 
-const ACCOUNT_FAILURE_CODES: readonly string[] = ['SMS_RATE_LIMITED', 'SMS_INVALID', 'SMS_CODE_EXPIRED', 'SMS_UNAVAILABLE', 'CLIENT_TOO_OLD']
+const ACCOUNT_FAILURE_CODES: readonly string[] = ['SMS_RATE_LIMITED', 'SMS_INVALID', 'SMS_CODE_EXPIRED', 'SMS_UNAVAILABLE', 'CLIENT_TOO_OLD', 'PHONE_ALREADY_REGISTERED']
 
 /**
  * Keep only a stable failure code so no server-authored message reaches the renderer.

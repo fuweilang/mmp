@@ -11,6 +11,7 @@ import { computeEffectivePermissions, listBoundRoleSources } from '../permission
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { PatchMemberDto } from './dto/patch-member.dto';
+import { preferOrgAdminRoleIds } from './org-preset-choice';
 
 const memberUserSelect = {
   id: true,
@@ -146,26 +147,30 @@ export class TenantService {
         await this.prisma.userRole.create({ data: { userId: user.id, roleId: preset.id } });
       }
     }
-    if (dto.roleIds?.length) {
-      await this.assertTenantRoleIds(id, dto.roleIds);
-      await this.prisma.userRole.createMany({
-        data: dto.roleIds.map((roleId) => ({ userId: user.id, roleId })),
-        skipDuplicates: true,
-      });
-    }
-    // roleIds 含管理员预设时同步历史枚举档（与 patchMember 口径一致）；显式传 role 时以 role 为准。
+    // 两个企业预设同时勾选时只留管理员。其它企业已有的预设由 sync 补回。
     let legacyRole = dto.role ?? MemberRole.MEMBER;
-    if (dto.roleIds?.length) {
+    let roleIds = dto.roleIds;
+    if (roleIds?.length) {
       const presets = await this.prisma.role.findMany({
         where: { key: { in: ['org_admin', 'org_member'] } },
         select: { id: true, key: true },
       });
-      const set = new Set(dto.roleIds);
+      roleIds = preferOrgAdminRoleIds(roleIds, presets);
+      const set = new Set(roleIds);
       if (presets.find((p) => p.key === 'org_admin' && set.has(p.id))) legacyRole = MemberRole.ADMIN;
       else if (presets.find((p) => p.key === 'org_member' && set.has(p.id))) legacyRole = MemberRole.MEMBER;
+      await this.assertTenantRoleIds(id, roleIds);
+      await this.prisma.userRole.createMany({
+        data: roleIds.map((roleId) => ({ userId: user.id, roleId })),
+        skipDuplicates: true,
+      });
     }
-    const member = await this.prisma.orgMember.create({
+    const created = await this.prisma.orgMember.create({
       data: { userId: user.id, tenantId: id, role: legacyRole },
+    });
+    if (roleIds?.length) await this.syncOrgPresetBindings(user.id);
+    const member = await this.prisma.orgMember.findFirstOrThrow({
+      where: { id: created.id },
       include: { user: { select: memberUserSelect } },
     });
     await this.prisma.auditLog.create({
@@ -189,14 +194,14 @@ export class TenantService {
       await this.prisma.user.update({ where: { id: member.userId }, data: { name } });
     }
     if (dto.roleIds !== undefined) {
-      await this.assertKeepsOrgAdmin(id, member.userId, dto.roleIds);
-      await this.replaceMemberRoles(id, member.userId, dto.roleIds);
-      // 同步历史枚举档（老流程 tenant.create 还看 org_member.role）：含管理员预设=ADMIN，仅成员预设=MEMBER，纯自建不动。
       const presets = await this.prisma.role.findMany({
         where: { key: { in: ['org_admin', 'org_member'] } },
         select: { id: true, key: true },
       });
-      const set = new Set(dto.roleIds);
+      const roleIds = preferOrgAdminRoleIds(dto.roleIds, presets);
+      await this.assertKeepsOrgAdmin(id, member.userId, roleIds);
+      await this.replaceMemberRoles(id, member.userId, roleIds);
+      const set = new Set(roleIds);
       const legacy =
         presets.find((p) => p.key === 'org_admin' && set.has(p.id)) ? MemberRole.ADMIN
         : presets.find((p) => p.key === 'org_member' && set.has(p.id)) ? MemberRole.MEMBER
@@ -204,6 +209,7 @@ export class TenantService {
       if (legacy !== undefined) {
         await this.prisma.orgMember.update({ where: { id: member.id }, data: { role: legacy } });
       }
+      await this.syncOrgPresetBindings(member.userId);
     }
     await this.prisma.auditLog.create({
       data: { userId: actor.id, tenantId: id, action: 'update_member', meta: { memberUserId: member.userId } },
@@ -212,6 +218,39 @@ export class TenantService {
       where: { id: member.id },
       include: { user: { select: memberUserSelect } },
     });
+  }
+
+  /** 全局企业预设按全部成员档重算：任一管理员保留企业管理员，任一成员保留企业成员。 */
+  private async syncOrgPresetBindings(userId: string) {
+    const memberships = await this.prisma.orgMember.findMany({ where: { userId }, select: { role: true } });
+    const presets = await this.prisma.role.findMany({
+      where: { key: { in: ['org_admin', 'org_member'] } },
+      select: { id: true, key: true },
+    });
+    const admin = presets.find((preset) => preset.key === 'org_admin');
+    const member = presets.find((preset) => preset.key === 'org_member');
+    const needAdmin = memberships.some((row) => row.role === MemberRole.ADMIN || row.role === MemberRole.OWNER);
+    const needMember = memberships.some((row) => row.role === MemberRole.MEMBER);
+    const existing = presets.length
+      ? await this.prisma.userRole.findMany({
+        where: { userId, roleId: { in: presets.map((preset) => preset.id) } },
+        select: { id: true, roleId: true },
+      })
+      : [];
+    const has = new Set(existing.map((row) => row.roleId));
+    const removeIds = existing
+      .filter((row) => (admin && row.roleId === admin.id && !needAdmin) || (member && row.roleId === member.id && !needMember))
+      .map((row) => row.id);
+    if (removeIds.length) await this.prisma.userRole.deleteMany({ where: { id: { in: removeIds } } });
+    const add: string[] = [];
+    if (admin && needAdmin && !has.has(admin.id)) add.push(admin.id);
+    if (member && needMember && !has.has(member.id)) add.push(member.id);
+    if (add.length) {
+      await this.prisma.userRole.createMany({
+        data: add.map((roleId) => ({ userId, roleId })),
+        skipDuplicates: true,
+      });
+    }
   }
 
   /**

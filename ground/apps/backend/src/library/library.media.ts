@@ -3,7 +3,7 @@ import type { LibraryAuthService } from './library.auth';
 import type { LibraryContext } from './library.context';
 import { LibraryError, libraryNotFound } from './library.errors';
 import { assertMediaType, fileExtension, storageKeyFor } from './library.files';
-import { openLibraryBytes, toLibraryItem } from './library.items';
+import { librarySummary, openLibraryBytes, toLibraryItem } from './library.items';
 import { listZipEntries, parseLibraryBytes } from './library.parse';
 import type { Actor, ChunkRecord, NodeRecord, VersionRecord } from './library.types';
 
@@ -142,6 +142,7 @@ export class LibraryMediaService {
       parseStatus: parsed.status,
       parseReason: parsed.reason,
       extractTruncated: parsed.truncated,
+      summary: librarySummary(parsed.chunks),
       createdByUserId: actor.userId,
       createdAt: now,
     };
@@ -184,6 +185,7 @@ export class LibraryMediaService {
       parseStatus: parsed.status,
       parseReason: parsed.reason,
       extractTruncated: parsed.truncated,
+      summary: librarySummary(parsed.chunks),
       chunks: this.chunkRows(version, parsed.chunks),
       audit: {
         id: this.ctx.store.createId(), tenantId: actor.tenantId, userId: actor.userId,

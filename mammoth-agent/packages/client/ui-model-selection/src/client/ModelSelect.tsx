@@ -41,7 +41,7 @@ import {
 import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@mammoth-ai/mmp-client-ui-slots'
 import type { ModelLabelOwner, ModelSelectInjected } from './slots.ts'
 import css from './ModelSelect.module.css'
-import { orderModelProviders } from './provider-order.ts'
+import { groundPickerConcealed, orderModelProviders } from './provider-order.ts'
 
 /** Which pane the dropdown shows: the two-row root or one drilled-in list. */
 type Pane = 'root' | 'model' | 'effort'
@@ -247,7 +247,7 @@ export function ModelSelect(
     }
   }, [available, open, pane, state, query])
 
-  if (!available) return null
+  if (!available || groundPickerConcealed(state.groups, state.current?.provider)) return null
 
   const show = (): void => {
     setSelectionFocus(false)

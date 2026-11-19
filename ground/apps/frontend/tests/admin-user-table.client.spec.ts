@@ -66,8 +66,26 @@ it('一家企业一行，角色写在企业名旁边', async () => {
   }]);
   await flush();
   const lines = [...document.querySelectorAll('.membership-line')].map((node) => node.textContent?.replace(/\s+/g, '') ?? '');
-  expect(lines).toEqual(['测试团队企业管理员', '杨泽昆的个人空间企业管理员', '今典管理企业成员']);
+  expect(lines).toEqual(['测试团队企业管理员登录进入', '杨泽昆的个人空间企业管理员', '今典管理企业成员']);
   expect(document.body.textContent).not.toContain('角色');
+});
+
+it('最早一家停用时，登录进入标在下面第一家仍在用的企业', async () => {
+  mount([{
+    ...base,
+    id: 'luo',
+    name: '罗小军',
+    roleKeys: ['org_admin', 'org_member'],
+    roleNames: ['企业管理员', '企业成员'],
+    tenants: [
+      { id: 't1', name: '已停用企业', role: 'ADMIN', status: 'disabled' },
+      { id: 't2', name: '猛犸战略部', role: 'MEMBER', status: 'active' },
+      { id: 't3', name: '罗小军的个人空间', role: 'ADMIN', status: 'active' },
+    ],
+  }]);
+  await flush();
+  const lines = [...document.querySelectorAll('.membership-line')].map((node) => node.textContent?.replace(/\s+/g, '') ?? '');
+  expect(lines).toEqual(['已停用企业企业管理员', '猛犸战略部企业成员登录进入', '罗小军的个人空间企业管理员']);
 });
 
 it('超级管理员只显示平台身份', async () => {
@@ -85,4 +103,5 @@ it('超级管理员只显示平台身份', async () => {
   expect(document.querySelector('.membership-line')).toBeNull();
   expect(document.body.textContent).toContain('超级管理员');
   expect(document.body.textContent).not.toContain('测试团队');
+  expect(document.body.textContent).not.toContain('登录进入');
 });

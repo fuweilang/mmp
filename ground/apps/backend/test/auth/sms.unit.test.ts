@@ -5,6 +5,7 @@ import { errorCode, errorMessage, memoryStore, seedRow, type Row } from './fake-
 
 const ENV_KEYS = [
   'SMS_PROVIDER',
+  'SMS_RATE_LIMIT',
   'NODE_ENV',
   'MOCK_SMS_CODE',
   'TENCENT_SMS_SECRET_ID',
@@ -68,14 +69,15 @@ describe('sms codes', () => {
     assert.equal(store.rows.length, 0);
   });
 
-  it('does not leak registration state when a register code is requested for a known phone', async () => {
+  it('sends a register code even when the phone is already registered', async () => {
     process.env.SMS_PROVIDER = 'mock';
     const store = memoryStore(new Set(['13800138000']));
     const sms = new SmsCodes(store, 'test-secret');
     const result = await sms.send('13800138000', 'register', '127.0.0.1');
     assert.equal(result.ok, true);
-    assert.equal(result.mockCode, undefined);
-    assert.equal(store.rows.length, 0);
+    assert.equal(result.mockCode, '123456');
+    assert.equal(store.rows.length, 1);
+    assert.equal(store.rows[0]?.scene, 'register');
   });
 
   it('returns a byte-identical body for the silent branch and the cooldown branch', async () => {
@@ -122,6 +124,7 @@ describe('sms codes', () => {
 
   it('counts the hourly limit per phone as well as per IP', async () => {
     process.env.SMS_PROVIDER = 'mock';
+    process.env.SMS_RATE_LIMIT = 'on';
     const store = memoryStore();
     const sms = new SmsCodes(store, 'test-secret');
     for (let i = 0; i < 5; i += 1) {
@@ -286,6 +289,7 @@ describe('production code verification (stubbed channel, no real SMS)', () => {
 
   it('enforces the IP limit across different phones and the phone limit across different IPs', async () => {
     process.env.SMS_PROVIDER = 'mock';
+    process.env.SMS_RATE_LIMIT = 'on';
     const ipStore = memoryStore();
     const ipSms = new SmsCodes(ipStore, 'test-secret');
     for (let i = 0; i < 20; i += 1) {
@@ -306,6 +310,41 @@ describe('production code verification (stubbed channel, no real SMS)', () => {
       }
     }
     await assert.rejects(() => phoneSms.send('13800138000', 'login', '30.30.30.99'), (error: unknown) => {
+      assert.equal(errorCode(error), 'SMS_RATE_LIMITED');
+      return true;
+    });
+  });
+
+  it('lets local development resend after the hourly cap', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.SMS_PROVIDER = 'mock';
+    delete process.env.SMS_RATE_LIMIT;
+    const store = memoryStore();
+    const sms = new SmsCodes(store, 'test-secret');
+    for (let i = 0; i < 6; i += 1) {
+      await sms.send('13800138000', 'register', '10.0.0.1');
+      for (const row of store.rows) {
+        row.createdAt = new Date(Date.now() - 120_000);
+        row.consumedAt ??= new Date();
+      }
+    }
+    assert.equal(store.rows.length, 6);
+  });
+
+  it('keeps the hourly cap in production even when the local switch is off', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.SMS_PROVIDER = 'tencent';
+    process.env.SMS_RATE_LIMIT = 'off';
+    const store = memoryStore();
+    const sms = new SmsCodes(store, 'prod-secret', async () => undefined);
+    for (let i = 0; i < 5; i += 1) {
+      await sms.send('13800138000', 'register', `10.1.0.${i}`);
+      for (const row of store.rows) {
+        row.createdAt = new Date(Date.now() - 120_000);
+        row.consumedAt ??= new Date();
+      }
+    }
+    await assert.rejects(() => sms.send('13800138000', 'register', '10.1.0.99'), (error: unknown) => {
       assert.equal(errorCode(error), 'SMS_RATE_LIMITED');
       return true;
     });

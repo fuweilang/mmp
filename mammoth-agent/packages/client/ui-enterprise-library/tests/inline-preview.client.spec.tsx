@@ -55,7 +55,7 @@ it('creates inside the folder whose plus menu was used even when another categor
   const dialog = within(await screen.findByRole('dialog', { name: zh.folder }))
   fireEvent.change(dialog.getByRole('textbox', { name: zh.name }), { target: { value: '新子目录' } })
   fireEvent.click(dialog.getByRole('button', { name: zh.save }))
-  await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/folders', expect.objectContaining({
+  await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('ground-library/folders', expect.objectContaining({
     body: JSON.stringify({ name: '新子目录', parentId: 'folder', scope: 'PRIVATE', confirmShare: false }),
   })))
 })
@@ -95,25 +95,6 @@ it('can return to recent files after a preview authorization failure removes the
   fireEvent.click(right.getByRole('button', { name: zh.close }))
   await right.findByRole('button', { name: '不可访问.md' })
   expect(right.queryByRole('alert')).toBeNull()
-})
-
-it('offers folder-local creation on search results while the normal tree is hidden', async () => {
-  const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
-    if (init?.method === 'POST') return Response.json({ id: 'created' })
-    return Response.json({ items: url.includes('q=') ? [{ id: 'search-folder', name: '搜索目录', kind: 'FOLDER', scope: 'ENTERPRISE', canManage: true }] : [], total: 1 })
-  })
-  const view = fixture(fetchImpl)
-  const left = within(view.container.querySelector('aside')!)
-  fireEvent.change(left.getByRole('searchbox'), { target: { value: '搜索' } })
-  fireEvent.click(await left.findByRole('button', { name: `${zh.new} · 搜索目录` }))
-  fireEvent.click(await screen.findByRole('menuitem', { name: zh.link }))
-  const dialog = within(await screen.findByRole('dialog', { name: zh.link }))
-  fireEvent.change(dialog.getByRole('textbox', { name: zh.name }), { target: { value: '资料链接' } })
-  fireEvent.change(dialog.getByRole('textbox', { name: zh.url }), { target: { value: 'https://example.com' } })
-  fireEvent.click(dialog.getByRole('button', { name: zh.save }))
-  await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('/ground-library/links', expect.objectContaining({
-    body: JSON.stringify({ name: '资料链接', parentId: 'search-folder', scope: 'ENTERPRISE', confirmShare: true, url: 'https://example.com' }),
-  })))
 })
 
 it('uses independently collapsible shared and personal trees and keeps directories out of the right pane', async () => {

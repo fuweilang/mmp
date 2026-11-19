@@ -66,7 +66,7 @@ async function nativeFixture(script:ConstructorParameters<typeof MockAdapter>[0]
  ctx.provide('deepseekAccount',{resolveToken:async()=> 'fixture-token-not-a-live-credential'} as never)
  ctx.provide('groundRequestAttribution',{bind:()=>{},unbind:()=>{},guard:()=>()=>{}} as never)
  const wires:Record<string,unknown>[]=[]
- let deny=false,corrupt=false,scope='tenant:fixture',contentReads=0,holdContent:undefined|{started:()=>void;wait:Promise<void>}
+ let deny=false,corrupt=false,previewExpired=false,scope='tenant:fixture',contentReads=0,holdContent:undefined|{started:()=>void;wait:Promise<void>}
  const json=(v:unknown,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json'}})
  vi.stubGlobal('fetch',vi.fn(async(input:unknown,init?:RequestInit)=>{
   const url=String(input)
@@ -77,6 +77,7 @@ async function nativeFixture(script:ConstructorParameters<typeof MockAdapter>[0]
   if(url.includes('/catalog-preferences'))return json(init?.method==='POST'?{ok:true}:[])
   if(url.endsWith('/catalog-card'))return json(expert)
   if(url.endsWith('/api/official-agents'))return json([expert])
+  if(url.endsWith('/runtime/resolve')){const body=init?.body?JSON.parse(String(init.body)) as {previewId?:string}:{};if(body.previewId){if(previewExpired)return json({message:'PREVIEW_EXPIRED_OR_FORBIDDEN'},403);return json({agentId:expert.id,key:expert.key,kind:'GENERAL',versionId:null,version:0,systemPrompt:'PREVIEW_ROLE',toolScope:[],executionProtocol:2,executionConfig:{route:'LEGACY',releaseIds:[],retrievalPolicy:'OFF',budgetTokens:8000,generationModel:{mode:'AUTO'},knowledge:[],skillPackages:[],builtinToolRevision:'ground-builtins-v1'},preview:{id:body.previewId,expiresAt:'2099-01-01T00:00:00.000Z',actorUserId:'fixture-user',usagePurpose:'PLATFORM_OPERATIONAL_PREVIEW'}})}}
   if(url.endsWith('/resolve'))return json({agentId:expert.id,key:expert.key,kind:'GENERAL',versionId:expert.versionId,version:1,systemPrompt:'EXPERT_ROLE_APPEND_ONLY',toolScope:[],linkedSkills:[skill]})
   if(url.includes('/content?')){contentReads++;if(contentReads===3&&holdContent){holdContent.started();await holdContent.wait}if(complete?.content)return json(complete.content);if(complete){const files=Object.entries(complete.data).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([path,bytes])=>({path,bytes:Buffer.byteLength(bytes),sha256:sha(bytes),executable:path.endsWith('.sh')}));return json({id:skill.id,key:skill.key,name:skill.name,summary:skill.summary,packageRevision:1,instruction:complete.instruction,packageFormat:2,files,packageDigest:sha(JSON.stringify(files.map(f=>[f.path,f.bytes,f.sha256,f.executable]))),limits:{maxFiles:500,maxTotalBytes:10485760,maxInstructionBytes:102400}})}return json({id:skill.id,key:skill.key,name:skill.name,summary:skill.summary,packageRevision:1,instruction:corrupt?instruction+'CORRUPT':instruction,references:[]})}
   if(complete&&url.includes('/resources?'))return new Response(complete.data[new URL(url).searchParams.get('path')!] as BodyInit)
@@ -87,7 +88,7 @@ async function nativeFixture(script:ConstructorParameters<typeof MockAdapter>[0]
  await ctx.plugin(Gallery,{groundOrigin:'https://fixture.invalid'})
  const adapter=new Adapter(script);ctx.llm.registerAdapter(['mammoth-ground'],adapter)
  await mountAgentLoopTestHarness(ctx)
- return {ctx,adapter,workspace,directory,privateReads,wires,holdThirdContent:()=>{let started!:()=>void,release!:()=>void;const ready=new Promise<void>(r=>{started=r}),wait=new Promise<void>(r=>{release=r});holdContent={started,wait};return {ready,release}},changeScope:()=>{scope='tenant:different-fixture'},revoke:()=>{deny=true},corrupt:()=>{corrupt=true}}
+ return {ctx,adapter,workspace,directory,privateReads,wires,holdThirdContent:()=>{let started!:()=>void,release!:()=>void;const ready=new Promise<void>(r=>{started=r}),wait=new Promise<void>(r=>{release=r});holdContent={started,wait};return {ready,release}},changeScope:()=>{scope='tenant:different-fixture'},revoke:()=>{deny=true},corrupt:()=>{corrupt=true},expirePreview:()=>{previewExpired=true}}
 }
 
 describe('t174 actual native standard execution',()=>{
@@ -113,6 +114,36 @@ describe('t174 actual native standard execution',()=>{
     preview: { ...preview, expiresAt: new Date(Date.now() - 60_000).toISOString() },
   })
   expect(ctx.bail('session/skip-blank-reuse', session.snapshotEvents())).toBe(true)
+ })
+
+ it('reopens an expired creator preview on the published expert and keeps the session', async () => {
+  const f = await nativeFixture([])
+  const handle = await f.ctx.agents.create({
+    sessionId: SessionId('preview-reopen'),
+    meta: { cwd: f.directory, agentPreset: 'standard' },
+    agentOptions: { provider: 'mammoth-ground', model: 'auto' },
+    setup: async (agentCtx, agent) => {
+      await f.ctx.agentPresets.mount(agentCtx, 'standard')
+      agent.session.append('official-agent/bound', {
+        agentId: expert.id, versionId: null, kind: 'GENERAL', name: expert.name,
+        systemPrompt: 'PREVIEW_ROLE', toolScope: [],
+        preview: { id: 'preview-vivo', expiresAt: '2099-01-01T00:00:00.000Z', actorUserId: 'fixture-user', usagePurpose: 'PLATFORM_OPERATIONAL_PREVIEW' },
+      })
+    },
+  })
+  f.expirePreview()
+  const id = handle.agent.id
+  await handle.dispose()
+  const resumed = await f.ctx.agents.resume({
+    resumeSessionId: id,
+    agentOptions: { provider: 'mammoth-ground', model: 'auto' },
+    setup: async agentCtx => { await f.ctx.agentPresets.mount(agentCtx, 'standard') },
+  })
+  const bound = resumed.agent.session.snapshotEvents().filter(event => event.type === 'official-agent/bound')
+  expect(bound.at(-1)?.data).toMatchObject({ agentId: expert.id, versionId: expert.versionId })
+  expect(bound.at(-1)?.data.preview).toBeUndefined()
+  expect(f.ctx.sessions.get(id)).toBe(resumed.agent.session)
+  await resumed.dispose()
  })
 
  it.skipIf(!process.env.MMP_REAL_SKILL_HANDOFF)('loads the user-supplied poster Skill with every file and runs its own Python helpers without external effects',async()=>{

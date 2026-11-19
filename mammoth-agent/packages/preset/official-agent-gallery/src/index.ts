@@ -216,7 +216,8 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     this.ctx.on('task/prepare-prompt', async (agent, request, message) => this.prepareTaskPrompt(agent, request, message))
     this.ctx.on('agent/created', async ({ agent }) => {
       this.installProductIdentity(agent)
-      const binding = this.bindingFor(agent.session)
+      const stored = this.bindingFor(agent.session)
+      const binding = stored?.preview ? await this.openableBinding(agent, stored) : stored
       const selected=this.skillBindingFor(agent.session)
       if(binding===null&&selected===null&&!agent.session.snapshotEvents().some(e=>e.type==='official-gallery/attempt'))return
       this.installCatalogRuntime(agent)
@@ -793,6 +794,49 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     return 'executionConfig' in execution?{executionConfig:execution.executionConfig,...execution.preview?{preview:execution.preview}:{}}:{}
   }
   private async resolveBinding(binding:OfficialAgentBinding,signal?:AbortSignal){const current=binding.preview?await this.ground.resolveRuntime(binding,signal):await this.ground.resolve(binding.agentId,this.publishedVersion(binding),signal);if(current.agentId!==binding.agentId||current.versionId!==binding.versionId||(binding.preview&&(!('preview' in current)||current.preview?.id!==binding.preview.id)))throw Error('EXPERT_BINDING_CHANGED: reopen the expert');return current}
+  /**
+   * Keep a stored creator preview when Ground still accepts it.
+   * A rejected preview adopts the published expert into the same Session, so a
+   * later open from any browser of the same account does not depend on that preview.
+   */
+  private async openableBinding(agent: Agent, binding: OfficialAgentBinding): Promise<OfficialAgentBinding> {
+    try {
+      await this.resolveBinding(binding)
+      return binding
+    } catch (error) {
+      if (!this.previewUnavailable(error)) throw error
+      return await this.adoptPublishedExpert(agent, binding, error)
+    }
+  }
+  private previewUnavailable(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error)
+    return message.includes('HTTP 403') || message.includes('PREVIEW_EXPIRED_OR_FORBIDDEN')
+  }
+  private async adoptPublishedExpert(agent: Agent, binding: OfficialAgentBinding, cause: unknown): Promise<OfficialAgentBinding> {
+    const card = await this.ground.getCard(binding.agentId).catch(() => undefined)
+    if (!card?.executionGranted) throw cause
+    const execution = await this.ground.resolve(binding.agentId, card.versionId)
+    if (execution.agentId !== binding.agentId || execution.versionId !== card.versionId || ('preview' in execution && execution.preview)) throw cause
+    const next: OfficialAgentBinding = {
+      agentId: execution.agentId,
+      versionId: execution.versionId,
+      kind: execution.kind,
+      name: card.name,
+      ...this.executionFields(execution),
+      systemPrompt: execution.systemPrompt,
+      toolScope: execution.toolScope,
+      ...execution.linkedSkills === undefined ? {} : { linkedSkills: execution.linkedSkills },
+    }
+    agent.session.append('official-agent/bound', next)
+    agent.session.append('official-gallery/source', {
+      type: 'expert',
+      id: next.agentId,
+      key: execution.key,
+      name: next.name,
+      versionId: next.versionId,
+    })
+    return next
+  }
   private publishedVersion(binding:RuntimeBinding):string{if(!binding.versionId)throw Error('EXPERT_PREVIEW_TOOL_UNAVAILABLE');return binding.versionId}
   private attributionFor(binding:OfficialAgentBinding){return binding.preview?{agentId:binding.agentId,previewId:binding.preview.id}:{agentId:binding.agentId,versionId:this.publishedVersion(binding)}}
   private selectFixedModel(agent:Agent,binding:OfficialAgentBinding|null){

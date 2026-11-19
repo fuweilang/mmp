@@ -15,3 +15,11 @@ function providerRank(id: string): number {
 export function orderModelProviders<T extends { readonly id: string }>(groups: readonly T[]): T[] {
   return groups.toSorted((left, right) => providerRank(left.id) - providerRank(right.id))
 }
+
+/** Product chat hides the named-model picker once Ground is the route. */
+export function groundPickerConcealed(
+  groups: readonly { readonly id: string }[],
+  provider: string | undefined,
+): boolean {
+  return provider === 'mammoth-ground' || groups.some(group => group.id === 'mammoth-ground')
+}

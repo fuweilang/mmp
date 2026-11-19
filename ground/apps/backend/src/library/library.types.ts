@@ -61,6 +61,7 @@ export type VersionRecord = {
   parseStatus: LibraryParseStatus;
   parseReason: string | null;
   extractTruncated: boolean;
+  summary?: string | null;
   createdByUserId: string;
   createdAt: number;
 };

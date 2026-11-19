@@ -206,7 +206,7 @@ it('lets the Host open selected v1 after v2 replaces it and preserves the draft 
   revoked.shell.setDraft('撤权后还在吗')
   await revoked.panel.onUse(choice)
   await service.recycle(actor, uploaded.id)
-  await expect(service.purge(actor, uploaded.id)).rejects.toMatchObject({ status: 409, code: 'REFERENCE_UNVERIFIED' })
+  await expect(service.purge(actor, uploaded.id)).resolves.toMatchObject({ ok: true, code: 'SOURCE_GONE' })
   revoked.shell.submit('queue', 'click')
   await vi.waitFor(() => { expect(authorize).toHaveBeenCalledTimes(2) })
   expect(sent).toEqual([])

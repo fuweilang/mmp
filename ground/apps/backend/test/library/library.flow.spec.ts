@@ -263,19 +263,27 @@ describe('enterprise library', () => {
     assert.equal((await service.list(owner, 'trash')).items.length, 2);
   });
 
-  it('keeps a recycled folder while a protected file is still inside it', async () => {
+  it('purges a recycled folder and leaves its recycled contents in the trash', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');
     const folder = await service.createFolder(owner, '资料夹');
     const child = await upload(service, owner, '子文件.md', Buffer.from('子文件正文'));
+    const link = await service.createLink(owner, '链接', 'https://example.test/kept');
     await service.move(owner, child.id, folder.id);
+    await service.move(owner, link.id, folder.id);
     await service.recycle(owner, child.id);
     await service.recycle(owner, folder.id);
+    await store.updateNode(child.id, { state: 'ACTIVE' });
     const blocked = code(await service.purge(owner, folder.id).catch((error: unknown) => error));
     assert.equal(blocked.status, 400);
     assert.equal(blocked.code, 'FOLDER_NONEMPTY');
-    assert.equal((await store.getNode(folder.id))?.state, 'RECYCLED');
+    await store.updateNode(child.id, { state: 'RECYCLED' });
+    await service.purge(owner, folder.id);
+    assert.equal((await store.getNode(folder.id))?.state, 'PURGED');
     assert.equal((await store.getNode(child.id))?.state, 'RECYCLED');
+    assert.equal((await store.getNode(child.id))?.parentId, null);
+    assert.equal((await store.getNode(link.id))?.state, 'RECYCLED');
+    assert.equal((await store.getNode(link.id))?.parentId, null);
   });
 
   it('opens a single ready chunk without a locator and still rejects missing or forbidden versions', async () => {
@@ -533,7 +541,8 @@ describe('enterprise library', () => {
     await service.list(owner, 'trash');
     const swept = code(await service.openCitation(owner, item.id, item.currentVersion!.id).catch((error: unknown) => error));
     assert.equal(swept.status, 409);
-    await assert.rejects(() => service.purge(owner, item.id), (error: unknown) => error instanceof LibraryError && error.code === 'REFERENCE_UNVERIFIED');
+    await service.purge(owner, item.id);
+    assert.equal((await store.getNode(item.id))?.state, 'PURGED');
     const stats = await service.adminStats({ userId: 'platform', isPlatformAdmin: true });
     assert.equal(JSON.stringify(stats).includes('私人正文'), false);
     assert.equal(JSON.stringify(stats).includes('私人.md'), false);
@@ -759,8 +768,38 @@ describe('t191 Console flat mine management', () => {
     assert.equal(named.hits[0]?.matched, 'name');
     assert.equal((await service.searchQuotes(mate, '仅保存')).hits.length, 0);
     assert.equal((await service.searchQuotes(owner, '不看的视频')).hits.length, 0);
+    const asked = await service.searchQuotes(owner, '请查一下泡泡玛特的渠道');
+    assert.equal(asked.hits[0]?.nodeId, privateFile.id);
+    const inventory = await service.searchQuotes(owner, '我们企业内部都有哪些资料');
+    assert.match((await service.searchQuotes(owner, '你列一下企业都有哪些资料')).hits[0]!.quote, /泡泡玛特商业分析\.md/);
+    assert.match((await service.searchQuotes(owner, '列举一下我们公司都有哪些企业资料')).hits[0]!.quote, /公开说明\.md/);
+    assert.equal(inventory.hits.length, 1);
+    assert.match(inventory.hits[0]!.quote, /泡泡玛特商业分析\.md/);
+    assert.match(inventory.hits[0]!.quote, /公开说明\.md/);
+    assert.doesNotMatch(inventory.hits[0]!.quote, /渠道仍以盲盒/);
+    const mateInventory = await service.searchQuotes(mate, '列举一下企业资料里面都有啥');
+    assert.match(mateInventory.hits[0]!.quote, /公开说明\.md/);
+    assert.doesNotMatch(mateInventory.hits[0]!.quote, /泡泡玛特商业分析/);
+    assert.equal((await service.searchQuotes(org, '现在再列举一下我们企业资料库里面有哪些东西')).hits[0]?.quote.includes('泡泡玛特商业分析'), false);
     await service.recycle(owner, privateFile.id);
     assert.equal((await service.searchQuotes(owner, '渠道仍以盲盒')).hits.length, 0);
+  });
+
+  it('finds an older file, reads neighboring passages, and filters table rows', async () => {
+    const { service, actor } = world();
+    const owner = actor('owner', 'ta');
+    const older = await upload(service, owner, '旧制度.md', Buffer.from('开头。\n\n财务系统在内网做预算，对接人罗小军。\n\n结尾。'));
+    for (let index = 0; index < 200; index += 1) await upload(service, owner, `填充${index}.md`, Buffer.from('x'));
+    const found = await service.searchQuotes(owner, '罗小军');
+    assert.equal(found.hits[0]?.nodeId, older.id);
+    const around = await service.readAround(owner, older.id, found.hits[0]!.versionId, found.hits[0]!.locator);
+    assert.match(around.passages.map((row) => row.text).join('\n'), /罗小军/);
+    const sheet = await upload(service, owner, '预算表.txt', Buffer.from('部门\t事项\n财务部\t做预算\n人事部\t入职'));
+    const versionId = sheet.currentVersion?.id;
+    assert.ok(versionId);
+    const rows = await service.queryRows(owner, sheet.id, versionId, '预算');
+    assert.deepEqual(rows.rows, ['财务部\t做预算']);
+    assert.equal((await service.queryRows(owner, older.id, found.hits[0]!.versionId, '罗小军')).rows.length, 1);
   });
 
   it('opens one member at a time and keeps another member\'s folder out of their root', async () => {
@@ -1001,25 +1040,21 @@ describe('atomic parse retry', () => {
 });
 
 describe('file purge protection', () => {
-  it('refuses file purge without changing originals, versions, chunks, state or audit', async () => {
+  it('purges a recycled file and drops its stored bytes', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');
     const item = await upload(service, owner, 'protected.md', Buffer.from('v1 body'));
     await service.replaceVersion(owner, item.id, 'protected.md', 'text/markdown', Buffer.from('v2 body'));
     await service.recycle(owner, item.id);
-    const before = structuredClone({ node: await store.getNode(item.id), versions: [...store.versions.values()], chunks: [...store.chunks.values()], audits: store.audits });
-    const blobs = [...store.blobs].map(([key, bytes]) => [key, bytes.toString('hex')]);
-    await assert.rejects(() => service.purge(owner, item.id), (error: unknown) => error instanceof LibraryError && error.status === 409 && error.code === 'REFERENCE_UNVERIFIED');
-    assert.deepEqual({ node: await store.getNode(item.id), versions: [...store.versions.values()], chunks: [...store.chunks.values()], audits: store.audits }, before);
-    assert.deepEqual([...store.blobs].map(([key, bytes]) => [key, bytes.toString('hex')]), blobs);
-    const row = (await service.list(owner, 'trash')).items.find(row => row.id === item.id)!;
-    assert.equal(typeof row.purgeBlockedReason, 'string');
-    assert.ok(row.purgeBlockedReason);
-    await service.restore(owner, item.id);
-    assert.equal((await service.openCitation(owner, item.id, item.currentVersion!.id)).quote, 'v1 body');
+    const keys = (await store.listVersions(item.id)).map(version => version.storageKey);
+    assert.equal((await service.list(owner, 'trash')).items.find(row => row.id === item.id)?.purgeBlockedReason, null);
+    await service.purge(owner, item.id);
+    assert.equal((await store.getNode(item.id))?.state, 'PURGED');
+    for (const key of keys) assert.equal(await store.getBlob(key), null);
+    assert.equal((await service.list(owner, 'trash')).items.find(row => row.id === item.id), undefined);
   });
 
-  it('reports protected files as failed in a mixed purge batch while clearing empty metadata', async () => {
+  it('purges recycled files together with empty folders and links', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');
     const file = await upload(service, owner, 'batch.md', Buffer.from('kept body'));
@@ -1027,24 +1062,42 @@ describe('file purge protection', () => {
     const link = await service.createLink(owner, 'empty link', 'https://example.test/kept');
     for (const row of [file, folder, link]) await service.recycle(owner, row.id);
     const result = await service.batch(owner, [file.id, folder.id, link.id], 'purge');
-    assert.deepEqual(result.ok, [folder.id, link.id]);
-    assert.deepEqual(result.failed.map(row => row.id), [file.id]);
-    assert.equal((await store.getNode(file.id))?.state, 'RECYCLED');
+    assert.deepEqual(result.ok, [file.id, folder.id, link.id]);
+    assert.deepEqual(result.failed, []);
+    assert.equal((await store.getNode(file.id))?.state, 'PURGED');
     assert.equal((await store.getNode(folder.id))?.state, 'PURGED');
     assert.equal((await store.getNode(link.id))?.state, 'PURGED');
   });
 
-  it('keeps a recycled folder nonempty while its protected file remains', async () => {
-    const { service, actor } = world();
+  it('purges a recycled download-only archive that has no citable text', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const item = await upload(service, owner, '1111.zip', zipStored('picture.bin', Buffer.from('not text')));
+    assert.equal(item.currentVersion?.parseStatus, 'DOWNLOAD_ONLY');
+    assert.equal(item.purgeBlockedReason, null);
+    await service.recycle(owner, item.id);
+    const listed = (await service.list(owner, 'trash')).items.find(row => row.id === item.id);
+    assert.equal(listed?.purgeBlockedReason, null);
+    const key = (await store.getVersion(item.currentVersion!.id))!.storageKey;
+    await service.purge(owner, item.id);
+    assert.equal((await store.getNode(item.id))?.state, 'PURGED');
+    assert.equal(await store.getBlob(key), null);
+  });
+
+  it('purges a recycled folder while its protected file stays in the trash', async () => {
+    const { service, store, actor } = world();
     const owner = actor('owner', 'ta');
     const folder = await service.createFolder(owner, 'parent');
     const file = await upload(service, owner, 'child.md', Buffer.from('retained child'));
     await service.move(owner, file.id, folder.id);
     await service.recycle(owner, file.id);
     await service.recycle(owner, folder.id);
-    await assert.rejects(() => service.purge(owner, folder.id), (error: unknown) => error instanceof LibraryError && error.code === 'FOLDER_NONEMPTY');
+    await service.purge(owner, folder.id);
+    assert.equal((await store.getNode(folder.id))?.state, 'PURGED');
+    assert.equal((await store.getNode(file.id))?.state, 'RECYCLED');
+    assert.equal((await store.getNode(file.id))?.parentId, null);
     const rows = (await service.list(owner, 'trash')).items;
-    assert.equal(rows.find(row => row.id === folder.id)?.purgeBlockedReason, null);
-    assert.ok(rows.find(row => row.id === file.id)?.purgeBlockedReason);
+    assert.equal(rows.find(row => row.id === folder.id), undefined);
+    assert.equal(rows.find(row => row.id === file.id)?.purgeBlockedReason, null);
   });
 });

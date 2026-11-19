@@ -7,14 +7,32 @@
     <div class="library-shell">
     <aside v-if="showTree" class="library-folders" aria-label="文件夹">
       <button type="button" class="library-folder-root" :class="{ 'is-current': !parentId }" @click="selectFolder(null)">{{ treeRootLabel }}</button>
-      <el-tree :key="treeKey" :data="pageTree" node-key="id" :current-node-key="parentId || undefined" highlight-current default-expand-all :expand-on-click-node="false" @node-click="onTreeFolder" />
+      <el-tree :key="treeKey" :data="pageTree" node-key="id" :current-node-key="parentId || undefined" highlight-current default-expand-all :expand-on-click-node="false" @node-click="onTreeFolder">
+        <template #default="{ data }">
+          <span class="library-folder-row">
+            <span class="library-folder-label">{{ data.label }}</span>
+            <el-dropdown v-if="manageableFolders.has(data.id)" trigger="click">
+              <button type="button" class="library-folder-more" :aria-label="`${data.label} 更多`" @click.stop>···</button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="renameFolder(data.id)">改名</el-dropdown-item>
+                  <el-dropdown-item @click="moveFolder(data.id)">移动</el-dropdown-item>
+                  <el-dropdown-item v-if="data.scope === 'PRIVATE' && view !== 'shared'" @click="shareFolder(data.id)">共享到企业</el-dropdown-item>
+                  <el-dropdown-item v-if="data.scope === 'ENTERPRISE' && view !== 'mine'" @click="unshareFolder(data.id)">撤销共享</el-dropdown-item>
+                  <el-dropdown-item class="library-menu-danger" @click="recycleFolder(data.id)">移入回收站</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </span>
+        </template>
+      </el-tree>
     </aside>
     <section class="library-main">
       <template v-if="memberRoster">
         <header class="library-toolbar">
           <el-input v-model="memberQuery" clearable placeholder="搜索姓名或手机号" aria-label="搜索成员" class="library-search" />
         </header>
-        <p v-if="listError" class="library-error">{{ listError }}</p>
+
         <el-table v-loading="loading" :data="visibleMembers" border class="library-table">
           <el-table-column label="姓名" min-width="160" prop="name" />
           <el-table-column label="手机号" min-width="140">
@@ -64,14 +82,13 @@
       </header>
 
       <p v-if="transferRatio != null" class="library-progress">上传进度 {{ Math.round(transferRatio * 100) }}%。解析状态在列表里单独显示。</p>
-      <p v-if="listError" class="library-error">{{ listError }} 已保留当前列表。</p>
-      <p v-if="actionError" class="library-error">{{ actionError }}</p>
+
 
       <div v-if="selected.length" class="library-batch">
         已选 {{ selected.length }} 项
         <el-button v-if="view !== 'trash'" size="small" @click="runBatch('recycle')">回收</el-button>
         <el-button v-if="view === 'trash'" size="small" @click="runBatch('restore')">恢复</el-button>
-        <el-button v-if="view === 'trash'" size="small" type="danger" :disabled="!!batchPurgeBlockedReason" :title="batchPurgeBlockedReason || undefined" @click="runBatch('purge')">彻底删除</el-button>
+        <el-button v-if="view === 'trash'" size="small" type="danger" @click="runBatch('purge')">彻底删除</el-button>
       </div>
 
       <el-table v-loading="loading" :data="items" border class="library-table" @selection-change="onSelect">
@@ -86,7 +103,7 @@
           </template>
         </el-table-column>
         <el-table-column label="文件类型" width="112"><template #default="{ row }"><span class="library-type-option" :style="{ color: libraryFileTypeColor(libraryFileType(row)) }"><i class="library-type-dot" :style="{ background: libraryFileTypeColor(libraryFileType(row)) }" />{{ libraryFileType(row) }}</span></template></el-table-column>
-        <el-table-column label="范围" width="110">
+        <el-table-column v-if="view !== 'shared'" label="范围" width="110">
           <template #default="{ row }">{{ row.scope === 'PRIVATE' ? '仅自己' : '企业共享' }}</template>
         </el-table-column>
         <el-table-column v-if="view === 'trash'" label="所有者" min-width="120">
@@ -98,7 +115,7 @@
             <span v-else-if="row.kind === 'LINK'">{{ statusLabel('NOT_APPLICABLE') }}</span>
             <span v-else>—</span>
             <span v-if="row.currentVersion?.parseReason" class="library-muted">{{ row.currentVersion.parseReason }}</span>
-            <span v-if="view === 'trash' && purgeBlockedReason(row)" class="library-muted">{{ purgeBlockedReason(row) }}</span>
+
           </template>
         </el-table-column>
         <el-table-column label="大小" width="90">
@@ -114,15 +131,15 @@
               <el-button text type="primary">更多</el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item @click="rename(row)">重命名</el-dropdown-item>
+                  <el-dropdown-item @click="rename(row)">改名</el-dropdown-item>
                   <el-dropdown-item v-if="view !== 'trash'" @click="move(row)">移动</el-dropdown-item>
                   <el-dropdown-item v-if="row.kind === 'FILE' && view !== 'trash'" @click="startReplace(row)">替换新版本</el-dropdown-item>
-                  <el-dropdown-item v-if="row.scope === 'PRIVATE' && view !== 'trash'" @click="share(row)">改为企业共享</el-dropdown-item>
-                  <el-dropdown-item v-if="row.scope === 'ENTERPRISE'" @click="unshare(row)">改回私人</el-dropdown-item>
+                  <el-dropdown-item v-if="row.scope === 'PRIVATE' && view !== 'trash' && view !== 'shared'" @click="share(row)">共享到企业</el-dropdown-item>
+                  <el-dropdown-item v-if="row.scope === 'ENTERPRISE' && (view === 'shared' || memberDetail)" @click="unshare(row)">撤销共享</el-dropdown-item>
                   <el-dropdown-item v-if="row.currentVersion?.parseStatus === 'FAILED'" @click="retry(row)">重试解析</el-dropdown-item>
-                  <el-dropdown-item v-if="view !== 'trash'" @click="recycleOne(row)">回收</el-dropdown-item>
+                  <el-dropdown-item v-if="view !== 'trash'" class="library-menu-danger" @click="recycleOne(row)">移入回收站</el-dropdown-item>
                   <el-dropdown-item v-if="view === 'trash'" @click="restoreOne(row)">恢复</el-dropdown-item>
-                  <el-dropdown-item v-if="view === 'trash'" :disabled="!!purgeBlockedReason(row)" :title="purgeBlockedReason(row) || undefined" @click="purgeOne(row)">彻底删除</el-dropdown-item>
+                  <el-dropdown-item v-if="view === 'trash'" @click="purgeOne(row)">彻底删除</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -136,7 +153,7 @@
         </template>
       </el-table>
 
-      <el-pagination v-if="view === 'mine' ? total > 0 : total > 20" v-model:current-page="page" class="library-pagination" :page-size="pageSize" :total="total" layout="total, prev, pager, next" />
+      <el-pagination v-if="view === 'mine' || view === 'recent' ? total > 0 : total > 20" v-model:current-page="page" class="library-pagination" :page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" :layout="view === 'recent' ? 'total, sizes, prev, pager, next' : 'total, prev, pager, next'" @size-change="onRecentPageSize" />
       </template>
     </section>
 
@@ -329,21 +346,19 @@ function clearSearch() {
 onBeforeUnmount(() => { if (keywordTimer) clearTimeout(keywordTimer); pdfSequence += 1; clearPdf(); });
 const items = ref<LibraryItem[]>([]);
 const page = ref(1);
+const recentPageSize = ref(10);
 const total = ref(0);
 const fileType = ref<string>();
 const parseStatus = ref<'ready' | 'failed' | 'download' | 'processing'>();
 const selectedFileType = computed(() => libraryFileTypeOptions.find((option) => option.value === fileType.value));
 const selectedParseStatus = computed(() => libraryParseStatusOptions.find((option) => option.value === parseStatus.value));
-const pageSize = computed(() => view.value === 'mine' ? 10 : 20);
+const pageSize = computed(() => view.value === 'mine' ? 10 : view.value === 'recent' ? recentPageSize.value : 20);
 const loading = ref(false);
-const listError = ref('');
-const actionError = ref('');
-const selected = ref<LibraryItem[]>([]);
-const batchPurgeBlockedReason = computed(() => selected.value.map(purgeBlockedReason).find(Boolean) || null);
-
-function purgeBlockedReason(row: LibraryItem): string | null {
-  return row.purgeBlockedReason || (row.kind === 'FILE' ? '文件暂不支持彻底删除，可回收或恢复' : null);
+function report(error: unknown, fallback: string) {
+  const message = error instanceof Error && error.message ? error.message : fallback;
+  ElMessage.error(message);
 }
+const selected = ref<LibraryItem[]>([]);
 const transferRatio = ref<number | null>(null);
 const uploadOpen = ref(false);
 const uploadParent = ref<string | null>(null);
@@ -351,14 +366,21 @@ const replaceTarget = ref<string | null>(null);
 const moveOpen = ref(false);
 const moveTarget = ref<LibraryItem | null>(null);
 const moveParent = ref<string | null>(null);
-const moveFolders = ref<LibraryItem[]>([]);
+const moveMineFolders = ref<LibraryItem[]>([]);
+const moveSharedFolders = ref<LibraryItem[]>([]);
 const treeFolders = ref<LibraryItem[]>([]);
 const treeKey = ref(0);
 const showTree = computed(() => view.value === 'mine' || view.value === 'shared' || (memberDetail.value && !unknownMember.value));
 const pageTree = computed(() => libraryFolderTree(treeFolders.value, null));
+const manageableFolders = computed(() => new Set(treeFolders.value.filter((folder) => folder.canManage).map((folder) => folder.id)));
+const moveFolders = computed(() => {
+  const byId = new Map<string, LibraryItem>();
+  for (const folder of [...moveMineFolders.value, ...moveSharedFolders.value]) byId.set(folder.id, folder);
+  return [...byId.values()];
+});
 const moveBlocked = computed(() => moveTarget.value?.kind === 'FOLDER' ? descendantFolderIds(moveTarget.value.id, moveFolders.value) : new Set(moveTarget.value ? [moveTarget.value.id] : []));
-const movePrivateTree = computed(() => libraryFolderTree(moveFolders.value, 'PRIVATE', moveBlocked.value));
-const moveEnterpriseTree = computed(() => libraryFolderTree(moveFolders.value, 'ENTERPRISE', moveBlocked.value));
+const movePrivateTree = computed(() => libraryFolderTree(moveMineFolders.value, null, moveBlocked.value));
+const moveEnterpriseTree = computed(() => libraryFolderTree(moveSharedFolders.value, null, moveBlocked.value));
 const folderOpen = ref(false);
 const folderName = ref('');
 const linkOpen = ref(false);
@@ -410,6 +432,13 @@ watch([view, parentId, routeKeyword, memberId, memberLibraryAllowed], () => {
 }, { immediate: true });
 
 watch(page, () => { selected.value = []; void reload(); });
+function onRecentPageSize(size: number) {
+  if (view.value !== 'recent' || recentPageSize.value === size || ![10, 20, 50, 100].includes(size)) return;
+  recentPageSize.value = size;
+  selected.value = [];
+  if (page.value !== 1) page.value = 1;
+  else void reload();
+}
 watch(fileType, () => {
   if (view.value !== 'mine' && !memberDetail.value) return;
   selected.value = [];
@@ -454,7 +483,7 @@ async function reload() {
         await router.replace({ query: { ...route.query, member: located.ownerUserId } });
         return;
       }
-      listError.value = '找不到这个文件夹对应的成员';
+      report(new Error('找不到这个文件夹对应的成员'), '找不到这个文件夹对应的成员');
       return;
     }
     if (memberRoster.value) {
@@ -464,7 +493,6 @@ async function reload() {
       rosterReady.value = true;
       items.value = [];
       total.value = 0;
-      listError.value = '';
       return;
     }
     if (memberDetail.value && !rosterReady.value) {
@@ -477,7 +505,6 @@ async function reload() {
       items.value = [];
       total.value = 0;
       treeFolders.value = [];
-      listError.value = '';
       return;
     }
     const searching = Boolean(keyword.value.trim());
@@ -493,10 +520,10 @@ async function reload() {
     total.value = data.total;
     breadcrumb.value = data.breadcrumb;
     parentScope.value = data.parentScope ?? null;
-    listError.value = '';
   } catch (error) {
     if (sequence !== listSequence) return;
-    listError.value = error instanceof Error ? error.message : '列表加载失败';
+    const message = error instanceof Error && error.message ? error.message : '列表加载失败';
+    ElMessage.error(`${message}。已保留当前列表。`);
   } finally {
     if (sequence === listSequence) loading.value = false;
   }
@@ -513,7 +540,12 @@ async function uploadOne(file: File, progress: (ratio: number) => void) {
   if (result.failed.length || !result.items.length) throw new Error(result.failed.map(row => row.message).join('；') || '未收到保存成功结果');
   return uploadTarget.value.scope === 'ENTERPRISE' ? '已保存，本企业成员可见；处理状态单独显示' : '已保存，仅自己可见；处理状态单独显示';
 }
-async function onUploadComplete(successes: number) { if (successes > 0) await revealCreated(); }
+async function onUploadComplete(successes: number) {
+  if (successes <= 0) return;
+  const replaced = replaceTarget.value !== null;
+  await revealCreated();
+  if (replaced) ElMessage.success('已替换新版本');
+}
 
 /** 创建后保留当前目录；最近使用不包含尚未打开的资料，转到我的资料。 */
 async function revealCreated() {
@@ -531,7 +563,7 @@ async function createFolder() {
     folderName.value = '';
     await revealCreated();
   } catch (error) {
-    actionError.value = error instanceof Error ? error.message : '创建失败';
+    report(error, '创建失败');
   }
 }
 
@@ -543,14 +575,14 @@ async function createLink() {
     linkUrl.value = '';
     await revealCreated();
   } catch (error) {
-    actionError.value = error instanceof Error ? error.message : '保存失败';
+    report(error, '保存失败');
   }
 }
 
 async function rename(row: LibraryItem) {
   try {
-    const result = await ElMessageBox.prompt('新名称', '重命名', { customClass: 'library-message-box', inputValue: row.name });
-    await act(() => renameLibrary(row.id, result.value));
+    const result = await ElMessageBox.prompt('新名称', '改名', { customClass: 'library-message-box', inputValue: row.name });
+    if (await act(() => renameLibrary(row.id, result.value))) ElMessage.success('已改名');
   } catch {
     // 取消重命名不改列表。
   }
@@ -581,11 +613,19 @@ function descendantFolderIds(rootId: string, folders: readonly LibraryItem[]) {
 }
 async function move(row: LibraryItem) {
   try {
-    moveFolders.value = await libraryFolders(view.value === 'members' ? 'members' : undefined, view.value === 'members' ? memberId.value || undefined : undefined);
+    if (view.value === 'members') {
+      const owned = await libraryFolders('members', memberId.value || undefined);
+      moveMineFolders.value = owned;
+      moveSharedFolders.value = owned.filter((folder) => folder.scope === 'ENTERPRISE');
+    } else {
+      const [mine, shared] = await Promise.all([libraryFolders('mine'), libraryFolders('shared')]);
+      moveMineFolders.value = mine;
+      moveSharedFolders.value = shared;
+    }
     moveTarget.value = row;
     moveParent.value = null;
     moveOpen.value = true;
-  } catch (error) { actionError.value = error instanceof Error ? error.message : '读取文件夹失败'; }
+  } catch (error) { report(error, '读取文件夹失败'); }
 }
 async function confirmMove() {
   if (!moveTarget.value) return;
@@ -596,9 +636,10 @@ async function confirmMove() {
       if (impact.changed && !await confirmAction(`移入后该资料及全部子项会企业共享，共涉及 ${impact.total} 项。`, '确认移动并共享')) return;
       options.confirmShare = true; options.expectedTreeRevision = impact.treeRevision;
     }
-    await act(() => moveLibrary(moveTarget.value!.id, moveParent.value, options));
-  } catch (error) { actionError.value = error instanceof Error ? error.message : '移动失败'; return; }
-  if (!actionError.value) moveOpen.value = false;
+    if (!(await act(() => moveLibrary(moveTarget.value!.id, moveParent.value, options)))) return;
+  } catch (error) { report(error, '移动失败'); return; }
+  moveOpen.value = false;
+  ElMessage.success('已移动');
 }
 
 function startReplace(row: LibraryItem) {
@@ -616,20 +657,19 @@ async function confirmAction(message: string, title: string, confirmButtonText =
 }
 
 function listedInsideSharedFolder(row: LibraryItem) {
-  return Boolean(parentId.value && parentScope.value === 'ENTERPRISE' && (!row.parentId || row.parentId === parentId.value));
+  return Boolean(parentId.value && parentScope.value === 'ENTERPRISE' && row.parentId === parentId.value);
 }
 
 function sharedParentNotice(row: LibraryItem) {
   const folderName = (parentId.value && parentScope.value === 'ENTERPRISE' ? breadcrumb.value.at(-1)?.name : undefined) || row.parentName;
   const place = folderName ? `共享文件夹「${folderName}」` : '共享文件夹';
-  const whole = folderName ? `请对「${folderName}」点「改回私人」` : '请到该文件夹上点「改回私人」';
-  return `「${row.name}」在${place}里，不能单独改回私人。请先用「移动」把它移出该文件夹，再改回私人。若要整个文件夹取消共享，${whole}。`;
+  const whole = folderName ? `请对「${folderName}」点「撤销共享」` : '请到该文件夹上点「撤销共享」';
+  return `「${row.name}」在${place}里，不能单独撤销共享。请先用「移动」把它移出该文件夹，再撤销共享。若要整个文件夹取消共享，${whole}。`;
 }
 
 async function explainSharedParent(row: LibraryItem) {
-  actionError.value = '';
   try {
-    await ElMessageBox.alert(sharedParentNotice(row), '不能单独改回私人', { customClass: 'library-message-box', confirmButtonText: '知道了' });
+    await ElMessageBox.alert(sharedParentNotice(row), '不能单独撤销共享', { customClass: 'library-message-box', confirmButtonText: '知道了' });
   } catch {
     // 关闭说明不改资料范围。
   }
@@ -660,9 +700,9 @@ async function changeScope(row: LibraryItem, scope: 'PRIVATE' | 'ENTERPRISE') {
       throw error;
     }
     window.dispatchEvent(new Event('mmp:library-changed'));
-    actionError.value = '';
     await reload();
-  } catch (error) { actionError.value = error instanceof Error ? error.message : '范围变更失败'; }
+    ElMessage.success(scope === 'ENTERPRISE' ? '已共享到企业' : '已撤销共享');
+  } catch (error) { report(error, '范围变更失败'); }
 }
 async function share(row: LibraryItem) { await changeScope(row, 'ENTERPRISE'); }
 async function unshare(row: LibraryItem) { await changeScope(row, 'PRIVATE'); }
@@ -677,7 +717,7 @@ function noticeRecycled() {
     duration: 6000,
     showClose: true,
     message: h('span', [
-      '已放入回收站。',
+      '已移入回收站。',
       h('button', {
         type: 'button',
         class: 'el-button el-button--primary is-link',
@@ -689,8 +729,43 @@ function noticeRecycled() {
 
 async function recycleOne(row: LibraryItem) {
   if (!await confirmRecycle()) return;
-  await act(() => recycleLibrary(row.id));
-  if (!actionError.value) noticeRecycled();
+  if (await act(() => recycleLibrary(row.id))) noticeRecycled();
+}
+
+function folderRow(id: string) {
+  return treeFolders.value.find((row) => row.id === id);
+}
+function renameFolder(id: string) {
+  const row = folderRow(id);
+  if (row) void rename(row);
+}
+function moveFolder(id: string) {
+  const row = folderRow(id);
+  if (row) void move(row);
+}
+function shareFolder(id: string) {
+  const row = folderRow(id);
+  if (row) void share(row);
+}
+function unshareFolder(id: string) {
+  const row = folderRow(id);
+  if (row) void unshare(row);
+}
+
+async function recycleFolder(id: string) {
+  const folder = treeFolders.value.find((row) => row.id === id);
+  if (!folder?.canManage) return;
+  if (!await confirmRecycle()) return;
+  const inside = parentId.value !== null && descendantFolderIds(id, treeFolders.value).has(parentId.value);
+  try {
+    await recycleLibrary(id);
+    window.dispatchEvent(new Event('mmp:library-changed'));
+    if (inside) selectFolder(null);
+    else await reload();
+    noticeRecycled();
+  } catch (error) {
+    report(error, '操作失败');
+  }
 }
 
 async function restoreOne(row: LibraryItem) {
@@ -698,10 +773,8 @@ async function restoreOne(row: LibraryItem) {
 }
 
 async function purgeOne(row: LibraryItem) {
-  const blockedReason = purgeBlockedReason(row);
-  if (blockedReason) { actionError.value = blockedReason; return; }
   if (!await confirmAction('彻底删除后，旧引用会显示来源不可用，不会改指向其它版本。', '彻底删除')) return;
-  await act(() => purgeLibrary(row.id));
+  if (await act(() => purgeLibrary(row.id))) ElMessage.success('已彻底删除');
 }
 
 function confirmRecycle() {
@@ -710,16 +783,15 @@ function confirmRecycle() {
 
 async function runBatch(action: 'recycle' | 'restore' | 'purge') {
   if (action === 'recycle' && !await confirmRecycle()) return;
-  if (action === 'purge' && batchPurgeBlockedReason.value) { actionError.value = batchPurgeBlockedReason.value; return; }
   if (action === 'purge' && !await confirmAction('彻底删除后不能再下载这些版本。', '彻底删除')) return;
   try {
     const result = await batchLibrary(selected.value.map((row) => row.id), action);
     if (result.skipped) ElMessage.warning(`${result.skipped} 项当前不可见，已跳过`);
-    if (result.failed.length) actionError.value = result.failed.map((row) => row.message).join('；');
+    if (result.failed.length) ElMessage.error(result.failed.map((row) => row.message).join('；'));
     if (action === 'recycle' && result.ok?.length) noticeRecycled();
     await reload();
   } catch (error) {
-    actionError.value = error instanceof Error ? error.message : '批量操作失败';
+    report(error, '批量操作失败');
   }
 }
 
@@ -727,10 +799,11 @@ async function act(work: () => Promise<unknown>) {
   try {
     await work();
     window.dispatchEvent(new Event('mmp:library-changed'));
-    actionError.value = '';
     await reload();
+    return true;
   } catch (error) {
-    actionError.value = error instanceof Error ? error.message : '操作失败';
+    report(error, '操作失败');
+    return false;
   }
 }
 
@@ -763,7 +836,7 @@ async function openPreview(row: LibraryItem) {
   try {
     await showPreview(await previewLibrary(row.id, row.currentVersion?.id));
   } catch (error) {
-    actionError.value = error instanceof Error ? error.message : '无法预览';
+    report(error, '无法预览');
   }
 }
 
@@ -778,7 +851,7 @@ watch(() => route.query.preview, async value => {
     const result = await previewLibrary(value, typeof route.query.version === 'string' ? route.query.version : undefined);
     if (route.query.preview !== value) return;
     await showPreview(result);
-  } catch (error) { actionError.value = error instanceof Error ? error.message : '无法预览'; }
+  } catch (error) { report(error, '无法预览'); }
 }, { immediate: true });
 </script>
 
@@ -795,6 +868,21 @@ watch(() => route.query.preview, async value => {
 .library-folder-root:disabled { color:var(--el-text-color-disabled); cursor:default; background:transparent; }
 .library-folders :deep(.el-tree) { background:transparent; color:var(--app-heading-color); }
 .library-folders :deep(.el-tree-node__content), .library-move-tree :deep(.el-tree-node__content) { height:36px; border-radius:8px; cursor:pointer; }
+.library-folder-row { position:relative; display:flex; align-items:center; width:100%; min-width:0; }
+.library-folder-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.library-folder-row :deep(.el-dropdown) { position:absolute; right:0; top:50%; transform:translateY(-50%); }
+.library-folder-more { width:24px; height:24px; margin:0; padding:0; display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:6px; background:#f3f5fb; color:#667085; letter-spacing:1px; font:inherit; opacity:0; pointer-events:none; cursor:pointer; }
+.library-folders :deep(.el-tree-node__content:hover) .library-folder-more,
+.library-folder-more:focus-visible { opacity:1; pointer-events:auto; }
+.library-folders :deep(.el-tree-node.is-current > .el-tree-node__content:hover) .library-folder-more,
+.library-folders :deep(.el-tree-node.is-current > .el-tree-node__content) .library-folder-more:focus-visible { background:var(--app-primary-light-color); }
+.library-folders :deep(.el-tree-node__content:hover) .library-folder-label,
+.library-folder-row:focus-within .library-folder-label { padding-right:26px; }
+@media (hover: none) {
+  .library-folder-more { opacity:1; pointer-events:auto; background:transparent; }
+  .library-folder-label { padding-right:26px; }
+}
+:global(.library-menu-danger) { color:#b42318; }
 .library-folders :deep(.el-tree-node__content:hover) { background:#f3f5fb; }
 .library-folders :deep(.el-tree-node.is-current > .el-tree-node__content) { background:var(--app-primary-light-color); color:var(--app-primary-color); font-weight:600; }
 .library-move-tree { max-height:50vh; overflow:auto; }
@@ -821,8 +909,7 @@ watch(() => route.query.preview, async value => {
 .library-table :deep(th.el-table__cell) { background:var(--el-fill-color-light); font-size:13px; font-weight:600; }
 .library-table :deep(.cell),.library-table :deep(.el-button.is-text) { font-size:13px; }
 .library-file { display:none; }
-.library-progress,.library-error,.library-batch { margin:8px 0 14px; font-size:13px; line-height:1.6; }
-.library-error { color:var(--el-color-danger); }
+.library-progress,.library-batch { margin:8px 0 14px; font-size:13px; line-height:1.6; }
 .library-muted { display:block; margin-top:4px; color:var(--el-text-color-secondary); font-size:12px; line-height:1.5; }
 .library-name { color:var(--el-color-primary); font-size:13px; padding:0; }
 .library-name,.library-folder-name,.library-muted { overflow-wrap:anywhere; }

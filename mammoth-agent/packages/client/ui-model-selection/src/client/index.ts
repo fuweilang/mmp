@@ -28,7 +28,7 @@ import { ModelDirectoryResolver } from './service.ts'
 import type { ModelSelectInjected } from './slots.ts'
 import { ModelSelect } from './ModelSelect.tsx'
 import { en, ja, es, fr, de, ru, pt, zh, type ModelKey } from './locales.ts'
-import { orderModelProviders } from './provider-order.ts'
+import { groundPickerConcealed, orderModelProviders } from './provider-order.ts'
 
 export { ModelDirectory } from './directory.ts'
 export type { ModelDirectoryState } from './directory.ts'
@@ -131,7 +131,12 @@ export function apply(ctx: ClientContext): void {
       label: () => t('command.label'),
       description: () => t('command.description'),
       icon: IconDataOutlineRegular,
-      available: session => sessions.subagentAddress(session.sessionId) === undefined,
+      available: session => {
+        if (sessions.subagentAddress(session.sessionId) !== undefined) return false
+        if (sessions.scope(session.sessionId) === undefined) return true
+        const snapshot = models.directoryFor(session.sessionId).store.getSnapshot()
+        return !groundPickerConcealed(snapshot.groups, snapshot.current?.provider)
+      },
       ui: {
         kind: 'popupSelect',
         searchMode: 'fuzzy-label',

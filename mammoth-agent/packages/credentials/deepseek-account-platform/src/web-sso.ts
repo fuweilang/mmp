@@ -65,8 +65,10 @@ export async function verifyGroundWebSession(origin: string, token: string, sign
   if (claims.expiresAt <= Date.now() || claims.userId !== value.user.id) throw new GroundWebSessionError(401, 'Ground 登录已过期')
   const tenant = 'currentTenant' in value ? value.currentTenant : null
   const tenantId = tenant && typeof tenant === 'object' && 'id' in tenant && typeof tenant.id === 'string' ? tenant.id : null
-  if (tenantId !== claims.tenantId) throw new GroundWebSessionError(403, 'Ground 企业身份不一致，请重新登录。')
   const platformAdmin = 'isPlatformAdmin' in value.user && value.user.isPlatformAdmin === true
+  // Platform admins follow the enterprise Ground reports, including none.
+  // Other accounts must match the enterprise named in the cookie.
+  if (tenantId !== claims.tenantId && !platformAdmin) throw new GroundWebSessionError(403, 'Ground 企业身份不一致，请重新登录。')
   if (!platformAdmin && tenant && typeof tenant === 'object' && 'status' in tenant && tenant.status !== 'active') {
     throw new GroundWebSessionError(403, '该企业已停用，请联系管理员。')
   }

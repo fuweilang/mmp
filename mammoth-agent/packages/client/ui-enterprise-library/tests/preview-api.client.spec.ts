@@ -13,7 +13,7 @@ it.each(['doc', 'DOCX', 'ppt', 'pptx'])('reads complete converted %s bytes for t
 it('reads original binary downloads without adding the media-only inline policy', async () => {
   const fetcher = vi.fn(async () => new Response(Uint8Array.from([0, 255, 1]), { headers: { 'content-type': 'application/octet-stream' } }))
   const result = await api.fetchLibraryPreviewBytes('', 'n', 'v', 'sheet.xlsx', fetcher)
-  expect(fetcher.mock.calls[0]).toEqual(['/ground-library/nodes/n/download?versionId=v', { credentials: 'include' }])
+  expect(fetcher.mock.calls[0]).toEqual(['ground-library/nodes/n/download?versionId=v', { credentials: 'include' }])
   expect(result).toEqual({ bytes: Uint8Array.from([0, 255, 1]), mimeType: 'application/octet-stream', missingFonts: [] })
 })
 it('retains authorization refusal status and detail', async () => {
@@ -44,6 +44,6 @@ it('does not start a download with an already aborted signal or missing version'
 it('downloads an extensionless file named docx without requesting Office conversion', async () => {
   const fetcher = vi.fn(async () => new Response('text'))
   const result = await api.fetchLibraryPreviewBytes('', 'n', 'v', 'docx', fetcher)
-  expect(fetcher.mock.calls[0]).toEqual(['/ground-library/nodes/n/download?versionId=v', { credentials: 'include' }])
+  expect(fetcher.mock.calls[0]).toEqual(['ground-library/nodes/n/download?versionId=v', { credentials: 'include' }])
   expect(new TextDecoder().decode(result.bytes)).toBe('text')
 })

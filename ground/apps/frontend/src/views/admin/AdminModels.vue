@@ -38,6 +38,15 @@
           :options="providerSelectOptions"
           placeholder="全部厂商"
         />
+        <el-select-v2
+          v-model="selectedStatus"
+          class="page-filter"
+          popper-class="models-filter-popper"
+          aria-label="运行状态"
+          filterable
+          :options="statusSelectOptions"
+          placeholder="全部状态"
+        />
         <el-button @click="testEnabled">{{ bulkRunning ? '停止' : '测试已启用' }}</el-button>
         <el-button @click="$router.push('/admin/knowledge-services')">检索服务</el-button>
         <el-button @click="openGeekAi">接入极客智坊</el-button>
@@ -296,6 +305,7 @@ const error = ref('');
 const keyword = ref('');
 const selectedFamily = ref('');
 const selectedProvider = ref('');
+const selectedStatus = ref('');
 const providers = ref<AdminLlmProviderRow[]>([]);
 // Preserve initial positions across settings changes and health refreshes.
 const rowPositions = new Map<string, number>();
@@ -324,6 +334,15 @@ const providerSelectOptions = computed(() => [
   { value: '', label: '全部厂商' },
   ...providers.value.map((provider) => ({ value: provider.id, label: provider.displayName || provider.name })),
 ]);
+const statusSelectOptions = [
+  { value: '', label: '全部状态' },
+  { value: 'disabled', label: '手动禁用' },
+  { value: 'unchecked', label: '待检查' },
+  { value: 'healthy', label: '正常' },
+  { value: 'degraded', label: '波动观察中' },
+  { value: 'limited', label: '限流冷却' },
+  { value: 'unavailable', label: '故障隔离' },
+];
 
 const probeToastText = computed(() => {
   const names = probingIds.value
@@ -342,6 +361,7 @@ const filteredRows = computed(() => {
   return flatRows.value.filter((r) => {
     if (selectedFamily.value && modelFamily(r.model.modelId, r.model.displayName) !== selectedFamily.value) return false;
     if (selectedProvider.value && r.provider.id !== selectedProvider.value) return false;
+    if (selectedStatus.value && rowStatus(r) !== selectedStatus.value) return false;
     const hay = `${r.model.modelId} ${r.model.displayName} ${r.provider.name} ${r.provider.displayName}`.toLowerCase();
     return hay.includes(q);
   });
@@ -353,7 +373,7 @@ const pagedRows = computed(() => {
   const start = (page.value - 1) * pageSize.value;
   return filteredRows.value.slice(start, start + pageSize.value);
 });
-watch([keyword, selectedFamily, selectedProvider, pageSize], () => { page.value = 1; });
+watch([keyword, selectedFamily, selectedProvider, selectedStatus, pageSize], () => { page.value = 1; });
 watch(filteredRows, (rows) => {
   const last = Math.max(1, Math.ceil(rows.length / pageSize.value));
   if (page.value > last) page.value = last;
@@ -780,6 +800,7 @@ async function onDeleteModel(m: AdminLlmModelRow) {
 }
 
 function healthLabel(status?: string) { return ({unchecked:'待检查',healthy:'正常',degraded:'波动观察中',limited:'限流冷却',unavailable:'故障隔离'} as Record<string,string>)[status || 'unchecked'] || '待检查'; }
+function rowStatus(row: FlatRow) { return row.model.enabled ? (row.model.health?.status || 'unchecked') : 'disabled'; }
 async function onRoutingChange(model: AdminLlmModelRow, changes: Parameters<typeof adminLlmProviderApi.updateModel>[1]) {
   busyModelId.value=model.id;
   try { await adminLlmProviderApi.updateModel(model.id,changes); await reload(); }

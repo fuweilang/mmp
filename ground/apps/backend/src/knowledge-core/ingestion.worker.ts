@@ -1,6 +1,6 @@
 import { OcrPageStore } from './ocr-progress';
 import { KnowledgeOcrService } from './vision-ocr';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { KnowledgeProfilesService } from './profiles.service';
@@ -9,6 +9,10 @@ import { KnowledgeJobsService } from './jobs.service';
 import { KnowledgeCoreService } from './knowledge-core.service';
 import { KnowledgeHttpAdapter } from './provider';
 import { KnowledgeCoreError, safeKnowledgeError } from './errors';
+import { configureLibraryAsr } from '../library/library.asr-setup';
+import { embedPendingLibraryChunks } from '../library/library.embed';
+import type { PrismaLibraryStore } from '../library/library.prisma-store';
+import { transcribeOnePendingVideo } from '../library/library.video-backfill';
 import { chunkEmbeddingInput } from './embedding-input';
 import {
   normalizeKnowledgeIndexConfig,
@@ -33,6 +37,7 @@ export class KnowledgeIngestionWorker {
     private readonly adapter: KnowledgeHttpAdapter,
     private readonly core?: KnowledgeCoreService,
     private readonly ocr?: KnowledgeOcrService,
+    @Optional() private readonly library?: PrismaLibraryStore,
   ) {}
   stop() {
     this.stopping = true;
@@ -198,9 +203,13 @@ export class KnowledgeIngestionWorker {
     return true;
   }
   async run(): Promise<void> {
+    await configureLibraryAsr(this.prisma).catch(() => undefined);
     while (!this.stopping) {
       const worked = await this.runOnce();
-      if (!worked) await new Promise<void>((r) => setTimeout(r, 1000));
+      if (worked) continue;
+      const embedded = await embedPendingLibraryChunks(this.prisma, this.adapter).catch(() => 0);
+      const transcribed = this.library ? await transcribeOnePendingVideo(this.prisma, this.library).catch(() => false) : false;
+      if (!embedded && !transcribed) await new Promise<void>((r) => setTimeout(r, 1000));
     }
   }
 }

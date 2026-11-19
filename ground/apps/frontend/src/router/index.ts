@@ -140,7 +140,7 @@ const router = createRouter({
         })),
         { path: 'library/members', meta: { title: memberLibraryView.label, perm: 'portal.console.access' }, component: () => import('../views/Library.vue') },
         { path: '', meta: { title: '工作台', perm: 'portal.console.workbench' }, component: () => import('../views/Home.vue') },
-        { path: 'knowledge', meta: { title: '知识库', perm: 'portal.console.kb' }, component: () => import('../views/Knowledge.vue') },
+        { path: 'knowledge', redirect: '/console/library/mine' },
         { path: 'members', meta: { title: '成员管理', perm: 'portal.console.members' }, component: () => import('../views/Members.vue') },
         { path: 'roles', meta: { title: '角色管理', perm: 'portal.console.roles' }, component: () => import('../views/Roles.vue') },
         { path: 'usage', meta: { title: '操作审计', perm: 'portal.console.usage' }, component: () => import('../views/Usage.vue') },

@@ -143,6 +143,14 @@ export class LibraryService {
     return this.askService.openCitation(actor, nodeId, versionId, locator, recordAccess);
   }
 
+  readAround(actor: Actor, nodeId: string, versionId: string, locator?: string | null) {
+    return this.askService.readAround(actor, nodeId, versionId, locator);
+  }
+
+  queryRows(actor: Actor, nodeId: string, versionId: string, query: string) {
+    return this.askService.queryRows(actor, nodeId, versionId, query);
+  }
+
   readRetrievalVersion(actor: Actor, nodeId: string, versionId: string) {
     return this.askService.readRetrievalVersion(actor, nodeId, versionId);
   }

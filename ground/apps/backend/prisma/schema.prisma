@@ -954,6 +954,7 @@ model LibraryVersion {
   parseStatus      LibraryParseStatus  @default(PENDING) @map("parse_status")
   parseReason      String?             @map("parse_reason")
   extractTruncated Boolean             @default(false) @map("extract_truncated")
+  summary          String?             @db.Text
   createdByUserId  String              @map("created_by_user_id")
   createdAt        DateTime            @default(now()) @map("created_at")
   node             LibraryNode         @relation(fields: [nodeId], references: [id], onDelete: Cascade)

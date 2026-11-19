@@ -10,10 +10,12 @@
     "noUnusedParameters": false
   },
   "include": [
+    "../../../../ground/apps/backend/src/library/library.asr.ts",
     "../../../../ground/apps/backend/src/library/library.ask.service.ts",
     "../../../../ground/apps/backend/src/library/library.ask.ts",
     "../../../../ground/apps/backend/src/library/library.auth.ts",
     "../../../../ground/apps/backend/src/library/library.context.ts",
+    "../../../../ground/apps/backend/src/library/library.embed-port.ts",
     "../../../../ground/apps/backend/src/library/library.errors.ts",
     "../../../../ground/apps/backend/src/library/library.files.ts",
     "../../../../ground/apps/backend/src/library/library.items.ts",
@@ -26,6 +28,7 @@
     "../../../../ground/apps/backend/src/library/library.parse.ts",
     "../../../../ground/apps/backend/src/library/library.policy.ts",
     "../../../../ground/apps/backend/src/library/library.read.ts",
+    "../../../../ground/apps/backend/src/library/library.search-index.ts",
     "../../../../ground/apps/backend/src/library/library.service.ts",
     "../../../../ground/apps/backend/src/library/library.stats.ts",
     "../../../../ground/apps/backend/src/library/library.store.ts",

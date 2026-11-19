@@ -1,5 +1,5 @@
 import type { LibraryContext } from './library.context';
-import { FILE_PURGE_BLOCKED_REASON, LibraryError, libraryNotFound } from './library.errors';
+import { LibraryError, libraryNotFound } from './library.errors';
 import { canKnow, canManage, canSee } from './library.policy';
 import type {
   Actor,
@@ -75,8 +75,35 @@ export function citationExcerpt(
 }
 
 export const SEARCH_HITS = 8;
-export const SEARCH_FILES = 200;
 export const SEARCH_SNIPPET = 400;
+
+export function librarySummary(chunks: readonly { content: string }[]): string | null {
+  const text = chunks.map((chunk) => chunk.content).join('\n').replace(/\s+/g, ' ').trim();
+  return text ? text.slice(0, SEARCH_SNIPPET) : null;
+}
+export const INVENTORY_NAMES = 100;
+
+const SEARCH_STOP = /麻烦你|请你|帮我|请问|查一下|看一下|说一下|找一下|列一下|列举一下|列个|列举|一下|我们|你们|咱们|企业内部|企业资料库|企业资料|资料库|知识库|资料|文件|文档|里面|里头|当中|都有哪些|有哪些|有什么东西|有什么|都有啥|有啥|哪些东西|哪些|现在|再|东西|什么|怎么|如何|是不是|是否|吗|呢|的|了|都|和|与|及|或|在|里|中|你|我|企业|公司|内部|请|查|看|说|找|问|[？?！!。．.，,、；;：:\s]/g;
+
+/** 去掉客套和问法后留下的检索词。短词原样保留，整句不再整段去对正文。 */
+export function librarySearchTerms(query: string): string[] {
+  const terms: string[] = [];
+  for (const part of query.trim().toLowerCase().split(SEARCH_STOP)) {
+    const term = part.trim();
+    if (term.length < 2 || terms.includes(term)) continue;
+    terms.push(term);
+    if (terms.length >= 8) break;
+  }
+  return terms;
+}
+
+/** 只问资料库里有什么、没有点名具体内容时，返回文件名清单。 */
+export function isLibraryInventoryQuestion(query: string): boolean {
+  const trimmed = query.trim();
+  if (!/列举|列一下|列个|有哪些|有啥|有什么|哪些|清单/.test(trimmed)) return false;
+  if (!/资料|文件|文档|知识库/.test(trimmed)) return false;
+  return librarySearchTerms(trimmed).length === 0;
+}
 export const VIEWABLE_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
 
 /** 对话检索只看本人私人资料和已对企业共享、且可供引用的当前版本。企业管理员和平台管理身份不扩大这个范围。 */
@@ -194,7 +221,7 @@ export async function toLibraryItem(
     linkUrl: node.kind === 'LINK' && node.state === 'ACTIVE' ? node.linkUrl : null,
     mine: node.ownerUserId === actor.userId,
     canManage: canManage(actor, node, custodies, ctx.now()),
-    purgeBlockedReason: node.kind === 'FILE' ? FILE_PURGE_BLOCKED_REASON : null,
+    purgeBlockedReason: null,
     currentVersion: version ? versionBrief(version) : null,
     createdAt: new Date(node.createdAt).toISOString(),
     updatedAt: new Date(node.updatedAt).toISOString(),

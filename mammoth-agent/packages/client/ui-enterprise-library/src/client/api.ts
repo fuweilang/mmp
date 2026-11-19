@@ -26,19 +26,29 @@ type RawItem = {
   currentVersion?: RawVersion | null
 }
 
+/**
+ * Library transport under the current document when `origin` is empty.
+ * A leading slash would ignore `<base href>` and miss a gateway prefix such as `/agent/`.
+ * The query never carries a tenant id.
+ */
+export function libraryTransport(origin: string, path: string): string {
+  const suffix = path.replace(/^\//, '')
+  const base = origin.replace(/\/$/, '')
+  return base === '' ? `ground-library/${suffix}` : `${base}/ground-library/${suffix}`
+}
+
 /** Same-origin or configured ground origin. The query never carries a tenant id. */
 export function libraryItemsUrl(origin: string, view: LibraryView, q = '', parentId?: string | null, flat = false): string {
-  const base = origin.replace(/\/$/, '')
   const params = new URLSearchParams({ view })
   if (flat) params.set('flat', '1')
   if (parentId && !q.trim()) params.set('parentId', parentId)
   const query = q.trim()
   if (query) params.set('q', query)
-  return `${base}/ground-library/items?${params.toString()}`
+  return `${libraryTransport(origin, 'items')}?${params.toString()}`
 }
 
 export function libraryOpenUrl(origin: string): string {
-  return `${origin.replace(/\/$/, '')}/ground-library/open`
+  return libraryTransport(origin, 'open')
 }
 
 export function readLibraryItems(payload: unknown): LibraryChoice[] {
@@ -179,7 +189,7 @@ export async function fetchLibrarySource(
 /** Request only through the protected Host; refusals retain their HTTP status and Ground code. */
 export async function libraryRequest(origin: string, path: string, method: string, data: unknown, fetchImpl: LibraryFetch): Promise<unknown> {
   const form = data instanceof FormData
-  const response = await fetchImpl(`${origin.replace(/\/$/, '')}/ground-library/${path}`, {
+  const response = await fetchImpl(libraryTransport(origin, path), {
     method, credentials: 'include',
     ...(data === undefined ? {} : form ? { body: data } : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }),
   })
@@ -194,7 +204,7 @@ export async function fetchLibraryCatalog(origin: string, q: string, page: numbe
   const params = new URLSearchParams({ catalog: '1', page: String(page), pageSize: '10' })
   const query = q.trim()
   if (query) params.set('q', query)
-  const response = await fetchImpl(`${origin.replace(/\/$/, '')}/ground-library/items?${params}`, { credentials: 'include', ...(signal ? { signal } : {}) })
+  const response = await fetchImpl(`${libraryTransport(origin, 'items')}?${params}`, { credentials: 'include', ...(signal ? { signal } : {}) })
   if (!response.ok) throw await failure(response, 'library list')
   const payload: unknown = await response.json()
   const total = payload && typeof payload === 'object' && typeof (payload as { total?: unknown }).total === 'number' ? (payload as { total: number }).total : 0
@@ -228,7 +238,7 @@ export async function fetchLibraryScopeImpact(origin: string, id: string, scope:
 }
 /** Fetch protected media bytes through the same account-bound Host; never mint a public URL. */
 export async function fetchLibraryMedia(origin: string, nodeId: string, versionId: string, fetchImpl: LibraryFetch, signal?: AbortSignal): Promise<Blob> {
-  const response = await fetchImpl(`${origin}/ground-library/nodes/${encodeURIComponent(nodeId)}/download?versionId=${encodeURIComponent(versionId)}&inline=1`, { credentials: 'include', ...(signal ? { signal } : {}) });
+  const response = await fetchImpl(`${libraryTransport(origin, `nodes/${encodeURIComponent(nodeId)}/download`)}?versionId=${encodeURIComponent(versionId)}&inline=1`, { credentials: 'include', ...(signal ? { signal } : {}) });
   if (!response.ok) throw await failure(response, 'library media');
   if (!/^(image\/(png|jpeg|gif|webp|avif)|video\/(mp4|webm|quicktime))$/.test(response.headers.get('content-type') ?? '')) throw new Error('unsupported media response');
   return response.blob();
@@ -253,7 +263,7 @@ export async function fetchLibraryPreviewBytes(
   const office = /^(doc|docx|ppt|pptx)$/.test(extension)
   const query = new URLSearchParams({ versionId })
   if (office) query.set('extension', extension)
-  const response = await fetchImpl(`${origin.replace(/\/$/, '')}/ground-library/nodes/${encodeURIComponent(nodeId)}/${office ? 'render' : 'download'}?${query}`, { credentials: 'include', ...(signal ? { signal } : {}) })
+  const response = await fetchImpl(`${libraryTransport(origin, `nodes/${encodeURIComponent(nodeId)}/${office ? 'render' : 'download'}`)}?${query}`, { credentials: 'include', ...(signal ? { signal } : {}) })
   signal?.throwIfAborted()
   if (!response.ok) throw await failure(response, 'library preview')
   const mimeType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() || 'application/octet-stream'

@@ -10,7 +10,7 @@ import { LibraryService, createLibraryService } from './library.service';
     useFactory: (store: PrismaLibraryStore) => createLibraryService({ store }),
     inject: [PrismaLibraryStore],
   }],
-  exports: [LibraryService],
+  exports: [LibraryService, PrismaLibraryStore],
 })
 export class LibraryDomainModule {
 }

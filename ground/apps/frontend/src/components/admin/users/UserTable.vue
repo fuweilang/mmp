@@ -28,7 +28,7 @@
         </template>
       </el-table-column>
       <el-table-column prop="phone" label="手机号" width="120" />
-      <el-table-column label="所属企业" min-width="280">
+      <el-table-column label="所属企业" min-width="360">
         <template #default="{ row }">
           <div v-if="isPlatformIdentity(row)" class="role-tags">
             <el-tag
@@ -51,6 +51,14 @@
                 :style="roleTagStyle(membershipRoleColor(tenant.role))"
               >
                 {{ membershipRoleLabel(tenant.role) }}
+              </el-tag>
+              <el-tag
+                v-if="tenant.id === loginTenantId(row)"
+                class="identity-tag"
+                size="small"
+                :style="roleTagStyle('#667085')"
+              >
+                登录进入
               </el-tag>
             </div>
           </div>
@@ -133,7 +141,7 @@
         :page-size="pageSize"
         background
         layout="total, sizes, prev, pager, next, jumper"
-        :page-sizes="[10, 20, 50]"
+        :page-sizes="[10, 20, 50, 100]"
         :total="total"
         @current-change="$emit('page-change', $event)"
         @size-change="$emit('page-size-change', $event)"
@@ -149,6 +157,7 @@ import {
   canDeleteUser,
   isPlatformIdentity,
   isSuperAdminRow,
+  loginTenantId,
   membershipRoleColor,
   membershipRoleLabel,
   roleTagStyle,
@@ -232,7 +241,7 @@ defineEmits<{
 
 .membership-name {
   flex: 0 1 auto;
-  max-width: calc(100% - 92px);
+  max-width: calc(100% - 168px);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

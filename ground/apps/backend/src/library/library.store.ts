@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { LibraryError } from './library.errors';
+import type { IndexedLibraryHit } from './library.search-index';
 import type {
   AuditRecord,
   ChunkRecord,
@@ -38,6 +39,7 @@ export type ParseCommit = {
   parseReason: string | null;
   extractTruncated: boolean;
   chunks: ChunkRecord[];
+  summary?: string | null;
   audit: AuditRecord;
 };
 
@@ -60,6 +62,10 @@ export interface LibraryStore {
   commitParseResult(input: ParseCommit): Promise<'committed' | 'unchanged'>;
   updateVersion(id: string, patch: Partial<VersionRecord>): Promise<void>;
   listChunks(versionId: string): Promise<ChunkRecord[]>;
+  /** Indexed keyword search. Absent on the in-memory store, which scans. */
+  searchLexical?(actor: { tenantId: string; userId: string }, terms: readonly string[]): Promise<IndexedLibraryHit[]>;
+  /** Nearest embedded chunks. Absent until the database has the vector column. */
+  searchSemantic?(actor: { tenantId: string; userId: string }, vector: readonly number[]): Promise<IndexedLibraryHit[]>;
   replaceChunks(versionId: string, tenantId: string, chunks: ChunkRecord[]): Promise<void>;
   listRecent(userId: string, tenantId: string): Promise<RecentRecord[]>;
   touchRecent(row: RecentRecord): Promise<void>;
@@ -211,6 +217,7 @@ export class MemoryLibraryStore implements LibraryStore {
       try {
         await this.updateVersion(version.id, {
           parseStatus: input.parseStatus, parseReason: input.parseReason, extractTruncated: input.extractTruncated,
+          summary: input.summary ?? null,
         });
         await this.replaceChunks(version.id, input.tenantId, input.chunks);
         await this.audit(input.audit);

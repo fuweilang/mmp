@@ -243,24 +243,27 @@ export async function startGroundWebRouter(options: {
     if (res.headersSent) { res.destroy(); return }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }).end(html)
   }
-  /** PWA install metadata the browser fetches without session cookies; must stay anonymous. */
-  const PUBLIC_PWA_ASSETS: Record<string, string> = {
-    '/manifest.webmanifest': 'application/manifest+json; charset=utf-8',
-    '/icon-192.png': 'image/png',
-    '/icon-512.png': 'image/png',
-    '/icon-maskable-512.png': 'image/png',
+  /** Tab icons and PWA metadata the browser fetches without session cookies; must stay anonymous. */
+  const PUBLIC_PWA_ASSETS: Record<string, { file: string; type: string }> = {
+    '/manifest.webmanifest': { file: 'manifest.webmanifest', type: 'application/manifest+json; charset=utf-8' },
+    '/icon-192.png': { file: 'icon-192.png', type: 'image/png' },
+    '/icon-512.png': { file: 'icon-512.png', type: 'image/png' },
+    '/icon-maskable-512.png': { file: 'icon-maskable-512.png', type: 'image/png' },
+    '/favicon.ico': { file: 'favicon.svg', type: 'image/svg+xml' },
+    '/favicon.svg': { file: 'favicon.svg', type: 'image/svg+xml' },
+    '/favicon-dark.svg': { file: 'favicon-dark.svg', type: 'image/svg+xml' },
   }
   const webPublicRoot = join(import.meta.dirname, '../apps/web/public')
   const servePublicPwaAsset = async (req: IncomingMessage, res: ServerResponse): Promise<boolean> => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return false
     let pathname = ''
     try { pathname = new URL(req.url ?? '/', origin || 'http://127.0.0.1').pathname } catch { return false }
-    const contentType = PUBLIC_PWA_ASSETS[pathname]
-    if (contentType === undefined) return false
+    const asset = PUBLIC_PWA_ASSETS[pathname]
+    if (asset === undefined) return false
     try {
-      const body = await readFile(join(webPublicRoot, pathname.slice(1)))
+      const body = await readFile(join(webPublicRoot, asset.file))
       if (res.headersSent) { res.destroy(); return true }
-      res.writeHead(200, { 'content-type': contentType, 'cache-control': 'no-cache' })
+      res.writeHead(200, { 'content-type': asset.type, 'cache-control': 'no-cache' })
       if (req.method === 'HEAD') res.end()
       else res.end(body)
       return true
@@ -286,11 +289,13 @@ button{margin-top:20px;border:1px solid #dfe5ef;background:#fff;color:#333946;pa
 <script>
 const status=document.getElementById('status'),retry=document.getElementById('retry');
 const started=Date.now();
+// 生产挂在 /agent/ 下。根路径 /.mmp/ready 和 / 会落到官网，启动页就一直转圈。
+const readyUrl=new URL('.mmp/ready',location.href);
+const appUrl=new URL('./',location.href);
 async function probe(){
   try{
-    const response=await fetch('/.mmp/ready',{cache:'no-store'});
-    if(response.ok){location.replace('/');return}
-    if(response.status===401||response.status===403){location.replace('/');return}
+    const response=await fetch(readyUrl,{cache:'no-store'});
+    if(response.ok||response.status===401||response.status===403){location.replace(appUrl);return}
     if(response.status>=500){status.textContent='启动失败，请稍后重试';retry.hidden=false;return}
     throw new Error('not ready');
   }catch{

@@ -25,20 +25,38 @@ async function mount(withReason: boolean) {
   app=createApp({render:()=>h(RouterView)}); app.use(ElementPlus); app.use(router); app.mount(root);
   await vi.waitFor(()=>expect(root!.textContent).toContain('protected.md'));
 }
-for (const withReason of [true, false]) it('blocks a protected file menu and mixed batch purge '+(withReason?'using the server reason':'with an older response'), async () => {
+for (const withReason of [true, false]) it('lets a recycled file be purged '+(withReason?'even when an older reason is present':'without a server reason'), async () => {
   await mount(withReason);
+  fixture.purge.mockResolvedValue({ ok: true });
+  fixture.batch.mockResolvedValue({ skipped: 0, ok: ['protected'], failed: [] });
   const select = root!.querySelector<HTMLInputElement>('.el-table__body-wrapper input[type="checkbox"]')!;
   select.click(); await nextTick();
   await vi.waitFor(()=>expect(root!.querySelector('.library-batch')).toBeTruthy());
   const batch=[...root!.querySelectorAll<HTMLButtonElement>('.library-batch button')].find(button=>button.textContent?.includes('彻底删除'))!;
-  expect(batch.disabled).toBe(true);
-  batch.click();
+  expect(batch.disabled).toBe(false);
   const more=[...root!.querySelectorAll<HTMLButtonElement>('button')].find(button=>button.textContent?.includes('更多'))!;
   more.click(); await nextTick();
-  await vi.waitFor(()=>expect([...document.querySelectorAll('[role="menuitem"]')].some(item=>item.textContent?.includes('彻底删除'))).toBe(true));
-  const purge=[...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(item=>item.textContent?.includes('彻底删除'))!;
-  expect(purge.getAttribute('aria-disabled')).toBe('true');
-  purge.click(); await nextTick();
-  expect(fixture.purge).not.toHaveBeenCalled(); expect(fixture.batch).not.toHaveBeenCalled();
-  expect(root!.textContent).toContain('protected.md');
+  const purge=await vi.waitFor(()=>[...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(item=>item.textContent?.includes('彻底删除'))!);
+  expect(purge.getAttribute('aria-disabled')).not.toBe('true');
+  vi.spyOn(ElMessageBox, 'confirm').mockResolvedValue('confirm');
+  purge.click();
+  await vi.waitFor(()=>expect(fixture.purge).toHaveBeenCalledWith('protected'));
+});
+it('lets a download-only archive be purged from trash', async () => {
+  fixture.list.mockResolvedValue({ items: [{ id: 'zip', name: '1111.zip', kind: 'FILE', state: 'RECYCLED', scope: 'PRIVATE', canManage: true, purgeBlockedReason: null,
+    currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'DOWNLOAD_ONLY', sizeBytes: 8, parseReason: '压缩包里没有可引用的文字，仅保存原件' } }], total: 1, breadcrumb: [] });
+  fixture.purge.mockResolvedValue({ ok: true });
+  root=document.createElement('div'); document.body.append(root);
+  const router=createRouter({ history:createMemoryHistory(), routes:[{path:'/console/library/:view', component:Library}] });
+  await router.push('/console/library/trash'); await router.isReady();
+  app=createApp({render:()=>h(RouterView)}); app.use(ElementPlus); app.use(router); app.mount(root);
+  await vi.waitFor(()=>expect(root!.textContent).toContain('1111.zip'));
+  expect(root!.textContent).not.toContain('文件暂不支持彻底删除');
+  const more=[...root!.querySelectorAll<HTMLButtonElement>('button')].find(button=>button.textContent?.includes('更多'))!;
+  more.click(); await nextTick();
+  const purge=await vi.waitFor(()=>[...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(item=>item.textContent?.includes('彻底删除'))!);
+  expect(purge.getAttribute('aria-disabled')).not.toBe('true');
+  vi.spyOn(ElMessageBox, 'confirm').mockResolvedValue('confirm');
+  purge.click();
+  await vi.waitFor(()=>expect(fixture.purge).toHaveBeenCalledWith('zip'));
 });

@@ -222,8 +222,8 @@ export const usageApi = {
 };
 
 export const auditApi = {
-  list: (page = 1, action = '') => {
-    const params = new URLSearchParams({ page: String(page), pageSize: '20' });
+  list: (page = 1, action = '', pageSize = 10) => {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (action) params.set('action', action);
     return http<{ total: number; page: number; pageSize: number; rows: AuditRow[] }>(`/api/audit?${params}`);
   },

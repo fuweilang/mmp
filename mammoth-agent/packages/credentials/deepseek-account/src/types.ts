@@ -61,6 +61,7 @@ export type AccountFailureCode =
   | 'SMS_CODE_EXPIRED'
   | 'SMS_UNAVAILABLE'
   | 'CLIENT_TOO_OLD'
+  | 'PHONE_ALREADY_REGISTERED'
 /** SMS send outcome. mockCode is present only for the local mock provider. */
 export type SmsSendResult =
   | { readonly ok: true; readonly retryAfterSeconds: number; readonly mockCode?: string }

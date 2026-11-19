@@ -127,9 +127,13 @@ it('Admin statistics count active file owners and shared files, but storage incl
       {id:'v1',sizeBytes:10,parseStatus:'READY'},{id:'v2',sizeBytes:2,parseStatus:'FAILED'},
       {id:'old',sizeBytes:8,parseStatus:'FAILED'},{id:'v3',sizeBytes:5,parseStatus:'FAILED'},
     ]},
+    orgMember:{findMany:async()=>[
+      {tenantId:'a',user:{name:'管理员乙',phone:'13800000002'}},
+      {tenantId:'a',user:{name:'管理员甲',phone:'13800000001'}},
+    ]},
   } as never);
   const page=await service.tenants({id:'platform',isPlatformAdmin:true},{page:1,pageSize:20} as never);
-  assert.deepEqual(page.items[0],{id:'a',name:'A',status:'active',memberCount:2,sharedFiles:1,activeFiles:2,folderCount:1,linkCount:0,recycledCount:1,usedBytes:25,failed:1});
+  assert.deepEqual(page.items[0],{id:'a',name:'A',status:'active',admins:[{name:'管理员乙',phone:'13800000002'},{name:'管理员甲',phone:'13800000001'}],memberCount:2,sharedFiles:1,activeFiles:2,folderCount:1,linkCount:0,recycledCount:1,usedBytes:25,failed:1});
 });
 it('Admin ownership validation accepts a real platform member, never a platform-only or inactive account', async () => {
   const service = new LibraryAdminService({} as never);

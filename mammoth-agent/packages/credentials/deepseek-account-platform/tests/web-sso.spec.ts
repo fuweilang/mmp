@@ -78,6 +78,26 @@ describe('Ground local Web identity', () => {
     policy.dispose()
   })
 
+  it('follows the enterprise Ground reports for a platform admin', async () => {
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      user: { id: 'user-1', isPlatformAdmin: true }, currentTenant: null,
+    })))
+    const home = setup()
+    const stale = token('user-1', 'stale-tenant')
+    expect(await home.policy.authorizeIndex(request(stale))).toBe(true)
+    expect(home.acceptGrant).toHaveBeenCalledWith(stale, { userId: 'user-1', tenantId: null }, expect.any(Object))
+    home.policy.dispose()
+
+    fetcher.mockResolvedValue(new Response(JSON.stringify({
+      user: { id: 'user-1', isPlatformAdmin: true }, currentTenant: { id: 'live-tenant', status: 'active' },
+    })))
+    const switched = setup()
+    const jwt = token('user-1', 'stale-tenant')
+    expect(await switched.policy.authorizeIndex(request(jwt))).toBe(true)
+    expect(switched.acceptGrant).toHaveBeenCalledWith(jwt, { userId: 'user-1', tenantId: 'live-tenant' }, expect.any(Object))
+    switched.policy.dispose()
+  })
+
   it('rejects ambiguous cookies and a deployment whose browser cookies cannot be shared', () => {
     expect(groundWebCookie({ headers: { cookie: 'session=a; session=b' } }, 'session')).toBeUndefined()
     expect(groundWebCookie({ headers: { cookie: 'session=%XX' } }, 'session')).toBeUndefined()

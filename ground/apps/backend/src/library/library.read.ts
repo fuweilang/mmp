@@ -2,11 +2,15 @@ import type { LibraryAuthService } from './library.auth';
 import type { LibraryContext } from './library.context';
 import { LibraryError, libraryNotFound } from './library.errors';
 import { fileExtension } from './library.files';
+import { fuseLibraryHits, keywordIsStrong } from './library.search-index';
+import { libraryEmbedQuery } from './library.embed-port';
 import {
   excerptAround,
+  INVENTORY_NAMES,
+  isLibraryInventoryQuestion,
   libraryFileTypeKey,
+  librarySearchTerms,
   quotableInChat,
-  SEARCH_FILES,
   SEARCH_HITS,
   toLibraryItem,
   versionBrief,
@@ -157,43 +161,120 @@ export class LibraryReadService {
     return { items, breadcrumb, parentScope, total, page, pageSize: pageSize ?? total, ownerUserId: folderOwner };
   }
 
-  /** 按正文或文件名做字面检索。视频和未解析的非图片文件不会出现。可查看的图片按文件名命中，即使没有抽出文字。 */
+  /** 按正文或文件名检索本人私人资料和已企业共享的资料。未转写的视频不会出现。图片可以只按文件名命中。 */
   async searchQuotes(actor: Actor, rawQuery: string) {
     this.auth.requireMember(actor);
     const query = rawQuery.trim();
     if (query.length < 1 || query.length > 200) throw new LibraryError(400, '检索词需要 1 到 200 个字符', 'BAD_QUERY');
-    const needle = query.toLowerCase();
+    const terms = librarySearchTerms(query);
+    const needles = terms.length > 0 ? terms : [query.toLowerCase()];
+    if (!isLibraryInventoryQuestion(query) && this.ctx.store.searchLexical) {
+      return this.indexedSearch(actor, query, needles);
+    }
     const nodes = (await this.ctx.store.listNodes(actor.tenantId))
       .filter((node) => quotableInChat(actor, node) && node.currentVersionId)
       .sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
-    const hits: LibrarySearchHit[] = [];
-    let examined = 0;
+    if (isLibraryInventoryQuestion(query)) return this.inventoryHits(query, nodes);
+    const ranked: Array<LibrarySearchHit & { score: number; updatedAt: number }> = [];
     for (const node of nodes) {
-      if (hits.length >= SEARCH_HITS || examined >= SEARCH_FILES) break;
-      examined += 1;
       const version = await this.ctx.store.getVersion(node.currentVersionId!);
       if (!version) continue;
       const viewable = (version.parseStatus === 'READY' || version.parseStatus === 'DOWNLOAD_ONLY')
         && VIEWABLE_IMAGE_EXTENSIONS.has(fileExtension(version.originalName));
       if (!viewable && version.parseStatus !== 'READY') continue;
       const chunks = version.parseStatus === 'READY' ? await this.ctx.store.listChunks(version.id) : [];
-      const textHit = chunks.find((row) => row.content.toLowerCase().includes(needle));
-      const nameHit = node.name.toLowerCase().includes(needle);
-      const source = textHit ?? (nameHit ? chunks[0] : undefined);
-      if (!source && !(viewable && nameHit)) continue;
-      hits.push({
+      const nameTerms = needles.filter((term) => node.name.toLowerCase().includes(term));
+      const summaryTerms = needles.filter((term) => (version.summary ?? '').toLowerCase().includes(term));
+      let bestChunk: (typeof chunks)[number] | undefined;
+      let bestCount = 0;
+      for (const row of chunks) {
+        const count = needles.filter((term) => row.content.toLowerCase().includes(term)).length;
+        if (count > bestCount) { bestCount = count; bestChunk = row; }
+      }
+      const chosen = bestChunk;
+      const textTerms = chosen ? needles.filter((term) => chosen.content.toLowerCase().includes(term)) : [];
+      const score = new Set([...nameTerms, ...textTerms, ...summaryTerms]).size;
+      if (score === 0) continue;
+      const matchedTerm = textTerms[0] ?? summaryTerms[0] ?? nameTerms[0] ?? needles[0]!;
+      const imageOnly = viewable && textTerms.length === 0 && summaryTerms.length === 0;
+      const summarySource = summaryTerms.length > 0 && !chosen
+        ? { locator: 'summary:1', locatorKind: 'paragraph' as const, content: version.summary ?? '' }
+        : undefined;
+      const source = imageOnly ? undefined : chosen ?? summarySource ?? (nameTerms.length > 0 ? chunks[0] : undefined);
+      ranked.push({
         nodeId: node.id,
         versionId: version.id,
         versionNo: version.versionNo,
         name: node.name,
         locator: source?.locator ?? 'image',
         locatorKind: source?.locatorKind ?? 'image',
-        quote: source ? excerptAround(source.content, needle) : '',
-        matched: textHit ? 'text' : 'name',
-        ...(viewable ? { image: true as const } : {}),
+        quote: source ? excerptAround(source.content, matchedTerm) : '',
+        matched: textTerms.length > 0 || summaryTerms.length > 0 ? 'text' : 'name',
+        ...(imageOnly ? { image: true as const } : {}),
+        score,
+        updatedAt: node.updatedAt,
       });
     }
-    return { query, hits, truncated: hits.length >= SEARCH_HITS || examined < nodes.length && examined >= SEARCH_FILES };
+    ranked.sort((a, b) => b.score - a.score || b.updatedAt - a.updatedAt || a.name.localeCompare(b.name, 'zh'));
+    const hits = ranked.slice(0, SEARCH_HITS).map(({ score: _score, updatedAt: _updatedAt, ...hit }) => hit);
+    return { query, hits, truncated: ranked.length > SEARCH_HITS };
+  }
+
+  private async indexedSearch(actor: Actor, query: string, needles: string[]) {
+    const lexical = await this.ctx.store.searchLexical!(actor, needles);
+    let ranked = lexical;
+    const embed = libraryEmbedQuery();
+    if (!keywordIsStrong(lexical, needles.length) && embed && this.ctx.store.searchSemantic) {
+      const vector = await embed(needles.join(' ')).catch(() => null);
+      if (vector) {
+        const semantic = await this.ctx.store.searchSemantic(actor, vector).catch(() => []);
+        ranked = fuseLibraryHits(lexical, semantic);
+      }
+    }
+    const hits = ranked.slice(0, SEARCH_HITS).map(({ score: _score, ...hit }) => hit);
+    return { query, hits, truncated: ranked.length > SEARCH_HITS };
+  }
+
+  /** 文件名清单放进一条引用，对话端只保留前几条命中时也能看到全部名称。 */
+  private async inventoryHits(query: string, nodes: NodeRecord[]) {
+    const ordered = [...nodes].sort((a, b) => a.name.localeCompare(b.name, 'zh') || a.id.localeCompare(b.id));
+    const names: string[] = [];
+    let carrier: { nodeId: string; versionId: string; versionNo: number } | undefined;
+    for (const node of ordered) {
+      if (names.length >= INVENTORY_NAMES) break;
+      const version = await this.ctx.store.getVersion(node.currentVersionId!);
+      if (!version) continue;
+      carrier ??= { nodeId: node.id, versionId: version.id, versionNo: version.versionNo };
+      names.push(node.name);
+    }
+    if (!carrier) return { query, hits: [], truncated: false };
+    const quote = ordered.length > INVENTORY_NAMES
+      ? await this.inventoryFolderQuote(ordered)
+      : `可引用资料共 ${ordered.length} 份：\n${names.map((name, index) => `${index + 1}. ${name}`).join('\n')}`;
+    const hits: LibrarySearchHit[] = [{
+      nodeId: carrier.nodeId,
+      versionId: carrier.versionId,
+      versionNo: carrier.versionNo,
+      name: '企业资料目录',
+      locator: '',
+      locatorKind: 'paragraph',
+      quote,
+      matched: 'name',
+    }];
+    return { query, hits, truncated: ordered.length > INVENTORY_NAMES };
+  }
+
+  private async inventoryFolderQuote(nodes: NodeRecord[]): Promise<string> {
+    const counts = new Map<string, number>();
+    for (const node of nodes) {
+      const parent = node.parentId ? await this.ctx.store.getNode(node.parentId) : null;
+      const label = parent?.kind === 'FOLDER' ? parent.name : '根目录';
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    const lines = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'))
+      .map(([name, count]) => `${name} ${count} 份`);
+    return `可引用资料共 ${nodes.length} 份，未逐份列出。\n${lines.join('\n')}`;
   }
 
   async versions(actor: Actor, nodeId: string) {

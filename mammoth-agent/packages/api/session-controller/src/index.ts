@@ -112,10 +112,12 @@ export interface Config {
   readonly nativeOpen?: boolean
   /** Positive integral milliseconds of list work before yielding between complete rows. */
   readonly listWorkSliceMs?: number
+  /** Rewrite each ordinary Session's sticky route to mammoth-ground/auto once per process. */
+  readonly forceAutomatic?: boolean
 }
 
 /** Deployment policy after schema defaults have been applied. */
-type ResolvedConfig = Config & { readonly listWorkSliceMs: number }
+type ResolvedConfig = Config & { readonly listWorkSliceMs: number; readonly forceAutomatic: boolean }
 
 /** Host integrations replaceable by direct unit tests. */
 export interface SessionControllerInternals {
@@ -152,6 +154,7 @@ export class SessionController extends TypertRemoteService {
   static Config: z<Config, ResolvedConfig> = z.object({
     nativeOpen: z.boolean(),
     listWorkSliceMs: z.natural().min(1).default(16),
+    forceAutomatic: z.boolean().default(false),
   })
 
   private historyController!: HistoryController
@@ -168,6 +171,7 @@ export class SessionController extends TypertRemoteService {
   private readonly revealPath: (path: string, signal: AbortSignal) => Promise<void>
   private readonly canOpenPath: () => boolean
   private readonly listWorkSliceMs: number
+  private readonly forceAutomatic: boolean
   private readonly promotions = new Set<Promise<void>>()
 
   /**
@@ -177,7 +181,9 @@ export class SessionController extends TypertRemoteService {
    */
   constructor(ctx: Context, config: Config, internals: SessionControllerInternals = {}) {
     super(ctx, 'sessionController', { namespace: 'session' })
-    this.listWorkSliceMs = SessionController.Config(config).listWorkSliceMs
+    const resolved = SessionController.Config(config)
+    this.listWorkSliceMs = resolved.listWorkSliceMs
+    this.forceAutomatic = resolved.forceAutomatic
     this.fileApplications = internals.fileApplications ?? nativeFileApplications
     this.openFileApplication = internals.openFileApplication ?? openNativeFileApplication
     this.openPath = internals.openPath ?? openNativeAssociatedPath
@@ -191,7 +197,7 @@ export class SessionController extends TypertRemoteService {
     ctx.typert.resources.register('session', { resolve: resolveSessionResource })
     this.agents = new ApiSessionAgentController(ctx)
     this.agents.initialize()
-    this.commands = new SessionCommandController(ctx, this.agents, process.cwd())
+    this.commands = new SessionCommandController(ctx, this.agents, process.cwd(), this.forceAutomatic)
     ctx.effect(() => ctx.fileUploads.registerAgentResolver(async (sessionId) => {
       const result = await this.agents.resolveAgent(sessionId)
       if ('error' in result) throw result.error
@@ -222,7 +228,18 @@ export class SessionController extends TypertRemoteService {
       ctx.emit('api-session/added', this.listState.summaryFor(session))
     })
     ctx.on('session/disposed', (session) => {
-      ctx.emit('api-session/removed', session.id)
+      const persistence = ctx.get('sessionPersistence')
+      if (persistence === undefined) {
+        ctx.emit('api-session/removed', session.id)
+        return
+      }
+      // Unloading a live Agent is not deletion. A stored task stays in every
+      // connected browser until persistence.remove has actually dropped it.
+      void persistence.stat(session.id).then((snapshot) => {
+        if (snapshot === undefined) ctx.emit('api-session/removed', session.id)
+      }, (error: unknown) => {
+        ctx.logger.warn(`session-controller: kept "${session.id}" listed because its store could not be read: ${String(error)}`)
+      })
     })
     const publishAgentAvailability = ({ agent }: { agent: Agent }): undefined => {
       if (ctx.sessions.get(agent.id) === agent.session) {

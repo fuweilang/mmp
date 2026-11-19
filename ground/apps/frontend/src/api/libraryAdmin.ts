@@ -1,7 +1,7 @@
 import { http, apiUrl, ApiError } from './http';
 import type { LibraryPreview, LibraryVersion, LibraryScopeImpact } from './library';
 export type AdminVersion=Pick<LibraryVersion,'id'|'versionNo'|'mimeType'|'sizeBytes'|'parseStatus'|'parseReason'|'originalName'|'createdAt'>&{createdByUserId:string};
-export type AdminTenant={id:string;name:string;status:string;activeFiles:number;folderCount:number;linkCount:number;recycledCount:number;usedBytes:number;failed:number;memberCount:number;sharedFiles:number};
+export type AdminTenant={id:string;name:string;status:string;activeFiles:number;folderCount:number;linkCount:number;recycledCount:number;usedBytes:number;failed:number;memberCount:number;sharedFiles:number;admins?:{name:string;phone:string}[]};
 export type AdminPage<T>={items:T[];total:number;page:number;pageSize:number};
 export type AdminFolder={id:string;name:string;parentId:string|null;ownerUserId:string;scope:'PRIVATE'|'ENTERPRISE'};
 export type AdminOptions={members?:{id:string;name:string|null;phone?:string|null;fileCount:number}[];tenant:Pick<AdminTenant,'id'|'name'|'status'>;limits:{maxFileBytes:number;allowedExtensions:string[]};owners:{id:string;name:string|null}[];filterOwners?:{id:string;name:string|null}[];filterFolders?:{id:string;name:string;parentId:string|null}[];folders:AdminFolder[]};

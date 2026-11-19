@@ -50,6 +50,12 @@ export function membershipRoleColor(role: string) {
   return role === 'MEMBER' ? ROLE_COLORS.org_member : ROLE_COLORS.org_admin;
 }
 
+/** 这个手机号登录后进入的企业：加入顺序里第一家仍在用的。平台账号不进企业。 */
+export function loginTenantId(row: AdminUserRow): string | null {
+  if (isPlatformIdentity(row)) return null;
+  return row.tenants.find((tenant) => tenant.status === undefined || tenant.status === 'active')?.id ?? null;
+}
+
 export function roleLabel(row: AdminUserRow) {
   const tags = roleTags(row);
   return tags.length ? tags.map((tag) => tag.label).join(' · ') : '普通用户';

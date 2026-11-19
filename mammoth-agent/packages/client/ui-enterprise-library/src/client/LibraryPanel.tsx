@@ -4,7 +4,7 @@ import type { LibraryKey } from './locales.ts'
 import type { HostObservable, InjectFace, PropsLocale, PropsRuntime, PropsRenderFactories } from '@mammoth-ai/mmp-client-ui-slots'
 import type {} from '@mammoth-ai/mmp-client-ui-layout/client'
 import type {} from '@mammoth-ai/mmp-client-ui-sidebar-documentpreview/client'
-import { fetchLibraryItems, fetchLibrarySource, fetchLibraryPage, fetchLibraryScopeImpact, fetchLibraryPreviewBytes, LibraryRequestError, libraryRequest, type LibraryFetch, type LibraryView } from './api.ts'
+import { fetchLibraryItems, fetchLibrarySource, fetchLibraryPage, fetchLibraryScopeImpact, fetchLibraryPreviewBytes, LibraryRequestError, libraryRequest, libraryTransport, type LibraryFetch, type LibraryView } from './api.ts'
 import { choiceBlock, type LibraryChoice } from './selection.ts'
 import { RowActions } from './LibraryRowActions.tsx'
 import { LibraryTree } from './LibraryTree.tsx'
@@ -27,6 +27,7 @@ export type LibraryPanelInjected = {
 }
 export type LibraryPanelProps = PropsRuntime<'main'> & PropsLocale<'enterpriseLibrary'> & InjectFace<LibraryPanelInjected> & PropsRenderFactories
 const VIEWS: readonly LibraryView[] = ['recent', 'mine', 'shared', 'trash']
+const PAGE_SIZE = 20
 type SaveTarget = { parentId: string | null; scope: 'PRIVATE' | 'ENTERPRISE'; name: string }
 type Edit = { kind: 'folder' | 'link' | 'rename' | 'move'; item?: LibraryChoice; target?: SaveTarget }
 type ScopeConfirm = { nodeId: string; scope: 'PRIVATE' | 'ENTERPRISE'; total: number; treeRevision: string; moveParentId?: string | null }
@@ -106,6 +107,9 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [located, setLocated] = useState<{ view: 'mine' | 'shared'; ids: readonly string[] } | null>(null)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
+  const recentScroll = useRef<HTMLElement | null>(null)
+  const recentSentinel = useRef<HTMLDivElement | null>(null)
+  const recentPaging = useRef(false)
   const [limits, setLimits] = useState<{ maxFileBytes: number; allowedExtensions: string[] }>()
   const [path, setPath] = useState<readonly { id: string; name: string }[]>([])
   const [parentScope, setParentScope] = useState<'PRIVATE' | 'ENTERPRISE'>()
@@ -121,8 +125,6 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [busy, setBusy] = useState(false)
   const [blocked, setBlocked] = useState<string | null>(null)
   const [configReady, setConfigReady] = useState(false)
-  const [tenants, setTenants] = useState<readonly { id: string; name: string }[]>([])
-  const [switching, setSwitching] = useState(false)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [filterOpen, setFilterOpen] = useState(false)
@@ -185,7 +187,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [movePath, setMovePath] = useState<readonly { id: string; name: string; scope?: string | undefined }[]>([])
   const parentId = path.at(-1)?.id ?? null
   const refresh = () => { setRevision(n => n + 1) }
-  /** Platform admins have no default enterprise; let them enter one in place. */
+  /** The signed-in enterprise owns this library. A lone membership with no session enterprise is entered in place. */
   const [memberTenantId, setMemberTenantId] = useState<string | null>(null)
   const entering = useRef(false)
   const autoTenant = useRef<string | null>(null)
@@ -194,7 +196,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       tenants: readonly { id: string; name: string }[]; selectedTenantId: string | null
     }
     if (!Array.isArray(context.tenants)) throw new Error(t('operationFailed'))
-    setTenants(context.tenants); setMemberTenantId(context.selectedTenantId)
+    setMemberTenantId(context.selectedTenantId)
     const only = context.tenants.length === 1 ? context.tenants[0] : undefined
     if (!context.selectedTenantId && only && autoTenant.current !== only.id) {
       autoTenant.current = only.id
@@ -204,7 +206,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const enterTenant = async (tenantId: string) => {
     if (entering.current || busy) return
     entering.current = true
-    setSwitching(true); setError(''); setBlocked(t('loading')); closePreview(); setItems([]); setVersions(undefined)
+    setError(''); setBlocked(t('loading')); closePreview(); setItems([]); setVersions(undefined)
     setPath([]); setFilter('all'); setView('mine'); setUploadTarget(undefined); setEdit(undefined)
     setMountedRoots({ mine: true, shared: false }); setExpandedRoots({ mine: true, shared: false })
     try {
@@ -213,7 +215,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     } catch (error) {
       setBlocked(t('memberContextHint'))
       showToast(error instanceof Error ? error.message : t('operationFailed'))
-    } finally { entering.current = false; setSwitching(false) }
+    } finally { entering.current = false }
   }
   useEffect(() => { void loadTenants().catch(() => { /* Failed discovery grants no enterprise access. */ }) }, [origin, fetchImpl, revision])
   useEffect(() => { setPage(1) }, [view, parentId, filter])
@@ -247,11 +249,14 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   useEffect(() => {
     if (!configReady || blocked !== null) { setLoading(false); setItems([]); setTotal(0); return }
     const control = new AbortController()
-    setLoading(true); setItems([])
+    const append = view === 'recent' && page > 1
+    setLoading(true)
+    if (!append) setItems([])
     void fetchLibraryPage(origin, view, '', fetchImpl, control.signal, parentId, page, filter).then(next => {
       if (!control.signal.aborted) {
-        const lastPage = Math.max(1, Math.ceil(next.total / 20)); if (page > lastPage) { setPage(lastPage); return }
-        setItems(next.items); setTotal(next.total); setParentScope(next.parentScope);
+        const lastPage = Math.max(1, Math.ceil(next.total / PAGE_SIZE)); if (page > lastPage) { setTotal(next.total); setPage(lastPage); return }
+        setItems(current => append ? [...new Map([...current, ...next.items].map(row => [row.nodeId, row])).values()] : next.items)
+        setTotal(next.total); setParentScope(next.parentScope);
         if (parentId && next.breadcrumb.length) setPath(next.breadcrumb); setError('') }
     }).catch(e => { if (!control.signal.aborted) {
       if (parentId && folderGone(e)) {
@@ -265,6 +270,20 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     } }).finally(() => { if (!control.signal.aborted) setLoading(false) })
     return () => { control.abort() }
   }, [configReady, blocked, origin, view, fetchImpl, t, revision, parentId, page, filter])
+  useEffect(() => { if (!loading) recentPaging.current = false }, [loading])
+  useEffect(() => {
+    if (view !== 'recent' || loading || page * PAGE_SIZE >= total) return
+    const root = recentScroll.current
+    const target = recentSentinel.current
+    if (!root || !target || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some(entry => entry.isIntersecting) || recentPaging.current) return
+      recentPaging.current = true
+      setPage(current => current + 1)
+    }, { root, rootMargin: '160px' })
+    observer.observe(target)
+    return () => { observer.disconnect() }
+  }, [view, loading, page, total, items.length])
   useEffect(() => {
     if (edit?.kind !== 'move') return
     const control = new AbortController()
@@ -372,7 +391,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   }
   const downloadVersion = (item: Pick<LibraryChoice, 'nodeId'> & { versionId?: string | null }, versionId = item.versionId) => {
     const link = document.createElement('a')
-    link.href = `${origin}/ground-library/nodes/${encodeURIComponent(item.nodeId)}/download?versionId=${encodeURIComponent(versionId ?? '')}`
+    link.href = `${libraryTransport(origin, `nodes/${encodeURIComponent(item.nodeId)}/download`)}?versionId=${encodeURIComponent(versionId ?? '')}`
     link.download = ''; link.click()
   }
   const rowAction = (action: string, item: LibraryChoice) => {
@@ -470,11 +489,12 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
         <RowActions item={item} view={view} busy={busy} t={t} onAction={rowAction} />
       </span>
     </div>)}
-    {total > 20 && <nav className={css.pagination} aria-label={t('browse')}>
+    {view !== 'recent' && total > PAGE_SIZE && <nav className={css.pagination} aria-label={t('browse')}>
       <Button size="sm" disabled={loading || page <= 1} onClick={() => { setPage(n => n - 1) }}>{t('previousPage')}</Button>
-      <span>{page} / {Math.ceil(total / 20)}</span>
-      <Button size="sm" disabled={loading || page * 20 >= total} onClick={() => { setPage(n => n + 1) }}>{t('nextPage')}</Button>
+      <span>{page} / {Math.ceil(total / PAGE_SIZE)}</span>
+      <Button size="sm" disabled={loading || page * PAGE_SIZE >= total} onClick={() => { setPage(n => n + 1) }}>{t('nextPage')}</Button>
     </nav>}
+    {view === 'recent' && items.length < total && <div ref={recentSentinel} className={css.recentSentinel} />}
   </div>
   return <section ref={sidebarResize.pageRef} className={css.page} style={sidebarResize.style} aria-busy={busy || loading}>
     <aside className={css.navigation} ref={sidebarResize.attachNavigation}>
@@ -494,7 +514,6 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       </div>
 
       {blocked !== null && <div role="alert" className={css.error}>{blocked}</div>}
-      {tenants.length > 1 && tenants.map(tenant => <Button key={tenant.id} size="sm" aria-pressed={memberTenantId === tenant.id} disabled={switching || busy} onClick={() => { void enterTenant(tenant.id) }}>{tenant.name}</Button>)}
       <nav className={css.navScroll} aria-label={t('browse')}>
         <LibraryCreateMenu prominent name={t('new')} disabled={busy || blocked !== null} t={t}
           onCreate={action => {
@@ -562,7 +581,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       </div>}
       {source?.linkUrl && <div className={css.previewStatus}><IconLinkOutlineRegular size={32} /><p>{source.linkUrl}</p><a href={source.linkUrl} target="_blank" rel="noopener noreferrer">{t('openLink')}</a></div>}
       {source?.parseReason && <p className={css.previewNote}>{source.parseReason}</p>}
-      {configReady && blocked === null && view === 'recent' && !source && !previewLoading && !previewError && <section className={css.recentFiles} aria-label={t('recent')}><h2>{t('recent')}</h2>{flatList}</section>}
+      {configReady && blocked === null && view === 'recent' && !source && !previewLoading && !previewError && <section ref={recentScroll} className={css.recentFiles} aria-label={t('recent')}><h2>{t('recent')}</h2>{flatList}</section>}
       {configReady && blocked === null && view !== 'recent' && !source && !previewLoading && !previewError && <div className={css.previewEmpty}>
         <IconFolderCloseRegular size={40} /><h2>{t('selectPreview')}</h2><p>{t('selectPreviewHint')}</p>
       </div>}

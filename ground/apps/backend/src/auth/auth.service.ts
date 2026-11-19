@@ -115,7 +115,12 @@ export class AuthService {
     const enterpriseName = input.enterpriseName.trim();
     if (!enterpriseName) throw new BadRequestException('注册必须填写企业名称');
     const existing = await this.prisma.user.findUnique({ where: { phone } });
-    if (existing) throw new ConflictException('手机号已注册');
+    if (existing) {
+      throw new ConflictException({
+        code: 'PHONE_ALREADY_REGISTERED',
+        message: '这个手机号已经被注册了',
+      });
+    }
 
     const passwordHash = await bcrypt.hash(input.password, 10);
     const slug = input.slug.trim();

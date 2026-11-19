@@ -19,16 +19,25 @@ import type {} from '@mammoth-ai/mmp-client-connection'
 import { installGroundBilling } from './ground-billing.ts'
 import { installGroundLibrary } from './ground-library.ts'
 import { installGroundLibraryPrompt } from './ground-library-prompt.ts'
+import { installGroundLibraryPassage } from './ground-library-passage.ts'
 import { installGroundLibrarySearch } from './ground-library-search.ts'
 import { loggedFetch } from './http-log.ts'
 import { buildAuthorizeUrl, exchangeGroundCode, fetchGroundSessionMe, fetchGroundUserinfo, groundBrowserLogoutUrl, groundOidcDoneHtml, groundOidcEndpoints, groundSessionToken, groundSessionProfile } from './ground-oidc.ts'
+
+/** Session JWT enterprise, when the login is already inside one company. */
+function sessionTenantId(token: string): string | undefined {
+  try {
+    const tenantId = groundWebTokenClaims(token).tenantId
+    return tenantId && tenantId.length > 0 ? tenantId : undefined
+  } catch { return undefined }
+}
 
 const KEY = credentialKey('deepseek-account-platform', 'default')
 const WEB_OWNER = credentialKey('ground-web-owner', 'default')
 const webOwner = z.object({ userId: z.string().min(1), tenantId: z.string().nullable() })
 const DEVICE = credentialKey('deepseek-account-platform', 'device')
 
-const ACCOUNT_FAILURE_CODES = ['SMS_RATE_LIMITED', 'SMS_INVALID', 'SMS_CODE_EXPIRED', 'SMS_UNAVAILABLE', 'CLIENT_TOO_OLD'] as const
+const ACCOUNT_FAILURE_CODES = ['SMS_RATE_LIMITED', 'SMS_INVALID', 'SMS_CODE_EXPIRED', 'SMS_UNAVAILABLE', 'CLIENT_TOO_OLD', 'PHONE_ALREADY_REGISTERED'] as const
 
 /**
  * Read the stable failure code Ground returns for SMS and desktop registration.
@@ -249,6 +258,11 @@ export class PlatformAccount extends DeepSeekAccount {
       let libraryContext: { account: string; selected: string } | undefined
       const libraryToken = async () => {
         const account = await this.groundSessionJwt()
+        // The signed-in enterprise is the only library. A previous in-panel choice must not outlive it.
+        if (account && sessionTenantId(account)) {
+          libraryContext = undefined
+          return account
+        }
         if (libraryContext?.account !== account) libraryContext = undefined
         return libraryContext?.selected ?? account
       }
@@ -266,6 +280,7 @@ export class PlatformAccount extends DeepSeekAccount {
       })
       installGroundLibraryPrompt(ctx, this.origin, libraryToken, rejectLibrary, this.requestTimeout)
       installGroundLibrarySearch(ctx, this.origin, libraryToken, rejectLibrary, this.requestTimeout)
+      installGroundLibraryPassage(ctx, this.origin, libraryToken, rejectLibrary, this.requestTimeout)
       if (resolved.historySync) installGroundHistory(ctx, { origin: this.origin, account: this,
         intervalMs: resolved.historySyncIntervalMs, batchSize: resolved.historyBatchSize, requestTimeoutMs: this.requestTimeout,
         clientKind: resolved.desktopPlatform === null ? 'web' : 'desktop' })

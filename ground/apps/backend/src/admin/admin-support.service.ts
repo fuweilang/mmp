@@ -215,6 +215,7 @@ export class AdminSupportService {
         id: m.tenant.id,
         name: m.tenant.name,
         role: m.role,
+        status: m.tenant.status,
       })),
     };
   }

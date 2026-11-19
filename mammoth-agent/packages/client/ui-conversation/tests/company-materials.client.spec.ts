@@ -55,7 +55,8 @@ it('company materials retrieval failure retains both question and selection and 
 it('company materials empty results keep the no-evidence note for the model and the question for the user',async()=>{
  const f=await fixture();f.fetch.mockResolvedValue(new Response('{"hits":[]}',{status:200}));f.shell.setDraft(query);f.shell.setEnterpriseKnowledge(true);f.shell.submit()
  await vi.waitFor(()=>expect(f.send).toHaveBeenCalledTimes(1))
- expect(f.send.mock.calls[0]?.[1]).toContain('当前权限范围内没有检索到相关资料')
+ expect(f.send.mock.calls[0]?.[1]).toContain('没有检索到相关资料')
+ expect(f.send.mock.calls[0]?.[1]).toContain('不要说成没有权限')
  expect(f.send.mock.calls[0]?.[7]).toMatchObject({ display: query, images: [] })
 })
 it('company materials attaches a retrieved picture and does not tell the model nothing was found',async()=>{

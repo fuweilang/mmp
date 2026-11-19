@@ -7,6 +7,7 @@ import { fileExtension } from './library.files';
 import { convertLegacyOffice } from './library.office-convert';
 import { presentationText, workbookText } from './library.office-text';
 import { recognizeImageText } from './library.ocr';
+import { transcribeVideo } from './library.asr';
 import type { ParseChunk, ParseResult } from './library.types';
 
 const MAX_EXTRACT_CHARS = 200_000;
@@ -34,7 +35,10 @@ export type ZipEntry = { name: string; size: number };
 export async function parseLibraryBytes(name: string, bytes: Buffer): Promise<ParseResult> {
   const ext = fileExtension(name);
   try {
-    if (VIDEO_EXTENSIONS.includes(ext)) return downloadOnly(VIDEO_REASON);
+    if (VIDEO_EXTENSIONS.includes(ext)) {
+      const text = await transcribeVideo(name, bytes);
+      return text ? textChunks(text) : downloadOnly(VIDEO_REASON);
+    }
     if (IMAGE_EXTENSIONS.includes(ext)) {
       const text = await recognizeImageText(name, bytes);
       return text ? textChunks(text) : downloadOnly(IMAGE_REASON);

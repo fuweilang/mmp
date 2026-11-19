@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import type { LibraryAuthService } from './library.auth';
 import { withWrite, type LibraryContext } from './library.context';
-import { FILE_PURGE_BLOCKED_REASON, LibraryError, libraryNotFound } from './library.errors';
+import { LibraryError, libraryNotFound } from './library.errors';
 import { assertAllowedUpload, safeDisplayName, safeLinkUrl, safeNodeName } from './library.files';
 import { toLibraryItem } from './library.items';
 import type { LibraryMediaService } from './library.media';
@@ -279,11 +279,13 @@ export class LibraryMutateService {
     if (node.state !== 'RECYCLED') {
       throw new LibraryError(400, '请先回收到回收站再彻底删除', 'BAD_STATE');
     }
-    if (node.kind === 'FILE') throw new LibraryError(409, FILE_PURGE_BLOCKED_REASON, 'REFERENCE_UNVERIFIED');
     const descendants = this.recycledSubtree(await this.ctx.store.listNodes(actor.tenantId), node.id);
-    if (descendants.some(row => row.state === 'ACTIVE' || row.kind === 'FILE')) throw new LibraryError(400, '目录不为空', 'FOLDER_NONEMPTY');
+    if (descendants.some(row => row.state === 'ACTIVE')) throw new LibraryError(400, '目录不为空', 'FOLDER_NONEMPTY');
+    const now = this.ctx.now();
     for (const child of descendants) {
-      if (child.state === 'RECYCLED') await this.purgeStored(child);
+      if (child.parentId !== node.id || child.state === 'PURGED') continue;
+      child.parentId = null;
+      await this.ctx.store.updateNode(child.id, { parentId: null, updatedAt: now });
     }
     await this.purgeStored(node);
     await this.auth.writeAudit(actor, 'library_purge', { nodeId: node.id });

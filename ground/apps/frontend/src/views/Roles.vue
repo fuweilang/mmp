@@ -144,15 +144,7 @@
       @close="resetForm"
     >
       <el-alert
-        v-if="editing && isOrgMemberPreset(editing)"
-        type="info"
-        :closable="false"
-        show-icon
-        title="保存后写入本企业覆盖，不影响其他企业与平台默认；未覆盖时跟随平台。"
-        class="drawer-alert"
-      />
-      <el-alert
-        v-else-if="editing"
+        v-if="editing && !isOrgMemberPreset(editing)"
         type="warning"
         :closable="false"
         show-icon
@@ -230,19 +222,11 @@
     >
       <template v-if="viewing">
         <el-alert
-          v-if="isOrgAdminPreset(viewing)"
+          v-if="isOrgMemberPreset(viewing) && viewing.hasTenantOverride"
           type="info"
           :closable="false"
           show-icon
-          title="全局共享，请到平台管理修改"
-          class="drawer-alert"
-        />
-        <el-alert
-          v-else-if="isOrgMemberPreset(viewing)"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="viewing.hasTenantOverride ? '当前显示本企业覆盖权限包' : '当前跟随平台默认（尚未覆盖）'"
+          title="当前显示本企业覆盖权限包"
           class="drawer-alert"
         />
         <el-descriptions :column="2" border>

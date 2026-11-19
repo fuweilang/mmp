@@ -302,4 +302,32 @@ describe('SessionController facade', () => {
     await disposal
     await expect(waiting).resolves.toMatchObject({ done: true })
   })
+
+  it('keeps a stored task listed when its live session unloads', async () => {
+    const ctx = new Context()
+    onTestFinished(() => ctx.fiber.dispose())
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(SessionProjectionRegistry)
+    await ctx.plugin(AgentRegistry)
+    const storedId = SessionId('stored-task')
+    const header: SessionHeader = {
+      version: SESSION_FORMAT_VERSION, id: storedId, createdAt: 1, cwd: '/workspace', isSeeded: false,
+    }
+    ctx.provide('sessionPersistence', testSessionPersistence(ctx, {
+      list: () => Promise.resolve([header]),
+    }) as never)
+    await createSessionTestController(ctx, defaults)
+    const removed: SessionId[] = []
+    ctx.on('api-session/removed', (id: SessionId) => { removed.push(id) })
+    const own = (id: SessionId) => ctx.plugin(Object.assign((inner: Context) => {
+      inner.sessions.create(id, { meta: { cwd: '/workspace' } })
+    }, { inject: ['sessions'] as const }))
+    await (await own(storedId)).dispose()
+    await new Promise(resolve => { setImmediate(resolve) })
+    expect(removed).toEqual([])
+    const missingId = SessionId('missing-task')
+    await (await own(missingId)).dispose()
+    await new Promise(resolve => { setImmediate(resolve) })
+    expect(removed).toEqual([missingId])
+  })
 })

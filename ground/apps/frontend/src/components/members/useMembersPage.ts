@@ -4,6 +4,7 @@ import { Search } from 'lucide-vue-next';
 import { isOrgAdmin } from '@mammoth/shared';
 import { tenantApi, type MemberRow, type RolePermSource } from '@/api/tenants';
 import { tenantRoleApi, type AssignableRole, type PermissionCatalogGroup } from '@/api/console';
+import { chooseOrgPresetIds, enterprisePresetKey } from './memberDisplay';
 import { useAuthStore } from '@/stores/auth';
 
 export function useMembersPage() {
@@ -40,7 +41,10 @@ export function useMembersPage() {
     const filterIds = new Set(roleFilter.value);
     return rows.value.filter((row) => {
       if (filterIds.size) {
-        const ids = (row.user?.roles ?? []).map((item) => item.role.id);
+        const presetKey = enterprisePresetKey(row.role);
+        const ids = (row.user?.roles ?? [])
+          .filter((item) => item.role.key !== 'org_admin' && item.role.key !== 'org_member' || item.role.key === presetKey)
+          .map((item) => item.role.id);
         if (!ids.some((id) => filterIds.has(id))) return false;
       }
       if (!q) return true;
@@ -120,6 +124,14 @@ export function useMembersPage() {
   const savingRoles = ref(false);
   const editingRow = ref<MemberRow | null>(null);
   const editRoleIds = ref<string[]>([]);
+  watch(editRoleIds, (next, previous) => {
+    const chosen = chooseOrgPresetIds(previous ?? [], next, assignableRoles.value);
+    if (chosen.length !== next.length || chosen.some((id, index) => id !== next[index])) editRoleIds.value = chosen;
+  });
+  watch(() => form.roleIds.slice(), (next, previous) => {
+    const chosen = chooseOrgPresetIds(previous ?? [], next, assignableRoles.value);
+    if (chosen.length !== next.length || chosen.some((id, index) => id !== next[index])) form.roleIds = chosen;
+  });
   const editName = ref('');
   const assignableRoles = ref<AssignableRole[]>([]);
 
@@ -237,8 +249,12 @@ export function useMembersPage() {
     editingRow.value = row;
     editName.value = row.user.name;
     // 预填企业侧角色（预设 + 本企业自建），平台角色不在可选项内。
+    const presetKey = enterprisePresetKey(row.role);
     editRoleIds.value = (row.user.roles ?? [])
-      .filter((item) => item.role.scope === 'ORG_PRESET' || item.role.scope === 'ORG_CUSTOM')
+      .filter((item) => {
+        if (item.role.key === 'org_admin' || item.role.key === 'org_member') return item.role.key === presetKey;
+        return item.role.scope === 'ORG_PRESET' || item.role.scope === 'ORG_CUSTOM';
+      })
       .map((item) => item.role.id);
     if (!assignableRoles.value.length) {
       assignableRoles.value = await tenantRoleApi.assignable();

@@ -3,7 +3,7 @@ import type { LibraryAuthService } from './library.auth';
 import type { LibraryContext } from './library.context';
 import { LibraryError, libraryNotFound } from './library.errors';
 import { fileExtension } from './library.files';
-import { citationExcerpt, openLibraryBytes, quotableInChat } from './library.items';
+import { citationExcerpt, librarySearchTerms, openLibraryBytes, quotableInChat } from './library.items';
 import { canSee } from './library.policy';
 import type { Actor, ChunkRecord, VersionRecord } from './library.types';
 
@@ -56,6 +56,42 @@ export class LibraryAskService {
       highlightNote: precise ? null : '没有可靠页码，只能定位到当时使用的段落摘录。',
       replacementVersionId: null,
     };
+  }
+
+  async readAround(actor: Actor, nodeId: string, versionId: string, locator?: string | null) {
+    const opened = await this.openCitation(actor, nodeId, versionId, locator, false);
+    const chunks = await this.ctx.store.listChunks(versionId);
+    const matched = chunks.flatMap((chunk, index) => chunk.locator === (locator ?? opened.locator) ? [index] : []);
+    const start = matched.length ? Math.max(0, matched[0]! - 1) : 0;
+    const end = matched.length ? Math.min(chunks.length, matched[matched.length - 1]! + 2) : Math.min(chunks.length, 2);
+    let used = 0;
+    const passages = [];
+    for (const chunk of chunks.slice(start, end)) {
+      if (used >= 2000) break;
+      const text = chunk.content.slice(0, 2000 - used);
+      used += text.length;
+      passages.push({ locator: chunk.locator, text });
+    }
+    return { nodeId: opened.nodeId, versionId: opened.versionId, versionNo: opened.versionNo, name: opened.name, passages };
+  }
+
+  async queryRows(actor: Actor, nodeId: string, versionId: string, rawQuery: string) {
+    const opened = await this.openCitation(actor, nodeId, versionId, null, false);
+    const query = rawQuery.trim();
+    if (query.length < 1 || query.length > 200) throw new LibraryError(400, '检索词需要 1 到 200 个字符', 'BAD_QUERY');
+    const terms = librarySearchTerms(query);
+    const needles = (terms.length > 0 ? terms : [query.toLowerCase()]).map((term) => term.toLowerCase());
+    const chunks = await this.ctx.store.listChunks(versionId);
+    const rows: string[] = [];
+    for (const chunk of chunks) {
+      for (const line of chunk.content.split(/\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || !needles.every((term) => trimmed.toLowerCase().includes(term))) continue;
+        rows.push(trimmed.slice(0, 300));
+        if (rows.length >= 30) return { nodeId: opened.nodeId, versionId: opened.versionId, name: opened.name, rows };
+      }
+    }
+    return { nodeId: opened.nodeId, versionId: opened.versionId, name: opened.name, rows };
   }
 
   /** Server-selected exact version only. No ordinal/character prefilter; owning ACL is rechecked on every read. */

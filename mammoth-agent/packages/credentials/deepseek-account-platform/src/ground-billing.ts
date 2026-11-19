@@ -22,7 +22,8 @@ const ROUTES: Record<string, { method: 'GET' | 'POST'; path: string }> = {
   cancel: { method: 'POST', path: '/api/billing/recharge/cancel' },
   /** Read-only Ground session info (user.isPlatformAdmin, tenants). */
   me: { method: 'GET', path: '/api/auth/me' },
-  knowledge: { method: 'POST', path: '/console/api/kb/retrieve' },
+  /** Handled below: the browser still posts here, and the Host reads the library. */
+  knowledge: { method: 'POST', path: '/console/api/library/search' },
   /** One-time 60s browser-sso ticket → `{ url, admin }` pointing at Ground `/login?sso=…`. */
   consoleLink: { method: 'POST', path: '/api/auth/browser-sso-ticket' },
 }
@@ -173,6 +174,29 @@ function imageNeedle(query: string): string {
     .trim()
 }
 
+const LIBRARY_LOCATOR = /^(?:page|paragraph):[1-9]\d*(?:,(?:page|paragraph):[1-9]\d*)*$/u
+
+/** Citation path the agent already opens. Invalid locators stay out of the link. */
+export function libraryTextHits(payload: unknown): Array<{ documentName: string; ordinal: number; snippet: string; source: string; locator?: string }> {
+  const rows = payload && typeof payload === 'object' && Array.isArray((payload as { hits?: unknown }).hits)
+    ? (payload as { hits: unknown[] }).hits
+    : []
+  const hits = []
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue
+    const item = row as { nodeId?: unknown; versionId?: unknown; name?: unknown; quote?: unknown; locator?: unknown; image?: unknown }
+    if (item.image === true || typeof item.quote !== 'string' || item.quote === '') continue
+    if (typeof item.name !== 'string' || typeof item.nodeId !== 'string' || typeof item.versionId !== 'string') continue
+    const locator = typeof item.locator === 'string' ? item.locator : ''
+    const source = /^[A-Za-z0-9_-]+$/u.test(item.nodeId) && /^[A-Za-z0-9_-]+$/u.test(item.versionId) && LIBRARY_LOCATOR.test(locator)
+      ? `/ground-library/nodes/${item.nodeId}/source?${new URLSearchParams({ versionId: item.versionId, locator })}`
+      : ''
+    hits.push({ documentName: item.name, ordinal: 0, snippet: item.quote, source, ...(locator === '' ? {} : { locator }) })
+    if (hits.length >= 8) break
+  }
+  return hits
+}
+
 async function libraryImages(origin: string, jwt: string, query: string): Promise<Array<{ mediaType: string; data: string; name?: string }>> {
   const needle = imageNeedle(query)
   if (needle.length < 2) return []
@@ -247,6 +271,37 @@ export function installGroundBilling(
         if (jwt === undefined) { sendJson(res, 401, { message: '请先登录猛犸账号' }); return }
         const scoped = await scopedToken().catch(() => undefined)
         const memberTenant = libraryMemberTenant(scoped, jwt)
+        if (op === 'knowledge') {
+          const libraryJwt = memberTenant !== undefined && scoped !== undefined ? scoped : jwt
+          const query = knowledgeQuery(body)
+          const needle = imageNeedle(query).slice(0, 200)
+          let hits: ReturnType<typeof libraryTextHits> = []
+          if (needle.length >= 1) {
+            let search: Response
+            try {
+              search = await loggedFetch(new URL(`/console/api/library/search?q=${encodeURIComponent(needle)}`, origin).href, {
+                headers: { authorization: `Bearer ${libraryJwt}`, accept: 'application/json' },
+                redirect: 'error',
+                signal: AbortSignal.timeout(20_000),
+              })
+            } catch {
+              sendJson(res, 502, { message: '无法连接猛犸云端，请稍后重试' })
+              return
+            }
+            if (search.status === 401) void onUnauthorized(jwt).catch(() => undefined)
+            if (!search.ok && search.status !== 400) {
+              sendJson(res, search.status, { message: '暂时无法检索企业资料，请重试' })
+              return
+            }
+            if (search.ok) {
+              try { hits = libraryTextHits(await search.json()) }
+              catch { sendJson(res, 502, { message: '企业资料返回异常' }); return }
+            }
+          }
+          if (await token() !== jwt) { sendJson(res, 409, { message: '企业或账号已切换，请重新发送' }); return }
+          sendJson(res, 200, { hits, images: await libraryImages(origin, libraryJwt, query) })
+          return
+        }
         let upstream: Response
         try {
           upstream = await loggedFetch(new URL(route.path, origin).href, {
@@ -257,7 +312,6 @@ export function installGroundBilling(
               authorization: `Bearer ${jwt}`,
               accept: 'application/json',
               ...(body === undefined ? {} : { 'content-type': 'application/json' }),
-              ...(op === 'knowledge' && memberTenant !== undefined ? { 'x-mmp-library-tenant': memberTenant } : {}),
             },
             ...(body === undefined ? {} : { body }),
           })
@@ -267,17 +321,6 @@ export function installGroundBilling(
         }
         const text = await upstream.text().catch(() => '')
         if (upstream.status === 401) void onUnauthorized(jwt).catch(() => undefined)
-        if (op === 'knowledge' && upstream.ok) {
-          try {
-            if (await token() !== jwt) { sendJson(res, 409, { message: '企业或账号已切换，请重新发送' }); return }
-            const data = JSON.parse(text) as { hits: Array<{ documentId: string }> }
-            const query = knowledgeQuery(body)
-            sendJson(res, 200, { hits: data.hits.map(hit => ({ ...hit,
-              source: new URL(`/console/api/kb/sources/${encodeURIComponent(hit.documentId)}`, origin).href,
-            })), images: await libraryImages(origin, memberTenant !== undefined && scoped !== undefined ? scoped : jwt, query) })
-          } catch { sendJson(res, 502, { message: '企业知识库返回异常' }) }
-          return
-        }
         if (op === 'consoleLink' && upstream.ok) {
           try { sendJson(res, 200, consoleLinkPayload(origin, text)) }
           catch { sendJson(res, 502, { message: '企业控制台登录票据无效，请稍后重试' }) }

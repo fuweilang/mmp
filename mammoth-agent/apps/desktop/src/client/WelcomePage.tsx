@@ -23,6 +23,7 @@ export function Welcome({ api }: { api: WelcomeApi }) {
   const [phone, setPhone] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginError, setLoginError] = useState('')
+  const [phoneTakenNotice, setPhoneTakenNotice] = useState(0)
   const [authMode, setAuthMode] = useState<'password' | 'sms' | 'register'>('password')
   const [smsCode, setSmsCode] = useState('')
   const [smsWait, setSmsWait] = useState(0)
@@ -189,7 +190,10 @@ export function Welcome({ api }: { api: WelcomeApi }) {
           name: name.trim(), phone, password: loginPassword, enterpriseName: enterpriseName.trim(), slug: slug.trim(), smsCode,
         })
         if (!mounted.current) return
-        if (!result.ok) setLoginError(result.code === 'CLIENT_TOO_OLD' ? m.welcomeClientTooOld : m.welcomeRegisterFailed)
+        if (!result.ok) {
+          if (result.code === 'PHONE_ALREADY_REGISTERED') setPhoneTakenNotice((current) => current + 1)
+          else setLoginError(result.code === 'CLIENT_TOO_OLD' ? m.welcomeClientTooOld : m.welcomeRegisterFailed)
+        }
         else setLoginPassword('')
       } catch {
         if (mounted.current) setLoginError(m.welcomeRegisterFailed)
@@ -286,6 +290,7 @@ export function Welcome({ api }: { api: WelcomeApi }) {
 
   return <>
     {expiryNotice && <Toast text={m.welcomeSessionExpired} onDone={() => { setExpiryNotice(false) }} />}
+    {phoneTakenNotice > 0 && <Toast key={phoneTakenNotice} text={m.welcomePhoneAlreadyRegistered} onDone={() => { setPhoneTakenNotice(0) }} />}
     <div className="titlebar" aria-hidden="true" />
     <main className="welcome" data-page={page} aria-labelledby={heading}>
       <img className="brand" src="assets/welcome-brand.svg" alt={m.welcomeBrand} width="472" height="40" />

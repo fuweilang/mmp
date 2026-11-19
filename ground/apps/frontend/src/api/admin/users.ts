@@ -5,6 +5,8 @@ export type AdminUserTenant = {
   id: string;
   name: string;
   role: MemberRole;
+  /** 企业状态。登录只进入第一家 active。缺省时按仍在用处理。 */
+  status?: string;
   /** 企业内实际角色（任意角色，含自建角色）。 */
   roleKey?: string | null;
   roleName?: string | null;

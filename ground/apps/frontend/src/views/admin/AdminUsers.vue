@@ -292,7 +292,7 @@ const {
   onPageSizeChange,
 } = useAdminTable<AdminUserRow>({
   rows: () => rows.value,
-  pageSize: 20,
+  pageSize: 10,
   hasFilters: () => hasActiveFilters.value,
   emptyAll: '还没有用户',
   emptyFiltered: '没有符合条件的用户',

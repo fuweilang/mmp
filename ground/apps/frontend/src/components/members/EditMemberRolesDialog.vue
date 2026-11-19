@@ -26,7 +26,7 @@
           />
         </el-select>
       </el-form-item>
-      <p class="role-edit-hint">平台角色不在此列；权限按角色取并集；企业至少保留一名管理员。</p>
+      <p class="role-edit-hint">企业管理员和企业成员只能留一个。选了管理员，登录后就是管理员。</p>
     </el-form>
     <template #footer>
       <el-button @click="$emit('update:modelValue', false)">取消</el-button>

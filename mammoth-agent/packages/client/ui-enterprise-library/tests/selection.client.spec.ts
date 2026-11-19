@@ -51,6 +51,7 @@ describe('library selection', () => {
 
   it('lists without a tenant query and rejects a swapped version', async () => {
     expect(libraryItemsUrl('http://ground.test/', 'mine', '制度')).toBe('http://ground.test/ground-library/items?view=mine&q=%E5%88%B6%E5%BA%A6')
+    expect(libraryItemsUrl('', 'mine', '')).toBe('ground-library/items?view=mine')
     expect(libraryItemsUrl('http://ground.test', 'shared', '').includes('tenant')).toBe(false)
     const listed = await fetchLibraryItems('http://ground.test', 'mine', '', async (url) => {
       expect(url).not.toContain('tenant')

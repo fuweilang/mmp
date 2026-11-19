@@ -26,16 +26,6 @@
 
     <template v-else>
       <el-alert
-        v-if="pendingCount > 0"
-        class="page-alert"
-        type="warning"
-        show-icon
-        :closable="false"
-        :title="`有 ${pendingCount} 份材料待生效`"
-      >
-        <el-button text type="primary" @click="go('/console/knowledge')">去生效</el-button>
-      </el-alert>
-      <el-alert
         v-if="walletLoaded && aiBalanceLow"
         class="page-alert"
         type="warning"
@@ -83,7 +73,6 @@ const welcomeText = computed(() => {
   const name = summary.value?.tenantName || auth.session?.currentTenant?.name;
   return name ? `${name} · 概览` : '企业概览';
 });
-const pendingCount = computed(() => summary.value?.kbPendingCount ?? 0);
 /** 钱包摘要未返回前不当作 0 余额，避免红条闪烁 */
 const walletLoaded = computed(() => summary.value !== null);
 const aiBalanceLow = computed(() => {
@@ -100,14 +89,6 @@ const cards = computed(() => {
       value: data ? String(data.memberCount) : '-',
       hint: '本企业通讯录',
       path: '/console/members',
-    },
-    {
-      label: '知识库',
-      value: data ? String(data.kbDocumentCount) : '-',
-      hint: data
-        ? `待生效 ${data.kbPendingCount} · 已生效 ${data.kbReadyCount}`
-        : '材料总量',
-      path: '/console/knowledge',
     },
     {
       label: '本月对话',

@@ -5,6 +5,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { LibraryError } from './library.errors';
 import { resolveUnderRoot } from './library.files';
+import { queryLexical, querySemantic } from './library.search-index';
 import type { LibraryStore, NewFileCommit, ParseCommit, ReplacementCommit, TenantBrief } from './library.store';
 import type {
   AuditRecord,
@@ -156,6 +157,7 @@ export class PrismaLibraryStore implements LibraryStore {
       if (version.parseStatus === 'READY') return 'unchanged';
       await tx.libraryVersion.update({ where: { id: version.id }, data: {
         parseStatus: input.parseStatus, parseReason: input.parseReason, extractTruncated: input.extractTruncated,
+        summary: input.summary ?? null,
       } });
       await tx.libraryChunk.deleteMany({ where: { versionId: version.id, tenantId: input.tenantId } });
       if (input.chunks.length) await tx.libraryChunk.createMany({ data: input.chunks.map(chunkData) });
@@ -174,8 +176,17 @@ export class PrismaLibraryStore implements LibraryStore {
         ...(patch.parseStatus !== undefined ? { parseStatus: patch.parseStatus } : {}),
         ...(patch.parseReason !== undefined ? { parseReason: patch.parseReason } : {}),
         ...(patch.extractTruncated !== undefined ? { extractTruncated: patch.extractTruncated } : {}),
+        ...(patch.summary !== undefined ? { summary: patch.summary } : {}),
       },
     });
+  }
+
+  searchLexical(actor: { tenantId: string; userId: string }, terms: readonly string[]) {
+    return queryLexical(this.prisma, actor, terms);
+  }
+
+  searchSemantic(actor: { tenantId: string; userId: string }, vector: readonly number[]) {
+    return querySemantic(this.prisma, actor, vector);
   }
 
   async listChunks(versionId: string): Promise<ChunkRecord[]> {
@@ -369,6 +380,7 @@ function versionData(row: VersionRecord): Prisma.LibraryVersionUncheckedCreateIn
     parseStatus: row.parseStatus,
     parseReason: row.parseReason,
     extractTruncated: row.extractTruncated,
+    summary: row.summary ?? null,
     createdByUserId: row.createdByUserId,
     createdAt: new Date(row.createdAt),
   };
@@ -423,6 +435,7 @@ type VersionRow = {
   parseStatus: VersionRecord['parseStatus'];
   parseReason: string | null;
   extractTruncated: boolean;
+  summary: string | null;
   createdByUserId: string;
   createdAt: Date;
 };
@@ -441,6 +454,7 @@ function toVersion(row: VersionRow): VersionRecord {
     parseStatus: row.parseStatus,
     parseReason: row.parseReason,
     extractTruncated: row.extractTruncated,
+    summary: row.summary,
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt.getTime(),
   };

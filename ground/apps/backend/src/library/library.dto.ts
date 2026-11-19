@@ -166,6 +166,22 @@ export class SearchQuery {
   q!: string;
 }
 
+export class AroundQuery {
+  @IsString()
+  versionId!: string;
+
+  @IsOptional()
+  @IsString()
+  locator?: string;
+}
+
+export class RowsQuery extends AroundQuery {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  q!: string;
+}
+
 export class ListQuery {
   @IsOptional() @IsIn(['all', 'ready', 'failed', 'download', 'processing', 'uncitable'])
   status?: 'all' | 'ready' | 'failed' | 'download' | 'processing' | 'uncitable';

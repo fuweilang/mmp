@@ -264,7 +264,6 @@ function onSwitchProduct(command: string) {
 type NavItem = { path: string; label: string; icon: Component; perm?: string; children?: readonly { path: string; label: string }[] };
 const businessItems: NavItem[] = [
   { path: '/console/', label: '工作台', icon: LayoutDashboard, perm: 'portal.console.workbench' },
-  { path: '/console/knowledge', label: '知识库', icon: FolderOpen, perm: 'portal.console.kb' },
   { path: '/console/library', label: '资料库', icon: Library, perm: 'portal.console.access', children: consoleLibraryViews },
   { path: '/console/members', label: '成员管理', icon: Users, perm: 'portal.console.members' },
   { path: '/console/roles', label: '角色管理', icon: KeyRound, perm: 'portal.console.roles' },
@@ -337,7 +336,7 @@ async function onLogout() {
 </script>
 <style scoped>
 .workspace.library-workspace { background:#fff; display:flex; flex-direction:column; }
-.workspace.admin-library-workspace { background:#fff; padding:0; display:flex; flex-direction:column; }
+.workspace.admin-library-workspace { display:flex; flex-direction:column; }
 .nav-group-trigger { align-items:center; display:flex; gap:10px; width:100%; height:44px; padding:0 18px; border:0; background:transparent; color:#667085; font:inherit; cursor:pointer; text-align:left; }
 .nav-group-trigger:hover { background:#EEF0F8; color:var(--app-primary-color); }
 .nav-group-active > .nav-group-trigger { color:var(--app-primary-color); }

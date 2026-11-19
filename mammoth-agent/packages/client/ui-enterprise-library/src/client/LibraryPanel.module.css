@@ -173,6 +173,7 @@
   .page button.createEntry:hover:not(:disabled) { color:var(--dsw-alias-label-primary-foreground); background:var(--dsw-alias-button-primary-hover); }
 }
 .recentFiles { flex:1; min-width:0; min-height:0; overflow:auto; padding:24px; }
+.recentSentinel { height:1px; }
 .recentFiles h2 { margin:0 0 20px; font-size:18px; font-weight:600; }
 .recentFiles .flatList { max-width:960px; margin:0 auto; }
 .recentFiles .flatRow { grid-template-columns:24px minmax(0,1fr) auto; min-height:52px; gap:12px; padding:8px 12px; border-bottom:1px solid var(--dsw-alias-border-l3); }

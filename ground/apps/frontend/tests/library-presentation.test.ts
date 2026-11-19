@@ -71,6 +71,14 @@ test('Console no tree/folder preview; four scopes share a white page and namespa
   assert.match(shell,/\.workspace\.library-workspace \{ background:#fff;/);
   assert.doesNotMatch(shell,/LibraryNavTree|libraryTreeExpanded|library-tree-toggle/); assert.match(page,/label="文件类型"/); assert.match(page,/placeholder="处理状态"/); assert.match(page,/<el-select v-model="parseStatus"/); assert.match(page,/libraryParseStatusOptions/); assert.match(page,/parseStatusMark\(row\)!\.label/); assert.match(page,/libraryParentPath\(row\)/);
   assert.match(page,/<el-tree/); assert.doesNotMatch(page,/class="library-path"/);
+  assert.equal(page.match(/class="library-folder-more"/g)?.length, 1);
+  assert.doesNotMatch(page,/class="library-folder-recycle"/);
+  assert.doesNotMatch(page,/content="移入回收站"/);
+  assert.match(page,/recycleFolder\(data\.id\)/);
+  assert.match(page,/>移入回收站</);
+  assert.doesNotMatch(page,/改为企业共享|改回私人/);
+  assert.doesNotMatch(page,/class="library-error"/);
+  assert.match(page,/v-if="view !== 'shared'" label="范围"/);
   assert.match(page,/v-if="row.kind !== 'FOLDER'" text type="primary" @click="openPreview\(row\)">预览/);
   assert.match(page,/\.library-page \{[^}]*background:#fff;/);
   assert.doesNotMatch(page,/\.library-page \{[^}]*padding:15px/);

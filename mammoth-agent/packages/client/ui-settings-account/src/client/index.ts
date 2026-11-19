@@ -364,14 +364,9 @@ export function apply(ctx: Context): void {
       const logoutUrl = snapshot.view?.links.logoutUrl
       const result = await ctx.remote.account.signOut(client())
       if (!result.ok) throw result.error
-      // Web sign-out clears the browser cookie. Desktop sign-out keeps the browser session.
-      if (!desktop && logoutUrl !== undefined) {
-        if (new URL(logoutUrl, window.location.href).origin === window.location.origin) {
-          window.location.assign(logoutUrl)
-          return
-        }
-        window.open(logoutUrl, '_blank', 'noopener,noreferrer')
-      }
+      // A successful web sign-out clears the browser cookie in this tab. Ground then shows login here.
+      // Desktop keeps its own window and does not open a browser login page.
+      if (!desktop && logoutUrl !== undefined) window.location.assign(logoutUrl)
     },
   }
   ctx.remoteAccess.whenAccess('account/watch', () => ctx.slots.inject('settings.models.sign-in', () => ctx.slots.register({

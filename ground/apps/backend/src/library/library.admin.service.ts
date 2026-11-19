@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
-import { Prisma, type LibraryNode, type LibraryVersion, type User } from '@prisma/client';
+import { MemberRole, Prisma, type LibraryNode, type LibraryVersion, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FILE_PURGE_BLOCKED_REASON, LibraryError, libraryNotFound } from './library.errors';
 import { LibraryService, createLibraryService } from './library.service';
@@ -25,8 +25,11 @@ export class LibraryAdminService {
  async tenants(user: Platform, query: AdminLibraryQuery) {
   this.platform(user); const where: Prisma.TenantWhereInput=query.q?.trim()?{name:{contains:query.q.trim(),mode:'insensitive'}}:{};
   const [total,tenants]=await Promise.all([this.prisma.tenant.count({where}),this.prisma.tenant.findMany({where,skip:(query.page-1)*query.pageSize,take:query.pageSize,orderBy:[{name:'asc'},{id:'asc'}],select:{id:true,name:true,status:true}})]);
+  const adminRows=tenants.length?await this.prisma.orgMember.findMany({where:{tenantId:{in:tenants.map(t=>t.id)},role:{in:[MemberRole.ADMIN,MemberRole.OWNER]},user:{status:'active'}},orderBy:[{createdAt:'asc'},{id:'asc'}],select:{tenantId:true,user:{select:{name:true,phone:true}}}}):[];
+  const adminsByTenant=new Map<string,{name:string;phone:string}[]>();
+  for(const row of adminRows){const list=adminsByTenant.get(row.tenantId)??[];list.push({name:row.user.name,phone:row.user.phone});adminsByTenant.set(row.tenantId,list);}
   const items=[];
-  for(const t of tenants) {const nodes=await this.prisma.libraryNode.findMany({where:{tenantId:t.id},select:{kind:true,state:true,scope:true,ownerUserId:true,currentVersionId:true}});const versions=await this.prisma.libraryVersion.findMany({where:{tenantId:t.id,node:{state:{not:'PURGED'}}},select:{id:true,sizeBytes:true,parseStatus:true}});const current=new Set(nodes.filter(n=>n.state==='ACTIVE').map(n=>n.currentVersionId));items.push({...t,memberCount:new Set(nodes.filter(n=>n.state==='ACTIVE'&&n.kind==='FILE').map(n=>n.ownerUserId)).size,sharedFiles:nodes.filter(n=>n.state==='ACTIVE'&&n.kind==='FILE'&&n.scope==='ENTERPRISE').length,activeFiles:nodes.filter(n=>n.kind==='FILE'&&n.state==='ACTIVE').length,folderCount:nodes.filter(n=>n.kind==='FOLDER'&&n.state==='ACTIVE').length,linkCount:nodes.filter(n=>n.kind==='LINK'&&n.state==='ACTIVE').length,recycledCount:nodes.filter(n=>n.state==='RECYCLED').length,usedBytes:versions.reduce((sum,v)=>sum+v.sizeBytes,0),failed:versions.filter(v=>current.has(v.id)&&v.parseStatus==='FAILED').length});}
+  for(const t of tenants) {const nodes=await this.prisma.libraryNode.findMany({where:{tenantId:t.id},select:{kind:true,state:true,scope:true,ownerUserId:true,currentVersionId:true}});const versions=await this.prisma.libraryVersion.findMany({where:{tenantId:t.id,node:{state:{not:'PURGED'}}},select:{id:true,sizeBytes:true,parseStatus:true}});const current=new Set(nodes.filter(n=>n.state==='ACTIVE').map(n=>n.currentVersionId));items.push({...t,admins:adminsByTenant.get(t.id)??[],memberCount:new Set(nodes.filter(n=>n.state==='ACTIVE'&&n.kind==='FILE').map(n=>n.ownerUserId)).size,sharedFiles:nodes.filter(n=>n.state==='ACTIVE'&&n.kind==='FILE'&&n.scope==='ENTERPRISE').length,activeFiles:nodes.filter(n=>n.kind==='FILE'&&n.state==='ACTIVE').length,folderCount:nodes.filter(n=>n.kind==='FOLDER'&&n.state==='ACTIVE').length,linkCount:nodes.filter(n=>n.kind==='LINK'&&n.state==='ACTIVE').length,recycledCount:nodes.filter(n=>n.state==='RECYCLED').length,usedBytes:versions.reduce((sum,v)=>sum+v.sizeBytes,0),failed:versions.filter(v=>current.has(v.id)&&v.parseStatus==='FAILED').length});}
   return {items,total,page:query.page,pageSize:query.pageSize};
  }
  async options(user: Platform, tenantId: string) {

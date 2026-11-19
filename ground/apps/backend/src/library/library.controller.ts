@@ -30,6 +30,8 @@ import { completeLibraryTurn } from './library.llm';
 import {
   AskDto,
   BatchDto,
+  AroundQuery,
+  RowsQuery,
   SearchQuery,
   CreateFolderDto,
   CreateLinkDto,
@@ -299,6 +301,16 @@ export class LibraryController {
   @Get('nodes/:id/source')
   async source(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null, @Param('id') id: string, @Query('versionId') versionId: string, @Query('locator') locator?: string) {
     return this.run(async () => this.library.openCitation(await this.actor(user, tenantId), id, versionId, locator));
+  }
+
+  @Get('nodes/:id/around')
+  async around(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null, @Param('id') id: string, @Query() query: AroundQuery) {
+    return this.run(async () => this.library.readAround(await this.actor(user, tenantId), id, query.versionId, query.locator));
+  }
+
+  @Get('nodes/:id/rows')
+  async rows(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null, @Param('id') id: string, @Query() query: RowsQuery) {
+    return this.run(async () => this.library.queryRows(await this.actor(user, tenantId), id, query.versionId, query.q));
   }
 
   @Get('nodes/:id/versions')

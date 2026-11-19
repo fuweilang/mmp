@@ -59,10 +59,12 @@
       <div class="usage-pagination">
         <el-pagination
           background
-          layout="total, prev, pager, next, jumper"
+          layout="total, sizes, prev, pager, next, jumper"
           :total="total"
-          :page-size="20"
+          :page-sizes="[10, 20, 50, 100]"
+          :page-size="pageSize"
           :current-page="page"
+          @size-change="onPageSize"
           @current-change="onPage"
         />
       </div>
@@ -87,6 +89,7 @@ const rows = ref<AuditRow[]>([]);
 const members = ref<SimpleMember[]>([]);
 const total = ref(0);
 const page = ref(1);
+const pageSize = ref(10);
 const actionFilter = ref('');
 const actionOptions = Object.entries(AuditActionLabel).map(([value, label]) => ({ value, label }));
 
@@ -132,7 +135,7 @@ async function loadAudit() {
   loadingAudit.value = true;
   error.value = '';
   try {
-    const data = await auditApi.list(page.value, actionFilter.value);
+    const data = await auditApi.list(page.value, actionFilter.value, pageSize.value);
     rows.value = data.rows;
     total.value = data.total;
   } catch (e) {
@@ -173,6 +176,12 @@ function onReset() {
 
 function onPage(next: number) {
   page.value = next;
+  void loadAudit();
+}
+
+function onPageSize(size: number) {
+  pageSize.value = size;
+  page.value = 1;
   void loadAudit();
 }
 

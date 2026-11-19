@@ -1,7 +1,7 @@
 import { underArchivedSession } from './archived-session-gate.ts'
 /** Session commands whose activation policy is explicit at each Remote method. */
 
-import { ensureRoutableSelection, modelAvailable } from './catalog.ts'
+import { CLOUD_PROVIDER_ID, ensureRoutableSelection, modelAvailable } from './catalog.ts'
 import { randomUUID } from 'node:crypto'
 import type { Context } from '@mammoth-ai/cordis'
 import { brandString } from '@mammoth-ai/mmp-brand'
@@ -90,10 +90,13 @@ export class SessionCommandController {
    * @param agents - sole owner of create, resume, and Agent composition.
    * @param defaultCwd - project directory used when create names neither a Workspace nor a cwd.
    */
+  private readonly forcedAutomatic = new Set<string>()
+
   constructor(
     private readonly ctx: Context,
     private readonly agents: ApiSessionAgentController,
     private readonly defaultCwd: string,
+    private readonly forceAutomatic = false,
   ) {}
 
   /**
@@ -423,7 +426,8 @@ export class SessionCommandController {
   private async healModelSelection(agent: Agent): Promise<void> {
     const current = agent.model.current()
     if (current === undefined) return
-    const next = await ensureRoutableSelection(this.ctx, current)
+    let next = await ensureRoutableSelection(this.ctx, current)
+    if (this.consumeAutomaticWash(agent)) next = { provider: CLOUD_PROVIDER_ID, model: 'auto' }
     if (
       next.provider === current.provider
       && next.model === current.model
@@ -445,6 +449,13 @@ export class SessionCommandController {
         `session-controller: healed model selection but failed to persist default: ${String(error)}`,
       )
     })
+  }
+
+  /** One wash per Agent for this process. A later expert fixed route is left in place. */
+  private consumeAutomaticWash(agent: Agent): boolean {
+    if (!this.forceAutomatic || this.forcedAutomatic.has(agent.id)) return false
+    this.forcedAutomatic.add(agent.id)
+    return !hasApiSessionSubagentOwner(this.ctx, agent.session, agent)
   }
 
   private async requireModel(selection: Pick<AgentModelSelection, 'provider' | 'model'>): Promise<void> {
