@@ -282,6 +282,8 @@
 </template>
 
 <script setup lang="ts">
+import { confirmDelete } from '../../utils/confirm-delete';
+
 import { computed, h, onBeforeUnmount, onMounted, reactive, ref, type VNode } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { Search } from 'lucide-vue-next';
@@ -575,7 +577,7 @@ async function onDelete(row: AdminEnterpriseRow) {
       return;
     }
     const lines = [
-      h('p', { class: 'confirm-line' }, ['确定删除企业「', highlight(row.name), '」？删除后不可恢复。']),
+      h('p', { class: 'confirm-line' }, '删除后不可恢复。'),
     ];
     if (impact.deletedUsers.length > 0) {
       const users: (string | VNode)[] = [];
@@ -597,12 +599,7 @@ async function onDelete(row: AdminEnterpriseRow) {
     if (impact.usageEventCount > 0) {
       lines.push(h('p', { class: 'confirm-line' }, [`该企业的 ${impact.usageEventCount} 条用量记录将一并清除。`]));
     }
-    await ElMessageBox.confirm(h('div', null, lines), '删除企业', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      confirmButtonClass: 'el-button--danger',
-      customClass: 'enterprise-confirm',
-    });
+    await confirmDelete({ title: '删除企业？', name: row.name, description: h('div', null, lines), confirmText: '删除企业' });
   } catch {
     return;
   }

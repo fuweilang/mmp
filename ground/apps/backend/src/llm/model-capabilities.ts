@@ -1,8 +1,10 @@
+import { modelPurpose } from './model-purpose';
 /** Models whose current APIs accept image input. Pro stays text-only. */
 const VISION_MODELS = /^(deepseek-flash|deepseek-v4-flash|kimi-k3(?:\.1-pro(?:-highspeed)?)?)$/
 
 /** Unknown models opt in to non-text capabilities explicitly in Admin. */
 export function modelCapabilities(model:{modelId:string;meta?:unknown}) {
+  if(modelPurpose(model)!=='chat')return {tools:false,vision:false,contextWindow:0};
   const meta=model.meta&&typeof model.meta==='object'&&!Array.isArray(model.meta)?model.meta as Record<string,unknown>:{};
   const known=/^(deepseek-flash|deepseek-v4-pro|deepseek-v4-flash|kimi-k3(?:\.1-pro(?:-highspeed)?)?)$/.test(model.modelId);
   return {tools:typeof meta.supportsTools==='boolean'?meta.supportsTools:known,

@@ -50,8 +50,9 @@ export class CreateOfficialAgentDto {
   toolScope!: string[];
 
   @IsOptional()
-  @IsIn(['common', 'productivity', 'content', 'sales', 'expertise', 'analytics'])
-  category?: 'common' | 'productivity' | 'content' | 'sales' | 'expertise' | 'analytics';
+  @IsString()
+  @MaxLength(64)
+  category?: string;
 
   @IsOptional()
   @IsArray()
@@ -75,6 +76,9 @@ export class CreateOfficialAgentDto {
 
 export class UpdateOfficialAgentDto {
   @IsOptional() @IsObject() executionConfig?: Record<string, unknown>;
+  @IsOptional()
+  @IsIn(['GENERAL', 'KNOWLEDGE'], { message: '专家类型无效' })
+  kind?: 'GENERAL' | 'KNOWLEDGE';
   @IsOptional()
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString({ message: '请输入专家名称' })
@@ -107,8 +111,9 @@ export class UpdateOfficialAgentDto {
   toolScope?: string[];
 
   @IsOptional()
-  @IsIn(['common', 'productivity', 'content', 'sales', 'expertise', 'analytics'])
-  category?: 'common' | 'productivity' | 'content' | 'sales' | 'expertise' | 'analytics';
+  @IsString()
+  @MaxLength(64)
+  category?: string;
 
   @IsOptional()
   @IsArray()
@@ -154,6 +159,11 @@ export class ListOfficialAgentsDto {
   @IsOptional()
   @IsIn(['GENERAL', 'KNOWLEDGE'])
   kind?: 'GENERAL' | 'KNOWLEDGE';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  category?: string;
 }
 
 export class BulkOfflineOfficialAgentsDto {

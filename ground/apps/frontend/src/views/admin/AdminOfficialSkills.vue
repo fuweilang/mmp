@@ -5,8 +5,11 @@
         <h2>技能管理</h2>
         <p>维护技能的名称、一句话介绍和启用状态。停用只是不再提供新的使用，不删除已有任务。</p>
       </div>
-      <el-button type="primary" @click="openCreate">新建技能</el-button>
+      <div class="header-actions"><el-button @click="categoryManagerOpen = true">分类管理</el-button><el-button type="primary" @click="openCreate">新建技能</el-button></div>
     </div>
+
+    <CatalogCategoryManager v-model="categoryManagerOpen" kind="skill" />
+    <el-alert v-if="categoryError" :title="`分类加载失败：${categoryError}`" type="error" :closable="false" show-icon><el-button text @click="loadCategories">重试</el-button></el-alert>
 
     <div class="toolbar">
       <el-input
@@ -29,7 +32,7 @@
             <span>{{ categoryName(value) }}</span>
           </span>
         </template>
-        <el-option v-for="item in availableCategoryOptions" :key="item.value" :label="item.label" :value="item.value">
+        <el-option v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value">
           <span class="cat-mark">
             <i class="cat-dot" :style="{ background: categoryColor(item.value) }" />
             <span>{{ item.label }}</span>
@@ -86,11 +89,10 @@
       <el-table-column label="更新时间" width="170">
         <template #default="{ row }">{{ formatTime(row.updatedAt) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="310" fixed="right" align="center">
+      <el-table-column label="操作" width="240" fixed="right" align="center">
         <template #default="{ row }">
           <div class="operation-buttons">
             <el-button text type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button text type="primary" @click="openDiscovery(row)">技能介绍</el-button>
             <el-button text type="primary" @click="toggleEnable(row)">
               {{ row.enabled ? '停用' : '启用' }}
             </el-button>
@@ -133,8 +135,9 @@
       class="official-skill-dialog"
       @closed="resetEditor"
     >
-      <el-form v-loading="detailLoading" :model="form" label-position="top" :disabled="saving || zipValidating || detailLoading">
-        <el-form-item label="图片">
+      <el-form v-loading="detailLoading" :model="form" label-position="top" :disabled="saving || zipValidating || detailLoading" class="skill-editor-form">
+        <div class="skill-identity">
+        <el-form-item class="skill-icon-field">
           <CatalogIconEditor v-model="pendingIcon" v-model:removed="removeIcon" profile="expert" :current-url="formIconUrl" :disabled="saving || zipValidating || detailLoading" @validating="iconValidating=$event" />
         </el-form-item>
         <el-form-item label="名称" required :error="fieldErrors.name">
@@ -151,13 +154,12 @@
             @input="fieldErrors.summary = ''"
           />
         </el-form-item>
+        </div>
         <el-form-item label="分类">
           <el-select
             v-model="form.categories"
             multiple
             clearable
-            collapse-tags
-            collapse-tags-tooltip
             :multiple-limit="3"
             placeholder="未设置，最多 3 个"
             style="width: 100%"
@@ -166,6 +168,24 @@
           </el-select>
         </el-form-item>
 
+        <div class="skill-section-heading">使用引导</div>
+        <el-form-item label="推荐提问">
+          <div class="skill-starters">
+            <div v-for="(starter,index) in publicDetail.starters" :key="index" class="skill-starter">
+              <el-input v-model="starter.text" type="textarea" :autosize="{minRows:1,maxRows:5}" maxlength="500" :aria-label="`推荐提问 ${index+1}`" placeholder="例如：帮我设计一个老客推荐活动" />
+              <div class="skill-starter-actions"><template v-if="publicDetail.starters.length>1"><el-button text title="上移" :aria-label="`上移推荐提问 ${index+1}`" :disabled="index===0" @click="movePublicStarter(index,-1)"><ChevronUp :size="15"/><span class="skill-sr-only">上移</span></el-button><el-button text title="下移" :aria-label="`下移推荐提问 ${index+1}`" :disabled="index===publicDetail.starters.length-1" @click="movePublicStarter(index,1)"><ChevronDown :size="15"/><span class="skill-sr-only">下移</span></el-button></template><el-button text title="删除提问" :aria-label="`移除推荐提问 ${index+1}`" @click="publicDetail.starters.splice(index,1)"><X :size="16"/><span class="skill-sr-only">删除提问</span></el-button></div>
+            </div>
+            <el-button class="skill-add-starter" text v-if="publicDetail.starters.length < 3" @click="publicDetail.starters.push({text:''})"><Plus :size="15"/>添加推荐提问</el-button>
+          </div>
+        </el-form-item>
+        <el-collapse v-model="supplementOpen" class="skill-supplement">
+          <el-collapse-item title="补充说明（选填）" name="supplement">
+            <el-form-item label="详细介绍"><el-input v-model="publicDetail.introduction" type="textarea" :rows="3" maxlength="2000" show-word-limit /></el-form-item>
+            <el-form-item v-for="field in supplementFields" :key="field.key" :label="field.label"><el-input v-model="publicLists[field.key]" type="textarea" :rows="2" placeholder="每行一项，最多 5 项" /></el-form-item>
+          </el-collapse-item>
+        </el-collapse>
+
+        <div class="skill-section-heading">技能内容</div>
         <el-form-item v-if="showStoredPackage" label="技能包">
           <div class="zip-file-row">
             <span class="zip-file-name">{{ form.key }}</span>
@@ -238,16 +258,19 @@
         <el-button v-else type="primary" :loading="saving" :disabled="zipValidating || detailLoading || iconValidating" @click="onSave(false)">保存修改</el-button>
       </template>
     </el-dialog>
-    <CatalogDiscoveryEditor v-if="discoveryId" kind="skill" :resource-id="discoveryId" :skill-enabled="discoveryEnabled" @close="discoveryId=''" @saved="reload" />
   </section>
 </template>
 
 <script setup lang="ts">
-import CatalogDiscoveryEditor from '../../components/CatalogDiscoveryEditor.vue';
-const discoveryId=ref('');
-const discoveryEnabled=ref(false);
+import { confirmDelete } from '../../utils/confirm-delete';
+
+import '../../styles/skillEditor.css';
+import { ChevronUp, ChevronDown, X, Plus } from 'lucide-vue-next';
+import type { SkillPublicDetail } from '../../api/admin';
 import CatalogIconEditor from '../../components/CatalogIconEditor.vue';
-import { computed, h, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import CatalogCategoryManager from '../../components/admin/CatalogCategoryManager.vue';
+import { useCatalogCategories } from '../../composables/useCatalogCategories';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox, type UploadFile, type UploadInstance } from 'element-plus';
 import {
   BarChart3,
@@ -273,7 +296,7 @@ import {
   type OfficialSkillRow,
   type OfficialSkillZipPreview,
 } from '../../api/admin';
-import { keepStoredExecution, skillDeleteConfirm, skillDeleteRequest, skillFormIssues, skillFormToast } from '../../utils/skill-form';
+import { keepStoredExecution, skillDeleteRequest, skillFormIssues, skillFormToast } from '../../utils/skill-form';
 import { useAdminSearch, useAdminTable } from '../../composables/useAdminTable';
 
 const rows = ref<OfficialSkillRow[]>([]);
@@ -343,27 +366,15 @@ const form = reactive({
   instruction: '',
 });
 
-const categoryOptions: Array<{ value: OfficialSkillCategory; label: string }> = [
-  { value: 'common', label: '效率工具' },
-  { value: 'content', label: '内容创作' },
-  { value: 'analytics', label: '数据分析' },
-  { value: 'office', label: '办公协作' },
-  { value: 'education', label: '知识学习' },
-  { value: 'expertise', label: '开发设计' },
-  { value: 'business', label: '运营增长' },
-  { value: 'ecommerce', label: '电商经营' },
-  { value: 'sales', label: '客户销售' },
-  { value: 'hr', label: '人力行政' },
-  { value: 'legal', label: '财税法务' },
-  { value: 'finance', label: '金融投研' },
-  { value: 'consulting', label: '企业咨询' },
-  { value: 'research', label: '行业研究' },
-  { value: 'files', label: '文件处理' },
-  { value: 'search', label: '网页检索' },
-  { value: 'writing', label: '翻译写作' },
-  { value: 'lifestyle', label: '个人生活' },
-];
-const availableCategoryOptions = computed(() => categoryOptions.filter(item => rows.value.some(row => rowCategories(row).includes(item.value))));
+const categoryManagerOpen = ref(false);
+const { options: categoryOptions, error: categoryError, load: loadCategories } = useCatalogCategories('skill');
+// Directory saves can delete the current choice without changing the skill rows.
+watch(categoryOptions, options => {
+  if (categoryFilter.value && !options.some(item => item.value === categoryFilter.value)) {
+    categoryFilter.value = '';
+    resetPage();
+  }
+});
 
 const categoryIcons: Record<OfficialSkillCategory, unknown> = {
   common: Sparkles,
@@ -417,7 +428,7 @@ function categoryColor(value: string) {
 }
 
 function categoryName(value: string) {
-  return categoryOptions.find((item) => item.value === value)?.label ?? value;
+  return categoryOptions.value.find((item) => item.value === value)?.label ?? value;
 }
 
 function formatTime(value: string) {
@@ -468,8 +479,20 @@ const {
 
 
 
+const emptyPublicDetail=():SkillPublicDetail=>({schemaVersion:1,displayRevision:0,introduction:'',outputs:[],materials:[],boundaries:[],starters:[]});
+const publicDetail=reactive<SkillPublicDetail>(emptyPublicDetail());
+const publicLists=reactive({outputs:'',materials:'',boundaries:''});
+const supplementFields=[{key:'outputs' as const,label:'交付内容'},{key:'materials' as const,label:'准备资料'},{key:'boundaries' as const,label:'使用边界'}];
+const supplementOpen=ref<string[]>([]);
+let publicBaseline='';
+const toPublicLines=(value:string)=>value.split('\n').map(v=>v.trim()).filter(Boolean);
+function publicPayload():SkillPublicDetail{return {...publicDetail,introduction:publicDetail.introduction.trim(),outputs:toPublicLines(publicLists.outputs),materials:toPublicLines(publicLists.materials),boundaries:toPublicLines(publicLists.boundaries),starters:publicDetail.starters.map(v=>({text:v.text.trim()})).filter(v=>v.text)};}
+function movePublicStarter(index:number,delta:number){const target=index+delta;if(target<0||target>=publicDetail.starters.length)return;const [item]=publicDetail.starters.splice(index,1);publicDetail.starters.splice(target,0,item);}
+function loadPublicDetail(value?:SkillPublicDetail){Object.assign(publicDetail,structuredClone(value??emptyPublicDetail()));for(const field of supplementFields)publicLists[field.key]=publicDetail[field.key].join('\n');publicBaseline=JSON.stringify(publicPayload());}
+
 function resetEditor() {
   editorSequence += 1;
+  loadPublicDetail();supplementOpen.value=[];
   pendingIcon.value=null;removeIcon.value=false;iconValidating.value=false;formIconUrl.value=null;contentBaseline.value=null;
   detailLoading.value = false;
   zipValidating.value = false;
@@ -493,11 +516,6 @@ function resetEditor() {
   form.categories = [];
   form.instruction = '';
   zipUploadRef.value?.clearFiles();
-}
-
-function openDiscovery(row: OfficialSkillRow) {
-  discoveryEnabled.value = row.enabled;
-  discoveryId.value = row.id;
 }
 
 function openCreate() {
@@ -524,7 +542,9 @@ async function openEdit(row: OfficialSkillRow) {
   try {
     const detail = await adminOfficialSkillApi.detail(row.id);
     if (sequence !== editorSequence || !editorOpen.value) return;
+    form.name=detail.name;form.summary=detail.summary;
     form.instruction = detail.instruction ?? '';
+    loadPublicDetail(detail.discoveryDetail);
     form.categories = rowCategories(detail);
     formIconUrl.value=detail.avatarUrl??null;
     editingEnabled.value = detail.enabled;
@@ -635,7 +655,10 @@ async function onSave(enable: boolean) {
   if (saving.value || zipValidating.value || detailLoading.value || iconValidating.value) return;
   saveIntent.value = enable ? 'enable' : 'save';
   if (!applyIssues(enable)) return;
+  const publicValue=publicPayload();
+  if(publicValue.starters.some(v=>v.text.length>500)||supplementFields.some(f=>publicValue[f.key].length>5||publicValue[f.key].some(v=>v.length>300))){ElMessage.warning('推荐提问每条最多500字；补充说明每组最多5项，每项300字');return;}
   saving.value = true;
+  let contentSaved=false;
   try {
     const wasNew=!editingId.value;
     let next:OfficialSkillRow|undefined;
@@ -684,6 +707,7 @@ async function onSave(enable: boolean) {
       if(changed) next=await adminOfficialSkillApi.update(editingId.value, patch);
     }
     if(next){
+      contentSaved=true;
       editingId.value=next.id;
       form.key=next.key;
       form.instruction=next.instruction??form.instruction;
@@ -693,6 +717,11 @@ async function onSave(enable: boolean) {
       contentBaseline.value=editorContent();
       storedPackageKept.value=contentSource.value==='zip';
       createMode.value=contentSource.value==='zip'?'zip':'form';
+    }
+    if(editingId.value && JSON.stringify(publicValue)!==publicBaseline){
+      next=await adminOfficialSkillApi.saveDiscovery(editingId.value,{expectedUpdatedAt:formUpdatedAt.value,discoveryDetail:publicValue});
+      formUpdatedAt.value=next.updatedAt;
+      loadPublicDetail(next.discoveryDetail??publicValue);contentSaved=true;
     }
     if(editingId.value && pendingIcon.value){
       const body=new FormData();
@@ -726,7 +755,9 @@ async function onSave(enable: boolean) {
     }
     await reload();
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存失败');
+    const reason=error instanceof Error ? error.message : '保存失败';
+    ElMessage.error(contentSaved ? `技能内容已保存，后续设置未全部保存：${reason}。可在当前窗口重试。` : reason);
+    if(contentSaved)await reload();
   } finally {
     saving.value = false;
   }
@@ -757,26 +788,15 @@ async function toggleEnable(row: OfficialSkillRow) {
 
 async function onDelete(row: OfficialSkillRow) {
   if (deletingId.value) return;
-  const copy = skillDeleteConfirm({ name: row.name });
   const skillName = row.name.trim() || '未命名技能';
   let confirmed = false;
   try {
-    await ElMessageBox.confirm(
-      h('span', null, [
-        '确定删除技能「',
-        h('span', { style: { color: 'var(--el-color-primary, #409eff)' } }, skillName),
-        '」？删除后不可再选用，已有对话和任务记录不受影响。',
-      ]),
-      copy.title,
-      {
-        type: 'warning',
-        customClass: 'official-skill-message-box',
-        confirmButtonText: copy.confirm,
-        cancelButtonText: copy.cancel,
-        confirmButtonClass: 'el-button--danger',
-        closeOnClickModal: false,
-      },
-    );
+    await confirmDelete({
+      title: '删除技能？', name: skillName,
+      description: '删除后不可再选用，已有对话和任务记录不受影响。',
+      confirmText: '删除技能',
+      closeOnClickModal: false,
+    });
     confirmed = true;
   } catch {
     confirmed = false;
@@ -786,7 +806,6 @@ async function onDelete(row: OfficialSkillRow) {
   try {
     await adminOfficialSkillApi.remove(row.id);
     if (editingId.value === row.id) editorOpen.value = false;
-    if (discoveryId.value === row.id) discoveryId.value = '';
     ElMessage.success('已删除');
     await reload();
   } catch (error) {
@@ -796,7 +815,7 @@ async function onDelete(row: OfficialSkillRow) {
   }
 }
 
-onMounted(() => { void reload(); });
+onMounted(() => { void reload(); void loadCategories(); });
 onUnmounted(() => {
   disposeSearch();
   editorSequence += 1;
@@ -804,6 +823,8 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+
+
 .official-skills-page {
   box-sizing: border-box;
   font-size: 13px;

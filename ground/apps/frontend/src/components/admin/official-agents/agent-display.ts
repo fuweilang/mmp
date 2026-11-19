@@ -1,15 +1,9 @@
+import { useCatalogCategories } from '../../../composables/useCatalogCategories';
 import type { TagProps } from 'element-plus';
 import type { OfficialAgentCategory, OfficialAgentKind, OfficialAgentStatus } from '../../../api/admin';
 import { formatAgentDateTime } from '../../../views/admin/official-agent-version-presentation';
 
-export const CATEGORY_LABELS: Record<OfficialAgentCategory, string> = {
-  common: '常用',
-  productivity: '工作提效',
-  content: '内容营销',
-  sales: '销售增长',
-  expertise: '专业知识',
-  analytics: '数据分析',
-};
+export const CATEGORY_LABELS = useCatalogCategories('expert').labels;
 
 export const TOOL_SCOPE_LABELS: Record<string, string> = {
   enterprise_knowledge: '企业资料 / 知识库',
@@ -42,6 +36,8 @@ export function buildCapabilityLabels(toolScope: string[], stored: string[]) {
     seen.add(text);
     labels.push(text);
   };
+  // Stored labels lead so the Admin view matches the public card order.
+  for (const label of stored) push(label);
   for (const tool of [
     'enterprise_knowledge',
     'web_search',
@@ -52,7 +48,6 @@ export function buildCapabilityLabels(toolScope: string[], stored: string[]) {
   ]) {
     if (toolScope.includes(tool)) push(toolScopeLabel(tool));
   }
-  for (const label of stored) push(label);
   return labels;
 }
 
@@ -83,14 +78,12 @@ export function splitLines(value: string) {
 export function collectPublishMissing(source: {
   name: string;
   summary: string;
-  expertRole: string;
   systemPrompt: string;
   toolScope: string[];
 }): string[] {
   const missing: string[] = [];
   if (!source.name.trim()) missing.push('专家名称');
   if (!source.summary.trim()) missing.push('一句话介绍');
-  if (!source.expertRole.trim()) missing.push('角色定位');
   if (!source.systemPrompt.trim()) missing.push('专家指令');
   const allowed = new Set([
     'enterprise_knowledge',

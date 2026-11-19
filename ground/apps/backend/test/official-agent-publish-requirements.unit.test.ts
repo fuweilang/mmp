@@ -9,7 +9,6 @@ function harness(seed: {
   name?: string;
   summary?: string;
   systemPrompt?: string;
-  role?: string;
   toolScope?: string[];
 }) {
   const actor = { id: 'admin-1' } as never;
@@ -25,7 +24,7 @@ function harness(seed: {
     toolScope: seed.toolScope ?? [],
     expertDefinition: {
       schemaVersion: 1,
-      profile: { role: seed.role ?? '' },
+      profile: {},
     },
     category: null,
     capabilities: [],
@@ -70,8 +69,6 @@ describe('publish requirements aggregation', () => {
       assert.match(message, /专家名称/);
       assert.match(message, /一句话介绍/);
       assert.match(message, /专家指令/);
-      // empty name => normalize also leaves role empty
-      assert.match(message, /角色定位/);
       return true;
     });
   });
@@ -81,7 +78,6 @@ describe('publish requirements aggregation', () => {
       name: '文案',
       summary: '',
       systemPrompt: '',
-      role: '编辑',
       toolScope: ['not_a_real_tool'],
     });
     await assert.rejects(() => service.publish(actor, 'agent-1'), (error: unknown) => {
@@ -99,7 +95,6 @@ describe('publish requirements aggregation', () => {
       name: '文案专家',
       summary: '润色中文',
       systemPrompt: '认真润色',
-      role: '资深编辑',
     });
     const published = await service.publish(actor, 'agent-1');
     assert.ok(published);

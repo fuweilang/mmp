@@ -1,3 +1,4 @@
+import { assertCategoryKeys } from '../catalog-category/catalog-category';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { assertSuperAdmin } from '../auth/super-admin';
@@ -129,6 +130,7 @@ export class AdminOfficialAgentDiscoveryService {
             where: { key: { in: asset.linkedSkillKeys }, deletedAt: null, enabledAt: { not: null }, currentRevision: { gt: 0 } }, select: { id: true },
           }) : [];
           if (skills.length !== asset.linkedSkillKeys.length) throw new BadRequestException(`专家 ${asset.key} 依赖的技能未启用或不存在`);
+          if (asset.category) await assertCategoryKeys(tx, 'expert', [asset.category]);
           const row = await tx.officialAgent.create({ data: {
             key: asset.key, kind: asset.kind, name: asset.name, summary: asset.summary,
             openingQuestions: asset.openingQuestions, systemPrompt: asset.systemPrompt, toolScope: asset.toolScope,

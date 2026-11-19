@@ -1,3 +1,4 @@
+import { assertCategoryKeys } from '../catalog-category/catalog-category';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { randomBytes } from 'crypto';
@@ -94,6 +95,7 @@ export class OfficialSkillPackageService {
     const name = assertSkillDisplayName(body.name);
     const summary = assertSkillSummary(body.summary ?? '');
     const categories = this.resolveCategories(body) ?? [];
+    await assertCategoryKeys(this.prisma, 'skill', categories);
     const key = await this.allocateKey(body.key, name);
     const instruction = String(body.instruction ?? '');
     if (!instruction.trim()) {
@@ -150,6 +152,7 @@ export class OfficialSkillPackageService {
     }
     const categories = this.resolveCategories(body);
     if (categories !== undefined) {
+      await assertCategoryKeys(this.prisma, 'skill', categories);
       data.categories = categories;
     }
 
@@ -275,6 +278,7 @@ export class OfficialSkillPackageService {
     sourceZip?: Buffer,
     display?: { name: string; summary: string; provenance: 'manual' | 'source' },
   ) {
+    await assertCategoryKeys(this.prisma, 'skill', storedCategories(parsed.manifest));
     const name = display?.name ?? parsed.manifest.name;
     const summary = display?.summary ?? parsed.manifest.description;
     // Create skill row first to get id for storage path; then package + point current.
@@ -334,6 +338,7 @@ export class OfficialSkillPackageService {
     sourceZip: Buffer | undefined,
     extra: Prisma.OfficialSkillUpdateInput = {},
   ) {
+    await assertCategoryKeys(tx, 'skill', storedCategories(parsed.manifest));
     const { revision } = packageWriteClaim(
       { updatedAt: row.updatedAt.toISOString(), revision: row.currentRevision },
       row.updatedAt.toISOString(),

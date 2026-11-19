@@ -4,6 +4,9 @@ import ElementPlus from 'element-plus';
 import zhCn from 'element-plus/es/locale/lang/zh-cn';
 import 'element-plus/dist/index.css';
 import './styles/layout.css';
+import './styles/deleteConfirm.css';
+import './styles/dialogTheme.css';
+import './styles/modalInputs.css';
 import App from './App.vue';
 import router from './router';
 

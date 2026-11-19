@@ -175,8 +175,10 @@
 </template>
 
 <script setup lang="ts">
+import { confirmDelete } from '../utils/confirm-delete';
+
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import LibraryUploadDialog from '../components/LibraryUploadDialog.vue';
 import { Search } from 'lucide-vue-next';
 import { AccessScopeLabel, KbStatusLabel, type AccessScope, type KbStatus } from '@mammoth/shared';
@@ -456,11 +458,7 @@ function onDownload(row: KbDocumentRow) {
 
 async function onRemove(row: KbDocumentRow) {
   try {
-    await ElMessageBox.confirm(`删除后不可恢复。确定删除「${row.name}」？`, '删除材料', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      confirmButtonClass: 'el-button--danger',
-    });
+    await confirmDelete({ title: '删除材料？', name: row.name, description: '删除后不可恢复。', confirmText: '删除材料' });
   } catch {
     return;
   }

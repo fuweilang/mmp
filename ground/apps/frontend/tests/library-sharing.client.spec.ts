@@ -46,7 +46,7 @@ function click(text: string, where: ParentNode = document) {
 async function confirmBox() {
   return vi.waitFor(() => {
     const node = document.querySelector<HTMLElement>('.library-message-box');
-    expect(node?.textContent).toContain('确认回收');
+    expect(node?.textContent).toContain('移入回收站？');
     return node!;
   });
 }
@@ -148,7 +148,7 @@ it('asks before recycling and only sends the request after confirmation', async 
   expect(fixture.recycle).not.toHaveBeenCalled();
   click('更多', root); await nextTick();
   [...document.querySelectorAll<HTMLElement>('.el-dropdown-menu__item')].find(node => node.textContent?.trim() === '回收')!.click();
-  click('确认', await confirmBox());
+  click('移入回收站', await confirmBox());
   await vi.waitFor(() => expect(fixture.recycle).toHaveBeenCalledWith('file'));
   const notice = await vi.waitFor(() => {
     const node = [...document.querySelectorAll('.el-message')].find(item => item.textContent?.includes('已放入回收站'));

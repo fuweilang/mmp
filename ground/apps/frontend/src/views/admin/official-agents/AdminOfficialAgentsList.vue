@@ -13,15 +13,14 @@
         @keyup.enter="emit('search')"
       />
       <el-select
-        :model-value="kindFilter"
-        class="kind-filter"
+        :model-value="categoryFilter"
+        class="category-filter"
         clearable
-        placeholder="全部类型"
-        aria-label="类型"
-        @update:model-value="onKindChange"
+        placeholder="全部分类"
+        aria-label="分类"
+        @update:model-value="onCategoryChange"
       >
-        <el-option label="通用型" value="GENERAL" />
-        <el-option label="资料型" value="KNOWLEDGE" />
+        <el-option v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
       <el-button type="primary" @click="emit('search')">搜索</el-button>
       <el-button @click="emit('reset')">重置</el-button>
@@ -86,11 +85,10 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="类型" width="110">
+      <el-table-column label="分类" width="110">
         <template #default="{ row }">
-          <el-tag size="small" effect="plain" :type="row.kind === 'KNOWLEDGE' ? 'warning' : 'primary'">
-            {{ kindLabel(row.kind) }}
-          </el-tag>
+          <el-tag v-if="row.category" size="small" effect="plain">{{ categoryLabel(row.category) }}</el-tag>
+          <span v-else class="muted">未设置</span>
         </template>
       </el-table-column>
       <el-table-column label="状态" width="100">
@@ -180,9 +178,10 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
+import { useCatalogCategories } from '../../../composables/useCatalogCategories';
 import { Search, UserRound } from 'lucide-vue-next';
-import type { OfficialAgentKind, OfficialAgentRow, OfficialAgentStatus, OfficialAgentStatusCounts } from '../../../api/admin';
-import { formatDate, kindLabel, statusLabel, statusType } from '../../../components/admin/official-agents/agent-display';
+import type { OfficialAgentCategory, OfficialAgentRow, OfficialAgentStatus, OfficialAgentStatusCounts } from '../../../api/admin';
+import { categoryLabel, formatDate, statusLabel, statusType } from '../../../components/admin/official-agents/agent-display';
 
 const props = withDefaults(defineProps<{
   rows: OfficialAgentRow[];
@@ -191,7 +190,7 @@ const props = withDefaults(defineProps<{
   statusCounts: OfficialAgentStatusCounts;
   keyword: string;
   statusFilter: OfficialAgentStatus | 'ALL';
-  kindFilter: OfficialAgentKind | '';
+  categoryFilter: OfficialAgentCategory | '';
   hasFilters: boolean;
   currentPage: number;
   pageSize: number;
@@ -209,7 +208,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   'update:keyword': [value: string];
   'update:statusFilter': [value: OfficialAgentStatus | 'ALL'];
-  'update:kindFilter': [value: OfficialAgentKind | ''];
+  'update:categoryFilter': [value: OfficialAgentCategory | ''];
   'search-input': [];
   search: [];
   reset: [];
@@ -227,6 +226,7 @@ const emit = defineEmits<{
   'page-size-change': [size: number];
 }>();
 
+const { options: categoryOptions } = useCatalogCategories('expert');
 const tableRef = ref();
 const brokenAvatarIds = reactive<Record<string, boolean>>({});
 
@@ -244,8 +244,8 @@ function onStatusChange(value: OfficialAgentStatus | 'ALL') {
   emit('search');
 }
 
-function onKindChange(value: OfficialAgentKind | '' | undefined) {
-  emit('update:kindFilter', value || '');
+function onCategoryChange(value: OfficialAgentCategory | '' | undefined) {
+  emit('update:categoryFilter', value || '');
   emit('search');
 }
 
@@ -306,8 +306,12 @@ defineExpose({
   width: 260px;
 }
 
-.kind-filter {
+.category-filter {
   width: 140px;
+}
+
+.muted {
+  color: var(--el-text-color-secondary);
 }
 
 .status-tabs {
@@ -424,7 +428,7 @@ defineExpose({
   }
 
   .keyword-input,
-  .kind-filter {
+  .category-filter {
     width: 100%;
   }
 

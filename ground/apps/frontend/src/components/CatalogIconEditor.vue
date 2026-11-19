@@ -1,7 +1,7 @@
 <template>
   <!-- Expert avatar: the whole circle and pencil share one two-action menu. -->
   <div v-if="profile === 'expert'" class="catalog-icon-editor catalog-icon-editor--expert">
-    <el-popover v-model:visible="menuOpen" trigger="click" placement="bottom" :width="104" :show-arrow="false" popper-class="catalog-avatar-menu">
+    <el-popover v-model:visible="menuOpen" trigger="click" placement="bottom" :width="164" :show-arrow="false" popper-class="catalog-avatar-menu">
       <template #reference>
         <button type="button" class="catalog-avatar-trigger" aria-label="编辑头像" :disabled="disabled || checking">
           <span class="catalog-icon-preview catalog-icon-preview--expert"><img v-if="preview && !broken" :src="preview" alt="专家头像" @error="broken=true" /><ImageIcon v-else :size="22" /></span>
@@ -9,14 +9,11 @@
         </button>
       </template>
       <el-upload ref="upload" :accept="accept" :auto-upload="false" :show-file-list="false" :disabled="disabled || checking" :on-change="picked" class="catalog-avatar-upload">
-        <button type="button" class="catalog-avatar-action" :disabled="disabled || checking" @click="menuOpen=false">上传图片</button>
+        <button type="button" class="catalog-avatar-action" :disabled="disabled || checking" @click="menuOpen=false"><Upload :size="17" aria-hidden="true"/><span>上传图片</span></button>
       </el-upload>
-      <button type="button" class="catalog-avatar-action" :disabled="disabled || checking" @click="openGeneration">AI 生成</button>
+      <button type="button" class="catalog-avatar-action" :disabled="disabled || checking" @click="openGeneration"><Sparkles :size="17" aria-hidden="true"/><span>AI 生成</span></button>
     </el-popover>
-    <el-dialog v-model="generationOpen" title="AI 生成头像" width="388px" class="catalog-avatar-generation" align-center append-to-body>
-      <div class="catalog-avatar-generation-empty"><Sparkles :size="28" /><p>尚未配置生图模型</p><span>配置生图模型后，可在这里生成专家头像。</span><a href="/admin/models" target="_blank" rel="noopener">前往模型管理</a></div>
-      <template #footer><el-button type="primary" @click="generationOpen=false">知道了</el-button></template>
-    </el-dialog>
+    <AvatarGenerationDialog v-model="generationOpen" @selected="applyGenerated" />
   </div>
 
   <!-- Skill: legacy compact icon picker (unchanged semantics). -->
@@ -65,7 +62,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { ElMessage, type UploadFile, type UploadInstance } from 'element-plus';
-import { Image as ImageIcon, Pencil, Sparkles } from 'lucide-vue-next';
+import '../styles/catalogAvatar.css';
+import AvatarGenerationDialog from './AvatarGenerationDialog.vue';
+import { Image as ImageIcon, Pencil, Sparkles, Upload } from 'lucide-vue-next';
 import {
   sanitizeSvgTextForPreview,
   validateCatalogImage,
@@ -161,6 +160,12 @@ async function picked(value: UploadFile) {
       emit('validating', false);
     }
   }
+}
+
+function applyGenerated(file: File) {
+  if (props.disabled || checking.value) return;
+  emit('update:modelValue', file);
+  emit('update:removed', false);
 }
 
 function remove() {

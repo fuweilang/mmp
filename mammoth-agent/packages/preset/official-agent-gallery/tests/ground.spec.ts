@@ -45,6 +45,18 @@ function json(value: unknown): Response {
 }
 
 describe('GroundOfficialAgentClient', () => {
+  it('accepts managed category keys and category display metadata from Ground', async () => {
+    const managedCard = { ...card, category: 'cat-managed' }
+    const facets = { total: 1, capabilities: [{ id: 'cat-managed', count: 1, name: '财务管理', sortOrder: 0 }], industries: [] }
+    const page = { items: [managedCard], total: 1, hasMore: false, nextCursor: null }
+    const skill = { id: 'skill', key: 'skill', name: '财务技能', summary: '', category: 'cat-managed-skill', categories: ['cat-managed-skill', 'finance'], enabledAt: null, packageRevision: 1 }
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ facets, page }))
+      .mockResolvedValueOnce(json({ ...page, items: [skill] }))
+    const client = new GroundOfficialAgentClient('https://ground.test', async () => 'token', fetcher)
+    await expect(client.openExperts({})).resolves.toEqual({ facets, page })
+    await expect(client.pageSkills({ capability: 'cat-managed-skill' })).resolves.toEqual({ ...page, items: [skill] })
+  })
+
   it('uses the exact list, resolve, and retrieve requests with bearer authorization and cancellation', async () => {
     const fetcher = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(json([card]))

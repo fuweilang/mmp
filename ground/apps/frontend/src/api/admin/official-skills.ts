@@ -1,8 +1,15 @@
 import { adminHttp } from '../http';
 
-export type OfficialSkillCategory = 'common' | 'content' | 'analytics' | 'office' | 'education' | 'expertise' | 'business' | 'ecommerce' | 'sales' | 'hr' | 'legal' | 'finance' | 'consulting' | 'research' | 'files' | 'search' | 'writing' | 'lifestyle';
+export type OfficialSkillCategory = string;
+
+export type SkillPublicDetail = {
+  schemaVersion: 1; displayRevision: number; introduction: string;
+  outputs: string[]; materials: string[]; boundaries: string[];
+  starters: Array<{text:string}>;
+};
 
 export type OfficialSkillRow = {
+  discoveryDetail?: SkillPublicDetail;
   id: string;
   key: string;
   name: string;
@@ -84,6 +91,8 @@ export const adminOfficialSkillApi = {
     id: string,
     body: Partial<{ name: string; summary: string; category: OfficialSkillCategory | ''; categories: OfficialSkillCategory[]; instruction: string; expectedUpdatedAt: string }>,
   ) => adminHttp<OfficialSkillRow>(`/official-skills/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  saveDiscovery: (id: string, body: {expectedUpdatedAt:string;discoveryDetail:SkillPublicDetail}) =>
+    adminHttp<OfficialSkillRow>(`/official-skills/${id}/discovery`, {method:'PUT',body:JSON.stringify(body)}),
   replaceZip: (id: string, body: FormData) =>
     adminHttp<OfficialSkillRow>(`/official-skills/${id}/replace-zip`, { method: 'POST', body }),
   uploadIcon: (id:string,body:FormData) => adminHttp<OfficialSkillRow>(`/official-skills/${id}/icon`,{method:'POST',body}),

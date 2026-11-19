@@ -13,6 +13,8 @@ The Host creates native standard sessions from published experts or immutable cr
 
 Each message freezes its selected expert's full execution, knowledge and model configuration. The current expert defines the role; prior identities and methods remain historical. User facts and answers persist, with up to 16 previous speakers attributed in the logged prompt. Retrieval follows the current expert's knowledge configuration.
 
+Managed category keys are stored as strings in skill bindings and linked-skill summaries. Current readers accept existing built-in keys and custom keys; skill cards may also include an optional list of at most three categories. Older strict readers reject unsupported custom keys or category-list fields rather than interpreting them as another category. This change does not alter execution permissions or package identity.
+
 ## Remote API
 
 `create` accepts an expert and workspace. `createPreview` also accepts the immutable preview ID consumed by the gallery client's `expertPreview` URL entry. Both mount the standard preset. The Host negotiates execution protocol 2 while accepting exact legacy responses. Preview requests use the normal Ground adapter and preview attribution, with no fabricated published version or free provider path.

@@ -17,7 +17,6 @@
     <div v-if="!hasTranscript && !outgoing" class="expert-preview-empty">
       <div class="expert-preview-profile">
         <div class="expert-preview-avatar"><img v-if="avatarUrl" :src="avatarUrl" alt="" /><UserRound v-else :size="27" /></div>
-        <h3>{{ name || '未命名专家' }}</h3><p>{{ summary }}</p>
         <div v-if="starters.length" class="expert-preview-divider">试一试</div>
         <button v-for="starter in starters" :key="starter" type="button" class="expert-preview-starter" @click="chooseStarter(starter)">{{ starter }}<ChevronRight :size="18" /></button>
       </div>

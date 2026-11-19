@@ -1,0 +1,42 @@
+/* Shared input boundaries for dialogs, prompts and drawers. Draw inside the
+   control so scrollable overlay bodies cannot clip its left/right focus edge. */
+.el-overlay :is(.el-dialog:not(:where(.expert-workspace)), .el-message-box, .el-drawer) {
+  --el-border-radius-base: 8px;
+}
+.el-overlay :is(.el-dialog:not(:where(.expert-workspace)), .el-message-box, .el-drawer)
+:is(.el-input__wrapper, .el-select__wrapper, .el-select-v2__wrapper, .el-textarea__inner) {
+  border-radius: 8px !important;
+}
+.el-overlay :is(.el-dialog:not(:where(.expert-workspace)), .el-message-box, .el-drawer)
+:is(.el-input__wrapper.is-focus, .el-textarea__inner:focus, .el-range-editor.is-active) {
+  box-shadow: 0 0 0 1px var(--el-input-focus-border-color, var(--el-color-primary)) inset;
+}
+.el-overlay :is(.el-dialog:not(:where(.expert-workspace)), .el-message-box, .el-drawer)
+:is(.el-select__wrapper.is-focused, .el-select-v2__wrapper.is-focused) {
+  box-shadow: 0 0 0 1px var(--el-select-input-focus-border-color, var(--el-color-primary)) inset;
+}
+/* Validation remains visible even while the invalid control has focus. */
+.el-overlay :is(.el-dialog:not(:where(.expert-workspace)), .el-message-box, .el-drawer) .el-form-item.is-error
+:is(.el-input:not(.is-disabled) .el-input__wrapper, .el-textarea:not(.is-disabled) .el-textarea__inner, .el-select__wrapper:not(.is-disabled), .el-select-v2__wrapper:not(.is-disabled)),
+.el-overlay :is(.el-dialog:not(:where(.expert-workspace)), .el-message-box, .el-drawer) .el-input.is-error:not(.is-disabled) .el-input__wrapper {
+  box-shadow: 0 0 0 1px var(--el-color-danger) inset;
+}
+/* Composite starter rows own their focus ring, including their action area. */
+.el-overlay .el-dialog .skill-starter .el-textarea__inner {
+  box-shadow: none;
+  border-radius: 0 !important;
+}
+/* Native controls already have a real border: color that border instead of
+   adding a second ring. File inputs and full-page editors are left alone. */
+.el-overlay .el-dialog :is(.processing-controls input, .processing-controls select, .expert-knowledge-create input, .expert-knowledge-search) {
+  border-radius: 8px;
+}
+.el-overlay .el-dialog .expert-knowledge-search:focus-within {
+  border-color: var(--el-color-primary);
+  box-shadow: none;
+}
+.el-overlay .el-dialog :is(.processing-controls input, .processing-controls select, .expert-knowledge-create input):focus:not(:disabled) {
+  outline: none;
+  border-color: var(--el-color-primary);
+  box-shadow: none;
+}

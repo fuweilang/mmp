@@ -3,7 +3,7 @@
     <header class="folder-heading">
       <div class="folder-title">
         <nav v-if="selectedBase && !initialBaseId" class="folder-crumb" aria-label="知识库位置">
-          <el-button plain @click="showFolders"><ArrowLeft :size="15"/>返回全部文件夹</el-button>
+          <button type="button" class="folder-back" aria-label="返回全部文件夹" title="返回全部文件夹" @click="showFolders"><ChevronLeft :size="20" aria-hidden="true" /></button>
           <strong>{{ selectedBase.name }}</strong>
         </nav>
         <h2 v-else-if="selectedBase">{{ selectedBase.name }}</h2>
@@ -32,7 +32,6 @@
       <div v-if="filteredBases.length" class="pagination-row">
         <el-pagination v-model:current-page="folderPage" v-model:page-size="folderPageSize" background layout="total, sizes, prev, pager, next" :page-sizes="pageSizes" :total="filteredBases.length" />
       </div>
-      <p class="folder-help">在专家配置里创建知识库后，这里会出现所属文件夹。删除专家不会删除文件。</p>
     </template>
     <template v-else>
       <el-alert v-if="selectedBase && !selectedBase.enabled" title="此文件夹已停用，文件仍保留。" type="info" :closable="false" />
@@ -46,16 +45,17 @@
       <div v-if="filteredDocuments.length" class="pagination-row">
         <el-pagination v-model:current-page="filePage" v-model:page-size="filePageSize" background layout="total, sizes, prev, pager, next" :page-sizes="pageSizes" :total="filteredDocuments.length" />
       </div>
-      <p class="folder-help">文件处理成功后自动生效；更新处理中继续使用旧内容。支持 Markdown、文本、CSV、PDF、Word、PPT、Excel 和静态图片；图片自动识别，PDF 扫描页自动转 OCR 并后台分批入库，保留原始页码；PDF 不超过 100 MiB，图片不超过 8 MiB，其他文件不超过 20 MiB。</p>
     </template>
     <KnowledgeFilePreview v-model="previewOpen" :document="previewDocument" :base-name="selectedBase?.name" allow-processing @process="process" />
     <KnowledgeDocumentProcessingDialog v-model="processingOpen" :document="processingDocument" @changed="processingChanged" />
   </section>
 </template>
 <script setup lang="ts">
+import { confirmDelete } from '../../utils/confirm-delete';
+
 import {computed,onBeforeUnmount,onMounted,ref,watch} from 'vue';
 import {useRoute,useRouter} from 'vue-router';
-import {ArrowLeft,FileText,Folder,Plus,Upload} from 'lucide-vue-next';
+import {ChevronLeft,FileText,Folder,Plus,Upload} from 'lucide-vue-next';
 import {ElMessage,ElMessageBox} from 'element-plus';
 import {adminKnowledgeCoreApi as api,type KnowledgeBase,type KnowledgeDocument} from '../../api/admin';
 import {availableKnowledgeFile,knowledgeFileStatus,latestKnowledgeIndex,latestKnowledgeRevision} from '../../utils/knowledge-files';
@@ -98,8 +98,7 @@ function showFolders(){if(router){if(route?.params.baseId)void router.push('/adm
 if(route)watch(()=>String(route.params.baseId||''),(id)=>{if(id===baseId.value)return;if(!id){request++;stopPoll();baseId.value='';documents.value=[];filePage.value=1;error.value='';void reload();return;}void enter(id);});
 async function createFolder(){try{const {value}=await ElMessageBox.prompt('文件夹名称','新建文件夹',{inputValidator:v=>!!v?.trim()||'请填写名称',confirmButtonText:'创建',cancelButtonText:'取消'});creating.value=true;const base=await api.createBase(value.trim());await reload();ElMessage.success('已创建');await openBase(base);}catch(e){if(e!=='cancel'&&e!=='close')error.value=message(e);}finally{creating.value=false;}}
 async function renameFolder(base:KnowledgeBase){try{const {value}=await ElMessageBox.prompt('文件夹名称','重命名',{inputValue:base.name,inputValidator:v=>!!v.trim()||'请填写名称'});await api.updateBase(base.id,{name:value.trim()});await reload();emit('changed');ElMessage.success('已重命名');}catch(e){if(e!=='cancel'&&e!=='close')error.value=message(e);}}
-function escapeHtml(value:string){return value.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]||ch));}
-async function removeFolder(base:KnowledgeBase){const count=base._count?.documents??0;const name=`<span style="color:var(--el-color-primary)">${escapeHtml(base.name)}</span>`;try{await ElMessageBox.confirm(`将永久删除文件夹「${name}」及其中 ${count} 个文件、分段和索引，此操作不可恢复。仍有专家引用时不能删除。`,`删除“${base.name}”？`,{type:'warning',confirmButtonText:'删除文件夹',cancelButtonText:'取消',confirmButtonClass:'el-button--danger',dangerouslyUseHTMLString:true});await api.deleteBase(base.id);if(baseId.value===base.id)showFolders();else await reload();emit('changed');ElMessage.success('文件夹已删除');}catch(e){if(e!=='cancel'&&e!=='close')ElMessage.error(message(e));}}
+async function removeFolder(base:KnowledgeBase){const count=base._count?.documents??0;try{await confirmDelete({title:'删除文件夹？',name:base.name,description:[`将永久删除此文件夹及其中 ${count} 个文件、分段和索引，此操作不可恢复。`,'仍有专家引用时不能删除。'],confirmText:'删除文件夹'});await api.deleteBase(base.id);if(baseId.value===base.id)showFolders();else await reload();emit('changed');ElMessage.success('文件夹已删除');}catch(e){if(e!=='cancel'&&e!=='close')ElMessage.error(message(e));}}
 function beginUpload(){fileInput.value?.click();}
 function beginReplace(document:KnowledgeDocument){replaceTarget.value=document;replaceInput.value?.click();}
 async function sendFiles(files:File[],documentId?:string){if(uploading.value||!baseId.value)return;const id=baseId.value;uploading.value=true;error.value='';try{for(const file of files){const limit=/\.pdf$/i.test(file.name)?100:20;if(file.size>limit*1024*1024)throw new Error(`${file.name} 超过 ${limit} MiB`);if(/\.(png|jpg|jpeg|webp|gif)$/i.test(file.name)&&file.size>8*1024*1024)throw new Error(`${file.name} 超过图片识别的 8 MiB 限制`);if(!/\.(md|markdown|txt|pdf|docx|pptx|xlsx|csv|png|jpg|jpeg|webp|gif)$/i.test(file.name))throw new Error(`${file.name} 的格式暂不支持`);const body=new FormData();body.set('file',file);body.set('idempotencyKey',crypto.randomUUID());if(documentId)body.set('documentId',documentId);await api.upload(id,body);}ElMessage.success('文件已上传，系统正在自动处理');if(alive&&id===baseId.value)await loadDocuments(false);emit('changed');}catch(e){error.value=message(e);}finally{if(alive)uploading.value=false;}}
@@ -108,10 +107,36 @@ function replaceFile(event:Event){const input=event.target as HTMLInputElement,f
 function ocrProgress(document:KnowledgeDocument){const job=latestKnowledgeIndex(document)?.job,p=job?.progress;if(!p)return '';return `已识别 ${p.completedPages} / ${p.totalPages} 页`+(job?.status==='FAILED'&&p.nextPage?`，第 ${p.nextPage} 页待重试`:p.nextPage?'，后台分批处理中':job?.status==='SUCCEEDED'?'':'，正在入库');}
 function retryable(document:KnowledgeDocument){return ['FAILED','CANCELLED'].includes(latestKnowledgeIndex(document)?.job?.status||'');}
 async function retry(document:KnowledgeDocument){const job=latestKnowledgeIndex(document)?.job;if(!job||retrying.value.has(document.id))return;retrying.value.add(document.id);try{const next=await api.jobAction(job.id,'retry');ElMessage.success(next.status==='SUCCEEDED'?'文件已处理完成':next.id===job.id?'已提交重试':'已创建新的处理任务');await loadDocuments(false);}catch(e){error.value=message(e);}finally{retrying.value.delete(document.id);}}
-async function remove(document:KnowledgeDocument){try{const usage=await api.usage(document.id);await ElMessageBox.confirm(`将删除此文件。仍有专家引用时不能删除。${usage.length?'引用专家：'+usage.map(e=>e.name).join('、')+'。':''}`,`删除“${document.title}”？`,{type:'warning',confirmButtonText:'删除文件',cancelButtonText:'取消'});await api.deleteDocument(document.id);await loadDocuments(false);emit('changed');ElMessage.success('文件已删除');}catch(e){if(e!=='cancel'&&e!=='close')ElMessage.error(message(e));}}
+async function remove(document:KnowledgeDocument){try{const usage=await api.usage(document.id);await confirmDelete({title:'删除文件？',name:document.title,description:['将删除此文件。仍有专家引用时不能删除。',...(usage.length?['引用专家：'+usage.map(e=>e.name).join('、')+'。']:[])],confirmText:'删除文件'});await api.deleteDocument(document.id);await loadDocuments(false);emit('changed');ElMessage.success('文件已删除');}catch(e){if(e!=='cancel'&&e!=='close')ElMessage.error(message(e));}}
 onMounted(reload);onBeforeUnmount(()=>{alive=false;request++;stopPoll();});
 defineExpose({reload});
 </script>
 <style scoped>
-.knowledge-folders{display:grid;gap:12px;min-width:0}.folder-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px}.folder-title{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto}.folder-heading h2{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:600;line-height:32px}.folder-crumb{display:flex;align-items:center;gap:10px;min-width:0}.folder-crumb :deep(.el-button){flex:0 0 auto}.folder-crumb :deep(svg){margin-right:4px}.folder-crumb strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:600;line-height:32px}.folder-help{color:var(--el-text-color-secondary);font-size:13px;line-height:1.7;margin:0}.folder-actions{display:flex;gap:8px;align-items:center;flex:0 0 auto}.folder-actions svg{margin-right:4px}.folder-search{width:240px}.folder-list.el-table,.folder-file-list.el-table{font-size:13px}.folder-list :deep(.el-table__cell),.folder-file-list :deep(.el-table__cell),.folder-list :deep(.el-button),.folder-file-list :deep(.el-button),.file-name{font-size:13px}.folder-list :deep(th.el-table__cell){background:var(--el-fill-color-light);font-weight:500}.folder-list :deep(td.el-table__cell){padding:14px 0}.folder-name,.file-name{display:flex;align-items:center;gap:10px;border:0;padding:0;background:transparent;color:var(--el-text-color-primary);font:inherit;cursor:pointer;text-align:left}.folder-name svg,.file-name svg{color:var(--el-color-primary);flex-shrink:0}.folder-name:hover,.file-name:hover{color:var(--el-color-primary)}.file-name{overflow-wrap:anywhere}.folder-list :deep(.el-button+.el-button),.folder-file-list :deep(.el-button+.el-button){margin-left:6px}.folder-list :deep(.folder-ops .cell),.folder-file-list :deep(.file-ops .cell){white-space:nowrap}.folder-list :deep(.folder-ops .el-button),.folder-file-list :deep(.file-ops .el-button){padding-left:6px;padding-right:6px}.pagination-row{display:flex;justify-content:flex-end}.muted{color:var(--el-text-color-secondary)}.file-note{font-size:12px;color:var(--el-text-color-secondary);overflow-wrap:anywhere}.file-error{font-size:12px;color:var(--el-color-danger);overflow-wrap:anywhere}.hidden-input{display:none}
+.folder-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.folder-back:hover {
+  background: #f0f1f8;
+}
+.folder-back:active {
+  background: #e6e8f2;
+}
+.folder-back:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+.knowledge-folders{display:grid;gap:12px;min-width:0}.folder-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px}.folder-title{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto}.folder-heading h2{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:600;line-height:32px}.folder-crumb{display:flex;align-items:center;gap:10px;min-width:0}.folder-crumb strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:600;line-height:32px}.folder-actions{display:flex;gap:8px;align-items:center;flex:0 0 auto}.folder-actions svg{margin-right:4px}.folder-search{width:240px}.folder-list.el-table,.folder-file-list.el-table{font-size:13px}.folder-list :deep(.el-table__cell),.folder-file-list :deep(.el-table__cell),.folder-list :deep(.el-button),.folder-file-list :deep(.el-button),.file-name{font-size:13px}.folder-list :deep(th.el-table__cell){background:var(--el-fill-color-light);font-weight:500}.folder-list :deep(td.el-table__cell){padding:14px 0}.folder-name,.file-name{display:flex;align-items:center;gap:10px;border:0;padding:0;background:transparent;color:var(--el-text-color-primary);font:inherit;cursor:pointer;text-align:left}.folder-name svg,.file-name svg{color:var(--el-color-primary);flex-shrink:0}.folder-name:hover,.file-name:hover{color:var(--el-color-primary)}.file-name{overflow-wrap:anywhere}.folder-list :deep(.el-button+.el-button),.folder-file-list :deep(.el-button+.el-button){margin-left:6px}.folder-list :deep(.folder-ops .cell),.folder-file-list :deep(.file-ops .cell){white-space:nowrap}.folder-list :deep(.folder-ops .el-button),.folder-file-list :deep(.file-ops .el-button){padding-left:6px;padding-right:6px}.pagination-row{display:flex;justify-content:flex-end}.muted{color:var(--el-text-color-secondary)}.file-note{font-size:12px;color:var(--el-text-color-secondary);overflow-wrap:anywhere}.file-error{font-size:12px;color:var(--el-color-danger);overflow-wrap:anywhere}.hidden-input{display:none}
 </style>

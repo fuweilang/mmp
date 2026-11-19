@@ -6,16 +6,20 @@
         <p>维护官方专家配置、发布与版本。</p>
       </div>
       <div class="header-actions">
+        <el-button v-if="canAuthor" @click="categoryManagerOpen = true">分类管理</el-button>
         <el-button @click="openAuditDrawer">运营审计</el-button>
         <el-button v-if="canAuthor" type="primary" @click="goCreate">新建专家</el-button>
       </div>
     </div>
 
+    <el-alert v-if="categoryError" :title="`分类加载失败：${categoryError}`" type="error" :closable="false" show-icon><el-button text @click="loadCategories">重试</el-button></el-alert>
+    <CatalogCategoryManager v-model="categoryManagerOpen" kind="expert" />
+
     <AdminOfficialAgentsList
       ref="listRef"
       v-model:keyword="keyword"
       v-model:status-filter="statusFilter"
-      v-model:kind-filter="kindFilter"
+      v-model:category-filter="categoryFilter"
       :rows="pagedRows"
       :total="rows.length"
       :loading="loading"
@@ -88,6 +92,8 @@
 </template>
 
 <script setup lang="ts">
+import CatalogCategoryManager from '../../components/admin/CatalogCategoryManager.vue';
+import { useCatalogCategories } from '../../composables/useCatalogCategories';
 import { computed, nextTick, onMounted, provide, ref, watch } from 'vue';
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -106,6 +112,9 @@ import { useAuthStore } from '../../stores/auth';
 import { canAuthorExperts } from '../../utils/knowledge-admin';
 import { useOfficialAgents } from '../../composables/useOfficialAgents';
 
+const categoryManagerOpen = ref(false);
+const { options: categoryOptions, error: categoryError, load: loadCategories } = useCatalogCategories('expert');
+onMounted(() => { void loadCategories(); });
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
@@ -116,7 +125,7 @@ const {
   statusCounts,
   keyword,
   statusFilter,
-  kindFilter,
+  categoryFilter,
   highlightedId,
   hasFilters,
   loading,
@@ -162,6 +171,14 @@ const {
 } = useOfficialAgents({
   canAuthor: () => canAuthor.value,
   saving: () => Boolean(editorRef.value?.isSaving?.()),
+});
+
+// Expert filtering is server-side: discard a deleted choice and replace its request.
+watch(categoryOptions, options => {
+  if (categoryFilter.value && !options.some(item => item.value === categoryFilter.value)) {
+    categoryFilter.value = '';
+    onSearchNow();
+  }
 });
 
 const listRef = ref<InstanceType<typeof AdminOfficialAgentsList> | null>(null);

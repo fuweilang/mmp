@@ -166,15 +166,14 @@ export function discoveryFor(skill: OfficialSkillCard): { capability: Capability
   return { capability, industries }
 }
 
-/** Expert labels are independent of the historical database category. */
-export const EXPERT_CAPABILITIES = [
- {id:'product-project',label:'expertProductProject',icon:'plan'},
- {id:'development',label:'expertDevelopment',icon:'code'},
- {id:'design',label:'expertDesign',icon:'design'},
- {id:'marketing',label:'expertMarketing',icon:'write'},
- {id:'sales-customer',label:'expertSalesCustomer',icon:'people'},
- {id:'business',label:'expertBusiness',icon:'case'},
- {id:'research-data',label:'expertResearchData',icon:'search'},
- {id:'finance-legal',label:'expertFinanceLegal',icon:'scales'},
- {id:'people-learning',label:'expertPeopleLearning',icon:'people'},
+/** Experts render the six Admin categories verbatim; unset categories get an explicit bucket. */
+export const UNCATEGORIZED_EXPERT_CATEGORY = 'uncategorized'
+export const EXPERT_CATEGORIES = [
+ {id:'common',label:'categoryCommon',icon:'plan'},
+ {id:'productivity',label:'categoryProductivity',icon:'plan'},
+ {id:'content',label:'categoryContent',icon:'write'},
+ {id:'sales',label:'categorySales',icon:'people'},
+ {id:'expertise',label:'categoryExpertise',icon:'file'},
+ {id:'analytics',label:'categoryAnalytics',icon:'chart'},
+ {id:UNCATEGORIZED_EXPERT_CATEGORY,label:'categoryUnset',icon:'case'},
 ] as const satisfies readonly {id:string;label:OfficialAgentGalleryLocaleKey;icon:string}[]

@@ -69,6 +69,8 @@
 </template>
 
 <script setup lang="ts">
+import { confirmDelete } from '../../utils/confirm-delete';
+
 import { ElMessageBox } from 'element-plus';
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { createExpertEditorResources, expertEditorResourcesKey } from './expert-editor-resources';
@@ -157,11 +159,11 @@ async function removeDocument(document: KnowledgeDocument) {
   try {
     const usage = await api.usage(document.id);
     const names = usage.map(item => item.name).filter(Boolean);
-    await ElMessageBox.confirm(
-      names.length ? `删除后，这份文件会从「${base.name}」移除。还在使用它的专家：${names.join('、')}。` : `删除后，这份文件会从「${base.name}」移除。`,
-      `删除「${name}」？`,
-      { type: 'warning', confirmButtonText: '删除文件', cancelButtonText: '取消' },
-    );
+    await confirmDelete({
+      title: '删除文件？', name,
+      description: [`删除后，这份文件会从「${base.name}」移除。`, ...(names.length ? [`还在使用它的专家：${names.join('、')}。`] : [])],
+      confirmText: '删除文件',
+    });
     await api.deleteDocument(document.id);
     if (!alive) return;
     if (previewDocument.value?.id === document.id) closePreview();
