@@ -356,7 +356,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
     const agent = publishRecordsAgent.value;
     if (!agent) return;
     try {
-      await ElMessageBox.confirm(`将在线版本切换到 v${version.version}，草稿保持原样；新会话使用所选版本。`, '回滚版本', { type: 'warning' });
+      await ElMessageBox.confirm(`将在线版本切换到 v${version.version}，并用该版本覆盖当前草稿；未发布的修改会丢失。`, '回滚版本', { type: 'warning' });
     } catch {
       return;
     }
@@ -365,7 +365,7 @@ export function useOfficialAgents(options: OfficialAgentsOptions = {}) {
       const next = await adminOfficialAgentApi.rollback(agent.id, version.id);
       replaceRow(next);
       publishRecordsAgent.value = next;
-      ElMessage.success('在线版本已回滚，草稿保持原样');
+      ElMessage.success(`在线版本已回滚，草稿已恢复为 v${version.version}`);
       await load();
     } catch (e) {
       ElMessage.error(e instanceof Error ? e.message : '回滚失败');

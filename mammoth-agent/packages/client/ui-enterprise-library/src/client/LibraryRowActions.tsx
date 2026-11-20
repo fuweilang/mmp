@@ -15,6 +15,7 @@ export function RowActions({ item, view, busy, t, onAction }: { item: LibraryCho
     : [
       ...(item.kind !== 'FOLDER' ? [{ id: 'preview', label: t('preview') }] : []),
       ...(item.kind === 'FILE' ? [{ id: 'use', label: t('useForChat'), disabled: choiceBlock(item).disabled }, { id: 'download', label: t('download') }, { id: 'versions', label: t('versions') }] : []),
+      ...(view === 'recent' ? [{ id: 'forgetRecent', label: t('forgetRecent') }] : []),
       ...(item.canManage ? [{ id: 'rename', label: t('rename') }, { id: 'move', label: t('move') },
         ...(item.kind === 'FILE' ? [{ id: 'replace', label: t('replace') }, ...(item.parseStatus === 'FAILED' ? [{ id: 'retry', label: t('retry') }] : [])] : []),
         { id: 'scope', label: t(item.scope === 'ENTERPRISE' ? 'unshare' : 'share') }, { id: 'recycle', label: t('recycle'), danger: true }] : []),

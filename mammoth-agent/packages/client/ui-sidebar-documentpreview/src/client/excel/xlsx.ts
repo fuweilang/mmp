@@ -105,11 +105,15 @@ export async function convertXlsx(bytes: Uint8Array<ArrayBuffer>, limits: ExcelL
     const visible = worksheet.state === 'visible'
     const status = visible && !active ? 1 : 0
     active ||= visible
+    const configuredRowHeight = worksheet.properties.defaultRowHeight
+    const defaultRowHeight = typeof configuredRowHeight === 'number' && Number.isFinite(configuredRowHeight) && configuredRowHeight > 0
+      ? configuredRowHeight * 96 / 72
+      : 20
     const sheet: Sheet = {
       id: String(worksheet.id), name: worksheet.name, order, status, hide: visible ? 0 : 1,
       row, column,
       config, celldata, showGridLines: view?.showGridLines !== false,
-      defaultRowHeight: worksheet.properties.defaultRowHeight * 96 / 72,
+      defaultRowHeight,
       luckysheet_select_save: initialSelection(config),
     }
     if (worksheet.properties.defaultColWidth !== undefined) sheet.defaultColWidth = columnPixels(worksheet.properties.defaultColWidth)

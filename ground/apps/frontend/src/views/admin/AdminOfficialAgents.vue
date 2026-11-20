@@ -71,6 +71,7 @@
       :loading="publishRecordsLoading"
       :can-author="canAuthor"
       :rollback-id="rollbackId"
+      :category-options="categoryOptions"
       @rollback="rollback"
     />
 
@@ -204,10 +205,9 @@ function goEdit(row: OfficialAgentRow) {
 }
 
 async function leaveToList() {
-  const back = router.options.history.state.back;
-  const backPath = typeof back === 'string' ? back.split('?')[0].replace(/\/$/, '') : '';
-  if (backPath === '/admin/official-agents') await router.back();
-  else await router.replace({ name: 'admin-official-agents' });
+  // router.back() resolves before the navigation guard runs, which used to clear
+  // bypassLeaveGuard too early and ask for discard a second time. Await replace.
+  await router.replace({ name: 'admin-official-agents' });
 }
 
 function onEditorVisibility(open: boolean) {

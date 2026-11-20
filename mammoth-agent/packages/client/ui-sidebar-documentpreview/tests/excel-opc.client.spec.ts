@@ -1,6 +1,7 @@
 /** OPC part resolution and namespace aliases preserve independent-writer workbook contents. */
 import { createRequire } from 'node:module'
 import ExcelJS from 'exceljs'
+import * as XLSX from 'xlsx'
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 import { Config } from '../src/config.ts'
@@ -50,6 +51,14 @@ describe.each([['Node', ExcelJS], ['browser bundle', browserExcel]] as const)('%
       texts: [{ text: '生成的批注', font: { bold: true } }], margins: { insetmode: 'custom' },
     })
   })
+})
+
+it('uses a finite default row height when a workbook omits sheet format properties', async () => {
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([['header'], ['value']]), '数据')
+  const result = await convertExcel(new Uint8Array(XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })), 'xlsx', limits)
+  expect(result.sheets[0]!.defaultRowHeight).toBe(20)
+  expect(result.sheets[0]!.row).toBe(2)
 })
 
 it('retains styles, formulas, hidden sheets and notices in the combined workbook', async () => {

@@ -51,6 +51,9 @@ export class AdminOfficialAgentPublishService {
             openingQuestions: frozenStringList(agent.openingQuestions, '开场问题'),
             systemPrompt: agent.systemPrompt,
             toolScope: frozenStringList(agent.toolScope, '工具范围'),
+            category: agent.category,
+            capabilities: (agent.capabilities ?? []) as Prisma.InputJsonValue,
+            kind: agent.kind,
             customAvatarPath: agent.customAvatarPath || null,
             linkedSkillSummaries: linkedSkillSummaries as unknown as Prisma.InputJsonValue,
             expertDefinition: normalizeExpertDefinition(agent.expertDefinition, agent),
@@ -121,8 +124,49 @@ export class AdminOfficialAgentPublishService {
     await prisma.$transaction(async tx=>{
       const version=await tx.officialAgentVersion.findFirst({where:{id:versionId,agentId:id}});
       if(!version)throw new NotFoundException('专家版本不存在');
-      await tx.officialAgent.update({where:{id},data:{status:'PUBLISHED',onlineVersionId:versionId}});
-      await tx.auditLog.create({data:{userId:actor.id,action:'admin_rollback_official_agent',meta:{agentId:id,versionId}}});
+      // Old versions predate the classification snapshot; leave current display metadata intact.
+      const classificationRestored = version.kind !== null;
+      // Restore the frozen version into the draft as well: the editor reads official_agent,
+      // while the online pointer only controls catalog/session execution.
+      const linkedSkillIds = Array.isArray(version.linkedSkillSummaries)
+        ? [...new Set(version.linkedSkillSummaries
+            .map(item => item && typeof item === 'object' && !Array.isArray(item) && 'id' in item
+              ? String((item as { id?: unknown }).id ?? '')
+              : '')
+            .filter(Boolean))]
+        : [];
+      const existingSkills = linkedSkillIds.length
+        ? await tx.officialSkill.findMany({ where: { id: { in: linkedSkillIds } }, select: { id: true } })
+        : [];
+      const restoredSkillIds = existingSkills.map(skill => skill.id);
+      const missingSkillIds = linkedSkillIds.filter(skillId => !restoredSkillIds.includes(skillId));
+      await tx.officialAgent.update({
+        where: { id },
+        data: {
+          status: OfficialAgentStatus.PUBLISHED,
+          onlineVersionId: versionId,
+          name: version.name,
+          summary: version.summary,
+          openingQuestions: frozenStringList(version.openingQuestions, '开场问题'),
+          systemPrompt: version.systemPrompt,
+          toolScope: frozenStringList(version.toolScope, '工具范围'),
+          ...(classificationRestored ? {
+            category: version.category,
+            capabilities: (version.capabilities ?? []) as Prisma.InputJsonValue,
+            kind: version.kind!,
+          } : {}),
+          customAvatarPath: version.customAvatarPath || null,
+          expertDefinition: (version.expertDefinition ?? {}) as Prisma.InputJsonValue,
+          executionConfig: (version.executionConfig ?? { route: 'LEGACY' }) as Prisma.InputJsonValue,
+        },
+      });
+      await tx.officialAgentSkillLink.deleteMany({ where: { agentId: id } });
+      if (restoredSkillIds.length) {
+        await tx.officialAgentSkillLink.createMany({
+          data: restoredSkillIds.map(skillId => ({ agentId: id, skillId })),
+        });
+      }
+      await tx.auditLog.create({data:{userId:actor.id,action:'admin_rollback_official_agent',meta:{agentId:id,versionId,version:version.version,draftRestored:true,classificationRestored,linkedSkillIds:restoredSkillIds,missingLinkedSkillIds:missingSkillIds}}});
     });
     return this.presenter.load(id);
   }

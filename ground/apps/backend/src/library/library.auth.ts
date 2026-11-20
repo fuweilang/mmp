@@ -64,6 +64,9 @@ export class LibraryAuthService {
 
   async touch(actor: Actor, node: NodeRecord) {
     if (node.state !== 'ACTIVE') return;
+    // Management visibility (org/platform admin) must not turn another owner's private
+    // file into a personal recent entry.
+    if (node.ownerUserId !== actor.userId && node.scope !== 'ENTERPRISE') return;
     await this.ctx.store.touchRecent({
       id: this.ctx.store.createId(),
       tenantId: actor.tenantId,

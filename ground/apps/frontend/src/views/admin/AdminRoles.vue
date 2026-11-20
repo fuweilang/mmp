@@ -45,7 +45,7 @@
           v-model="tenantFilter"
           class="tenant-filter"
           clearable
-          filterable
+
           placeholder="筛选企业"
           @change="onSearchNow"
         >
@@ -164,7 +164,7 @@
             <el-select
               v-model="createTenantId"
               style="width: 100%"
-              filterable
+
               placeholder="选择企业"
             >
               <el-option

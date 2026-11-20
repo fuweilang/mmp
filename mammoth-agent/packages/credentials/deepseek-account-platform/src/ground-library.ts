@@ -11,7 +11,7 @@ const ROUTES: readonly [string, RegExp][] = [
   ['GET', /^\/(?:context|config|items|search)$/], ['POST', /^\/(?:context|folders|links|files|open|batch|used)$/],
   ['POST', /^\/files\/[A-Za-z0-9_-]+\/versions$/],
   ['PATCH', /^\/nodes\/[A-Za-z0-9_-]+$/], ['DELETE', /^\/nodes\/[A-Za-z0-9_-]+$/],
-  ['POST', /^\/nodes\/[A-Za-z0-9_-]+\/(?:move|scope|recycle|restore|retry-parse)$/],
+  ['POST', /^\/nodes\/[A-Za-z0-9_-]+\/(?:move|scope|recycle|restore|retry-parse|forget-recent)$/],
   ['GET', /^\/nodes\/[A-Za-z0-9_-]+\/(?:preview|source|download|versions|scope-impact)$/],
 ]
 

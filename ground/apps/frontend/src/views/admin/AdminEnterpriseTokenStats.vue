@@ -16,7 +16,7 @@
         <el-select
           v-model="modelFilter"
           clearable
-          filterable
+
           placeholder="全部模型"
           class="ets-model"
           @change="reload"

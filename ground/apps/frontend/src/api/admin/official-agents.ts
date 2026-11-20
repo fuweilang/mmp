@@ -27,6 +27,9 @@ export type OfficialAgentVersion = {
   openingQuestions: string[];
   systemPrompt: string;
   toolScope: string[];
+  category?: string | null;
+  capabilities?: string[] | null;
+  kind?: OfficialAgentKind | null;
   publishedByUserId: string | null;
   /** Real operator display name when the user still exists; null if unknown/missing. */
   publishedByName?: string | null;

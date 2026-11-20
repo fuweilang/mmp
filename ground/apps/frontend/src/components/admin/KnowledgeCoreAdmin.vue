@@ -182,7 +182,7 @@
   <p class="plain-lead">选一个文件夹，输入可能会问到的问题。下面出现的段落，就是专家能引用的内容。</p>
   <el-form label-width="88px">
     <el-form-item label="文件夹">
-      <el-select v-model="askBaseId" filterable placeholder="选择文件夹">
+      <el-select v-model="askBaseId" placeholder="选择文件夹">
         <el-option v-for="b in bases.filter(b => b.enabled)" :key="b.id" :label="b.name" :value="b.id" />
       </el-select>
     </el-form-item>
@@ -204,7 +204,7 @@
   <el-alert title="仅检索已发布的新知识版本。候选分数只在对应路线 / 配置内有效，跨配置按排名融合。测试结果不代表真实供应商质量已验收。" type="info" :closable="false" />
   <el-form label-width="160px">
     <el-form-item label="知识发布版本">
-      <el-select v-model="testReleaseIds" multiple filterable placeholder="选择最多 20 个版本">
+      <el-select v-model="testReleaseIds" multiple placeholder="选择最多 20 个版本">
         <el-option v-for="r in allReleases" :key="r.id" :value="r.id" :label="`${r.baseName} · v${r.version} · ${r.id}`" />
       </el-select>
     </el-form-item>
@@ -272,7 +272,7 @@
   <p v-if="profileForm.predecessorId" class="muted profiles-note">旧配置和已经做好的搜索结果会保留。新上传的文件才会改用这一套。</p>
   <el-form label-width="120px">
     <el-form-item label="用哪家服务">
-      <el-select v-model="profileForm.providerId" filterable>
+      <el-select v-model="profileForm.providerId">
         <el-option v-for="p in retrievalProviders" :key="p.id" :value="p.id" :label="`${p.displayName}${p.enabled?'':'（停用）'}${p.hasApiKey?'':'（未配密钥）'}`" />
       </el-select>
     </el-form-item>

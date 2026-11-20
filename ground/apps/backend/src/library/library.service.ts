@@ -71,8 +71,8 @@ export class LibraryService {
     return this.mutate.createFolder(actor, name, parentId, options);
   }
 
-  createOwnedFolder(actor: Actor, ownerUserId: string, name: string, parentId?: string | null, requestedScope?: LibraryScope): Promise<LibraryItem> {
-    return this.mutate.createOwnedFolder(actor, ownerUserId, name, parentId, requestedScope);
+  createOwnedFolder(actor: Actor, ownerUserId: string, name: string, parentId?: string | null, requestedScope?: LibraryScope, options: Pick<CreationOptions, 'reuseExisting'> = {}): Promise<LibraryItem> {
+    return this.mutate.createOwnedFolder(actor, ownerUserId, name, parentId, requestedScope, options);
   }
 
   createLink(actor: Actor, name: string, url: string, parentId?: string | null, options: CreationOptions = {}): Promise<LibraryItem> {
@@ -117,6 +117,10 @@ export class LibraryService {
 
   purge(actor: Actor, nodeId: string): Promise<{ ok: boolean; code: 'SOURCE_GONE' }> {
     return this.mutate.purge(actor, nodeId);
+  }
+
+  forgetRecent(actor: Actor, nodeId: string): Promise<{ ok: boolean }> {
+    return this.mutate.forgetRecent(actor, nodeId);
   }
 
   batch(actor: Actor, ids: string[], action: 'recycle' | 'restore' | 'purge') {

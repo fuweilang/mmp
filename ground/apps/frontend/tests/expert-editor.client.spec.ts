@@ -243,6 +243,14 @@ it('closing a dirty form asks before discarding and cancelling preserves input',
   await click('返回专家列表', dialog()); await vi.waitFor(() => expect(confirm).toHaveBeenCalled());
   expect(dialog().querySelector<HTMLTextAreaElement>('textarea[aria-label="专家指令"]')?.value).toBe('未保存');
 });
+it('confirming discard navigates to the list once without asking a second time', async () => {
+  await mount(); await prompt('未保存');
+  const confirm = vi.spyOn(ElMessageBox, 'confirm').mockResolvedValue('confirm');
+  await click('返回专家列表', dialog());
+  await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(confirm).toHaveBeenCalledTimes(1);
+});
 it('new experts use Core without silently migrating existing legacy experts', async () => {
   row.draft.executionConfig = undefined; await mount();
   expect(dialog().textContent).not.toContain('当前保留旧知识配置');

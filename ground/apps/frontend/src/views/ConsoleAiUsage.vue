@@ -28,10 +28,10 @@
         style="width: 260px"
         @change="onSearch"
       />
-      <el-select v-if="tab === 'detail'" v-model="userId" clearable filterable placeholder="成员" style="width: 160px" @change="onSearch">
+      <el-select v-if="tab === 'detail'" v-model="userId" clearable placeholder="成员" style="width: 160px" @change="onSearch">
         <el-option v-for="m in members" :key="m.userId" :label="m.name" :value="m.userId" />
       </el-select>
-      <el-select v-if="tab === 'detail'" v-model="model" clearable filterable placeholder="模型" style="width: 220px" @change="onSearch">
+      <el-select v-if="tab === 'detail'" v-model="model" clearable placeholder="模型" style="width: 220px" @change="onSearch">
         <el-option v-for="name in models" :key="name" :label="name" :value="name" />
       </el-select>
       <el-input

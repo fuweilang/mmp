@@ -143,6 +143,8 @@ export type LibraryItem = {
   updatedAt: string;
   recycledAt: string | null;
   accessedAt: string | null;
+  /** Folder-create response only: an existing same-name sibling was reused. */
+  reused?: boolean;
 };
 
 export type ParseChunk = {

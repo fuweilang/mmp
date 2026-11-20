@@ -19,7 +19,7 @@ export type UploadInput = {
   confirmShare?: boolean;
 };
 
-export type CreationOptions = { scope?: LibraryScope; confirmShare?: boolean };
+export type CreationOptions = { scope?: LibraryScope; confirmShare?: boolean; reuseExisting?: boolean };
 export type ScopeOptions = { confirmUnshare?: boolean; expectedTreeRevision?: string };
 export type MoveOptions = { confirmShare?: boolean; expectedTreeRevision?: string };
 export type ScopeImpact = { total: number; changed: number; files: number; folders: number; links: number; treeRevision: string };
@@ -49,17 +49,31 @@ export class LibraryMutateService {
   async createFolder(actor: Actor, name: string, parentId?: string | null, options: CreationOptions = {}) {
     this.auth.requireMember(actor);
     if (!parentId) this.scopeOrThrow(options.scope, options.confirmShare);
-    return this.createOwnedFolder(actor, actor.userId, name, parentId, options.scope);
+    return this.createOwnedFolder(actor, actor.userId, name, parentId, options.scope, options);
   }
 
   /** Explicitly authorized platform creation keeps the real actor separate from the target owner. */
-  async createOwnedFolder(actor: Actor, ownerUserId: string, name: string, parentId?: string | null, requestedScope?: LibraryScope): Promise<LibraryItem> {
-    if (!this.ctx.writing) return this.write(actor, service => service.createOwnedFolder(actor, ownerUserId, name, parentId, requestedScope));
+  async createOwnedFolder(actor: Actor, ownerUserId: string, name: string, parentId?: string | null, requestedScope?: LibraryScope, options: Pick<CreationOptions, 'reuseExisting'> = {}): Promise<LibraryItem> {
+    if (!this.ctx.writing) return this.write(actor, service => service.createOwnedFolder(actor, ownerUserId, name, parentId, requestedScope, options));
     const { scope } = await this.creationTarget(actor, parentId, requestedScope);
     await this.assertCreation(actor, ownerUserId, scope);
     await this.auth.sweep(actor.tenantId);
+    const safeName = safeNodeName(name);
+    const existing = (await this.ctx.store.listNodes(actor.tenantId)).find(row => row.kind === 'FOLDER'
+      && row.state === 'ACTIVE'
+      && row.ownerUserId === ownerUserId
+      && (row.parentId ?? null) === (parentId ?? null)
+      && row.scope === scope
+      && row.name === safeName);
+    if (existing) {
+      if (options.reuseExisting) {
+        const item = await toLibraryItem(this.ctx, actor, existing, await this.auth.custodiesFor(actor), null);
+        return { ...item, reused: true };
+      }
+      throw new LibraryError(409, '同一目录下已存在同名文件夹', 'NAME_TAKEN');
+    }
     const now = this.ctx.now();
-    const node = { ...this.blankNode(actor, 'FOLDER', safeNodeName(name), parentId ?? null, now), ownerUserId, scope };
+    const node = { ...this.blankNode(actor, 'FOLDER', safeName, parentId ?? null, now), ownerUserId, scope };
     await this.ctx.store.insertNode(node);
     await this.auth.writeAudit(actor, 'library_folder', { nodeId: node.id });
     return toLibraryItem(this.ctx, actor, node, await this.auth.custodiesFor(actor), null);
@@ -93,6 +107,15 @@ export class LibraryMutateService {
     const scope = target.scope;
     const name = safeDisplayName(input.originalName);
     const ext = assertAllowedUpload(name, input.bytes, this.ctx.limits);
+    const sameNameFile = (nodes: readonly NodeRecord[]) => nodes.some(row => row.kind === 'FILE'
+      && row.state === 'ACTIVE'
+      && row.ownerUserId === ownerUserId
+      && (row.parentId ?? null) === (input.parentId ?? null)
+      && row.scope === scope
+      && row.name === name);
+    if (sameNameFile(await this.ctx.store.listNodes(actor.tenantId))) {
+      throw new LibraryError(409, '同一目录下已存在同名文件，请改名或替换新版本', 'NAME_TAKEN');
+    }
     await this.stats.assertQuota(actor.tenantId, input.bytes.length);
     const now = this.ctx.now();
     const node = { ...this.blankNode(actor, 'FILE', name, input.parentId ?? null, now), ownerUserId };
@@ -106,6 +129,9 @@ export class LibraryMutateService {
           throw new LibraryError(409, '目标目录已变化，请确认保存位置后重试', 'SCOPE_CONFLICT');
         }
         await service.assertCreation(actor, ownerUserId, scope);
+        if (sameNameFile(await service.ctx.store.listNodes(actor.tenantId))) {
+          throw new LibraryError(409, '同一目录下已存在同名文件，请改名或替换新版本', 'NAME_TAKEN');
+        }
         await service.ctx.store.commitNewFile({ node, version: prepared.version, chunks: prepared.chunks, tenantQuotaBytes: this.ctx.limits.tenantQuotaBytes });
         await service.auth.writeAudit(actor, 'library_upload', { nodeId: node.id, versionId: prepared.version.id, scope });
         return toLibraryItem(service.ctx, actor, node, await service.auth.custodiesFor(actor), null);
@@ -152,7 +178,18 @@ export class LibraryMutateService {
   async rename(actor: Actor, nodeId: string, name: string): Promise<LibraryItem> {
     if (!this.ctx.writing) return this.write(actor, service => service.rename(actor, nodeId, name));
     const node = await this.auth.requireManage(actor, nodeId);
-    node.name = safeNodeName(name);
+    const safeName = safeNodeName(name);
+    if (node.kind === 'FOLDER' && safeName !== node.name) {
+      const conflict = (await this.ctx.store.listNodes(actor.tenantId)).some(row => row.id !== node.id
+        && row.kind === 'FOLDER'
+        && row.state === 'ACTIVE'
+        && row.ownerUserId === node.ownerUserId
+        && (row.parentId ?? null) === (node.parentId ?? null)
+        && row.scope === node.scope
+        && row.name === safeName);
+      if (conflict) throw new LibraryError(409, '同一目录下已存在同名文件夹', 'NAME_TAKEN');
+    }
+    node.name = safeName;
     node.updatedAt = this.ctx.now();
     await this.ctx.store.updateNode(node.id, { name: node.name, updatedAt: node.updatedAt });
     await this.auth.writeAudit(actor, 'library_rename', { nodeId: node.id });
@@ -162,6 +199,7 @@ export class LibraryMutateService {
   async move(actor: Actor, nodeId: string, parentId: string | null, options: MoveOptions = {}): Promise<LibraryItem> {
     if (!this.ctx.writing) return this.write(actor, service => service.move(actor, nodeId, parentId, options));
     const node = await this.auth.requireManage(actor, nodeId);
+    const previousScope = node.scope;
     if (parentId) {
       const destinationActor = actor.targetCustodyId ? { ...actor, custodyId: actor.targetCustodyId } : actor;
       const parent = await this.auth.requireVisibleFolder(destinationActor, parentId);
@@ -182,7 +220,19 @@ export class LibraryMutateService {
         }
       }
     }
-    const previousScope = node.scope;
+    if ((node.parentId ?? null) !== (parentId ?? null) || previousScope !== node.scope) {
+      const conflict = (await this.ctx.store.listNodes(actor.tenantId)).some(row => row.id !== node.id
+        && row.kind === node.kind
+        && row.state === 'ACTIVE'
+        && row.ownerUserId === node.ownerUserId
+        && (row.parentId ?? null) === (parentId ?? null)
+        && row.scope === node.scope
+        && row.name === node.name);
+      if (conflict) {
+        const label = node.kind === 'FOLDER' ? '文件夹' : node.kind === 'LINK' ? '链接' : '文件';
+        throw new LibraryError(409, node.kind === 'FILE' ? '同一目录下已存在同名文件，请改名或替换新版本' : `同一目录下已存在同名${label}`, 'NAME_TAKEN');
+      }
+    }
     node.parentId = parentId;
     node.updatedAt = this.ctx.now();
     await this.ctx.store.updateNode(node.id, { parentId, updatedAt: node.updatedAt });
@@ -225,6 +275,8 @@ export class LibraryMutateService {
       throw new LibraryError(400, '取消共享会影响全部子项，请确认', 'CONFIRM_UNSHARE');
     }
     await this.applyScope(tree, scope);
+    // Losing enterprise visibility also clears other members' personal recent entries.
+    if (scope === 'PRIVATE') await this.ctx.store.removeRecentForNodes(tree);
     await this.auth.writeAudit(actor, 'library_share', { nodeId: node.id, scope, affectedCount: tree.length });
     return toLibraryItem(this.ctx, actor, { ...node, scope, updatedAt: this.ctx.now() }, await this.auth.custodiesFor(actor), null);
   }
@@ -260,9 +312,15 @@ export class LibraryMutateService {
       }
       if (!parent || parent.state === 'PURGED') node.parentId = null;
     }
+    // Restoring a trashed folder restores its whole branch. Parents are written before
+    // children so every child's parent is active by the time its own state changes.
+    const nodes = await this.ctx.store.listNodes(actor.tenantId);
+    const descendants = this.recycledSubtree(nodes, node.id).reverse().filter(row => row.state === 'RECYCLED');
+    for (const child of descendants) await this.auth.requireManage(actor, child.id);
+    const now = this.ctx.now();
     node.state = 'ACTIVE';
     node.recycledAt = null;
-    node.updatedAt = this.ctx.now();
+    node.updatedAt = now;
     await this.ctx.store.updateNode(node.id, {
       state: 'ACTIVE',
       recycledAt: null,
@@ -270,8 +328,22 @@ export class LibraryMutateService {
       scope: node.scope,
       updatedAt: node.updatedAt,
     });
-    await this.auth.writeAudit(actor, 'library_restore', { nodeId: node.id, scope: node.scope });
+    for (const child of descendants) {
+      await this.ctx.store.updateNode(child.id, {
+        state: 'ACTIVE',
+        recycledAt: null,
+        updatedAt: now,
+      });
+    }
+    await this.auth.writeAudit(actor, 'library_restore', { nodeId: node.id, scope: node.scope, restoredCount: descendants.length + 1 });
     return toLibraryItem(this.ctx, actor, node, await this.auth.custodiesFor(actor), null);
+  }
+
+  /** Remove this user's recent entry without touching the node or its versions. */
+  async forgetRecent(actor: Actor, nodeId: string): Promise<{ ok: boolean }> {
+    this.auth.requireMember(actor);
+    await this.ctx.store.removeRecent(actor.userId, actor.tenantId, nodeId);
+    return { ok: true };
   }
 
   async purge(actor: Actor, nodeId: string): Promise<{ ok: boolean; code: 'SOURCE_GONE' }> {
@@ -281,14 +353,12 @@ export class LibraryMutateService {
     }
     const descendants = this.recycledSubtree(await this.ctx.store.listNodes(actor.tenantId), node.id);
     if (descendants.some(row => row.state === 'ACTIVE')) throw new LibraryError(400, '目录不为空', 'FOLDER_NONEMPTY');
-    const now = this.ctx.now();
+    // A folder purge removes its entire recycled branch; nothing is re-parented into trash.
     for (const child of descendants) {
-      if (child.parentId !== node.id || child.state === 'PURGED') continue;
-      child.parentId = null;
-      await this.ctx.store.updateNode(child.id, { parentId: null, updatedAt: now });
+      if (child.state !== 'PURGED') await this.purgeStored(child);
     }
     await this.purgeStored(node);
-    await this.auth.writeAudit(actor, 'library_purge', { nodeId: node.id });
+    await this.auth.writeAudit(actor, 'library_purge', { nodeId: node.id, purgedCount: descendants.length + 1 });
     return { ok: true, code: 'SOURCE_GONE' as const };
   }
 
@@ -303,6 +373,7 @@ export class LibraryMutateService {
         skipped += 1;
         continue;
       }
+      if (action === 'purge' && node.state === 'PURGED') { ok.push(id); continue; }
       try {
         if (action === 'recycle') await this.recycle(actor, id);
         else if (action === 'restore') await this.restore(actor, id);

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, IconChevronDownOutlineRegular, IconFolderCloseRegular, IconLinkOutlineRegular, FileTypeIcon } from '@mammoth-ai/mmp-client-ui-primitives'
 import { fetchLibraryPage, type LibraryFetch } from './api.ts'
-import type { LibraryChoice } from './selection.ts'
+import { matchesStatus, type LibraryChoice } from './selection.ts'
 import type { LibraryPanelProps } from './LibraryPanel.tsx'
 import { RowActions } from './LibraryRowActions.tsx'
 import { LibraryCreateMenu, type LibraryCreateAction } from './LibraryCreateMenu.tsx'
@@ -25,10 +25,12 @@ type Props = {
   busy?: boolean
   /** Bumped after a library change. Open branches refetch without collapsing. */
   revision?: number
+  /** Optional AI-availability filter; folders stay visible so the tree keeps its structure. */
+  status?: string
 }
 /** Children are fetched only while expanded; every branch has its own bounded page and cancellation. */
 export function LibraryTree(props: Props) {
-  const { origin, fetchImpl, t, path, onFolder, onFile, selectedId, view = 'mine', onDenied, revision = 0, revealIds } = props
+  const { origin, fetchImpl, t, path, onFolder, onFile, selectedId, view = 'mine', onDenied, revision = 0, revealIds, status = 'all' } = props
   const nextId = revealIds?.[0]
   const parentId = path.at(-1)?.id ?? null
   const [page, setPage] = useState(1)
@@ -45,11 +47,13 @@ export function LibraryTree(props: Props) {
     setPage(1)
     setRetry(n => n + 1)
   }, [revision])
+  useEffect(() => { setPage(1) }, [status])
   useEffect(() => {
     const control = new AbortController(); setLoading(true); setError('')
-    void fetchLibraryPage(origin, view, '', fetchImpl, control.signal, parentId, page).then(result => {
+    void fetchLibraryPage(origin, view, '', fetchImpl, control.signal, parentId, page, status).then(result => {
       if (control.signal.aborted) return
-      setRows(previous => page === 1 ? result.items : [...new Map([...previous, ...result.items].map(row => [row.nodeId, row])).values()]); setTotal(result.total)
+      const items = result.items.filter(row => matchesStatus(row, status))
+      setRows(previous => page === 1 ? items : [...new Map([...previous, ...items].map(row => [row.nodeId, row])).values()]); setTotal(result.total)
     }).catch(e => { if (!control.signal.aborted) {
       const message = String(e)
       if (parentId && (message.includes('404') || message.includes('资料不存在'))) { setRows([]); setError(''); return }
@@ -57,7 +61,7 @@ export function LibraryTree(props: Props) {
       if (/(?:401|403|409)/.test(message)) onDenied?.()
     } }).finally(() => { if (!control.signal.aborted) setLoading(false) })
     return () => { control.abort() }
-  }, [origin, fetchImpl, parentId, page, retry, view, onDenied])
+  }, [origin, fetchImpl, parentId, page, retry, view, onDenied, status])
   useEffect(() => {
     if (!nextId || loading || error || rows.some((row) => row.nodeId === nextId) || rows.length >= total || page > 20) return
     setPage((current) => current + 1)
@@ -84,7 +88,7 @@ export function LibraryTree(props: Props) {
     })}
     {loading && <li role="status">{t('loading')}</li>}
     {error && <li role="alert">{error}<Button size="sm" onClick={() => { setPage(1); setRetry(n => n + 1) }}>{t('refresh')}</Button></li>}
-    {!loading && !error && rows.length === 0 && <li className={css.treeEmpty}>{t('empty')}</li>}
+    {!loading && !error && rows.length === 0 && <li className={css.treeEmpty}>{status === 'all' ? t('empty') : t('noResults')}</li>}
     {!loading && !error && rows.length < total && <li className={css.treeMore}><Button size="sm" onClick={() => { setPage(n => n + 1) }}>{t('loadMore')}</Button></li>}
   </ul>
 }

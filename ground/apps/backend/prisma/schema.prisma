@@ -221,6 +221,10 @@ model OfficialAgentVersion {
   openingQuestions Json                      @default("[]") @map("opening_questions")
   systemPrompt     String                    @default("") @map("system_prompt") @db.Text
   toolScope        Json                      @default("[]") @map("tool_scope")
+  /// Frozen display classification; null on versions published before this snapshot existed.
+  category         String?
+  capabilities     Json?
+  kind             OfficialAgentKind?
   /// Frozen Admin custom avatar path at publish time; terminal reads this, not draft parent.
   customAvatarPath String?                   @map("custom_avatar_path")
   publishedByUserId String?                  @map("published_by_user_id")
