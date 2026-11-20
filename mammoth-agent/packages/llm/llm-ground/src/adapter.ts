@@ -188,7 +188,6 @@ export class GroundLlmAdapter extends LlmAdapter {
     }
     // Sticky/default refs removed from the Admin pool must never hit the old ID.
     if(hit===undefined)throw new LlmError('Selected cloud model is unavailable. Choose Automatic or an enabled model.','UNKNOWN_MODEL')
-    if(hit===undefined)throw new LlmError('Admin cloud model catalog unavailable.','UNKNOWN_MODEL')
 
     return {
       provider,

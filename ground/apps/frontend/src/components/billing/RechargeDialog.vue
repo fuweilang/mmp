@@ -2,7 +2,7 @@
   <el-dialog
     v-model="dialogVisible"
     :title="dialogTitle"
-    width="560px"
+    width="680px"
     align-center
     append-to-body
     destroy-on-close
@@ -46,43 +46,41 @@
           :disabled="payLoading"
           @click="startMockPay"
         >模拟支付</el-button>
-        <template v-else>
-          <el-button
-            v-if="wechatOk"
-            class="footer-channel is-wechat"
-            :loading="payLoading"
-            :disabled="payLoading"
-            @click="startPayFromForm('wechat')"
-          >
-            <img :src="wechatIcon" alt="" class="channel-brand-icon">
-            微信支付
-          </el-button>
-          <el-button
-            v-if="alipayOk"
-            class="footer-channel is-alipay"
-            :loading="payLoading"
-            :disabled="payLoading"
-            @click="startPayFromForm('alipay')"
-          >
-            <img :src="alipayIcon" alt="" class="channel-brand-icon">
-            支付宝
-          </el-button>
-        </template>
+        <el-button
+          v-if="wechatOk"
+          class="footer-channel is-wechat"
+          :loading="payLoading"
+          :disabled="payLoading"
+          @click="startPayFromForm('wechat')"
+        >
+          <img :src="wechatIcon" alt="" class="channel-brand-icon">
+          微信支付
+        </el-button>
+        <el-button
+          v-if="alipayOk"
+          class="footer-channel is-alipay"
+          :loading="payLoading"
+          :disabled="payLoading"
+          @click="startPayFromForm('alipay')"
+        >
+          <img :src="alipayIcon" alt="" class="channel-brand-icon">
+          支付宝
+        </el-button>
       </template>
       <template v-else>
-        <el-button v-if="!mockPayEnabled" class="pay-back" :disabled="payLoading" @click="goBackToForm">
+        <el-button v-if="selectedChannel !== 'mock'" class="pay-back" :disabled="payLoading" @click="goBackToForm">
           上一步
         </el-button>
         <el-button class="pay-close" @click="dialogVisible = false">关闭</el-button>
         <el-button
-          v-if="mockPayEnabled"
+          v-if="mockPayEnabled && selectedChannel === 'mock'"
           type="primary"
           :loading="payLoading"
           :disabled="payLoading"
           @click="startMockPay"
         >模拟支付</el-button>
         <el-button
-          v-else-if="payError && selectedChannel && selectedChannel !== 'mock'"
+          v-if="payError && selectedChannel && selectedChannel !== 'mock'"
           type="primary"
           :loading="payLoading"
           @click="retryCurrentChannel"

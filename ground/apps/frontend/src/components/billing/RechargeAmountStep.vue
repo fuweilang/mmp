@@ -59,7 +59,8 @@ defineEmits<{
 .recharge-step,
 .recharge-form { padding-top: 2px; }
 .enterprise-wallet-hint {
-  margin: 6px 0 0;
+  flex: 0 0 100%;
+  margin: 0;
   color: #64748b;
   font-size: 12px;
   line-height: 1.45;

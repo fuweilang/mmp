@@ -109,25 +109,43 @@
   </el-tab-pane>
   <el-tab-pane label="搜索服务" name="profiles">
     <p v-if="!serviceOnly" class="plain-lead">给专家用哪些文件，在专家配置里选。这里只确认上传的文件能不能被按问题找到。</p>
+    <div v-if="serviceOnly" class="search-card" aria-label="知识库搜索">
+      <div class="service-status">
+        <p v-if="activeEmbedding">可以搜索。新上传的文件会用「{{ embeddingLabel }}」整理成可搜索的内容。</p>
+        <p v-else>还不能按问题搜索。文件可以上传并保存，但专家问到这些资料时找不到。</p>
+      </div>
+      <dl v-if="searchProvider" class="search-facts">
+        <div><dt>服务商</dt><dd>{{ searchProvider.displayName }}</dd></div>
+        <div><dt>地址</dt><dd>{{ searchProvider.baseUrl }}</dd></div>
+        <div><dt>密钥</dt><dd>{{ searchProvider.hasApiKey ? searchProvider.apiKeyMasked : '未配置' }}</dd></div>
+        <div><dt>模型</dt><dd>{{ searchProfile?.model || '未配置' }}</dd></div>
+      </dl>
+      <p v-else class="muted">尚未配置检索服务。</p>
+      <div class="search-actions">
+        <el-button v-if="searchProvider" @click="openProvider(searchProvider)">{{ searchProvider.hasApiKey ? '更换密钥' : '填写密钥' }}</el-button>
+        <el-button type="primary" :disabled="!searchProfile || busy" @click="testSearch">测试</el-button>
+      </div>
+      <p v-if="searchTestMessage" class="muted search-result">{{ searchTestMessage }}</p>
+    </div>
+    <template v-else>
     <div class="service-status">
       <p v-if="activeEmbedding">可以搜索。新上传的文件会用「{{ embeddingLabel }}」整理成可搜索的内容。</p>
       <p v-else>还不能按问题搜索。文件可以上传并保存，但专家问到这些资料时找不到。</p>
       <el-button v-if="keyProvider" @click="openProvider(keyProvider)">{{ activeEmbedding ? '更换密钥' : '填写密钥' }}</el-button>
     </div>
-    <el-collapse>
-      <el-collapse-item title="技术人员设置" name="technical-service">
+    <section class="tech-settings">
+      <h2 class="tech-settings-title">技术人员设置</h2>
     <section class="tech-block">
     <div class="tech-block-head">
       <h3>供应商凭据</h3>
       <el-button @click="openProvider()">新建供应商凭据</el-button>
     </div>
-    <p class="muted">更换密钥会影响用到这家服务的聊天模型和知识库搜索。平时保留正在使用的那一条即可。</p>
-    <el-table :data="providers" border class="service-table" aria-label="供应商凭据">
+    <p class="muted">这里只放检索凭据。更换密钥只影响知识库搜索。</p>
+    <el-table :data="retrievalProviders" border class="service-table" aria-label="供应商凭据">
       <el-table-column prop="displayName" label="供应商" min-width="140" />
       <el-table-column prop="name" label="短名" min-width="150" />
       <el-table-column label="Base URL" min-width="220"><template #default="{row}"><span class="cell-url" :title="row.baseUrl">{{ row.baseUrl }}</span></template></el-table-column>
       <el-table-column label="密钥" width="120"><template #default="{row}">{{row.hasApiKey ? row.apiKeyMasked : '未配置'}}</template></el-table-column>
-      <el-table-column label="聊天模型数" width="110" align="center"><template #default="{row}">{{row.models.length}}</template></el-table-column>
       <el-table-column label="状态" width="80" align="center"><template #default="{row}">{{row.enabled?'启用':'停用'}}</template></el-table-column>
       <el-table-column label="操作" width="180" align="center" class-name="provider-ops" label-class-name="provider-ops"><template #default="{row}"><el-button text type="primary" @click="openProvider(row)">管理凭据</el-button><el-button text :type="row.enabled?'danger':'primary'" @click="toggleProvider(row)">{{row.enabled?'停用':'启用'}}</el-button></template></el-table-column>
     </el-table>
@@ -157,8 +175,8 @@
   </el-table>
   <el-empty v-if="!profiles.length" description="尚未配置检索服务" />
     </section>
-      </el-collapse-item>
-    </el-collapse>
+    </section>
+    </template>
 </el-tab-pane>
 <el-tab-pane v-if="!serviceOnly" label="试着提问" name="test">
   <p class="plain-lead">选一个文件夹，输入可能会问到的问题。下面出现的段落，就是专家能引用的内容。</p>
@@ -255,7 +273,7 @@
   <el-form label-width="120px">
     <el-form-item label="用哪家服务">
       <el-select v-model="profileForm.providerId" filterable>
-        <el-option v-for="p in providers" :key="p.id" :value="p.id" :label="`${p.displayName}${p.enabled?'':'（停用）'}${p.hasApiKey?'':'（未配密钥）'}`" />
+        <el-option v-for="p in retrievalProviders" :key="p.id" :value="p.id" :label="`${p.displayName}${p.enabled?'':'（停用）'}${p.hasApiKey?'':'（未配密钥）'}`" />
       </el-select>
     </el-form-item>
     <el-form-item label="用来做什么">
@@ -301,17 +319,17 @@
     <el-button type="primary" :disabled="!profileForm.providerId || !profileForm.model.trim() || busy" @click="saveProfile">创建配置</el-button>
   </template>
 </el-dialog>
-<el-dialog v-model="providerOpen" :title="providerEditId ? '管理供应商凭据' : '新建供应商凭据'" width="620px" @closed="clearProviderSecret">
+<el-dialog v-model="providerOpen" :title="serviceOnly ? (searchProvider?.hasApiKey ? '更换密钥' : '填写密钥') : (providerEditId ? '管理供应商凭据' : '新建供应商凭据')" width="620px" @closed="clearProviderSecret">
   <el-form label-width="100px">
-    <el-form-item label="供应商短名"><el-input v-model="providerForm.name" :disabled="!!providerEditId" placeholder="字母、数字、点、下划线或短横线" /></el-form-item>
-    <el-form-item label="显示名称"><el-input v-model="providerForm.displayName" /></el-form-item>
-    <el-form-item label="Base URL"><el-input v-model="providerForm.baseUrl" placeholder="https://供应商地址/v1" /></el-form-item>
+    <el-form-item v-if="!serviceOnly" label="供应商短名"><el-input v-model="providerForm.name" :disabled="!!providerEditId" placeholder="字母、数字、点、下划线或短横线" /></el-form-item>
+    <el-form-item v-if="!serviceOnly" label="显示名称"><el-input v-model="providerForm.displayName" /></el-form-item>
+    <el-form-item v-if="!serviceOnly" label="Base URL"><el-input v-model="providerForm.baseUrl" placeholder="https://供应商地址/v1" /></el-form-item>
     <el-form-item label="API Key"><el-input v-model="providerForm.apiKey" type="password" autocomplete="new-password" :disabled="providerForm.clearApiKey" :placeholder="providerEditId ? '留空保留现有密钥；填写则轮换' : '输入供应商密钥（加密保存）'" /></el-form-item>
-    <el-form-item v-if="providerEditId" label="清除密钥"><el-checkbox v-model="providerForm.clearApiKey" @change="providerForm.apiKey=''">明确清除已保存密钥</el-checkbox></el-form-item>
-    <el-form-item label="启用"><el-switch v-model="providerForm.enabled" /></el-form-item>
+    <el-form-item v-if="providerEditId && !serviceOnly" label="清除密钥"><el-checkbox v-model="providerForm.clearApiKey" @change="providerForm.apiKey=''">明确清除已保存密钥</el-checkbox></el-form-item>
+    <el-form-item v-if="!serviceOnly" label="启用"><el-switch v-model="providerForm.enabled" /></el-form-item>
   </el-form>
   <p v-if="providerTestMessage" :class="providerTestOk ? 'muted' : 'error'">{{ providerTestMessage }}</p>
-  <template #footer><el-button @click="providerOpen=false">取消</el-button><el-button :loading="testingProvider" :disabled="!canTestProvider" @click="testProvider">测试</el-button><el-button type="primary" :disabled="busy || !providerForm.name.trim() || !providerForm.displayName.trim()" @click="saveProvider">保存凭据</el-button></template>
+  <template #footer><el-button @click="providerOpen=false">取消</el-button><el-button v-if="!serviceOnly" :loading="testingProvider" :disabled="!canTestProvider" @click="testProvider">测试</el-button><el-button type="primary" :disabled="busy || !providerForm.name.trim() || !providerForm.displayName.trim()" @click="saveProvider">{{ serviceOnly ? '保存' : '保存凭据' }}</el-button></template>
 </el-dialog>
 <el-dialog v-model="inspectionOpen" title="不可变正文与分段" width="850px">
   <p>正文按 UTF-16 偏移分页，分段保留定位信息；全部内容以纯文本显示。</p>
@@ -346,7 +364,10 @@ const profiles = ref<KnowledgeProfile[]>([]), providers = ref<AdminLlmProviderRo
 const profileId = ref(''), documentId = ref(''), file = ref<File>(), fileInput = ref<HTMLInputElement>(), selectedIndexes = ref<string[]>([]), jobs = ref<KnowledgeJob[]>([]), jobLookup = ref('');
 const selectedBase = computed(() => bases.value.find(b => b.id === baseId.value)), embeddings = computed(() => profiles.value.filter(p => p.enabled && p.task === 'EMBEDDING')), reranks = computed(() => profiles.value.filter(p => p.enabled && p.task === 'RERANK')), eligible = computed(() => releaseEligibleIndexes(documents.value, profiles.value));
 const activeEmbedding = computed(() => embeddings.value.find(p => configured.value[p.id]));
-const keyProvider = computed(() => { const profile = activeEmbedding.value ?? embeddings.value[0]; return profile ? providers.value.find(p => p.id === profile.providerId) : undefined; });
+const retrievalProviders = computed(() => providers.value.filter((provider) => provider.models.length === 0));
+const searchProfile = computed(() => activeEmbedding.value ?? embeddings.value[0]);
+const keyProvider = computed(() => searchProfile.value ? retrievalProviders.value.find(p => p.id === searchProfile.value!.providerId) : undefined);
+const searchProvider = keyProvider;
 const embeddingLabel = computed(() => { const profile = activeEmbedding.value; if (!profile) return ''; const name = providers.value.find(p => p.id === profile.providerId)?.displayName; return name ? `${name} · ${profile.model}` : profile.model; });
 async function act(fn: () => Promise<void>) { error.value = ''; busy.value = true; try {
     await fn();
@@ -389,7 +410,7 @@ async function jobAction(id: string, action: 'retry' | 'cancel') { await act(asy
 function selectIndex(id: string, checked: boolean) { selectedIndexes.value = checked ? [...new Set([...selectedIndexes.value, id])] : selectedIndexes.value.filter(x => x !== id); }
 async function publishRelease() { await act(async () => { const ids = selectedIndexes.value.filter(id => eligible.value.includes(id)); if (ids.length !== selectedIndexes.value.length)
     throw new Error('所选索引已不可发布，请刷新'); await api.release(baseId.value, ids); ElMessage.success('不可变知识版本已发布'); await reload(); }); }
-const providerOpen = ref(false), providerEditId = ref(''), testingProvider = ref(false), providerTestMessage = ref(''), providerTestOk = ref(false);
+const providerOpen = ref(false), providerEditId = ref(''), testingProvider = ref(false), providerTestMessage = ref(''), providerTestOk = ref(false), searchTestMessage = ref('');
 const providerForm = reactive({name:'', displayName:'', baseUrl:'', apiKey:'', clearApiKey:false, enabled:true});
 const canTestProvider = computed(() => !testingProvider.value && !!providerForm.baseUrl.trim() && !providerForm.clearApiKey && (!!providerEditId.value || !!providerForm.apiKey.trim()));
 function clearProviderSecret() { providerForm.apiKey = ''; providerForm.clearApiKey = false; providerTestMessage.value = ''; }
@@ -423,7 +444,7 @@ async function testProvider() {
 async function toggleProvider(row: AdminLlmProviderRow) {
   const enabling = !row.enabled;
   try {
-    await ElMessageBox.confirm(enabling ? `启用后，引用「${row.displayName}」的聊天模型和检索会恢复使用。` : `停用「${row.displayName}」后，引用它的聊天模型和检索都会停止。`, enabling ? '启用供应商' : '停用供应商', { type: 'warning', confirmButtonText: enabling ? '启用' : '停用', cancelButtonText: '取消' });
+    await ElMessageBox.confirm(enabling ? `启用后，知识库搜索会重新使用「${row.displayName}」。` : `停用「${row.displayName}」后，知识库搜索会停止使用这家服务。`, enabling ? '启用供应商' : '停用供应商', { type: 'warning', confirmButtonText: enabling ? '启用' : '停用', cancelButtonText: '取消' });
   } catch (e) {
     if (e === 'cancel' || e === 'close') return;
     throw e;
@@ -458,6 +479,7 @@ function healthText(code?: string | null) { return code ? profileHealthText[code
 function profileTaskLabel(task: string) { return task === 'EMBEDDING' ? '把文件变成可搜索内容' : task === 'RERANK' ? '重新排序搜索结果' : task; }
 async function health(id: string) { await act(async () => { const r = await api.health(id); configured.value[id] = r.configured; const text = r.configured ? '本地配置有效。这一步没有请求供应商。' : healthText(r.errorCode); profileHealth[id] = text; if (r.configured) ElMessage.success(text); else ElMessage.warning(text); }); }
 async function probe(id: string) { await act(async () => { await ElMessageBox.confirm('将向供应商发送固定的「连接测试」输入，可能产生计费。连接成功不代表检索质量合格。', '主动探测', { confirmButtonText: '发送探测（可能计费）' }); const r = await api.probe(id); profileHealth[id] = r.available ? `连接成功 · ${r.durationMs}ms · 估算 ${r.estimatedTokens} / 实际 ${r.actualTokens ?? '供应商未提供'} Token` : `连接失败：${healthText(r.errorCode)}`; }); }
+async function testSearch() { const id = searchProfile.value?.id; if (!id) return; await act(async () => { await ElMessageBox.confirm('将向检索服务发送一次「连接测试」，可能产生少量费用。', '测试检索服务', { confirmButtonText: '测试', cancelButtonText: '取消' }); const r = await api.probe(id); searchTestMessage.value = r.available ? '连接成功' : `连接失败：${healthText(r.errorCode)}`; if (r.available) ElMessage.success(searchTestMessage.value); else ElMessage.error(searchTestMessage.value); }); }
 const inspectionOpen = ref(false), inspectIds = ref<string[]>([]), chunkPage = ref<Awaited<ReturnType<typeof api.chunks>>>(), extracted = ref<Awaited<ReturnType<typeof api.extracted>>>();
 async function inspect(d: string, r: string, i: string) { await act(async () => { inspectIds.value = [d, r, i]; [chunkPage.value, extracted.value] = await Promise.all([api.chunks(d, r, i), api.extracted(d, r, i)]); inspectionOpen.value = true; }); }
 async function moreText() { await act(async () => { const [d, r, i] = inspectIds.value; extracted.value = await api.extracted(d!, r!, i!, extracted.value?.nextOffset ?? 0); }); }
@@ -483,5 +505,5 @@ onMounted(reload);
 onBeforeUnmount(() => testAbort?.abort());
 </script>
 <style scoped>
-.knowledge-core-admin{min-width:0}.service-only :deep(.el-tabs__header){display:none}.plain-lead{margin:4px 0 12px;line-height:1.7}.service-status{display:grid;justify-items:start;gap:10px;margin-bottom:16px}.service-status p{margin:0;line-height:1.7}.tech-block+.tech-block{margin-top:8px;padding-top:16px;border-top:1px solid #eef0f4}.tech-block-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.tech-block-head h3{margin:0;font-size:14px;font-weight:600;color:#333946}.tech-block>.muted{margin:8px 0 12px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}.toolbar .el-input{max-width:420px}.el-select{min-width:240px;max-width:100%}.upload-form{margin-top:20px}.document-card{border:1px solid var(--el-border-color);padding:16px;margin:16px 0;border-radius:8px}.revision{border-top:1px solid var(--el-border-color-lighter);padding:12px 0}.section-title{margin:18px 0 8px;font-size:14px;font-weight:600}.profiles-note{margin:12px 0 0}.muted{color:var(--el-text-color-secondary);font-size:13px}.service-table.el-table{font-size:13px}.service-table :deep(.el-table__cell),.service-table :deep(.el-button){font-size:13px}.service-table :deep(th.el-table__cell){background:var(--el-fill-color-light);font-weight:500}.service-table :deep(td.el-table__cell){padding:12px 0}.cell-url{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.knowledge-core-admin :deep(.profile-ops .cell),.knowledge-core-admin :deep(.provider-ops .cell){white-space:nowrap}.knowledge-core-admin :deep(.profile-ops .el-button),.knowledge-core-admin :deep(.provider-ops .el-button){padding-left:6px;padding-right:6px}.error{color:var(--el-color-danger)}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--el-fill-color-light);padding:12px;max-height:420px;overflow:auto}a{color:var(--el-color-primary)}
+.knowledge-core-admin{min-width:0}.service-only :deep(.el-tabs__header){display:none}.plain-lead{margin:4px 0 12px;line-height:1.7}.service-status{display:grid;justify-items:start;gap:10px;margin-bottom:16px}.service-status p{margin:0;line-height:1.7}.search-facts{display:grid;gap:12px;margin:0 0 16px}.search-facts div{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:baseline}.search-facts dt{margin:0;color:#667085;font-size:13px}.search-facts dd{margin:0;color:#333946;font-size:14px;overflow-wrap:anywhere}.search-actions{display:flex;gap:8px}.search-result{margin:12px 0 0}.tech-settings-title{margin:4px 0 16px;font-size:16px;font-weight:600;color:#333946}.tech-block+.tech-block{margin-top:8px;padding-top:16px;border-top:1px solid #eef0f4}.tech-block-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.tech-block-head h3{margin:0;font-size:14px;font-weight:600;color:#333946}.tech-block>.muted{margin:8px 0 12px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}.toolbar .el-input{max-width:420px}.el-select{min-width:240px;max-width:100%}.upload-form{margin-top:20px}.document-card{border:1px solid var(--el-border-color);padding:16px;margin:16px 0;border-radius:8px}.revision{border-top:1px solid var(--el-border-color-lighter);padding:12px 0}.section-title{margin:18px 0 8px;font-size:14px;font-weight:600}.profiles-note{margin:12px 0 0}.muted{color:var(--el-text-color-secondary);font-size:13px}.service-table.el-table{font-size:13px}.service-table :deep(.el-table__cell),.service-table :deep(.el-button){font-size:13px}.service-table :deep(th.el-table__cell){background:var(--el-fill-color-light);font-weight:500}.service-table :deep(td.el-table__cell){padding:12px 0}.cell-url{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.knowledge-core-admin :deep(.profile-ops .cell),.knowledge-core-admin :deep(.provider-ops .cell){white-space:nowrap}.knowledge-core-admin :deep(.profile-ops .el-button),.knowledge-core-admin :deep(.provider-ops .el-button){padding-left:6px;padding-right:6px}.error{color:var(--el-color-danger)}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--el-fill-color-light);padding:12px;max-height:420px;overflow:auto}a{color:var(--el-color-primary)}
 </style>

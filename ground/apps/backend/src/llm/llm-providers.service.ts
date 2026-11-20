@@ -148,6 +148,27 @@ export class LlmProvidersService {
     };
   }
 
+  private shouldRetestProvider(existing: { baseUrl: string | null; apiKeyEnc: string | null; enabled: boolean }, dto: UpdateLlmProviderDto) {
+    const baseChanged = dto.baseUrl !== undefined && (dto.baseUrl?.trim() || null) !== existing.baseUrl;
+    let keyChanged = false;
+    if (dto.apiKey !== undefined) {
+      const next = dto.apiKey == null ? '' : String(dto.apiKey).trim();
+      let previous = '';
+      if (existing.apiKeyEnc) {
+        try { previous = decryptApiKey(existing.apiKeyEnc); } catch { previous = ''; }
+      }
+      keyChanged = next !== previous;
+    }
+    return baseChanged || keyChanged || (dto.enabled === true && !existing.enabled);
+  }
+
+  private async assertDisplayNameAvailable(displayName: string, exceptId?: string) {
+    const key = displayName.trim().toLowerCase();
+    const rows = await this.prisma.llmProvider.findMany({ select: { id: true, displayName: true } });
+    const duplicate = rows.find((row) => row.id !== exceptId && row.displayName.trim().toLowerCase() === key);
+    if (duplicate) throw new ConflictException(`厂商名「${duplicate.displayName}」已存在`);
+  }
+
   async list(actor: User): Promise<LlmProviderView[]> {
     this.requirePlatformAdmin(actor);
     const rows = await this.prisma.llmProvider.findMany({
@@ -175,6 +196,7 @@ export class LlmProvidersService {
     const name = dto.name.trim();
     const displayName = dto.displayName.trim();
     if (!name || !displayName) throw new BadRequestException('name / displayName 必填');
+    await this.assertDisplayNameAvailable(displayName);
 
     const apiKey = dto.apiKey?.trim() || '';
     const apiKeyEnc = apiKey ? encryptApiKey(apiKey) : null;
@@ -244,6 +266,7 @@ export class LlmProvidersService {
     if (dto.displayName !== undefined) {
       const v = dto.displayName.trim();
       if (!v) throw new BadRequestException('displayName 不能为空');
+      await this.assertDisplayNameAvailable(v, id);
       data.displayName = v;
     }
     if (dto.kind !== undefined) data.kind = dto.kind.trim() || 'openai_compatible';
@@ -268,9 +291,9 @@ export class LlmProvidersService {
       data,
       include: { models: { orderBy: [{ sortOrder: 'asc' }, { modelId: 'asc' }] } },
     });
-    if(dto.apiKey!==undefined||dto.baseUrl!==undefined||dto.enabled===true){
+    if (this.shouldRetestProvider(existing, dto)) {
       await this.health.reset(id);
-      for(const m of updated.models)if(m.enabled && modelPurpose(m)==='chat')this.health.requestProbe(m.id);
+      for (const m of updated.models) if (m.enabled && modelPurpose(m) === 'chat') this.health.requestProbe(m.id);
     }
     await this.prisma.auditLog.create({
       data: {

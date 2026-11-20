@@ -22,6 +22,18 @@ test('automatic chat candidates exclude image before price or health checks',asy
  const result=await service.listModelsOpenAiShape({isPlatformAdmin:true} as any,null);
  assert.ok(!result.data.some(x=>x.id.includes('Kolors')));assert.equal(quoted,false);
 });
+test('a disabled chat model can still be probed from the row action',async()=>{
+ const updates:unknown[]=[];
+ const db={llmModel:{findUnique:async()=>({...chat,enabled:false,provider:{id:'sf',enabled:false,apiKeyEnc:null,baseUrl:null}}),updateMany:async(query:unknown)=>{updates.push(query);return{count:1};}},$queryRaw:async()=>[{status:'unavailable'}]};
+ const service=new LlmHealthService(db as any,{event(){}} as any);
+ const result=await service.probeSaved('chat');
+ assert.equal(result.message.includes('管理员已禁用'),false);
+ assert.match(result.message,/配置不完整/);
+ assert.deepEqual(updates,[{where:{id:'chat'},data:{enabled:false}}]);
+ updates.length=0;
+ await service.failure({id:'chat',providerId:'sf'},500);
+ assert.deepEqual(updates,[]);
+});
 test('image cannot be probed as chat or change provider health',async()=>{
  const db={llmModel:{findUnique:async()=>image}};const service=new LlmHealthService(db as any,{} as any);
  const result=await service.probeSaved('image');assert.equal(result.ok,false);assert.match(result.message,/对话/);

@@ -18,19 +18,6 @@
           placeholder="搜索 Model ID / 显示名 / 厂商"
         />
         <el-select-v2
-          v-model="selectedFamily"
-          class="page-filter"
-          popper-class="models-filter-popper"
-          aria-label="模型筛选"
-          clearable
-          :filterable="false"
-          :options="familySelectOptions"
-          placeholder="全部模型"
-        >
-          <template #default="{ item }"><span class="mark"><i class="mark-dot" :style="{ backgroundColor: item.color }" /><span>{{ item.label }}</span></span></template>
-          <template #label="{ label, value }"><span class="mark"><i class="mark-dot" :style="{ backgroundColor: familyColor(value) }" /><span>{{ label }}</span></span></template>
-        </el-select-v2>
-        <el-select-v2
           v-model="selectedProvider"
           class="page-filter"
           popper-class="models-filter-popper"
@@ -39,7 +26,10 @@
           :filterable="false"
           :options="providerSelectOptions"
           placeholder="全部厂商"
-        />
+        >
+          <template #default="{ item }"><span class="mark"><i class="mark-dot" :style="{ backgroundColor: item.color }" /><span>{{ item.label }}</span></span></template>
+          <template #label="{ label, value }"><span class="mark"><i class="mark-dot" :style="{ backgroundColor: providerColor(value) }" /><span>{{ label }}</span></span></template>
+        </el-select-v2>
         <el-select-v2
           v-show="showPurposeFilter"
           v-model="selectedPurpose"
@@ -79,8 +69,8 @@
         </el-select-v2>
         <el-button @click="resetFilters">重置</el-button>
         <el-button type="danger" :disabled="!selectedRows.length || deletingSelected" :loading="deletingSelected" @click="onDeleteSelected">{{ selectedRows.length ? `删除所选 (${selectedRows.length})` : '删除所选' }}</el-button>
-        <el-button type="primary" @click="testEnabled">{{ bulkRunning ? '停止' : '测试已启用' }}</el-button>
-        <el-button @click="$router.push('/admin/knowledge-services')">检索服务</el-button>
+        <el-button type="primary" :disabled="(!selectedRows.length && bulkSource !== 'selected') || (bulkRunning && bulkSource !== 'selected')" @click="testSelected">{{ bulkRunning && bulkSource === 'selected' ? '停止测试' : (selectedRows.length ? `测试所选 (${selectedRows.length})` : '测试所选') }}</el-button>
+        <el-button type="primary" :disabled="bulkRunning && bulkSource !== 'enabled'" @click="testEnabled">{{ bulkRunning && bulkSource === 'enabled' ? '停止测试' : '测试已启用' }}</el-button>
         <el-button type="primary" @click="openCreate">新建模型</el-button>
       </div>
     </div>
@@ -123,7 +113,7 @@
         <el-table-column label="用途" width="105" align="center"><template #default="{row}"><el-tag :type="isImage(row.model)?'warning':'info'">{{isImage(row.model)?'生成图片':'对话'}}</el-tag></template></el-table-column>
         <el-table-column label="厂商" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">
-            <el-button link class="prov-name" :style="{ color: familyColor(modelFamily(row.model.modelId, row.model.displayName)) }" :aria-label="`设置供应商 ${row.provider.displayName}`" @click="openEditProvider(row.provider)">{{ row.provider.displayName }}</el-button>
+            <span class="prov-name" :style="{ color: providerColor(row.provider.id) }">{{ row.provider.displayName }}</span>
           </template>
         </el-table-column>
         <el-table-column v-if="selectedPurpose!=='image'" label="默认" width="120" align="center">
@@ -213,18 +203,9 @@
     >
       <el-form label-width="96px" @submit.prevent>
         <div class="form-section-title">厂商</div>
-        <el-form-item label="短名" required>
-          <el-input
-            v-model="dialog.form.name"
-            :disabled="dialog.mode === 'edit'"
-            placeholder="如 deepseek / kimi"
-          />
-          <div v-if="dialog.mode === 'create' && nameConflictProvider" class="hint name-conflict">
-            短名「{{ nameConflictProvider.name }}」已存在，请换一个短名
-          </div>
-        </el-form-item>
-        <el-form-item label="显示名" required>
-          <el-input v-model="dialog.form.displayName" placeholder="DeepSeek" />
+        <el-form-item label="厂商名" required>
+          <el-input v-model="dialog.form.displayName" placeholder="如 DeepSeek、极客智坊" />
+          <div v-if="vendorNameConflict" class="hint name-conflict">厂商名「{{ vendorNameConflict }}」已存在</div>
         </el-form-item>
         <el-form-item label="Base URL" required>
           <el-input v-model="dialog.form.baseUrl" placeholder="https://api.deepseek.com" />
@@ -238,11 +219,14 @@
             :placeholder="dialog.mode === 'edit' && dialog.hasApiKey ? '留空则保持原 Key' : 'sk-…'"
           />
           <div v-if="dialog.mode === 'edit' && dialog.hasApiKey" class="hint">
-            当前掩码：{{ dialog.apiKeyMasked }}
+            当前掩码：{{ dialog.apiKeyMasked }}。这把 Key 属于厂商，保存后该厂商下的模型都会使用它。
           </div>
         </el-form-item>
 
-        <div class="form-section-title row-between">
+        <div v-if="dialog.mode === 'edit' && dialog.editingModelId" class="form-section-title">模型</div>
+        <div v-if="dialog.mode === 'edit' && dialog.editingModelId" class="hint">Model ID：{{ dialog.editingModelId }}</div>
+
+        <div v-if="dialog.mode === 'create'" class="form-section-title row-between">
           <span>模型</span>
           <div class="section-actions">
             <el-button
@@ -263,7 +247,7 @@
         </div>
 
         <el-alert
-          v-if="dialog.fetchError"
+          v-if="dialog.mode === 'create' && dialog.fetchError"
           class="fetch-alert"
           :title="dialog.fetchError"
           type="error"
@@ -271,10 +255,17 @@
           :closable="false"
         />
 
-        <div v-if="visibleRemoteModels.length" class="remote-list">
+        <div v-if="dialog.mode === 'create' && listedModels.length" class="remote-list">
+          <el-checkbox
+            v-if="visibleRemoteModels.length"
+            class="remote-select-all"
+            :model-value="allVisibleSelected"
+            :indeterminate="visibleSelectionIndeterminate"
+            @change="(checked: boolean | string | number) => toggleVisibleSelection(Boolean(checked))"
+          >全选</el-checkbox>
           <el-checkbox-group v-model="dialog.selectedIds">
             <div
-              v-for="m in visibleRemoteModels"
+              v-for="m in listedModels"
               :key="m.id"
               class="remote-item"
             >
@@ -286,29 +277,15 @@
             </div>
           </el-checkbox-group>
         </div>
-        <div v-if="geekAiDialog && hiddenRemoteCount" class="hint">已隐藏 {{ hiddenRemoteCount }} 个非对话模型</div>
+        <div v-if="dialog.mode === 'create' && geekAiDialog && hiddenRemoteCount" class="hint">已隐藏 {{ hiddenRemoteCount }} 个非对话模型</div>
 
-        <el-form-item label="手填 Model ID" class="manual-item">
-          <el-select
-            v-model="dialog.selectedIds"
-            multiple
-            filterable
-            allow-create
-            default-first-option
-            clearable
-            collapse-tags
-            collapse-tags-tooltip
-            placeholder="输入后回车添加；可多选"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="id in manualOptions"
-              :key="id"
-              :label="id"
-              :value="id"
-            />
-          </el-select>
-          <div class="hint">拉取失败时仍可在此手填；已勾选与手填共用同一列表</div>
+        <el-form-item v-if="dialog.mode === 'create'" label="手填 Model ID" class="manual-item">
+          <el-input
+            v-model="dialog.manualDraft"
+            placeholder="输入 Model ID 后回车添加"
+            @keydown.enter.prevent="addManualModel"
+          />
+          <div class="hint">拉取失败或列表里没有时，回车补进上面的勾选列表</div>
         </el-form-item>
 
       </el-form>
@@ -338,8 +315,6 @@ import {
   type AdminLlmProviderRow,
 } from '@/api/admin';
 import { ApiError } from '@/api/http';
-import { modelFamily } from '@/utils/model-family';
-
 type FlatRow = {
   key: string;
   provider: AdminLlmProviderRow;
@@ -353,7 +328,6 @@ const deletingSelected = ref(false);
 function onSelectionChange(rows: FlatRow[]) { selectedRows.value = rows; }
 const error = ref('');
 const keyword = ref('');
-const selectedFamily = ref('');
 const selectedProvider = ref('');
 const showPurposeFilter = false;
 const selectedPurpose = ref('');
@@ -391,6 +365,7 @@ const busyModelId = ref<string | null>(null);
 const probes = new Map<string, AbortController>();
 const probingIds = ref<string[]>([]);
 const bulkRunning = ref(false);
+const bulkSource = ref<'enabled' | 'selected' | ''>('');
 let bulkStop: AbortController | null = null;
 
 function autoUsable(row: FlatRow) {
@@ -412,20 +387,15 @@ const flatRows = computed<FlatRow[]>(() => {
   return out.sort(compareRows);
 });
 
-const familyOptions = computed(() => [...new Set(flatRows.value.map(row => modelFamily(row.model.modelId, row.model.displayName)))].sort((a, b) => a === '其他' ? 1 : b === '其他' ? -1 : a.localeCompare(b)));
-function familyColor(name?: string) {
-  if (!name) return '#909399';
-  const index = familyOptions.value.indexOf(name);
+function providerColor(id?: string) {
+  if (!id) return '#909399';
+  const index = providers.value.findIndex((provider) => provider.id === id);
   const hue = ((index >= 0 ? index : 0) * 47) % 360;
   return `hsl(${hue} 62% 42%)`;
 }
-const familySelectOptions = computed(() => [
-  { value: '', label: '全部模型', color: '#909399' },
-  ...familyOptions.value.map((family) => ({ value: family, label: family, color: familyColor(family) })),
-]);
 const providerSelectOptions = computed(() => [
-  { value: '', label: '全部厂商' },
-  ...providers.value.map((provider) => ({ value: provider.id, label: provider.displayName || provider.name })),
+  { value: '', label: '全部厂商', color: '#909399' },
+  ...providers.value.filter((provider) => provider.models.length > 0).map((provider) => ({ value: provider.id, label: provider.displayName || provider.name, color: providerColor(provider.id) })),
 ]);
 const statusColors: Record<string, string> = {
   '': '#909399',
@@ -472,7 +442,6 @@ const filteredRows = computed(() => {
   const q = keyword.value.trim().toLowerCase();
   return flatRows.value.filter((r) => {
     if(selectedPurpose.value && (r.model.purpose || 'chat')!==selectedPurpose.value)return false;
-    if (selectedFamily.value && modelFamily(r.model.modelId, r.model.displayName) !== selectedFamily.value) return false;
     if (selectedProvider.value && r.provider.id !== selectedProvider.value) return false;
     if (selectedStatus.value && healthStatus(r) !== selectedStatus.value) return false;
     if (selectedEnabled.value === 'enabled' && !r.model.enabled) return false;
@@ -490,13 +459,12 @@ const pagedRows = computed(() => {
 });
 function resetFilters() {
   keyword.value = '';
-  selectedFamily.value = '';
   selectedProvider.value = '';
   selectedPurpose.value = '';
   selectedStatus.value = '';
   selectedEnabled.value = '';
 }
-watch([keyword, selectedFamily, selectedProvider, selectedPurpose, selectedStatus, selectedEnabled, pageSize], () => {
+watch([keyword, selectedProvider, selectedPurpose, selectedStatus, selectedEnabled, pageSize], () => {
   page.value = 1;
   tableRef.value?.clearSelection();
 });
@@ -512,12 +480,15 @@ const dialog = reactive({
   fetching: false,
   testingSelected: false,
   providerId: '' as string,
+  editingModelId: '' as string,
   hasApiKey: false,
   apiKeyMasked: null as string | null,
   existingModelIds: [] as string[],
   fetchError: '' as string,
   remoteModels: [] as Array<{ id: string; ownedBy?: string; name?: string; type?: string; context?: number }>,
   selectedIds: [] as string[],
+  manualIds: [] as string[],
+  manualDraft: '',
   form: {
     name: '',
     displayName: '',
@@ -530,21 +501,12 @@ const selectedModelIds = computed(() =>
   Array.from(new Set(dialog.selectedIds.map((x) => String(x).trim()).filter(Boolean))),
 );
 
-const manualOptions = computed(() => {
-  const set = new Set<string>();
-  for (const m of dialog.remoteModels) set.add(m.id);
-  for (const id of dialog.selectedIds) {
-    const t = String(id).trim();
-    if (t) set.add(t);
-  }
-  for (const id of dialog.existingModelIds) set.add(id);
-  return Array.from(set).sort((a, b) => a.localeCompare(b));
-});
-
 function resetDialogModels() {
   dialog.fetchError = '';
   dialog.remoteModels = [];
   dialog.selectedIds = [];
+  dialog.manualIds = [];
+  dialog.manualDraft = '';
   dialog.existingModelIds = [];
 }
 
@@ -560,12 +522,17 @@ async function reload(quiet = false) {
   }
 }
 
-const nameConflictProvider = computed(() => {
-  if (dialog.mode !== 'create') return null;
-  const n = dialog.form.name.trim().toLowerCase();
-  if (!n) return null;
-  return providers.value.find((p) => p.name.toLowerCase() === n) || null;
-});
+function providerShortName(displayName: string) {
+  const base = displayName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9._-]/g, '').replace(/^[^a-z0-9]+/, '').replace(/-+/g, '-').replace(/-+$/, '').slice(0, 64) || 'vendor';
+  const taken = new Set(providers.value.map((provider) => provider.name.toLowerCase()));
+  if (!taken.has(base)) return base;
+  for (let n = 2; n < 1000; n += 1) {
+    const suffix = `-${n}`;
+    const candidate = `${base.slice(0, 64 - suffix.length)}${suffix}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+  return `${base.slice(0, 50)}-${Date.now().toString(36)}`;
+}
 
 function isGeekAiBase(baseUrl: string | null | undefined) {
   try {
@@ -580,10 +547,48 @@ const visibleRemoteModels = computed(() =>
   geekAiDialog.value ? dialog.remoteModels.filter((m) => !m.type || m.type === 'chat') : dialog.remoteModels,
 );
 const hiddenRemoteCount = computed(() => dialog.remoteModels.length - visibleRemoteModels.value.length);
+const listedModels = computed(() => {
+  const remote = visibleRemoteModels.value;
+  const remoteIds = new Set(remote.map((model) => model.id));
+  const extras = new Set<string>();
+  for (const id of [...dialog.manualIds, ...dialog.existingModelIds, ...dialog.selectedIds]) {
+    const trimmed = String(id).trim();
+    if (trimmed && !remoteIds.has(trimmed)) extras.add(trimmed);
+  }
+  return [...remote, ...[...extras].sort((a, b) => a.localeCompare(b)).map((id) => ({ id }))];
+});
+const selectedVisibleCount = computed(() => visibleRemoteModels.value.filter((model) => dialog.selectedIds.includes(model.id)).length);
+const allVisibleSelected = computed(() => visibleRemoteModels.value.length > 0 && selectedVisibleCount.value === visibleRemoteModels.value.length);
+const visibleSelectionIndeterminate = computed(() => selectedVisibleCount.value > 0 && selectedVisibleCount.value < visibleRemoteModels.value.length);
+function toggleVisibleSelection(checked: boolean) {
+  const visible = new Set(visibleRemoteModels.value.map((model) => model.id));
+  if (checked) {
+    const next = new Set(dialog.selectedIds);
+    for (const id of visible) next.add(id);
+    dialog.selectedIds = [...next];
+    return;
+  }
+  dialog.selectedIds = dialog.selectedIds.filter((id) => !visible.has(id));
+}
+function addManualModel() {
+  const id = dialog.manualDraft.trim();
+  dialog.manualDraft = '';
+  if (!id) return;
+  if (!visibleRemoteModels.value.some((model) => model.id === id) && !dialog.manualIds.includes(id)) dialog.manualIds.push(id);
+  if (!dialog.selectedIds.includes(id)) dialog.selectedIds.push(id);
+}
+
+const vendorNameConflict = computed(() => {
+  const name = dialog.form.displayName.trim().toLowerCase();
+  if (!name) return '';
+  const found = providers.value.find((provider) => provider.id !== dialog.providerId && provider.displayName.trim().toLowerCase() === name);
+  return found?.displayName || '';
+});
 
 function openCreate() {
   dialog.mode = 'create';
   dialog.providerId = '';
+  dialog.editingModelId = '';
   dialog.hasApiKey = false;
   dialog.apiKeyMasked = null;
   dialog.form = { name: '', displayName: '', baseUrl: '', apiKey: '' };
@@ -594,6 +599,7 @@ function openCreate() {
 function openEditProvider(provider: AdminLlmProviderRow, preferModelId?: string) {
   dialog.mode = 'edit';
   dialog.providerId = provider.id;
+  dialog.editingModelId = preferModelId || '';
   dialog.hasApiKey = provider.hasApiKey;
   dialog.apiKeyMasked = provider.apiKeyMasked;
   dialog.form = {
@@ -678,14 +684,17 @@ async function onTestSelected() {
 async function onSave() {
   dialog.saving = true;
   try {
-    const name = dialog.form.name.trim();
     const displayName = dialog.form.displayName.trim();
     const baseUrl = dialog.form.baseUrl.trim();
     const apiKey = dialog.form.apiKey.trim();
     const modelIds = selectedModelIds.value;
 
-    if (!name || !displayName) {
-      ElMessage.warning('请填写短名与显示名');
+    if (!displayName) {
+      ElMessage.warning('请填写厂商名');
+      return;
+    }
+    if (vendorNameConflict.value) {
+      ElMessage.warning(`厂商名「${vendorNameConflict.value}」已存在`);
       return;
     }
     if (!baseUrl) {
@@ -694,11 +703,7 @@ async function onSave() {
     }
 
     if (dialog.mode === 'create') {
-      const existing = providers.value.find((p) => p.name.toLowerCase() === name.toLowerCase());
-      if (existing) {
-        ElMessage.error(`短名「${existing.name}」已存在，请换一个短名`);
-        return;
-      }
+      const name = providerShortName(displayName);
       if (!apiKey) {
         ElMessage.warning('请填写 API Key');
         return;
@@ -794,33 +799,23 @@ async function onProbeSaved(m: AdminLlmModelRow) {
   try {
     const result = await runProbe(m);
     if (result.kind === 'stopped') return;
+    if (result.kind === 'bad') {
+      try {
+        await adminLlmProviderApi.updateModel(m.id, { enabled: false });
+        m.enabled = false;
+      } catch {
+        /* 探测失败时后端也会关掉这个模型。 */
+      }
+    }
     await reload(true);
     if (result.kind === 'ok') ElMessage.success(result.message || '连通正常');
-    else ElMessage.error(result.message || '连通失败');
+    else ElMessage.error(`${result.message || '连通失败'}，已自动禁用`);
   } catch (e) {
     ElMessage.error(e instanceof ApiError ? e.message : '测试失败');
   }
 }
 
-async function testEnabled() {
-  if (bulkRunning.value) {
-    bulkStop?.abort();
-    return;
-  }
-  const models = flatRows.value.filter((row) => row.model.enabled && !isImage(row.model)).map((row) => row.model);
-  if (!models.length) {
-    ElMessage.info('没有已启用的模型');
-    return;
-  }
-  try {
-    await ElMessageBox.confirm(
-      `将测试 ${models.length} 个已启用模型。每个模型会向上游发送一次短对话，可能产生少量费用。测不通的会自动禁用。同时最多 3 个。`,
-      '测试已启用',
-      { confirmButtonText: '开始', cancelButtonText: '取消' },
-    );
-  } catch {
-    return;
-  }
+async function runBulk(models: AdminLlmModelRow[], disableOnFailure: boolean) {
   bulkRunning.value = true;
   const stop = new AbortController();
   bulkStop = stop;
@@ -837,6 +832,7 @@ async function testEnabled() {
         if (result.kind === 'ok') ok += 1;
         else if (result.kind === 'bad') {
           bad += 1;
+          if (!disableOnFailure) continue;
           try {
             await adminLlmProviderApi.updateModel(model.id, { enabled: false });
             model.enabled = false;
@@ -859,6 +855,56 @@ async function testEnabled() {
     bulkRunning.value = false;
     if (bulkStop === stop) bulkStop = null;
   }
+}
+
+async function testSelected() {
+  if (bulkRunning.value) {
+    if (bulkSource.value === 'selected') bulkStop?.abort();
+    return;
+  }
+  const picked = selectedRows.value.map((row) => row.model);
+  const models = picked.filter((model) => !isImage(model));
+  if (!models.length) {
+    ElMessage.info(picked.length ? '所选没有可测试的对话模型' : '请先勾选模型');
+    return;
+  }
+  const skipped = picked.length - models.length;
+  try {
+    await ElMessageBox.confirm(
+      `将测试选中的 ${models.length} 个对话模型。启用和禁用都会测，测不通的会自动禁用。${skipped ? `已跳过 ${skipped} 个生图模型。` : ''}可能产生少量费用。同时最多 3 个。`,
+      '测试所选',
+      { confirmButtonText: '开始', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  bulkSource.value = 'selected';
+  try { await runBulk(models, true); }
+  finally { bulkSource.value = ''; }
+}
+
+async function testEnabled() {
+  if (bulkRunning.value) {
+    if (bulkSource.value === 'enabled') bulkStop?.abort();
+    return;
+  }
+  const models = flatRows.value.filter((row) => row.model.enabled && !isImage(row.model)).map((row) => row.model);
+  if (!models.length) {
+    ElMessage.info('没有已启用的模型');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `将测试 ${models.length} 个已启用模型。每个模型会向上游发送一次短对话，可能产生少量费用。测不通的会自动禁用。同时最多 3 个。`,
+      '测试已启用',
+      { confirmButtonText: '开始', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  bulkSource.value = 'enabled';
+  try { await runBulk(models, true); }
+  finally { bulkSource.value = ''; }
 }
 
 async function onToggleModel(m: AdminLlmModelRow, enabled: boolean) {
@@ -1126,7 +1172,6 @@ onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of pr
 }
 .prov-name {
   font-weight: 500;
-  color: #333946;
 }
 .prov-sub {
   margin-left: 6px;
@@ -1159,6 +1204,12 @@ onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of pr
   padding: 8px 12px;
   margin-bottom: 12px;
   background: #fafbfc;
+}
+.remote-select-all {
+  display: flex;
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
 }
 .remote-item {
   display: flex;

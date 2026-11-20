@@ -344,6 +344,28 @@ export const billingApi = {
       total: number;
     }>(`/api/billing/token-usage${suffix}`);
   },
+  memberTokenStats: (query?: { from?: string; to?: string; name?: string; page?: number; pageSize?: number }) => {
+    const q = new URLSearchParams();
+    if (query?.from) q.set('from', query.from);
+    if (query?.to) q.set('to', query.to);
+    if (query?.name) q.set('name', query.name);
+    if (query?.page) q.set('page', String(query.page));
+    if (query?.pageSize) q.set('pageSize', String(query.pageSize));
+    const suffix = q.toString() ? `?${q}` : '';
+    return http<{
+      skipped?: boolean;
+      members: Array<{
+        userId: string;
+        name: string;
+        inputTokens: number;
+        outputTokens: number;
+        totalTokens: number;
+      }>;
+      page: number;
+      pageSize: number;
+      total: number;
+    }>(`/api/billing/token-usage/members${suffix}`);
+  },
   orders: (query?: {
     from?: string;
     to?: string;

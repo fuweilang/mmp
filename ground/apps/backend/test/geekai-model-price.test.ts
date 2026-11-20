@@ -30,13 +30,13 @@ test('GeekAI quotes only domestic CNY chat prices and ignores discounts and USD'
   assert.equal(geekAiModelUrl('https://geekai.co/api/v1', 'gpt-5.1'), 'https://geekai.co/api/v1/models/gpt-5.1');
 });
 
-test('GeekAI omits thinking unless the admin or a tool call asks for it', () => {
-  const off = withUpstreamThinking({ model: 'claude-fable', thinking: { type: 'disabled' } }, 'https://geekai.co/api/v1', false);
+test('thinking is omitted unless the admin switch asks for it', () => {
+  const off = withUpstreamThinking({ model: 'claude-opus-5-5', thinking: { type: 'disabled' } }, 'https://proxy.token-factory.example/v1', false);
   assert.equal('thinking' in off, false);
-  const on = withUpstreamThinking({ model: 'claude-fable' }, 'https://geekai.co/api/v1', true);
+  const on = withUpstreamThinking({ model: 'claude-opus-5-5' }, 'https://proxy.token-factory.example/v1', true);
   assert.deepEqual(on.thinking, { type: 'enabled' });
-  const deepseek = withUpstreamThinking({ model: 'deepseek-flash' }, 'https://api.deepseek.com', false);
-  assert.deepEqual(deepseek.thinking, { type: 'disabled' });
+  const geekai = withUpstreamThinking({ model: 'claude-fable', thinking: { type: 'disabled' } }, 'https://geekai.co/api/v1', false);
+  assert.equal('thinking' in geekai, false);
 });
 
 test('a GeekAI model is billed from its account price, not the DeepSeek catalogue', async () => {

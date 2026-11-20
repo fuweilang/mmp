@@ -26,7 +26,7 @@
             <p class="hint">{{ model.price.tier }} · 单位：元／百万 Token。输入成本 {{ model.price.input }}，输出成本 {{ model.price.output }}，缓存命中 {{ model.price.cachedInput ?? model.price.input }}。</p>
             <p v-if="model.price.cacheWrite5m" class="hint">缓存写入另计：5 分钟 {{ model.price.cacheWrite5m }}，1 小时 {{ model.price.cacheWrite1h }} 元／百万 Token。</p>
             <p class="hint">输入售价 {{ price(model.price.input) }}，输出售价 {{ price(model.price.output) }} 元／百万 Token。缓存写入按实际用量另计。</p>
-            <p class="hint"><a :href="model.price.source" target="_blank" rel="noopener noreferrer">厂商官方价目表</a> · 最近核验 {{ new Date(model.price.checkedAt).toLocaleString('zh-CN') }}</p>
+            <p class="hint"><a v-if="priceLink(model.price.source)" :href="model.price.source" target="_blank" rel="noopener noreferrer">厂商官方价目表</a><span v-else>{{ model.price.source }}</span> · 最近核验 {{ new Date(model.price.checkedAt).toLocaleString('zh-CN') }}</p>
           </details>
         </template>
         <el-alert v-else title="系统尚未取得该接入渠道的有效价格，企业付费调用暂不可用。无需手填，也不会误按免费计费。" type="warning" :closable="false" />
@@ -46,6 +46,7 @@ const validMultiplier = computed(() => Number.isFinite(form.sellPriceMultiplier)
 function money(n: number) { return Number.isFinite(n) ? n.toLocaleString('zh-CN', { maximumFractionDigits: 4 }) : '—'; }
 function coins(n: number) { return Math.round(n * 10000).toLocaleString('zh-CN'); }
 function price(cost: number) { return Number((cost * validMultiplier.value).toFixed(6)); }
+function priceLink(source: string) { return source.startsWith('https://'); }
 function tokens(budget: number, cost: number) { return cost > 0 ? Math.floor(budget * 1e6 / (cost * validMultiplier.value)).toLocaleString('zh-CN') : '—'; }
 function apply(config: BillingConfig) { catalog.value = config.modelCatalog || []; form.sellPriceMultiplier = config.sellPriceMultiplier; form.welcomeGiftYuan = config.welcomeGiftYuan ?? 0; }
 async function reload() {

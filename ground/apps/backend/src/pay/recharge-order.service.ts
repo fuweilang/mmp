@@ -113,16 +113,6 @@ export class RechargeOrderService {
       throw new BadRequestException('当前订单不可支付');
     }
 
-    // 同渠道未过期码复用
-    if (
-      order.channel === channel &&
-      order.codeUrl &&
-      order.expireAt &&
-      order.expireAt.getTime() > Date.now() + 30_000
-    ) {
-      return this.settle.toQrPayload(order);
-    }
-
     if (channel === PAY_CHANNEL_WECHAT && !this.wechat.isConfigured()) {
       throw new BadRequestException(CHANNEL_NOT_CONFIGURED_MESSAGE);
     }
@@ -199,7 +189,9 @@ export class RechargeOrderService {
     const tid = await this.settle.requireOrgAdminTenant(user, tenantId);
     const where: Prisma.AiRechargeOrderWhereInput = { tenantId: tid };
     const status = (query?.status || '').trim();
-    if (status) where.status = status;
+    // 企业充值记录只留入账和失败。待支付、取消、过期不展示，也不再拉起来付。
+    if (status === 'confirmed' || status === 'failed') where.status = status;
+    else where.status = { in: ['confirmed', 'failed'] };
     const channel = (query?.channel || '').trim();
     if (channel) where.channel = channel;
     const createdByUserId = (query?.createdByUserId || '').trim();

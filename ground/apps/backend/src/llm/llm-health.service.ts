@@ -69,6 +69,10 @@ export class LlmHealthService implements OnModuleInit,OnModuleDestroy {
     const changed=await this.prisma.$queryRaw<HealthState[]>`INSERT INTO llm_health_state(id,model_id,provider_id,status,failures,checked_at,retry_at,reason) VALUES(${id},${channel?null:target.id},${channel?target.providerId:null},${immediate?(limited?'limited':'unavailable'):'unchecked'},1,now(),CASE WHEN ${immediate} THEN now()+${cooldown}*interval '1 millisecond' ELSE NULL END,${reason}) ON CONFLICT(id) DO UPDATE SET failures=CASE WHEN llm_health_state.checked_at<now()-${this.interval}*interval '1 millisecond' THEN 1 ELSE llm_health_state.failures+1 END,checked_at=now(),status=CASE WHEN ${immediate} THEN ${limited?'limited':'unavailable'} WHEN llm_health_state.checked_at>=now()-${this.interval}*interval '1 millisecond' AND llm_health_state.failures+1>=${this.threshold} THEN 'unavailable' WHEN llm_health_state.status='unavailable' THEN 'unavailable' WHEN llm_health_state.status='unchecked' THEN 'unchecked' ELSE 'degraded' END,retry_at=now()+${cooldown}*interval '1 millisecond',reason=${reason} RETURNING id,status,failures,checked_at AS "checkedAt",retry_at AS "retryAt",reason,latency_ms AS "latencyMs"`;
     this.log.event('warn','model.health.failure',{modelId:target.id,providerId:target.providerId,status,health:changed[0]?.status,reason});return true;
   }
+  /** A failed probe turns this model off. Live chat failures only update health. */
+  private async disableProbedModel(modelId:string):Promise<void>{
+    await this.prisma.llmModel.updateMany({where:{id:modelId},data:{enabled:false}});
+  }
   /** Remove old observation after an operator changes a model/key, without changing manual switches. */
   async reset(providerId:string,modelId?:string):Promise<void>{
     await this.prisma.$executeRaw`DELETE FROM llm_health_state WHERE provider_id=${providerId} OR ${modelId?Prisma.sql`model_id=${modelId}`:Prisma.sql`model_id IN (SELECT id FROM llm_model WHERE provider_id=${providerId})`}`;
@@ -114,10 +118,9 @@ export class LlmHealthService implements OnModuleInit,OnModuleDestroy {
     if(!model)return{ok:false,latencyMs:0,message:'模型不存在'};
     if(modelPurpose(model)!=='chat')return{ok:false,latencyMs:0,message:'该模型不是对话模型，请使用头像生图预览'};
     const target={id:model.id,providerId:model.providerId},start=Date.now();
-    if(!model.enabled||!model.provider.enabled)return{ok:false,latencyMs:0,message:'管理员已禁用，未发起探测'};
     let apiKey:string;
-    try{apiKey=model.provider.apiKeyEnc?decryptApiKey(model.provider.apiKeyEnc):'';}catch(error){this.log.event('error','model.health.key_failed',{providerId:model.providerId,error});await this.failure(target,401,true);return{ok:false,latencyMs:0,message:'厂商凭据不可用',statusCode:401};}
-    if(!apiKey||!model.provider.baseUrl){await this.failure(target,401,true);return{ok:false,latencyMs:0,message:'厂商配置不完整',statusCode:401};}
+    try{apiKey=model.provider.apiKeyEnc?decryptApiKey(model.provider.apiKeyEnc):'';}catch(error){this.log.event('error','model.health.key_failed',{providerId:model.providerId,error});await this.failure(target,401,true);await this.disableProbedModel(model.id);return{ok:false,latencyMs:0,message:'厂商凭据不可用',statusCode:401};}
+    if(!apiKey||!model.provider.baseUrl){await this.failure(target,401,true);await this.disableProbedModel(model.id);return{ok:false,latencyMs:0,message:'厂商配置不完整',statusCode:401};}
     const base=model.provider.baseUrl.replace(/\/+$/,'');const url=/\/chat\/completions$/i.test(base)?base:/\/v1$/i.test(base)?base+'/chat/completions':base+'/v1/chat/completions';
     const attempt=new AbortController();
     const abort=()=>attempt.abort();
@@ -128,13 +131,13 @@ export class LlmHealthService implements OnModuleInit,OnModuleDestroy {
       const response=await axios.post(url,withUpstreamThinking({model:model.modelId,messages:[{role:'user',content:'Reply OK'}],max_tokens:16,stream:false},model.provider.baseUrl,false),{headers:{Authorization:`Bearer ${apiKey}`},timeout:this.timeout,signal:attempt.signal,validateStatus:()=>true,maxRedirects:0});
       const latencyMs=Date.now()-start;
       const ok=response.status>=200&&response.status<300&&Array.isArray(response.data?.choices)&&response.data.choices.length>0;
-      if(ok)await this.success(target,latencyMs);else await this.failure(target,response.status>=400?response.status:502,true);
+      if(ok)await this.success(target,latencyMs);else{await this.failure(target,response.status>=400?response.status:502,true);await this.disableProbedModel(model.id);}
       this.log.event(ok?'info':'warn','model.health.probe',{modelId,providerId:model.providerId,status:response.status,latencyMs,ok});
       return{ok,latencyMs,message:ok?'检查通过':`检查失败（HTTP ${response.status}）`,statusCode:response.status};
     }catch(error){
       if(cancel.aborted)return{ok:false,latencyMs:Date.now()-start,message:'已中断'};
       if(this.stop.signal.aborted)return{ok:false,latencyMs:Date.now()-start,message:'检查已取消'};
-      await this.failure(target,0,true);this.log.event('error','model.health.probe_error',{modelId,error});return{ok:false,latencyMs:Date.now()-start,message:'模型连接失败'};
+      await this.failure(target,0,true);await this.disableProbedModel(model.id);this.log.event('error','model.health.probe_error',{modelId,error});return{ok:false,latencyMs:Date.now()-start,message:'模型连接失败'};
     }finally{cancel.removeEventListener('abort',abort);this.stop.signal.removeEventListener('abort',abort);}
   }
 }

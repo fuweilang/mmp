@@ -8,7 +8,7 @@ import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportTokenUsageDto } from './dto/billing.dto';
 import { shanghaiDayRangeUnix } from './octop-usage.reader';
-import { listEnabledChatModels } from './octop-providers.reader';
+import { modelPurpose } from '../llm/model-purpose';
 import { BillingConfigService } from './billing-config.service';
 import {
   blendedYuanPer1mForModel,
@@ -26,6 +26,21 @@ export class EnterpriseTokenStatsService {
     private config: BillingConfigService,
     private support: TokenStatsSupport,
   ) {}
+
+  /** 模型管理里仍启用的对话模型，格式与用量行的 provider/modelId 一致。 */
+  private async enabledChatModelRefs(): Promise<string[]> {
+    const rows = await this.prisma.llmModel.findMany({
+      where: { enabled: true, provider: { enabled: true } },
+      select: { modelId: true, meta: true, provider: { select: { name: true } } },
+    });
+    const refs: string[] = [];
+    for (const row of rows) {
+      if (modelPurpose(row) !== 'chat') continue;
+      const ref = `${row.provider.name}/${row.modelId}`.trim();
+      if (ref.length > 1) refs.push(ref);
+    }
+    return refs;
+  }
 
   async usageReconcile(
     actor: User,
@@ -182,6 +197,7 @@ export class EnterpriseTokenStatsService {
       throw new BadRequestException(e instanceof Error ? e.message : '日期无效');
     }
     const modelFilter = (query.model || '').trim() || null;
+    const catalogIds = await this.enabledChatModelRefs();
 
     const where: Prisma.TokenUsageTurnWhereInput = {
       occurredAt: { gte: range.start, lt: range.end },
@@ -224,7 +240,7 @@ export class EnterpriseTokenStatsService {
         take: 200,
       }),
     ]);
-    const modelFilterOptions = this.support.buildModelFilterOptions(modelRows.map((m) => m.model || '(unknown)'));
+    const modelFilterOptions = this.support.buildModelFilterOptions(modelRows.map((m) => m.model || '(unknown)'), catalogIds);
     const usageTenantIds = [...new Set(turnByTenant.map((row) => row.tenantId).filter((id): id is string => Boolean(id)))];
     const tenants = usageTenantIds.length
       ? await this.prisma.tenant.findMany({
@@ -382,9 +398,6 @@ export class EnterpriseTokenStatsService {
       offlineModels: modelFilterOptions.offlineModels,
       modelsSource: {
         dbPath: modelFilterOptions.catalogDbPath,
-        ...(modelFilterOptions.catalogError
-          ? { error: modelFilterOptions.catalogError }
-          : {}),
       },
       tokensPerAiCoin,
       aiCoinSource: 'ledger_chat_consume' as const,
@@ -422,6 +435,7 @@ export class EnterpriseTokenStatsService {
       throw new BadRequestException(e instanceof Error ? e.message : '日期无效');
     }
     const modelFilter = (query.model || '').trim() || null;
+    const catalogIds = await this.enabledChatModelRefs();
     const where: Prisma.TokenUsageTurnWhereInput = {
       tenantId: tenant.id,
       occurredAt: { gte: range.start, lt: range.end },
@@ -452,7 +466,7 @@ export class EnterpriseTokenStatsService {
         _count: { _all: true },
       }),
     ]);
-    const modelFilterOptions = this.support.buildModelFilterOptions(modelOptionRows.map(row => row.model || '(unknown)'));
+    const modelFilterOptions = this.support.buildModelFilterOptions(modelOptionRows.map(row => row.model || '(unknown)'), catalogIds);
 
     const members = await this.prisma.orgMember.findMany({
       where: { tenantId: tenant.id },
@@ -636,7 +650,6 @@ export class EnterpriseTokenStatsService {
       offlineModels: modelFilterOptions.offlineModels,
       modelsSource: {
         dbPath: modelFilterOptions.catalogDbPath,
-        ...(modelFilterOptions.catalogError ? { error: modelFilterOptions.catalogError } : {}),
       },
       tokensPerAiCoin: billingConfig.tokensPerAiCoin,
       aiCoinSource: 'ledger_chat_consume' as const,

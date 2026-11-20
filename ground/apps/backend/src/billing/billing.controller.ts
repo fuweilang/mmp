@@ -56,6 +56,27 @@ export class BillingController {
     return { skipped: false, items, page: current, pageSize: size, total };
   }
 
+  @Get('token-usage/members')
+  async memberTokenStats(
+    @CurrentUser() user: User,
+    @CurrentTenantId() tenantId: string | null,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('name') name?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const snap = await this.billing.getWalletForTenant(user, tenantId);
+    if (snap.skipped || !tenantId) return { skipped: true, members: [], page: 1, pageSize: 10, total: 0 };
+    return this.billing.consoleMemberTokenStats(tenantId, {
+      from,
+      to,
+      name,
+      page: Number(page) || 1,
+      pageSize: Number(pageSize) || 10,
+    });
+  }
+
   @Get('token-usage')
   async tokenUsage(
     @CurrentUser() user: User,

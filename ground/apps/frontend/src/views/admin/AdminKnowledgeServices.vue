@@ -5,7 +5,6 @@
         <h1>检索服务</h1>
         <p>配置知识文件处理和专家检索所用的服务。实际检索效果请在专家调试中验证。</p>
       </div>
-      <el-button @click="$router.push('/admin/models')">返回模型管理</el-button>
     </header>
     <KnowledgeCoreAdmin settings-only service-only />
   </section>
@@ -17,7 +16,7 @@ import KnowledgeCoreAdmin from '../../components/admin/KnowledgeCoreAdmin.vue';
 .workspace:has(> .knowledge-services) {
   display: flex;
   flex-direction: column;
-  padding: 15px 20px 20px;
+  padding: 15px;
 }
 </style>
 <style scoped>

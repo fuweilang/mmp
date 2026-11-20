@@ -17,6 +17,62 @@ import {
 import { ledgerCoinsAtCurrentRate } from './billing.pricing';
 import { TokenStatsSupport } from './token-stats.support';
 
+export type MemberTokenStat = {
+  userId: string;
+  name: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+};
+
+/** Highest token use first. Current members with no usage stay at 0. */
+export function mergeMemberTokenStats(
+  members: Array<{ userId: string; name: string }>,
+  usage: Array<{ userId: string; inputTokens: number; outputTokens: number; totalTokens: number }>,
+  departed: Array<{ userId: string; name: string }>,
+): MemberTokenStat[] {
+  const byUser = new Map(usage.map((row) => [row.userId, row]));
+  const rows: MemberTokenStat[] = members.map((m) => {
+    const hit = byUser.get(m.userId);
+    return {
+      userId: m.userId,
+      name: m.name,
+      inputTokens: hit?.inputTokens ?? 0,
+      outputTokens: hit?.outputTokens ?? 0,
+      totalTokens: hit?.totalTokens ?? 0,
+    };
+  });
+  const seen = new Set(rows.map((row) => row.userId));
+  for (const person of departed) {
+    if (seen.has(person.userId)) continue;
+    const hit = byUser.get(person.userId);
+    if (!hit || hit.totalTokens <= 0) continue;
+    rows.push({
+      userId: person.userId,
+      name: person.name,
+      inputTokens: hit.inputTokens,
+      outputTokens: hit.outputTokens,
+      totalTokens: hit.totalTokens,
+    });
+  }
+  rows.sort((a, b) => b.totalTokens - a.totalTokens || a.name.localeCompare(b.name, 'zh'));
+  return rows;
+}
+
+export function pageMemberTokenStats(
+  rows: MemberTokenStat[],
+  name: string | undefined,
+  page: number,
+  pageSize: number,
+) {
+  const keyword = (name || '').trim().toLowerCase();
+  const filtered = keyword ? rows.filter((row) => row.name.toLowerCase().includes(keyword)) : rows;
+  const size = Math.min(Math.max(Number(pageSize) || 10, 10), 100);
+  const current = Math.max(Number(page) || 1, 1);
+  const start = (current - 1) * size;
+  return { members: filtered.slice(start, start + size), page: current, pageSize: size, total: filtered.length };
+}
+
 export type TokenUsageSettlementMark = {
   status: 'settled' | 'exempt' | 'settlement-failed';
   chargedCoins?: number;
@@ -278,6 +334,62 @@ export class TokenUsageService {
       pageSize,
       total,
     };
+  }
+
+  /** One row per current member, plus anyone who used tokens and then left. Zeros stay. */
+  async consoleMemberTokenStats(
+    tenantId: string,
+    query: { from?: string; to?: string; name?: string; page?: number; pageSize?: number } = {},
+  ) {
+    if (!tenantId) throw new BadRequestException('请先选择企业');
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true, type: true },
+    });
+    if (!tenant || tenant.type === 'PLATFORM') throw new NotFoundException('企业不存在');
+    let range;
+    try {
+      range = this.support.shanghaiRangeDates(query.from, query.to);
+    } catch (e) {
+      throw new BadRequestException(e instanceof Error ? e.message : '日期无效');
+    }
+    const where: Prisma.TokenUsageTurnWhereInput = {
+      tenantId,
+      occurredAt: { gte: range.start, lt: range.end },
+    };
+    const [grouped, memberRows] = await Promise.all([
+      this.prisma.tokenUsageTurn.groupBy({
+        by: ['userId'],
+        where,
+        _sum: { inputTokens: true, outputTokens: true, totalTokens: true },
+      }),
+      this.prisma.orgMember.findMany({
+        where: { tenantId },
+        select: { userId: true, user: { select: { name: true } } },
+        take: 500,
+      }),
+    ]);
+    const usage = grouped.map((row) => ({
+      userId: row.userId,
+      inputTokens: row._sum.inputTokens ?? 0,
+      outputTokens: row._sum.outputTokens ?? 0,
+      totalTokens: row._sum.totalTokens ?? 0,
+    }));
+    const known = new Set(memberRows.map((m) => m.userId));
+    const missingIds = usage.map((row) => row.userId).filter((id) => !known.has(id));
+    const extras = missingIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: missingIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const extraById = new Map(extras.map((u) => [u.id, u.name]));
+    const ranked = mergeMemberTokenStats(
+      memberRows.map((m) => ({ userId: m.userId, name: m.user.name })),
+      usage,
+      missingIds.map((id) => ({ userId: id, name: extraById.get(id) || id })),
+    );
+    return pageMemberTokenStats(ranked, query.name, Number(query.page) || 1, Number(query.pageSize) || 10);
   }
 
 

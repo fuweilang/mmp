@@ -119,9 +119,9 @@ function safeReason(code?: string) {
         EXTRACTION_TOKEN_LIMIT: "文档 Token 数超过提取限制，请拆分后上传",
         DOCUMENT_CHUNK_LIMIT: "分段数量超过限制，请调整参数或拆分文件",
         PREVIEW_RESPONSE_LIMIT: "预览内容超过限制，请调整参数",
-        PROFILE_DISABLED: "检索服务已停用，请到模型管理的检索服务检查",
-        EMBEDDING_SERVICE_UNCONFIGURED: "尚未配置检索服务，请到模型管理的检索服务配置",
-        PROVIDER_CREDENTIALS_MISSING: "检索服务凭据未配置，请到模型管理检查",
+        PROFILE_DISABLED: "检索服务已停用，请到检索服务检查",
+        EMBEDDING_SERVICE_UNCONFIGURED: "尚未配置检索服务，请到检索服务配置",
+        PROVIDER_CREDENTIALS_MISSING: "检索服务凭据未配置，请到检索服务检查",
         KNOWLEDGE_DISABLED: "文档已停用",
         KNOWLEDGE_REVISION_NOT_FOUND: "文件版本已变更，请重新打开设置"
     } as Record<string, string>)[code || ""] || "处理未完成，请重试或检查文件与检索服务配置";

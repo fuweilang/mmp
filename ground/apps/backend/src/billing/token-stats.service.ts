@@ -53,4 +53,8 @@ export class TokenStatsService {
   ) {
     return this.usage.consoleTenantTokenUsage(tenantId, query);
   }
+
+  consoleMemberTokenStats(tenantId: string, query: { from?: string; to?: string; name?: string; page?: number; pageSize?: number }) {
+    return this.usage.consoleMemberTokenStats(tenantId, query);
+  }
 }

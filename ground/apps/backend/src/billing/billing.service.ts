@@ -281,4 +281,8 @@ export class BillingService {
   ) {
     return this.tokenStats.consoleTenantTokenUsage(tenantId, query);
   }
+
+  consoleMemberTokenStats(tenantId: string, query: { from?: string; to?: string; name?: string; page?: number; pageSize?: number }) {
+    return this.tokenStats.consoleMemberTokenStats(tenantId, query);
+  }
 }

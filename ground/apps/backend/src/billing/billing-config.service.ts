@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { modelPricingSnapshot, parseModelPurchasePrices } from './model-pricing';
 import { COINS_PER_YUAN, officialModelPrice, seedOfficialPriceCatalogue, officialPriceCatalogue, type OfficialPrice } from './official-model-prices';
 import { geekAiChatBase, loadGeekAiModel } from './geekai-model-price';
+import { tokenFactoryPurchasePrice } from './token-factory-price';
 import { decryptApiKey } from '../llm/llm-key-crypto';
 import { UpdateBillingConfigDto } from './dto/billing.dto';
 import { listEnabledChatModels } from './octop-providers.reader';
@@ -223,6 +224,8 @@ export class BillingConfigService {
       const loaded = await loadGeekAiModel(provider, upstream?.baseUrl, model, apiKey);
       return loaded.ok ? { ok: true, price: loaded.price } : { ok: false, reason: loaded.reason };
     }
+    const contracted = await tokenFactoryPurchasePrice(upstream?.baseUrl, model);
+    if (contracted) return { ok: true, price: contracted };
     const price = await officialModelPrice(upstream?.baseUrl ?? null, model);
     return price ? { ok: true, price } : { ok: false, reason: '暂无有效的系统参考价，暂不可用于企业计费' };
   }

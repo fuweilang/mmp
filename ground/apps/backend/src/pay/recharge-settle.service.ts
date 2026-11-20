@@ -27,6 +27,7 @@ import {
   RECHARGE_STATUS_CANCELLED,
   RECHARGE_STATUS_CONFIRMED,
   RECHARGE_STATUS_EXPIRED,
+  RECHARGE_STATUS_FAILED,
   RECHARGE_STATUS_PENDING,
   WALLET_RECHARGE_MAX_AMOUNT,
   type PayChannel,
@@ -57,6 +58,13 @@ export class RechargeSettleService {
     await this.prisma.aiRechargeOrder.updateMany({
       where: { id: orderId, status: RECHARGE_STATUS_PENDING },
       data: { status: RECHARGE_STATUS_EXPIRED },
+    });
+  }
+
+  async markFailed(orderId: string) {
+    await this.prisma.aiRechargeOrder.updateMany({
+      where: { id: orderId, status: RECHARGE_STATUS_PENDING },
+      data: { status: RECHARGE_STATUS_FAILED },
     });
   }
 
@@ -272,7 +280,9 @@ export class RechargeSettleService {
           confirmedBy,
           paidAt: q.successTime ? new Date(q.successTime) : new Date(),
         });
-      } else if (['CLOSED', 'REVOKED', 'PAYERROR'].includes(q.tradeState)) {
+      } else if (q.tradeState === 'PAYERROR') {
+        await this.markFailed(order.id);
+      } else if (q.tradeState === 'CLOSED' || q.tradeState === 'REVOKED') {
         await this.markExpired(order.id);
       }
       return;

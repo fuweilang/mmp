@@ -1,7 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { shanghaiDayRangeUnix } from './octop-usage.reader';
-import { listEnabledChatModels } from './octop-providers.reader';
 
 @Injectable()
 export class TokenStatsSupport {
@@ -47,23 +46,20 @@ export class TokenStatsSupport {
   }
 
   /**
-   * Octop Web/桌面每轮对话结束后上报物理 token。
-   * tenantId 取自 JWT；无企业则落 null（Admin 企业统计不计）。
+   * 当前启用的对话模型用 provider/modelId。历史用量里对不上的才标已下线。
    */
-  buildModelFilterOptions(usageModels: string[]): {
+  buildModelFilterOptions(usageModels: string[], catalogIds: readonly string[]): {
     models: string[];
     offlineModels: string[];
     catalogDbPath: string | null;
-    catalogError?: string;
   } {
-    const listed = listEnabledChatModels();
-    const catalogIds: string[] = [];
     const catalogSet = new Set<string>();
-    for (const m of listed.models) {
-      const id = (m.modelId || '').trim();
+    const models: string[] = [];
+    for (const raw of catalogIds) {
+      const id = (raw || '').trim();
       if (!id || catalogSet.has(id)) continue;
       catalogSet.add(id);
-      catalogIds.push(id);
+      models.push(id);
     }
 
     const usageIds: string[] = [];
@@ -76,28 +72,16 @@ export class TokenStatsSupport {
     }
     usageIds.sort((a, b) => a.localeCompare(b, 'zh'));
 
-    const models: string[] = [];
-    const seen = new Set<string>();
-    for (const id of catalogIds) {
-      if (seen.has(id)) continue;
-      seen.add(id);
-      models.push(id);
-    }
+    const seen = new Set(catalogSet);
     const offlineModels: string[] = [];
     for (const id of usageIds) {
       if (seen.has(id)) continue;
       seen.add(id);
       models.push(id);
-      // 目录可读时才标 offline；读失败时不误标
-      if (id !== '(unknown)' && !listed.error && !catalogSet.has(id)) offlineModels.push(id);
+      if (id !== '(unknown)') offlineModels.push(id);
     }
 
-    return {
-      models,
-      offlineModels,
-      catalogDbPath: listed.dbPath || null,
-      ...(listed.error ? { catalogError: listed.error } : {}),
-    };
+    return { models, offlineModels, catalogDbPath: null };
   }
 
   requirePlatformAdmin(actor: User) {

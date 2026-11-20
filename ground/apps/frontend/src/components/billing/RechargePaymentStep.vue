@@ -11,11 +11,11 @@
         <span v-if="createdOrder?.aiCoins != null" class="coins-line">到账 {{ createdOrder.aiCoins.toLocaleString('zh-CN') }} AI币</span>
       </div>
     </div>
-    <p v-if="mockPayEnabled" class="mock-pay-hint">
+    <p v-if="mockPayEnabled && selectedChannel === 'mock'" class="mock-pay-hint">
       本地开发：点模拟支付直接入账，不生成微信/支付宝码。
     </p>
 
-    <div v-if="!mockPayEnabled" class="channel-options" aria-label="支付方式">
+    <div v-if="wechatOk || alipayOk" class="channel-options" aria-label="支付方式">
       <el-button
         v-if="wechatOk"
         class="channel-button is-wechat"
@@ -47,7 +47,7 @@
     />
 
     <section
-      v-if="!mockPayEnabled && selectedChannel && selectedChannel !== 'mock'"
+      v-if="selectedChannel === 'wechat' || selectedChannel === 'alipay'"
       v-loading="payLoading"
       class="payment-action"
       :class="`is-${selectedChannel}`"
