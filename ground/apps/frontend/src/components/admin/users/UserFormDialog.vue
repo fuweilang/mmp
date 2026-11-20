@@ -78,7 +78,7 @@
       <el-form-item v-if="!editPerEnterprise" :label="platformAccount && editingId ? '加入终端企业' : '所属企业'" prop="tenantId">
         <el-select
           :model-value="selectedEnterpriseKnown ? form.tenantId : ''"
-          filterable
+
           :loading="enterprisesLoading"
           :placeholder="enterprisesLoading ? '正在加载企业…' : unresolvedEnterprise ? '企业名称暂不可用' : '选择一家企业'"
           :aria-describedby="platformAccount && editingId ? 'user-member-enterprise-help' : undefined"

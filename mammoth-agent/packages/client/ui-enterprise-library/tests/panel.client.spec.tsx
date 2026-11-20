@@ -262,6 +262,35 @@ describe('library panel', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
+  it('shows extracted text for a document whose stored content is plain text', async () => {
+    const fetchImpl = vi.fn(async (url: string) => url.includes('/preview?')
+      ? Response.json({
+        nodeId: 'doc', versionId: 'vd', versionNo: 1, name: '个人简介.docx', originalName: '个人简介.docx',
+        mimeType: 'text/plain', previewKind: 'text', text: '这是一份纯文本正文', parseStatus: 'READY',
+      })
+      : Response.json({ items: [{ id: 'doc', name: '个人简介.docx', kind: 'FILE', currentVersion: { id: 'vd', versionNo: 1, parseStatus: 'READY' } }] }))
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    fireEvent.click(await listing().findByRole('button', { name: '个人简介.docx' }))
+    expect(await preview().findByText('这是一份纯文本正文')).toBeTruthy()
+    expect(fetchImpl.mock.calls.some(([url]) => String(url).includes('/render?'))).toBe(false)
+  })
+
+  it('falls back to extracted text when Office conversion fails', async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url.includes('/preview?')) return Response.json({
+        nodeId: 'doc', versionId: 'vd', versionNo: 1, name: '个人简介.docx', originalName: '个人简介.docx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', previewKind: 'text',
+        text: '转换失败后仍可阅读的正文', parseStatus: 'READY',
+      })
+      if (url.includes('/render?')) return Response.json({ message: 'Office 转换失败' }, { status: 502 })
+      return Response.json({ items: [{ id: 'doc', name: '个人简介.docx', kind: 'FILE', currentVersion: { id: 'vd', versionNo: 1, parseStatus: 'READY' } }] })
+    })
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    fireEvent.click(await listing().findByRole('button', { name: '个人简介.docx' }))
+    expect(await preview().findByText('转换失败后仍可阅读的正文')).toBeTruthy()
+    expect(preview().queryByText(/Office 转换失败/)).toBeNull()
+  })
+
   it('saves the prominent New action in the open folder, and in My files from Recent', async () => {
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === 'POST') return Response.json({ id: 'made' })
@@ -323,7 +352,7 @@ describe('library panel', () => {
     const confirm = vi.spyOn(window, 'confirm')
     const treeRevision = 'a'.repeat(64)
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes('/scope-impact')) return Response.json({ total: 4, changed: 4, treeRevision })
+      if (url.includes('/scope-impact')) return Response.json({ total: 2, changed: 2, treeRevision })
       if (init?.method === 'POST') return Response.json({ id: 'folder', scope: 'ENTERPRISE' })
       return Response.json({ items: [{ id: 'folder', name: '已有目录', kind: 'FOLDER', scope: 'PRIVATE', canManage: true }] })
     })
@@ -332,7 +361,7 @@ describe('library panel', () => {
     fireEvent.click(listing().getByRole('button', { name: `${zh.more} · 已有目录` }))
     fireEvent.click(await screen.findByRole('menuitem', { name: zh.share }))
     const dialog = await screen.findByRole('dialog', { name: zh.share })
-    expect(within(dialog).getByText(zh.confirmShareTree.replace('{count}', '4'))).toBeTruthy()
+    expect(within(dialog).getByText(zh.confirmShareTree.replace('{count}', '1'))).toBeTruthy()
     expect(confirm).not.toHaveBeenCalled()
     fireEvent.click(within(dialog).getByRole('button', { name: zh.share }))
     await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('ground-library/nodes/folder/scope', expect.objectContaining({ body: JSON.stringify({ scope: 'ENTERPRISE', confirmShare: true, confirmUnshare: false, expectedTreeRevision: treeRevision }) })))
@@ -596,6 +625,76 @@ describe('t188 lazy tree, media and upload feedback', () => {
     expect(screen.getByRole('button', { name: zh.shared }).getAttribute('aria-current')).toBe('page');
     expect(fetchImpl.mock.calls.some(([url]) => url.includes('/scope'))).toBe(false);
   });
+  it('creates the selected folder tree and uploads each file into its folder', async () => {
+    const calls: Array<{ url: string; body: unknown }> = []
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/config')) return Response.json({ maxFileBytes: 1000, allowedExtensions: ['.md'] })
+      if (init?.method === 'POST' && url.includes('/folders')) {
+        const body = JSON.parse(String(init.body)) as { name: string; parentId?: string | null }
+        calls.push({ url, body })
+        return Response.json({ id: body.name === 'Docs' ? 'folder-docs' : 'folder-sub', kind: 'FOLDER', name: body.name })
+      }
+      if (init?.method === 'POST' && url.includes('/files')) {
+        const form = init.body as FormData
+        calls.push({ url, body: { name: (form.get('files') as File).name, parentId: form.get('parentId') } })
+        return Response.json({ items: [{ id: `file-${calls.length}` }], failed: [] })
+      }
+      return Response.json({ items: [] })
+    })
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    await listing().findByText(zh.empty)
+    fireEvent.click(screen.getByRole('button', { name: `${zh.new} · ${zh.mine}` }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: zh.upload }))
+    const nested = new File(['a'], 'a.md')
+    const root = new File(['b'], 'b.md')
+    Object.defineProperty(nested, 'webkitRelativePath', { value: 'Docs/sub/a.md' })
+    Object.defineProperty(root, 'webkitRelativePath', { value: 'Docs/b.md' })
+    fireEvent.change(screen.getByLabelText(zh.uploadChooseFolder, { selector: 'input' }), { target: { files: [nested, root] } })
+    fireEvent.click(screen.getByRole('button', { name: zh.uploadStart }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: zh.upload })).toBeNull())
+    expect(calls).toEqual([
+      { url: 'ground-library/folders', body: { name: 'Docs', parentId: null, scope: 'PRIVATE', confirmShare: false, reuseExisting: true } },
+      { url: 'ground-library/folders', body: { name: 'sub', parentId: 'folder-docs', scope: 'PRIVATE', confirmShare: false, reuseExisting: true } },
+      { url: 'ground-library/files', body: { name: 'a.md', parentId: 'folder-sub' } },
+      { url: 'ground-library/files', body: { name: 'b.md', parentId: 'folder-docs' } },
+    ])
+  });
+  it('warns when folder upload merges into an existing same-name folder', async () => {
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/config')) return Response.json({ maxFileBytes: 1000, allowedExtensions: ['.md'] })
+      if (url.endsWith('/files')) return Response.json({ items: [{ id: 'file-1' }], failed: [] })
+      if (init?.method === 'POST') return Response.json({ id: 'created' })
+      return Response.json({ items: [{ id: 'folder-docs', name: 'Docs', kind: 'FOLDER', scope: 'PRIVATE', parentId: null, canManage: true }], total: 1 })
+    })
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    await listing().findByText('Docs')
+    fireEvent.click(screen.getByRole('button', { name: `${zh.new} · ${zh.mine}` }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: zh.upload }))
+    const file = new File(['a'], 'a.md')
+    Object.defineProperty(file, 'webkitRelativePath', { value: 'Docs/a.md' })
+    fireEvent.change(screen.getByLabelText(zh.uploadChooseFolder, { selector: 'input' }), { target: { files: [file] } })
+    expect(await screen.findByText(zh.folderMergeNotice.replace('{name}', 'Docs'))).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: zh.uploadStart }))
+    await screen.findByText(zh.folderMerged.replace('{name}', 'Docs'))
+    expect(fetchImpl.mock.calls.some(([url, init]) => String(url).endsWith('/folders') && (init as RequestInit | undefined)?.method === 'POST')).toBe(false)
+  });
+
+  it('blocks uploading a file whose name already exists in this directory', async () => {
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/config')) return Response.json({ maxFileBytes: 1000, allowedExtensions: ['.md'] })
+      if (url.endsWith('/files') && init?.method === 'POST') return Response.json({ items: [{ id: 'new-file' }], failed: [] })
+      return Response.json({ items: [{ id: 'existing', name: '同名.md', kind: 'FILE', parentId: null, canManage: true, currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'READY' } }], total: 1 })
+    })
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+    await listing().findByText('同名.md')
+    fireEvent.click(screen.getByRole('button', { name: `${zh.new} · ${zh.mine}` }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: zh.upload }))
+    fireEvent.change(screen.getByLabelText(zh.uploadChoose, { selector: 'input' }), { target: { files: [new File(['x'], '同名.md')] } })
+    expect(await screen.findByText(zh.fileExists.replace('{name}', '同名.md'))).toBeTruthy()
+    expect((screen.getByRole('button', { name: zh.uploadStart }) as HTMLButtonElement).disabled).toBe(true)
+    expect(fetchImpl.mock.calls.some(([url, init]) => String(url).endsWith('/files') && (init as RequestInit | undefined)?.method === 'POST')).toBe(false)
+  });
+
   it('retains actual upload errors instead of reporting transfer success', async () => {
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => url.endsWith('/config') ? Response.json({ maxFileBytes: 1000, allowedExtensions: ['.png'] }) : init?.method === 'POST' ? Response.json({ items: [], failed: [{ name: 'fake.png', message: '媒体内容无效' }] }) : Response.json({ items: [] }));
     render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
@@ -607,6 +706,18 @@ describe('t188 lazy tree, media and upload feedback', () => {
     await screen.findByText('媒体内容无效', { exact: false }); expect(screen.queryByText(zh.transferred)).toBeNull();
   });
 });
+
+it('removes a recent access record without recycling the file', async () => {
+  const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') return Response.json({ ok: true })
+    return Response.json({ items: [{ id: 'n1', name: '制度.md', kind: 'FILE', currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'READY' } }], total: 1 })
+  })
+  render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />)
+  fireEvent.click(await screen.findByRole('button', { name: zh.recent }))
+  fireEvent.click(await listing().findByRole('button', { name: `${zh.more} · 制度.md` }))
+  fireEvent.click(await screen.findByRole('menuitem', { name: zh.forgetRecent }))
+  await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith('ground-library/nodes/n1/forget-recent', expect.objectContaining({ method: 'POST' })))
+})
 
 it('loads the next recent page when its end is visible and keeps the first page', async () => {
   class ImmediateObserver {
@@ -793,10 +904,10 @@ describe('t196 real primitive status menu', () => {
     fireEvent.click(trigger);
     const menu = await screen.findByRole('menu');
     expect(view.container.contains(menu)).toBe(false);
-    expect(within(menu).getAllByRole('menuitem')).toHaveLength(2);
+    expect(within(menu).getAllByRole('menuitem')).toHaveLength(3);
     expect(within(menu).queryByRole('menuitem', { name: '处理中' })).toBeNull();
     expect(within(menu).queryByRole('menuitem', { name: zh.statusFailed })).toBeNull();
-    expect(within(menu).queryByRole('menuitem', { name: zh.allStatus })).toBeNull();
+    expect(within(menu).getByRole('menuitem', { name: zh.allStatus })).toBeTruthy();
     expect(within(menu).getByRole('menuitem', { name: zh.statusDownloadOnly })).toBeTruthy();
     fireEvent.click(within(menu).getByRole('menuitem', { name: zh.statusReady }));
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
@@ -830,7 +941,7 @@ describe('t196 real primitive status menu', () => {
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
   });
   it('puts unfinished files in the not-for-AI filter and keeps stored photos available', async () => {
-    const fetchImpl = vi.fn(async () => Response.json({ items: [
+    const fetchImpl = vi.fn(async (_url: string) => Response.json({ items: [
       { id: 'wait', name: '等待.pdf', kind: 'FILE', currentVersion: { id: 'vw', versionNo: 1, parseStatus: 'PENDING' } },
       { id: 'work', name: '解析.docx', kind: 'FILE', currentVersion: { id: 'vx', versionNo: 1, parseStatus: 'PROCESSING' } },
       { id: 'pic', name: '图片.png', kind: 'FILE', currentVersion: { id: 'vp', versionNo: 1, parseStatus: 'DOWNLOAD_ONLY' } },
@@ -858,7 +969,24 @@ describe('t196 real primitive status menu', () => {
       expect(listing().getByRole('button', { name: '制度.md' })).toBeTruthy();
       expect(listing().queryByRole('button', { name: '等待.pdf' })).toBeNull();
     });
+    fireEvent.click(screen.getByRole('button', { name: zh.filterStatus }));
+    fireEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: zh.allStatus }));
+    await waitFor(() => expect(listing().getByRole('button', { name: '等待.pdf' })).toBeTruthy());
     expect(screen.getByRole('button', { name: zh.refresh }).textContent).toBe('');
+  });
+
+  it('shows an all-status reset when a status view has no matches', async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ items: [
+      { id: 'ready', name: '制度.md', kind: 'FILE', currentVersion: { id: 'vr', versionNo: 1, parseStatus: 'READY' } },
+    ] }));
+    render(<Panel useSourceRequest={noSource} clearSourceRequest={() => {}} t={t as never} origin="" fetchImpl={fetchImpl} onUse={vi.fn()} />);
+    await listing().findByRole('button', { name: '制度.md' });
+    fireEvent.click(screen.getByRole('button', { name: zh.filterStatus }));
+    fireEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: zh.statusDownloadOnly }));
+    await waitFor(() => expect(listing().queryByRole('button', { name: '制度.md' })).toBeNull());
+    expect(listing().getByRole('button', { name: zh.allStatus })).toBeTruthy();
+    fireEvent.click(listing().getByRole('button', { name: zh.allStatus }));
+    await waitFor(() => expect(listing().getByRole('button', { name: '制度.md' })).toBeTruthy());
   });
 });
 

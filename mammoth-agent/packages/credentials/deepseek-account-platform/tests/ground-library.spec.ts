@@ -9,6 +9,8 @@ it('allows explicit library paths, never admin, traversal or arbitrary upstream 
  expect(libraryProxyTarget('POST', '/ground-library/used')).toBe('/api/library/used')
  expect(libraryProxyTarget('GET', '/ground-library/used')).toBeUndefined()
  expect(libraryProxyTarget('GET', '/ground-library/nodes/abc/scope-impact?scope=ENTERPRISE')).toBe('/api/library/nodes/abc/scope-impact?scope=ENTERPRISE')
+ expect(libraryProxyTarget('POST', '/ground-library/nodes/abc/forget-recent')).toBe('/api/library/nodes/abc/forget-recent')
+ expect(libraryProxyTarget('GET', '/ground-library/nodes/abc/forget-recent')).toBeUndefined()
  expect(libraryProxyTarget('POST', '/ground-library/nodes/abc/scope-impact')).toBeUndefined()
  expect(libraryProxyTarget('GET', '/ground-library/nodes/abc/download?versionId=v&inline=1')).toBe('/api/library/nodes/abc/download?versionId=v&inline=1')
  expect(libraryProxyTarget('GET', '/ground-library/nodes/abc/download?versionId=v')).toContain('/api/library/nodes/abc/download')

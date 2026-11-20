@@ -7,6 +7,7 @@
       <input ref="input" hidden type="file" :multiple="multiple" :accept="accept" @change="choose" />
     </div>
     <p class="library-upload-note">{{ note }}</p>
+    <el-alert v-if="error" :title="error" type="error" :closable="false" class="library-upload-error" />
     <p v-if="running" role="status">上传期间请保持窗口打开；关闭页面不会撤销已发送的请求。</p>
 
     <ul class="library-upload-list" aria-label="上传队列">

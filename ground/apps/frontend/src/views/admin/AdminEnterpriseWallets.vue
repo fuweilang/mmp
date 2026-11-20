@@ -8,7 +8,7 @@
           class="enterprise-select"
           :options="enterpriseSelectOptions"
           clearable
-          filterable
+
           placeholder="搜索企业"
           @change="onEnterpriseFilterChange"
         />

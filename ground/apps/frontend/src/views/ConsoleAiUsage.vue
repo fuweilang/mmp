@@ -102,7 +102,7 @@
         <el-select
           v-model="userId"
           clearable
-          filterable
+
           placeholder="成员"
           style="width: 160px"
           @change="onSearch"
@@ -122,7 +122,7 @@
         <el-select
           v-model="model"
           clearable
-          filterable
+
           placeholder="模型"
           style="width: 200px"
           @change="onSearch"

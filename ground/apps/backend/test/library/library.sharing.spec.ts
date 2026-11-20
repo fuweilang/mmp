@@ -43,6 +43,26 @@ describe('library sharing inheritance', () => {
     await assert.rejects(service.rename(mate, document.id, '不能编辑他人文件'), { status: 403 });
   });
 
+  it('clears other members recent entries when a shared file becomes private', async () => {
+    const { service, owner, mate, admin, file } = setup();
+    const item = await file();
+    await service.setScope(owner, item.id, 'ENTERPRISE', true);
+    await service.preview(mate, item.id);
+    await service.preview(admin, item.id);
+    assert.equal((await service.list(mate, 'recent')).items.length, 1);
+    assert.equal((await service.list(admin, 'recent')).items.length, 1);
+    await service.setScope(owner, item.id, 'PRIVATE');
+    assert.equal((await service.list(mate, 'recent')).items.length, 0);
+    assert.equal((await service.list(admin, 'recent')).items.length, 0);
+  });
+
+  it('does not record an admin private-file preview as a recent entry', async () => {
+    const { service, admin, file } = setup();
+    const item = await file();
+    await service.preview(admin, item.id);
+    assert.equal((await service.list(admin, 'recent')).items.length, 0);
+  });
+
   it('rejects a stale client scope instead of silently sharing after a parent changes', async () => {
     const { service, owner } = setup();
     const root = await service.createFolder(owner, '父目录');

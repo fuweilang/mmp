@@ -238,6 +238,16 @@ export class PrismaLibraryStore implements LibraryStore {
     });
   }
 
+  async removeRecent(userId: string, tenantId: string, nodeId: string): Promise<void> {
+    await this.prisma.libraryRecent.deleteMany({ where: { userId, tenantId, nodeId } });
+  }
+
+  async removeRecentForNodes(nodes: readonly { id: string; ownerUserId: string }[]): Promise<void> {
+    for (const node of nodes) {
+      await this.prisma.libraryRecent.deleteMany({ where: { nodeId: node.id, userId: { not: node.ownerUserId } } });
+    }
+  }
+
   async listCustodies(): Promise<CustodyRecord[]> {
     const rows = await this.prisma.libraryCustody.findMany();
     return rows.map(toCustody);

@@ -256,6 +256,11 @@ export class LibraryController {
     return this.run(async () => this.library.restore(await this.actor(user, tenantId), id));
   }
 
+  @Post('nodes/:id/forget-recent')
+  async forgetRecent(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null, @Param('id') id: string) {
+    return this.run(async () => this.library.forgetRecent(await this.actor(user, tenantId), id));
+  }
+
   @Delete('nodes/:id')
   async purge(@CurrentUser() user: User, @CurrentTenantId() tenantId: string | null, @Param('id') id: string) {
     return this.run(async () => this.library.purge(await this.actor(user, tenantId), id));

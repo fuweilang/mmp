@@ -247,8 +247,12 @@ describe('enterprise library', () => {
     assert.equal((await store.getNode(child.id))?.state, 'ACTIVE');
     await service.recycle(owner, child.id);
     await service.recycle(owner, folder.id);
-    assert.equal((await service.list(owner, 'trash')).items.length, 2);
+    const trashed = await service.list(owner, 'trash');
+    assert.equal(trashed.items.length, 1);
+    assert.equal(trashed.items[0]?.id, folder.id);
     assert.equal((await service.restore(owner, folder.id)).state, 'ACTIVE');
+    assert.equal((await store.getNode(child.id))?.state, 'ACTIVE');
+    assert.equal((await service.list(owner, 'trash')).items.length, 0);
   });
 
   it('recycles a folder together with the active items inside it', async () => {
@@ -260,10 +264,12 @@ describe('enterprise library', () => {
     await service.recycle(owner, folder.id);
     assert.equal((await store.getNode(folder.id))?.state, 'RECYCLED');
     assert.equal((await store.getNode(child.id))?.state, 'RECYCLED');
-    assert.equal((await service.list(owner, 'trash')).items.length, 2);
+    const trashed = await service.list(owner, 'trash');
+    assert.equal(trashed.items.length, 1);
+    assert.equal(trashed.items[0]?.id, folder.id);
   });
 
-  it('purges a recycled folder and leaves its recycled contents in the trash', async () => {
+  it('purges a recycled folder with every recycled descendant', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');
     const folder = await service.createFolder(owner, '资料夹');
@@ -278,12 +284,12 @@ describe('enterprise library', () => {
     assert.equal(blocked.status, 400);
     assert.equal(blocked.code, 'FOLDER_NONEMPTY');
     await store.updateNode(child.id, { state: 'RECYCLED' });
+    const key = (await store.getVersion(child.currentVersion!.id))!.storageKey;
     await service.purge(owner, folder.id);
     assert.equal((await store.getNode(folder.id))?.state, 'PURGED');
-    assert.equal((await store.getNode(child.id))?.state, 'RECYCLED');
-    assert.equal((await store.getNode(child.id))?.parentId, null);
-    assert.equal((await store.getNode(link.id))?.state, 'RECYCLED');
-    assert.equal((await store.getNode(link.id))?.parentId, null);
+    assert.equal((await store.getNode(child.id))?.state, 'PURGED');
+    assert.equal((await store.getNode(link.id))?.state, 'PURGED');
+    assert.equal(await store.getBlob(key), null);
   });
 
   it('opens a single ready chunk without a locator and still rejects missing or forbidden versions', async () => {
@@ -675,6 +681,55 @@ describe('t188 navigation and media bounds', () => {
     assert.ok(page.breadcrumb.length <= 2);
     await assert.rejects(service.move(owner, a.id, b.id));
   });
+  it('keeps sibling folder names unique and reuses them for folder uploads', async () => {
+    const { service, actor } = world();
+    const owner = actor('owner', 'ta');
+    const folder = await service.createFolder(owner, '重复目录');
+    await assert.rejects(service.createFolder(owner, '重复目录'), { code: 'NAME_TAKEN' });
+    const reused = await service.createFolder(owner, '重复目录', null, { reuseExisting: true });
+    assert.equal(reused.id, folder.id);
+    assert.equal(reused.reused, true);
+    const nested = await service.createFolder(owner, '重复目录', folder.id);
+    assert.notEqual(nested.id, folder.id);
+    const other = await service.createFolder(owner, '另一个目录');
+    await assert.rejects(service.rename(owner, other.id, '重复目录'), { code: 'NAME_TAKEN' });
+    const shared = await service.createFolder(owner, '重复目录', null, { scope: 'ENTERPRISE', confirmShare: true });
+    assert.notEqual(shared.id, folder.id);
+  });
+
+  it('rejects duplicate file names in one directory but allows renamed files', async () => {
+    const { service, actor } = world();
+    const owner = actor('owner', 'ta');
+    const first = await service.upload(owner, { originalName: '同名.md', mimeType: 'text/markdown', bytes: Buffer.from('第一份') });
+    await assert.rejects(service.upload(owner, { originalName: '同名.md', mimeType: 'text/markdown', bytes: Buffer.from('第二份') }), { code: 'NAME_TAKEN' });
+    const renamed = await service.upload(owner, { originalName: '同名 (2).md', mimeType: 'text/markdown', bytes: Buffer.from('改名后的同名文件') });
+    assert.notEqual(renamed.id, first.id);
+    const folder = await service.createFolder(owner, '另一个目录');
+    const nested = await service.upload(owner, { originalName: '同名.md', mimeType: 'text/markdown', bytes: Buffer.from('另一个目录'), parentId: folder.id });
+    assert.notEqual(nested.id, first.id);
+    const replaced = await service.replaceVersion(owner, first.id, '同名.md', 'text/markdown', Buffer.from('新版本'));
+    assert.equal(replaced.id, first.id);
+    assert.equal(replaced.currentVersion?.versionNo, 2);
+  });
+
+  it('rejects moving files or folders onto a same-name sibling', async () => {
+    const { service, actor } = world();
+    const owner = actor('owner', 'ta');
+    const target = await service.createFolder(owner, '目标目录');
+    const inside = await service.upload(owner, { originalName: '同名.md', mimeType: 'text/markdown', bytes: Buffer.from('目标内'), parentId: target.id });
+    const outside = await service.upload(owner, { originalName: '同名.md', mimeType: 'text/markdown', bytes: Buffer.from('目标外') });
+    await assert.rejects(service.move(owner, outside.id, target.id), { code: 'NAME_TAKEN' });
+    assert.equal((await service.list(owner, 'mine', target.id)).items.find(row => row.id === outside.id), undefined);
+    await service.rename(owner, outside.id, '改名后.md');
+    const moved = await service.move(owner, outside.id, target.id);
+    assert.equal(moved.parentId, target.id);
+    assert.notEqual(moved.id, inside.id);
+    const folderTarget = await service.createFolder(owner, '文件夹目标');
+    await service.createFolder(owner, '重复文件夹', folderTarget.id);
+    const folder = await service.createFolder(owner, '重复文件夹');
+    await assert.rejects(service.move(owner, folder.id, folderTarget.id), { code: 'NAME_TAKEN' });
+  });
+
   it('rejects oversized/spoofed media before storage and does not index media', async () => {
     const { service, store, actor } = world(); const owner = actor('owner', 'ta');
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=', 'base64');
@@ -686,6 +741,16 @@ describe('t188 navigation and media bounds', () => {
     await assert.rejects(upload(service, owner, 'QA_fake.png', Buffer.from('<script/>')));
     await assert.rejects(upload(service, owner, 'QA_big.png', Buffer.concat([png, Buffer.alloc(1000)])));
     await assert.rejects(service.download(owner, (await upload(service, owner, 'QA.md', Buffer.from('text'))).id, undefined, true));
+  });
+  it('removes only the caller recent entry without recycling the file', async () => {
+    const { service, actor } = world(); const owner = actor('owner', 'ta');
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=', 'base64');
+    const file = await upload(service, owner, '最近.png', png);
+    await service.download(owner, file.id, undefined, true);
+    assert.equal((await service.list(owner, 'recent')).items.length, 1);
+    assert.deepEqual(await service.forgetRecent(owner, file.id), { ok: true });
+    assert.equal((await service.list(owner, 'recent')).items.length, 0);
+    assert.equal((await service.list(owner, 'mine')).items.some((row) => row.id === file.id), true);
   });
 });
 
@@ -902,12 +967,63 @@ describe('t191 Console flat mine management', () => {
     const members = await service.list(org, 'members');
     assert.equal(members.items.some((row) => row.id === failed.id), true);
     const cite = await service.list(owner, 'mine', null, '', true, 1, 20, 'ready', undefined, undefined, true);
-    assert.deepEqual(cite.items.map((row) => row.id), [ready.id]);
+    assert.deepEqual(cite.items.map((row) => row.id).sort(), [ready.id, image.id].sort());
     const unavailable = await service.list(owner, 'mine', null, '', true, 1, 20, 'uncitable', undefined, undefined, true);
-    assert.deepEqual(unavailable.items.map((row) => row.name).sort(), ['封面.png', '等待.md']);
+    assert.deepEqual(unavailable.items.map((row) => row.name), ['等待.md']);
     const found = await service.catalog(owner, '', 1, 10);
     assert.equal(found.items.some((row) => row.id === failed.id), false);
     assert.equal(found.items.some((row) => row.id === ready.id), true);
+  });
+
+  it('filters matching files at every depth and keeps current-level folders', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const folder = await service.createFolder(owner, '资料夹');
+    const ready = await upload(service, owner, '可引用.md', Buffer.from('正文'));
+    const nested = await service.upload(owner, { originalName: '嵌套.md', mimeType: 'text/plain', bytes: Buffer.from('深层正文'), parentId: folder.id });
+    const pending = await service.upload(owner, { originalName: '等待.md', mimeType: 'text/plain', bytes: Buffer.from('正文'), parentId: folder.id });
+    await store.updateVersion(pending.currentVersion!.id, { parseStatus: 'PENDING' });
+    const image = await service.upload(owner, { originalName: '封面.png', mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+    await store.updateVersion(image.currentVersion!.id, { parseStatus: 'DOWNLOAD_ONLY' });
+    const level = await service.list(owner, 'mine', null, '', false, 1, 20, 'ready');
+    assert.equal(level.items.some((row) => row.id === folder.id), true);
+    const citable = await service.list(owner, 'mine', null, '', true, 1, 20, 'ready');
+    assert.equal(citable.items.some((row) => row.id === folder.id), false);
+    assert.equal(citable.items.some((row) => row.id === ready.id), true);
+    assert.equal(citable.items.some((row) => row.id === nested.id), true);
+    assert.equal(citable.items.some((row) => row.id === image.id), true);
+    const uncitable = await service.list(owner, 'mine', null, '', true, 1, 20, 'uncitable');
+    assert.equal(uncitable.items.some((row) => row.id === folder.id), false);
+    assert.equal(uncitable.items.some((row) => row.id === pending.id), true);
+    assert.equal(uncitable.items.some((row) => row.id === image.id), false);
+  });
+
+  it('intersects parse status with file type', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const failed = await service.upload(owner, { originalName: '失败.txt', mimeType: 'text/plain', bytes: Buffer.from('坏') });
+    const ready = await service.upload(owner, { originalName: '可用.txt', mimeType: 'text/plain', bytes: Buffer.from('好') });
+    await store.updateVersion(failed.currentVersion!.id, { parseStatus: 'FAILED' });
+    const byStatus = await service.list(owner, 'mine', null, '', true, 1, 20, 'failed');
+    assert.deepEqual(byStatus.items.map((row) => row.id), [failed.id]);
+    const byBoth = await service.list(owner, 'mine', null, '', true, 1, 20, 'failed', 'text');
+    assert.deepEqual(byBoth.items.map((row) => row.id), [failed.id]);
+    const readyText = await service.list(owner, 'mine', null, '', true, 1, 20, 'ready', 'text');
+    assert.deepEqual(readyText.items.map((row) => row.id), [ready.id]);
+    const failedImages = await service.list(owner, 'mine', null, '', true, 1, 20, 'failed', 'image');
+    assert.equal(failedImages.total, 0);
+  });
+
+  it('finds nested status matches only when the list is flat', async () => {
+    const { service, store, actor } = world();
+    const owner = actor('owner', 'ta');
+    const folder = await service.createFolder(owner, '资料夹');
+    const nested = await service.upload(owner, { originalName: '嵌套失败.txt', mimeType: 'text/plain', bytes: Buffer.from('坏'), parentId: folder.id });
+    await store.updateVersion(nested.currentVersion!.id, { parseStatus: 'FAILED' });
+    const level = await service.list(owner, 'mine', null, '', false, 1, 20, 'failed');
+    assert.equal(level.items.some((row) => row.id === nested.id), false);
+    const flat = await service.list(owner, 'mine', null, '', true, 1, 20, 'failed');
+    assert.equal(flat.items.some((row) => row.id === nested.id), true);
   });
 });
 
@@ -1084,7 +1200,7 @@ describe('file purge protection', () => {
     assert.equal(await store.getBlob(key), null);
   });
 
-  it('purges a recycled folder while its protected file stays in the trash', async () => {
+  it('purges a recycled folder together with its recycled files', async () => {
     const { service, store, actor } = world();
     const owner = actor('owner', 'ta');
     const folder = await service.createFolder(owner, 'parent');
@@ -1094,10 +1210,9 @@ describe('file purge protection', () => {
     await service.recycle(owner, folder.id);
     await service.purge(owner, folder.id);
     assert.equal((await store.getNode(folder.id))?.state, 'PURGED');
-    assert.equal((await store.getNode(file.id))?.state, 'RECYCLED');
-    assert.equal((await store.getNode(file.id))?.parentId, null);
+    assert.equal((await store.getNode(file.id))?.state, 'PURGED');
     const rows = (await service.list(owner, 'trash')).items;
     assert.equal(rows.find(row => row.id === folder.id), undefined);
-    assert.equal(rows.find(row => row.id === file.id)?.purgeBlockedReason, null);
+    assert.equal(rows.find(row => row.id === file.id), undefined);
   });
 });

@@ -18,7 +18,7 @@ import {
   VIEWABLE_IMAGE_EXTENSIONS,
 } from './library.items';
 import { canManage, canSee, matchingCustody } from './library.policy';
-import type { Actor, CustodyRecord, LibraryScope, LibraryView, NodeRecord } from './library.types';
+import type { Actor, CustodyRecord, LibraryScope, LibraryView, NodeRecord, VersionRecord } from './library.types';
 
 export type LibrarySearchHit = {
   nodeId: string;
@@ -102,8 +102,16 @@ export class LibraryReadService {
       if (view === 'shared') return node.scope === 'ENTERPRISE';
       if (view === 'members') return !memberOwner || node.ownerUserId === memberOwner;
       if (view === 'managed') return matchingCustody(actor, node, custodies, this.ctx.now()) !== null;
-      return recentAt.has(node.id);
+      // Recent is a personal reading list, not the admin visibility surface. Losing the
+      // enterprise share removes it from other members' recent lists, including admins.
+      return recentAt.has(node.id) && (node.ownerUserId === actor.userId || node.scope === 'ENTERPRISE');
     });
+    if (view === 'trash' && !parentId) {
+      // A recycled folder owns its recycled descendants. Show only the top-level trashed
+      // branch so restoring one row restores the whole original tree instead of each file.
+      const byId = new Map(nodes.map(node => [node.id, node]));
+      rows = rows.filter(node => !node.parentId || byId.get(node.parentId)?.state !== 'RECYCLED');
+    }
     const query = q?.trim().toLowerCase();
     if (!query && parentId) rows = rows.filter((node) => node.parentId === parentId);
     else if (!query && !flat && (view === 'mine' || view === 'shared' || view === 'members' || view === 'managed')) rows = rows.filter((node) => this.isRootForView(node, nodes, actor, custodies, view, memberOwner));
@@ -117,16 +125,28 @@ export class LibraryReadService {
       }
       rows = visible;
     }
+    // Status views are result lists, not a tree: a flat request searches every depth and
+    // returns matching files only. The current-level tree request keeps its folders.
+    const keepFolders = !flat || view === 'trash';
     if (status === 'uncitable') {
       const matched: NodeRecord[] = [];
       for (const node of rows) {
-        if (node.kind === 'FILE' && versionStatusFrom(node, versions) !== 'READY') matched.push(node);
+        if (node.kind === 'FOLDER') { if (keepFolders) matched.push(node); continue; }
+        if (node.kind === 'FILE' && !this.citableInChat(node, versions)) matched.push(node);
+      }
+      rows = matched;
+    } else if (status === 'ready') {
+      const matched: NodeRecord[] = [];
+      for (const node of rows) {
+        if (node.kind === 'FOLDER') { if (keepFolders) matched.push(node); continue; }
+        if (node.kind === 'FILE' && this.citableInChat(node, versions)) matched.push(node);
       }
       rows = matched;
     } else if (status !== 'all') {
       const statuses = status === 'processing' ? ['PENDING', 'PROCESSING'] : [({ ready: 'READY', failed: 'FAILED', download: 'DOWNLOAD_ONLY' } as Record<string, string>)[status]].filter(value => value !== undefined);
       const matched: NodeRecord[] = [];
       for (const node of rows) {
+        if (node.kind === 'FOLDER') { if (keepFolders) matched.push(node); continue; }
         const version = node.currentVersionId ? versions.get(node.currentVersionId) ?? null : null;
         if (node.kind === 'FILE' && version && statuses.includes(version.parseStatus)) matched.push(node);
       }
@@ -282,6 +302,15 @@ export class LibraryReadService {
     if (node.kind !== 'FILE') return [];
     const rows = await this.ctx.store.listVersions(node.id);
     return rows.map((row) => versionBrief(row));
+  }
+
+  /** READY text or a stored photo that the composer can attach as an image. */
+  private citableInChat(node: NodeRecord, versions: ReadonlyMap<string, VersionRecord>): boolean {
+    if (node.kind !== 'FILE' || !node.currentVersionId) return false;
+    const version = versions.get(node.currentVersionId);
+    if (!version) return false;
+    if (version.parseStatus === 'READY') return true;
+    return version.parseStatus === 'DOWNLOAD_ONLY' && VIEWABLE_IMAGE_EXTENSIONS.has(fileExtension(version.originalName));
   }
 
   private isRootForView(

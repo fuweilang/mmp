@@ -10,6 +10,7 @@
       <el-tree :key="treeKey" :data="pageTree" node-key="id" :current-node-key="parentId || undefined" highlight-current default-expand-all :expand-on-click-node="false" @node-click="onTreeFolder">
         <template #default="{ data }">
           <span class="library-folder-row">
+            <Folder :size="16" class="library-folder-icon" aria-hidden="true" />
             <span class="library-folder-label">{{ data.label }}</span>
             <el-dropdown v-if="manageableFolders.has(data.id)" trigger="click">
               <button type="button" class="library-folder-more" :aria-label="`${data.label} 更多`" @click.stop>···</button>
@@ -62,13 +63,13 @@
           @clear="keyword = ''"
           @keyup.enter="commitKeyword()"
         />
-        <el-select v-if="view === 'mine' || memberDetail" v-model="fileType" class="library-type" filterable clearable placeholder="文件类型" aria-label="文件类型">
+        <el-select v-if="view === 'mine' || memberDetail" v-model="fileType" class="library-type" clearable placeholder="文件类型" aria-label="文件类型">
           <template v-if="selectedFileType" #prefix><i class="library-type-dot" :style="{ background: selectedFileType.color }" /></template>
           <el-option v-for="option in libraryFileTypeOptions" :key="option.value" :label="option.label" :value="option.value">
             <span class="library-type-option"><i class="library-type-dot" :style="{ background: option.color }" /><span :style="{ color: option.color }">{{ option.label }}</span></span>
           </el-option>
         </el-select>
-        <el-select v-model="parseStatus" class="library-status" filterable clearable placeholder="处理状态" aria-label="处理状态">
+        <el-select v-if="view !== 'trash' && view !== 'recent'" v-model="parseStatus" class="library-status" clearable placeholder="处理状态" aria-label="处理状态">
           <template v-if="selectedParseStatus" #prefix><i class="library-type-dot" :style="{ background: selectedParseStatus.color }" /></template>
           <el-option v-for="option in libraryParseStatusOptions" :key="option.value" :label="option.label" :value="option.value">
             <span class="library-type-option"><i class="library-type-dot" :style="{ background: option.color }" />{{ option.label }}</span>
@@ -76,9 +77,11 @@
         </el-select>
         <el-button type="primary" @click="commitKeyword()">搜索</el-button>
         <el-button @click="clearSearch">重置</el-button>
-        <el-button :disabled="view === 'trash' || view === 'members' || loading" @click="openCreate('folder')">新建文件夹</el-button>
-        <el-button :disabled="view === 'trash' || view === 'members' || loading" @click="openCreate('link')">新建链接</el-button>
-        <el-button type="primary" :disabled="view === 'trash' || view === 'members' || loading" @click="pickUpload">上传文件</el-button>
+        <template v-if="view !== 'trash' && view !== 'recent'">
+          <el-button :disabled="view === 'members' || loading" @click="openCreate('folder')">新建文件夹</el-button>
+          <el-button :disabled="view === 'members' || loading" @click="openCreate('link')">新建链接</el-button>
+          <el-button type="primary" :disabled="view === 'members' || loading" @click="pickUpload">上传文件</el-button>
+        </template>
       </header>
 
       <p v-if="transferRatio != null" class="library-progress">上传进度 {{ Math.round(transferRatio * 100) }}%。解析状态在列表里单独显示。</p>
@@ -96,7 +99,7 @@
         <el-table-column label="名称" min-width="220">
           <template #default="{ row }">
             <button v-if="row.kind === 'FOLDER' && (view === 'mine' || view === 'shared' || memberDetail)" type="button" class="library-name" @click="selectFolder(row.id)">{{ row.name }}</button>
-            <span v-else-if="row.kind === 'FOLDER'" class="library-folder-name">{{ row.name }}</span>
+            <span v-else-if="row.kind === 'FOLDER' || view === 'trash'" class="library-folder-name">{{ row.name }}</span>
             <button v-else type="button" class="library-name" @click="openPreview(row)">{{ row.name }}</button>
             <span v-if="(view === 'mine' || memberDetail) && row.parentPath?.length" class="library-muted">所属：{{ libraryParentPath(row) }}</span>
             <span v-if="row.parentHidden" class="library-muted">上级不可见</span>
@@ -126,20 +129,21 @@
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button v-if="row.kind !== 'FOLDER'" text type="primary" @click="openPreview(row)">预览</el-button>
-            <el-dropdown v-if="row.canManage" trigger="click">
+            <el-button v-if="row.kind !== 'FOLDER' && view !== 'trash'" text type="primary" @click="openPreview(row)">预览</el-button>
+            <el-dropdown v-if="row.canManage || view === 'recent'" trigger="click">
               <el-button text type="primary">更多</el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item @click="rename(row)">改名</el-dropdown-item>
-                  <el-dropdown-item v-if="view !== 'trash'" @click="move(row)">移动</el-dropdown-item>
-                  <el-dropdown-item v-if="row.kind === 'FILE' && view !== 'trash'" @click="startReplace(row)">替换新版本</el-dropdown-item>
-                  <el-dropdown-item v-if="row.scope === 'PRIVATE' && view !== 'trash' && view !== 'shared'" @click="share(row)">共享到企业</el-dropdown-item>
-                  <el-dropdown-item v-if="row.scope === 'ENTERPRISE' && (view === 'shared' || memberDetail)" @click="unshare(row)">撤销共享</el-dropdown-item>
-                  <el-dropdown-item v-if="row.currentVersion?.parseStatus === 'FAILED'" @click="retry(row)">重试解析</el-dropdown-item>
-                  <el-dropdown-item v-if="view !== 'trash'" class="library-menu-danger" @click="recycleOne(row)">移入回收站</el-dropdown-item>
-                  <el-dropdown-item v-if="view === 'trash'" @click="restoreOne(row)">恢复</el-dropdown-item>
-                  <el-dropdown-item v-if="view === 'trash'" @click="purgeOne(row)">彻底删除</el-dropdown-item>
+                  <el-dropdown-item v-if="row.canManage" @click="rename(row)">改名</el-dropdown-item>
+                  <el-dropdown-item v-if="row.canManage && view !== 'trash'" @click="move(row)">移动</el-dropdown-item>
+                  <el-dropdown-item v-if="row.canManage && row.kind === 'FILE' && view !== 'trash'" @click="startReplace(row)">替换新版本</el-dropdown-item>
+                  <el-dropdown-item v-if="row.canManage && row.scope === 'PRIVATE' && view !== 'trash' && view !== 'shared'" @click="share(row)">共享到企业</el-dropdown-item>
+                  <el-dropdown-item v-if="row.canManage && row.scope === 'ENTERPRISE' && (view === 'shared' || memberDetail)" @click="unshare(row)">撤销共享</el-dropdown-item>
+                  <el-dropdown-item v-if="row.canManage && row.currentVersion?.parseStatus === 'FAILED'" @click="retry(row)">重试解析</el-dropdown-item>
+                  <el-dropdown-item v-if="view === 'recent'" @click="forgetRecent(row)">仅移除访问记录</el-dropdown-item>
+                  <el-dropdown-item v-if="row.canManage && view !== 'trash'" class="library-menu-danger" @click="recycleOne(row)">移入回收站</el-dropdown-item>
+                  <el-dropdown-item v-if="row.canManage && view === 'trash'" @click="restoreOne(row)">恢复</el-dropdown-item>
+                  <el-dropdown-item v-if="row.canManage && view === 'trash'" @click="purgeOne(row)">彻底删除</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -147,7 +151,7 @@
         </el-table-column>
         <template #empty>
           <el-empty :description="emptyText">
-            <el-button v-if="!keyword && view !== 'trash' && view !== 'members'" type="primary" @click="pickUpload">上传文件</el-button>
+            <el-button v-if="!keyword && view !== 'trash' && view !== 'recent' && view !== 'members'" type="primary" @click="pickUpload">上传文件</el-button>
             <el-button v-if="keyword || fileType || parseStatus" @click="clearSearch">重置</el-button>
           </el-empty>
         </template>
@@ -163,9 +167,13 @@
       <p>移入共享目录时需确认共享该资料及全部子项；移出后保留当前可见范围。</p>
       <div class="library-move-tree">
         <button type="button" class="library-folder-root" :class="{ 'is-current': !moveParent && moveTarget?.scope === 'PRIVATE' }" :disabled="moveTarget?.scope !== 'PRIVATE'" @click="moveParent = null">我的资料</button>
-        <el-tree :data="movePrivateTree" node-key="id" :current-node-key="moveParent || undefined" highlight-current default-expand-all :expand-on-click-node="false" @node-click="onMoveFolder" />
+        <el-tree :data="movePrivateTree" node-key="id" :current-node-key="moveParent || undefined" highlight-current default-expand-all :expand-on-click-node="false" @node-click="onMoveFolder">
+          <template #default="{ data }"><span class="library-folder-row"><Folder :size="16" class="library-folder-icon" aria-hidden="true" /><span class="library-folder-label">{{ data.label }}</span></span></template>
+        </el-tree>
         <button type="button" class="library-folder-root" :class="{ 'is-current': !moveParent && moveTarget?.scope === 'ENTERPRISE' }" :disabled="moveTarget?.scope !== 'ENTERPRISE'" @click="moveParent = null">企业共享</button>
-        <el-tree :data="moveEnterpriseTree" node-key="id" :current-node-key="moveParent || undefined" highlight-current default-expand-all :expand-on-click-node="false" @node-click="onMoveFolder" />
+        <el-tree :data="moveEnterpriseTree" node-key="id" :current-node-key="moveParent || undefined" highlight-current default-expand-all :expand-on-click-node="false" @node-click="onMoveFolder">
+          <template #default="{ data }"><span class="library-folder-row"><Folder :size="16" class="library-folder-icon" aria-hidden="true" /><span class="library-folder-label">{{ data.label }}</span></span></template>
+        </el-tree>
       </div>
       <template #footer><el-button @click="moveOpen = false">取消</el-button><el-button type="primary" @click="confirmMove">移动</el-button></template>
     </el-dialog>
@@ -219,6 +227,7 @@ import { libraryFileType, libraryFileTypeColor, libraryFileTypeOptions, libraryF
 import '../styles/libraryDialogs.css';
 import { computed, h, onBeforeUnmount, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Folder } from 'lucide-vue-next';
 import {
   LibraryParseStatusLabel,
   type LibraryParseStatus,
@@ -241,6 +250,7 @@ import {
   renameLibrary,
   replaceLibraryFile,
   restoreLibrary,
+  forgetLibraryRecent,
   retryLibraryParse,
   shareLibrary,
   uploadLibraryFiles,
@@ -289,11 +299,12 @@ const selectedSaveId = ref('root:PRIVATE');
 const uploadTarget = ref<SaveTarget>({ ...createTarget.value });
 function captureTarget(): SaveTarget { return { parentId: parentId.value, scope: parentId.value ? parentScope.value ?? (view.value === 'shared' ? 'ENTERPRISE' : 'PRIVATE') : view.value === 'shared' ? 'ENTERPRISE' : 'PRIVATE', name: breadcrumb.value.at(-1)?.name ?? (view.value === 'shared' ? '企业共享' : '我的资料') }; }
 function targetHint(target: SaveTarget) { return `保存到：${target.name}；${target.scope === 'ENTERPRISE' ? '本企业成员可见，新建或上传的内容继承此范围。' : '仅自己可见。'}`; }
-function rootChoices(): SaveChoice[] {
-  return [
+function rootChoices(scope?: 'PRIVATE' | 'ENTERPRISE'): SaveChoice[] {
+  const choices: SaveChoice[] = [
     { id: 'root:PRIVATE', parentId: null, scope: 'PRIVATE', label: '我的资料' },
     { id: 'root:ENTERPRISE', parentId: null, scope: 'ENTERPRISE', label: '企业共享' },
   ];
+  return scope ? choices.filter(choice => choice.scope === scope) : choices;
 }
 function folderChoice(folder: LibraryItem, folders: readonly LibraryItem[]): SaveChoice {
   return { id: folder.id, parentId: folder.id, scope: folder.scope, label: libraryFolderLabel(folder, folders) };
@@ -310,8 +321,9 @@ function onSaveTarget(id: string) {
 }
 async function loadSaveFolders(current: SaveChoice) {
   try {
-    const folders = (await libraryFolders()).filter(item => item.canManage !== false);
-    saveChoices.value = dedupeChoices([current, ...rootChoices(), ...folders.map(folder => folderChoice(folder, folders))]);
+    const folders = (await libraryFolders(current.scope === 'ENTERPRISE' ? 'shared' : 'mine'))
+      .filter(item => item.canManage !== false && item.scope === current.scope);
+    saveChoices.value = dedupeChoices([current, ...rootChoices(current.scope), ...folders.map(folder => folderChoice(folder, folders))]);
   } catch { /* 保留打开时的当前位置 */ }
 }
 function openCreate(kind: 'folder' | 'link') {
@@ -319,8 +331,8 @@ function openCreate(kind: 'folder' | 'link') {
   createTarget.value = current;
   const currentChoice: SaveChoice = current.parentId
     ? { id: current.parentId, parentId: current.parentId, scope: current.scope, label: current.name }
-    : rootChoices().find(item => item.scope === current.scope)!;
-  saveChoices.value = dedupeChoices([currentChoice, ...rootChoices()]);
+    : rootChoices(current.scope)[0]!;
+  saveChoices.value = dedupeChoices([currentChoice, ...rootChoices(current.scope)]);
   selectedSaveId.value = currentChoice.id;
   if (kind === 'folder') folderOpen.value = true; else linkOpen.value = true;
   void loadSaveFolders(currentChoice);
@@ -426,6 +438,7 @@ watch([view, parentId, routeKeyword, memberId, memberLibraryAllowed], () => {
     rosterReady.value = false;
     memberQuery.value = '';
   }
+  if (view.value === 'trash' || view.value === 'recent') parseStatus.value = undefined;
   page.value = 1;
   selected.value = [];
   items.value = [];
@@ -510,9 +523,10 @@ async function reload() {
       return;
     }
     const searching = Boolean(keyword.value.trim());
-    const location = libraryListLocation(view.value, parentId.value, searching);
+    // A status filter is a library-wide result list; keeping it one-level would hide nested matches.
+    const location = libraryListLocation(view.value, parentId.value, searching || Boolean(parseStatus.value));
     const listedType = (view.value === 'mine' || memberDetail.value) && fileType.value ? fileType.value : showTree.value && !searching ? 'content' : undefined;
-    const listedStatus = parseStatus.value;
+    const listedStatus = view.value === 'trash' || view.value === 'recent' ? undefined : parseStatus.value;
     const data = await listLibrary(view.value, location.parentId, keyword.value, page.value, location.flat, pageSize.value, listedType, listedStatus, memberDetail.value ? memberId.value : undefined);
     if (sequence !== listSequence) return;
     if (showTree.value) void loadFolderTree(sequence);
@@ -538,6 +552,9 @@ function onSelect(rows: LibraryItem[]) {
 function pickUpload() { replaceTarget.value = null; uploadTarget.value = captureTarget(); uploadParent.value = uploadTarget.value.parentId; uploadOpen.value = true; }
 async function uploadOne(file: File, progress: (ratio: number) => void) {
   if (replaceTarget.value) { await replaceLibraryFile(replaceTarget.value, file); return '新版本已保存；处理状态在列表中显示'; }
+  if (items.value.some(row => row.kind === 'FILE' && row.canManage !== false && row.name === file.name && (row.parentId ?? null) === (uploadTarget.value.parentId ?? null))) {
+    throw new Error(`同一目录下已存在同名文件「${file.name}」，请改名或使用替换新版本。`);
+  }
   const result = await uploadLibraryFiles([file], uploadTarget.value.parentId, progress, { scope: uploadTarget.value.scope, confirmShare: uploadTarget.value.scope === 'ENTERPRISE' });
   if (result.failed.length || !result.items.length) throw new Error(result.failed.map(row => row.message).join('；') || '未收到保存成功结果');
   return uploadTarget.value.scope === 'ENTERPRISE' ? '已保存，本企业成员可见；处理状态单独显示' : '已保存，仅自己可见；处理状态单独显示';
@@ -629,13 +646,17 @@ async function move(row: LibraryItem) {
     moveOpen.value = true;
   } catch (error) { report(error, '读取文件夹失败'); }
 }
+function impactedCount(row: Pick<LibraryItem, 'kind'>, total: number) {
+  return row.kind === 'FOLDER' ? Math.max(0, total - 1) : total;
+}
+
 async function confirmMove() {
   if (!moveTarget.value) return;
   try {
     const options: { confirmShare?: boolean; expectedTreeRevision?: string } = {};
     if (moveFolders.value.find(folder => folder.id === moveParent.value)?.scope === 'ENTERPRISE') {
       const impact = await libraryScopeImpact(moveTarget.value.id, 'ENTERPRISE');
-      if (impact.changed && !await confirmAction(`移入后该资料及全部子项会企业共享，共涉及 ${impact.total} 项。`, '确认移动并共享')) return;
+      if (impact.changed && !await confirmAction(`移入后当前位置的全部内容会企业共享，共涉及 ${impactedCount(moveTarget.value, impact.total)} 项。`, '确认移动并共享')) return;
       options.confirmShare = true; options.expectedTreeRevision = impact.treeRevision;
     }
     if (!(await act(() => moveLibrary(moveTarget.value!.id, moveParent.value, options)))) return;
@@ -688,9 +709,10 @@ async function changeScope(row: LibraryItem, scope: 'PRIVATE' | 'ENTERPRISE') {
       return;
     }
     const impact = await libraryScopeImpact(row.id, scope);
+    const count = impactedCount(row, impact.total);
     const message = scope === 'ENTERPRISE'
-      ? `该资料及全部子文件夹和文件会一起共享，本企业成员可见，共涉及 ${impact.total} 项。`
-      : `该资料及全部子文件夹和文件会改为各自所有者私有，共涉及 ${impact.total} 项。`;
+      ? `当前位置的全部内容会一起共享，本企业成员可见，共涉及 ${count} 项。`
+      : `当前位置的全部内容会改为各自所有者私有，共涉及 ${count} 项。`;
     if (!await confirmAction(message, scope === 'ENTERPRISE' ? '确认共享' : '确认取消共享')) return;
     try {
       await shareLibrary(row.id, scope, scope === 'ENTERPRISE', { confirmUnshare: scope === 'PRIVATE', expectedTreeRevision: impact.treeRevision });
@@ -734,6 +756,10 @@ async function recycleOne(row: LibraryItem) {
   if (await act(() => recycleLibrary(row.id))) noticeRecycled();
 }
 
+async function forgetRecent(row: LibraryItem) {
+  if (await act(() => forgetLibraryRecent(row.id))) ElMessage.success('已移除访问记录');
+}
+
 function folderRow(id: string) {
   return treeFolders.value.find((row) => row.id === id);
 }
@@ -775,7 +801,7 @@ async function restoreOne(row: LibraryItem) {
 }
 
 async function purgeOne(row: LibraryItem) {
-  if (!await confirmLibraryDelete(row.name, '彻底删除后，旧引用会显示来源不可用，不会改指向其它版本。', '彻底删除资料？', '彻底删除')) return;
+  if (!await confirmLibraryDelete(row.name, '彻底删除该资料及其中的全部内容与版本；旧引用会显示来源不可用，不会改指向其它版本。', '彻底删除资料？', '彻底删除')) return;
   if (await act(() => purgeLibrary(row.id))) ElMessage.success('已彻底删除');
 }
 
@@ -792,7 +818,7 @@ function confirmRecycle(name: string | string[]) {
 
 async function runBatch(action: 'recycle' | 'restore' | 'purge') {
   if (action === 'recycle' && !await confirmRecycle(selected.value.map(row => row.name))) return;
-  if (action === 'purge' && !await confirmLibraryDelete(selected.value.map(row => row.name), '彻底删除后不能再下载这些版本。', '彻底删除所选资料？', '彻底删除')) return;
+  if (action === 'purge' && !await confirmLibraryDelete(selected.value.map(row => row.name), '彻底删除所选资料及其中的全部内容与版本，不能再下载这些版本。', '彻底删除所选资料？', '彻底删除')) return;
   try {
     const result = await batchLibrary(selected.value.map((row) => row.id), action);
     if (result.skipped) ElMessage.warning(`${result.skipped} 项当前不可见，已跳过`);
@@ -878,6 +904,7 @@ watch(() => route.query.preview, async value => {
 .library-folders :deep(.el-tree) { background:transparent; color:var(--app-heading-color); }
 .library-folders :deep(.el-tree-node__content), .library-move-tree :deep(.el-tree-node__content) { height:36px; border-radius:8px; cursor:pointer; }
 .library-folder-row { position:relative; display:flex; align-items:center; width:100%; min-width:0; }
+.library-folder-icon { flex:none; margin-right:6px; color:#667085; }
 .library-folder-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .library-folder-row :deep(.el-dropdown) { position:absolute; right:0; top:50%; transform:translateY(-50%); }
 .library-folder-more { width:24px; height:24px; margin:0; padding:0; display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:6px; background:#f3f5fb; color:#667085; letter-spacing:1px; font:inherit; opacity:0; pointer-events:none; cursor:pointer; }

@@ -26,6 +26,33 @@ it('real Modal drop/multiselect serial queue, partial permission failure and ret
   await waitFor(() => expect(closed).toHaveBeenCalledOnce())
   expect(calls).toEqual(['a.md', 'b.md', 'c.md', 'b.md'])
 })
+it('uploads a chosen folder with its relative path preserved', async () => {
+  const uploadFile = vi.fn(async () => {})
+  render(<LibraryUploadDialog t={t} accept=".md" single={false} loadLimits={limits} uploadFile={uploadFile} onSaved={vi.fn()} onClose={vi.fn()} />)
+  const nested = new File(['a'], 'a.md')
+  const root = new File(['b'], 'b.md')
+  Object.defineProperty(nested, 'webkitRelativePath', { value: 'Docs/sub/a.md' })
+  Object.defineProperty(root, 'webkitRelativePath', { value: 'Docs/b.md' })
+  fireEvent.change(screen.getByLabelText(zh.uploadChooseFolder, { selector: 'input' }), { target: { files: [nested, root] } })
+  expect(screen.getByText('Docs/sub/a.md')).toBeTruthy()
+  expect(screen.getByText('Docs/b.md')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: zh.uploadStart }))
+  await waitFor(() => expect(uploadFile).toHaveBeenCalledWith(nested, ['Docs', 'sub']))
+  await waitFor(() => expect(uploadFile).toHaveBeenCalledWith(root, ['Docs']))
+})
+
+it('rejects multiple folder roots before uploading', async () => {
+  const uploadFile = vi.fn(async () => {})
+  render(<LibraryUploadDialog t={t} accept=".md" single={false} loadLimits={limits} uploadFile={uploadFile} onSaved={vi.fn()} onClose={vi.fn()} />)
+  const one = new File(['a'], 'a.md')
+  const two = new File(['b'], 'b.md')
+  Object.defineProperty(one, 'webkitRelativePath', { value: 'One/a.md' })
+  Object.defineProperty(two, 'webkitRelativePath', { value: 'Two/b.md' })
+  fireEvent.change(screen.getByLabelText(zh.uploadChooseFolder, { selector: 'input' }), { target: { files: [one, two] } })
+  expect(screen.getByText(zh.uploadFolderMultipleRoots)).toBeTruthy()
+  expect((screen.getByRole('button', { name: zh.uploadStart }) as HTMLButtonElement).disabled).toBe(true)
+})
+
 it('keeps the real in-flight request active on Escape/close and blocks invalid types without transport', async () => {
   let release: () => void = () => {}; const closed = vi.fn()
   const uploadFile = vi.fn(() => new Promise<void>(resolve => { release = resolve }))

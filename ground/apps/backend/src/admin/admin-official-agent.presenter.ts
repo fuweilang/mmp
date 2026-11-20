@@ -303,6 +303,9 @@ export class AdminOfficialAgentPresenter {
       openingQuestions: version.openingQuestions,
       systemPrompt: version.systemPrompt,
       toolScope: version.toolScope,
+      category: version.category ?? null,
+      capabilities: Array.isArray(version.capabilities) ? version.capabilities : null,
+      kind: version.kind ?? null,
       expertDefinition: version.expertDefinition,
       linkedSkillSummaries: Array.isArray(version.linkedSkillSummaries)
         ? version.linkedSkillSummaries

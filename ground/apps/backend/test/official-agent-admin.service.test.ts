@@ -21,6 +21,7 @@ function createHarness() {
     toolScope: [] as string[],
     expertDefinition: {} as Record<string, unknown>,
     executionConfig: {route:'LEGACY'} as Record<string,unknown>,
+    customAvatarPath: null as string | null,
     onlineVersionId: null as string | null,
     createdAt: new Date('2026-11-05T08:00:00Z'),
     updatedAt: new Date('2026-11-05T08:00:00Z'),
@@ -28,6 +29,11 @@ function createHarness() {
   const versions: Array<Record<string, unknown>> = [];
   const grants: Array<Record<string, unknown>> = [];
   const audit: Array<Record<string, unknown>> = [];
+  const links: Array<{ agentId: string; skillId: string }> = [];
+  const skills = new Map([
+    ['skill-1', { id: 'skill-1', key: 'skill-1', name: '技能一', summary: '', categories: [], enabledAt: new Date(), currentRevision: 1, customAvatarPath: null }],
+    ['skill-2', { id: 'skill-2', key: 'skill-2', name: '技能二', summary: '', categories: [], enabledAt: new Date(), currentRevision: 1, customAvatarPath: null }],
+  ]);
   const tenant = {
     id: 'tenant-1',
     name: '试点企业',
@@ -50,7 +56,7 @@ function createHarness() {
         tenant,
         version: versions.find((version) => version.id === grant.versionId),
       })),
-      skillLinks: [],
+      skillLinks: links.map((link) => ({ ...link, skill: skills.get(link.skillId)! })),
     };
   }
 
@@ -61,6 +67,8 @@ function createHarness() {
         if (typeof data.status === 'string') agent.status = data.status as OfficialAgentStatus;
         if (typeof data.name === 'string') agent.name = data.name;
         if (typeof data.kind === 'string') agent.kind = data.kind as typeof agent.kind;
+        if ('category' in data) agent.category = data.category as string | null;
+        if (Array.isArray(data.capabilities)) agent.capabilities = data.capabilities as string[];
         if (typeof data.summary === 'string') agent.summary = data.summary;
         if (typeof data.systemPrompt === 'string') agent.systemPrompt = data.systemPrompt;
         if(data.executionConfig)agent.executionConfig=data.executionConfig as Record<string,unknown>;
@@ -70,6 +78,10 @@ function createHarness() {
           (agent as { expertDefinition: Record<string, unknown> }).expertDefinition =
             data.expertDefinition as Record<string, unknown>;
         }
+        if (typeof data.customAvatarPath === 'string' || data.customAvatarPath === null) {
+          agent.customAvatarPath = data.customAvatarPath as string | null;
+        }
+        if (typeof data.onlineVersionId === 'string') agent.onlineVersionId = data.onlineVersionId;
         const online = data.onlineVersion as { connect?: { id: string } } | undefined;
         if (online?.connect) agent.onlineVersionId = online.connect.id;
         agent.updatedAt = new Date();
@@ -139,6 +151,22 @@ function createHarness() {
         return grant;
       },
     },
+    officialSkill: {
+      findMany: async ({ where }: { where: { id: { in: string[] } } }) =>
+        where.id.in.filter((id) => skills.has(id)).map((id) => skills.get(id)!),
+    },
+    officialAgentSkillLink: {
+      deleteMany: async ({ where }: { where: { agentId: string } }) => {
+        for (let i = links.length - 1; i >= 0; i -= 1) {
+          if (links[i]!.agentId === where.agentId) links.splice(i, 1);
+        }
+        return { count: 1 };
+      },
+      createMany: async ({ data }: { data: Array<{ agentId: string; skillId: string }> }) => {
+        links.push(...data);
+        return { count: data.length };
+      },
+    },
     tenant: {
       findUnique: async () => tenant,
     },
@@ -165,7 +193,29 @@ function createHarness() {
     { setAgentSkillLinks: async () => undefined, snapshotLinkedSkills: async () => [] } as never,
     new ExpertRuntimeService(prisma as never, {} as never),
   );
-  return { service, agent, versions, grants, audit };
+  return { service, agent, versions, grants, audit, links };
+}
+
+function versionSetup(versions: Array<Record<string, unknown>>, agentId: string) {
+  versions.push({
+    id: 'version-old',
+    agentId,
+    version: 3,
+    name: '旧名称',
+    summary: '旧简介',
+    openingQuestions: ['旧问题'],
+    systemPrompt: '旧指令',
+    toolScope: ['web_search'],
+    category: 'content',
+    capabilities: ['旧标签'],
+    kind: 'KNOWLEDGE',
+    customAvatarPath: 'official-avatars/old.jpg',
+    expertDefinition: { profile: { role: '旧角色' } },
+    executionConfig: { route: 'LEGACY' },
+    linkedSkillSummaries: [{ id: 'skill-1' }, { id: 'missing-skill' }],
+    publishedByUserId: null,
+    publishedAt: new Date('2026-11-01T00:00:00Z'),
+  });
 }
 
 test('已创建的专家可以修改类型并落库', async () => {
@@ -184,8 +234,17 @@ test('发布冻结独立快照，后续草稿和新版本不改变历史版本�
 
   agent.name = '修改后的草稿';
   agent.systemPrompt = '新的提示词';
+  agent.category = 'content';
+  agent.capabilities = ['新标签'];
+  agent.kind = 'KNOWLEDGE';
   const second = await service.publish(actor, agent.id);
 
+  assert.equal(first.versions[0]?.category, null);
+  assert.deepEqual(first.versions[0]?.capabilities, []);
+  assert.equal(first.versions[0]?.kind, 'GENERAL');
+  assert.equal(second.versions[0]?.category, 'content');
+  assert.deepEqual(second.versions[0]?.capabilities, ['新标签']);
+  assert.equal(second.versions[0]?.kind, 'KNOWLEDGE');
   assert.equal(versions.length, 2);
   assert.equal(versions[0]?.name, '文案润色大师');
   assert.equal(versions[0]?.systemPrompt, '保留事实');
@@ -211,6 +270,87 @@ test('企业开通默认固定线上版本，并允许显式升级、回滚和�
     service.grant(actor, agent.id, { tenantId: 'tenant-1', versionId: 'other-agent-version' }),
     /所选版本不属于该专家/,
   );
+});
+
+test('回滚同时把所选版本的冻结内容恢复到草稿，并重建关联技能', async () => {
+  const { service, agent, versions, audit, links } = createHarness();
+  versionSetup(versions, agent.id);
+  agent.name = '新名称';
+  agent.summary = '新简介';
+  agent.systemPrompt = '新指令';
+  agent.openingQuestions = ['新问题'];
+  agent.toolScope = ['terminal'];
+  agent.category = 'sales';
+  agent.capabilities = ['新标签'];
+  agent.kind = 'GENERAL';
+  agent.customAvatarPath = 'official-avatars/new.jpg';
+  agent.expertDefinition = { profile: { role: '新角色' } };
+  agent.executionConfig = { route: 'KNOWLEDGE_CORE' };
+  links.push({ agentId: agent.id, skillId: 'skill-2' });
+
+  const restored = await service.rollback(actor, agent.id, 'version-old');
+
+  assert.equal(restored.onlineVersion?.id, 'version-old');
+  assert.equal(agent.status, OfficialAgentStatus.PUBLISHED);
+  assert.equal(agent.onlineVersionId, 'version-old');
+  assert.equal(agent.name, '旧名称');
+  assert.equal(agent.summary, '旧简介');
+  assert.equal(agent.systemPrompt, '旧指令');
+  assert.deepEqual(agent.openingQuestions, ['旧问题']);
+  assert.deepEqual(agent.toolScope, ['web_search']);
+  assert.equal(agent.category, 'content');
+  assert.deepEqual(agent.capabilities, ['旧标签']);
+  assert.equal(agent.kind, 'KNOWLEDGE');
+  assert.equal(agent.customAvatarPath, 'official-avatars/old.jpg');
+  assert.deepEqual(agent.expertDefinition, { profile: { role: '旧角色' } });
+  assert.deepEqual(agent.executionConfig, { route: 'LEGACY' });
+  assert.deepEqual(links, [{ agentId: agent.id, skillId: 'skill-1' }]);
+  assert.equal(restored.draft.name, '旧名称');
+  assert.equal(restored.draft.systemPrompt, '旧指令');
+  assert.equal(restored.category, 'content');
+  assert.deepEqual(restored.capabilities, ['旧标签']);
+  assert.equal(restored.kind, 'KNOWLEDGE');
+  assert.ok(audit.some((row) => {
+    const meta = row.meta as Record<string, unknown>;
+    return row.action === 'admin_rollback_official_agent' && meta.draftRestored === true
+      && Array.isArray(meta.missingLinkedSkillIds) && (meta.missingLinkedSkillIds as string[]).includes('missing-skill');
+  }));
+});
+
+test('历史版本没有分类快照时保留当前分类和标签', async () => {
+  const { service, agent, versions, audit } = createHarness();
+  versions.push({
+    id: 'version-legacy',
+    agentId: agent.id,
+    version: 1,
+    name: '历史名称',
+    summary: '',
+    openingQuestions: [],
+    systemPrompt: '',
+    toolScope: [],
+    category: null,
+    capabilities: null,
+    kind: null,
+    customAvatarPath: null,
+    expertDefinition: {},
+    executionConfig: { route: 'LEGACY' },
+    linkedSkillSummaries: [],
+    publishedByUserId: null,
+    publishedAt: new Date('2026-11-01T00:00:00Z'),
+  });
+  agent.category = 'content';
+  agent.capabilities = ['保留标签'];
+  agent.kind = 'GENERAL';
+
+  await service.rollback(actor, agent.id, 'version-legacy');
+
+  assert.equal(agent.category, 'content');
+  assert.deepEqual(agent.capabilities, ['保留标签']);
+  assert.equal(agent.kind, 'GENERAL');
+  assert.ok(audit.some((row) => {
+    const meta = row.meta as Record<string, unknown>;
+    return row.action === 'admin_rollback_official_agent' && meta.classificationRestored === false;
+  }));
 });
 
 test('下架阻止新开通，撤销保留授权记录并写入审计', async () => {

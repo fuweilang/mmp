@@ -53,7 +53,7 @@
           v-model="enterpriseFilter"
           class="enterprise-filter"
           clearable
-          filterable
+
           placeholder="筛选所属企业"
           @change="onEnterpriseChange"
           @clear="onEnterpriseChange"

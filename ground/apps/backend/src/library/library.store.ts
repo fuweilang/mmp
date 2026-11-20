@@ -69,6 +69,8 @@ export interface LibraryStore {
   replaceChunks(versionId: string, tenantId: string, chunks: ChunkRecord[]): Promise<void>;
   listRecent(userId: string, tenantId: string): Promise<RecentRecord[]>;
   touchRecent(row: RecentRecord): Promise<void>;
+  removeRecent(userId: string, tenantId: string, nodeId: string): Promise<void>;
+  removeRecentForNodes(nodes: readonly { id: string; ownerUserId: string }[]): Promise<void>;
   listCustodies(): Promise<CustodyRecord[]>;
   getCustody(id: string): Promise<CustodyRecord | null>;
   insertCustody(row: CustodyRecord): Promise<void>;
@@ -286,6 +288,20 @@ export class MemoryLibraryStore implements LibraryStore {
     const existing = [...this.recents.values()].find((item) => item.userId === row.userId && item.nodeId === row.nodeId);
     if (existing) this.recents.set(existing.id, { ...existing, accessedAt: row.accessedAt });
     else this.recents.set(row.id, row);
+  }
+
+  async removeRecent(userId: string, tenantId: string, nodeId: string) {
+    for (const [id, row] of this.recents) {
+      if (row.userId === userId && row.tenantId === tenantId && row.nodeId === nodeId) this.recents.delete(id);
+    }
+  }
+
+  async removeRecentForNodes(nodes: readonly { id: string; ownerUserId: string }[]) {
+    const owners = new Map(nodes.map(node => [node.id, node.ownerUserId]));
+    for (const [id, row] of this.recents) {
+      const ownerUserId = owners.get(row.nodeId);
+      if (ownerUserId !== undefined && row.userId !== ownerUserId) this.recents.delete(id);
+    }
   }
 
   async listCustodies() {

@@ -70,7 +70,7 @@
             <el-select
               v-model="ordersCreatedByUserId"
               clearable
-              filterable
+
               placeholder="充值人"
               style="width: 140px"
               @change="onOrdersSearch"
@@ -152,7 +152,7 @@
             <el-select
               v-model="ledgerActorUserId"
               clearable
-              filterable
+
               placeholder="员工"
               style="width: 140px"
               @change="onLedgerSearch"

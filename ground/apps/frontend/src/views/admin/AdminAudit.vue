@@ -10,7 +10,7 @@
         v-model="tenantId"
         class="filter-enterprise"
         clearable
-        filterable
+
         placeholder="全部企业"
         @change="onSearch"
       >
@@ -37,7 +37,7 @@
         v-model="actionFilter"
         class="filter-action"
         clearable
-        filterable
+
         placeholder="全部操作"
         @change="onActionExact"
       >

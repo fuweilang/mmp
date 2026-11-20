@@ -3,7 +3,7 @@
     v-if="showSwitcher"
     :model-value="currentId"
     class="tenant-switcher"
-    filterable
+
     :loading="switching"
     placeholder="选择企业"
     size="default"

@@ -5,7 +5,7 @@ import type { HostObservable, InjectFace, PropsLocale, PropsRuntime, PropsRender
 import type {} from '@mammoth-ai/mmp-client-ui-layout/client'
 import type {} from '@mammoth-ai/mmp-client-ui-sidebar-documentpreview/client'
 import { fetchLibraryItems, fetchLibrarySource, fetchLibraryPage, fetchLibraryScopeImpact, fetchLibraryPreviewBytes, LibraryRequestError, libraryRequest, libraryTransport, type LibraryFetch, type LibraryView } from './api.ts'
-import { choiceBlock, type LibraryChoice } from './selection.ts'
+import { matchesStatus, type LibraryChoice } from './selection.ts'
 import { RowActions } from './LibraryRowActions.tsx'
 import { LibraryTree } from './LibraryTree.tsx'
 import { LibraryFinder } from './LibraryFinder.tsx'
@@ -31,10 +31,16 @@ const PAGE_SIZE = 20
 type SaveTarget = { parentId: string | null; scope: 'PRIVATE' | 'ENTERPRISE'; name: string }
 type Edit = { kind: 'folder' | 'link' | 'rename' | 'move'; item?: LibraryChoice; target?: SaveTarget }
 type ScopeConfirm = { nodeId: string; scope: 'PRIVATE' | 'ENTERPRISE'; total: number; treeRevision: string; moveParentId?: string | null }
+
+/** The prompt lists folder contents; the folder row itself is not a counted child item. */
+function affectedCount(item: LibraryChoice, total: number): number {
+  return item.kind === 'FOLDER' ? Math.max(0, total - 1) : total
+}
 type ArchiveEntry = { name: string; size: number }
 type Source = { citationQuote?: string | null; originalName?: string; parseStatus?: string; bytes?: Uint8Array<ArrayBuffer>; mimeType?: string; missingFonts?: readonly string[]; item?: LibraryChoice; nodeId?: string; previewKind?: string; mediaUrl?: string; name?: string; text?: string | null; linkUrl?: string | null; parseReason?: string | null; highlightNote?: string | null; locator?: string | null; versionNo?: number | null; versionId?: string; truncated?: boolean; truncationNote?: string | null; entries?: readonly ArchiveEntry[]; chunks?: readonly { locator: string; text: string }[] }
 
 const ACCEPT = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.md,.markdown,.txt,.csv,.html,.htm,.zip,.png,.jpg,.jpeg,.gif,.webp,.avif,.mp4,.webm,.mov'
+const BINARY_PREVIEW_NAME = /\.(?:docx?|xlsx?|pptx?|pdf|png|jpe?g|gif|webp|avif|mp4|webm|mov)$/i
 const VIEW_ICONS = { recent: IconClockOutlineRegular, mine: IconFolderCloseRegular, shared: IconShareOutlineRegular, trash: IconTrashOutlineRegular }
 type VersionRow = { id: string; versionNo: number; parseStatus: string; createdAt?: string }
 
@@ -85,14 +91,6 @@ function folderGone(error: unknown): boolean {
   return message.includes('404') || message.includes('资料不存在')
 }
 
-function matchesFilter(item: LibraryChoice, filter: string): boolean {
-  if (item.kind === 'FILE' && item.parseStatus === 'FAILED') return false
-  if (filter === 'all') return true
-  if (filter === 'ready') return !choiceBlock(item).disabled
-  if (filter === 'uncitable') return item.kind === 'FILE' && choiceBlock(item).disabled
-  return false
-}
-
 /** Native Web/desktop library browser. Explicit save never uploads temporary chat attachments. */
 export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSourceRequest, clearSourceRequest, renderFactorySlot, useNavigationWidth, setNavigationElement }: LibraryPanelProps) {
   const navigationWidth = useNavigationWidth(value => value)
@@ -129,6 +127,9 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [filter, setFilter] = useState('all')
   const [filterOpen, setFilterOpen] = useState(false)
   const [uploadTarget, setUploadTarget] = useState<SaveTarget & { replacement?: LibraryChoice }>()
+  const uploadFolderCache = useRef(new Map<string, string>())
+  const uploadReusedFolders = useRef(new Set<string>())
+  const replacedVersion = useRef<{ item: LibraryChoice; versionId: string; versionNo: number | null; parseStatus: string | null } | null>(null)
   const [revision, setRevision] = useState(0)
   const [edit, setEdit] = useState<Edit>()
   const [purgeItem, setPurgeItem] = useState<LibraryChoice>()
@@ -168,9 +169,19 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
         item: { ...item, versionId, versionNo, parseStatus: result.parseStatus ?? (versionId === item.versionId ? item.parseStatus : null), parseReason: result.parseReason ?? null },
         versionNo, name: result.name ?? item.name, ...(versionId ? { versionId } : {}) }
       setSource(authorized)
-      const contents = item.kind === 'FILE' && versionId && !entries
-        ? await fetchLibraryPreviewBytes(origin, item.nodeId, versionId, result.originalName ?? result.name ?? item.name, fetchImpl, control.signal)
-        : undefined
+      // A stored file can be plain text under a .docx/.pdf name. Prefer the server's
+      // extracted text instead of sending those bytes to an Office/PDF renderer.
+      const textOnly = (result.mimeType ?? '').toLowerCase().startsWith('text/')
+        && BINARY_PREVIEW_NAME.test(result.originalName ?? result.name ?? item.name)
+      let contents: { bytes: Uint8Array<ArrayBuffer>; mimeType: string; missingFonts: readonly string[] } | undefined
+      if (item.kind === 'FILE' && versionId && !entries && !textOnly) {
+        try {
+          contents = await fetchLibraryPreviewBytes(origin, item.nodeId, versionId, result.originalName ?? result.name ?? item.name, fetchImpl, control.signal)
+        } catch (error) {
+          // A converter refusal must not hide readable extracted text.
+          if (control.signal.aborted || !authorized.text) throw error
+        }
+      }
       if (control.signal.aborted || generation !== previewGeneration.current) return
       setSource({ ...authorized, ...contents })
     } catch (error) {
@@ -314,7 +325,16 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
         locator: citation.locator, citationQuote: citation.quote, highlightNote: citation.highlightNote,
         truncated: citation.truncated, truncationNote: citation.truncationNote } : {}), nodeId: requested.nodeId, versionId: requested.versionId }
       setSource(authorized)
-      const contents = entries ? undefined : await fetchLibraryPreviewBytes(origin, requested.nodeId, requested.versionId, opened.originalName ?? opened.name, fetchImpl, control.signal)
+      const textOnly = (opened.mimeType ?? '').toLowerCase().startsWith('text/')
+        && BINARY_PREVIEW_NAME.test(opened.originalName ?? opened.name)
+      let contents: { bytes: Uint8Array<ArrayBuffer>; mimeType: string; missingFonts: readonly string[] } | undefined
+      if (!entries && !textOnly) {
+        try {
+          contents = await fetchLibraryPreviewBytes(origin, requested.nodeId, requested.versionId, opened.originalName ?? opened.name, fetchImpl, control.signal)
+        } catch (error) {
+          if (control.signal.aborted || !authorized.text) throw error
+        }
+      }
       if (!control.signal.aborted && generation === previewGeneration.current) setSource({ ...authorized, ...contents })
     })().catch(error => {
       if (!control.signal.aborted && generation === previewGeneration.current) {
@@ -341,21 +361,80 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     const config = await libraryRequest(origin, 'config', 'GET', undefined, fetchImpl) as { maxFileBytes: number; allowedExtensions: string[] }
     setLimits(config); return config
   }
-  const uploadOne = async (file: File) => {
+  const uploadOne = async (file: File, folderPath?: readonly string[]) => {
     if (!uploadTarget) throw new Error(t('operationFailed'))
+    if (!uploadTarget.replacement && !folderPath?.length) {
+      const duplicate = items.some(item => item.kind === 'FILE'
+        && item.name === file.name
+        && (item.parentId ?? null) === (uploadTarget.parentId ?? null));
+      if (duplicate) throw new Error(t('fileExists').replace('{name}', file.name))
+    }
+    let parentId = uploadTarget.parentId
+    if (!uploadTarget.replacement && folderPath?.length) {
+      for (let index = 0; index < folderPath.length; index += 1) {
+        const name = folderPath[index]!
+        const key = `${parentId ?? 'root'}\u0000${folderPath.slice(0, index + 1).join('/')}`
+        let next = uploadFolderCache.current.get(key)
+        if (!next && index === 0) {
+          const existing = items.find(item => item.kind === 'FOLDER'
+            && item.name === name
+            && (item.parentId ?? null) === (parentId ?? null)
+            && item.canManage)
+          if (existing) {
+            next = existing.nodeId
+            uploadReusedFolders.current.add(name)
+          }
+        }
+        if (!next) {
+          const created = await libraryRequest(origin, 'folders', 'POST', {
+            name,
+            parentId,
+            scope: uploadTarget.scope,
+            confirmShare: uploadTarget.scope === 'ENTERPRISE',
+            reuseExisting: true,
+          }, fetchImpl)
+          if (!created || typeof created !== 'object' || !('id' in created) || typeof created.id !== 'string') throw new Error(t('operationFailed'))
+          if ('reused' in created && created.reused === true) uploadReusedFolders.current.add(name)
+          next = created.id
+          uploadFolderCache.current.set(key, next)
+        }
+        parentId = next
+      }
+    }
     const form = new FormData(); form.append('files', file)
     if (!uploadTarget.replacement) {
-      if (uploadTarget.parentId) form.append('parentId', uploadTarget.parentId)
+      if (parentId) form.append('parentId', parentId)
       form.append('scope', uploadTarget.scope); form.append('confirmShare', String(uploadTarget.scope === 'ENTERPRISE'))
     }
     const result = await libraryRequest(origin, uploadTarget.replacement ? `files/${uploadTarget.replacement.nodeId}/versions` : 'files', 'POST', form, fetchImpl)
-    if (uploadTarget.replacement) return
+    if (uploadTarget.replacement) {
+      const current = result && typeof result === 'object' && 'currentVersion' in result && result.currentVersion && typeof result.currentVersion === 'object'
+        ? result.currentVersion as { id?: unknown; versionNo?: unknown; parseStatus?: unknown }
+        : null
+      if (current && typeof current.id === 'string') {
+        replacedVersion.current = {
+          item: uploadTarget.replacement,
+          versionId: current.id,
+          versionNo: typeof current.versionNo === 'number' ? current.versionNo : null,
+          parseStatus: typeof current.parseStatus === 'string' ? current.parseStatus : null,
+        }
+      }
+      return
+    }
     if (result && typeof result === 'object' && 'failed' in result && Array.isArray(result.failed) && result.failed.length) throw new Error(result.failed.map(row => String(row && typeof row === 'object' && 'message' in row ? row.message : t('operationFailed'))).join('; '))
     if (!result || typeof result !== 'object' || !('items' in result) || !Array.isArray(result.items) || !result.items.length) throw new Error(t('operationFailed'))
   }
   const revealCreated = () => {
+    const replaced = replacedVersion.current
+    replacedVersion.current = null
+    const reused = [...uploadReusedFolders.current]
+    uploadReusedFolders.current.clear()
+    if (reused.length > 0) showToast(t('folderMerged').replace('{name}', reused.join('、')))
     if (view === 'recent') { setView('mine'); setPath([]) }
     setFilter('all'); setPage(1); refresh()
+    if (replaced) {
+      void openSource({ ...replaced.item, versionId: replaced.versionId, versionNo: replaced.versionNo, parseStatus: replaced.parseStatus }, replaced.versionId)
+    }
   }
   const captureTarget = (): SaveTarget => ({ parentId, scope: parentId ? parentScope ?? (view === 'shared' ? 'ENTERPRISE' : 'PRIVATE') : view === 'shared' ? 'ENTERPRISE' : 'PRIVATE', name: path.at(-1)?.name ?? t(view === 'shared' ? 'shared' : 'mine') })
   const openEdit = (kind: Edit['kind'], item?: LibraryChoice, target = captureTarget()) => {
@@ -366,7 +445,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     else for (const item of chosen) await onUse(item)
     setNotice(t('added'))
   })
-  const visibleItems = items.filter(item => matchesFilter(item, filter))
+  const visibleItems = items.filter(item => matchesStatus(item, filter))
   const chooseView = (next: LibraryView) => {
     if (next !== view || next === 'recent') closePreview()
     if (next === 'mine' || next === 'shared') {
@@ -402,6 +481,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     if (action === 'rename' || action === 'move') { openEdit(action, item); return }
     if (action === 'replace') { setUploadTarget({ ...captureTarget(), replacement: item }); return }
     if (action === 'purge') { setPurgeItem(item); return }
+    if (action === 'forgetRecent') { void mutate(`nodes/${id}/forget-recent`, 'POST'); return }
     void run(async () => {
       if (action === 'versions') {
         const result = await libraryRequest(origin, `nodes/${id}/versions`, 'GET', undefined, fetchImpl)
@@ -410,7 +490,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       } else if (action === 'scope') {
         const scope = item.scope === 'ENTERPRISE' ? 'PRIVATE' : 'ENTERPRISE'
         const impact = await fetchLibraryScopeImpact(origin, item.nodeId, scope, fetchImpl)
-        setScopeConfirm({ nodeId: item.nodeId, scope, total: impact.total, treeRevision: impact.treeRevision })
+        setScopeConfirm({ nodeId: item.nodeId, scope, total: affectedCount(item, impact.total), treeRevision: impact.treeRevision })
       } else if (action === 'retry') await mutate(`nodes/${id}/retry-parse`, 'POST')
       else if (action === 'restore' || action === 'recycle') { leaveFolder(item.nodeId); await mutate(`nodes/${id}/${action}`, 'POST') }
     })
@@ -443,7 +523,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       if (movePath.at(-1)?.scope === 'ENTERPRISE') {
         const impact = await fetchLibraryScopeImpact(origin, edit.item.nodeId, 'ENTERPRISE', fetchImpl)
         if (impact.changed) {
-          setScopeConfirm({ nodeId: edit.item.nodeId, scope: 'ENTERPRISE', total: impact.total, treeRevision: impact.treeRevision, moveParentId: movePath.at(-1)?.id ?? null })
+          setScopeConfirm({ nodeId: edit.item.nodeId, scope: 'ENTERPRISE', total: affectedCount(edit.item, impact.total), treeRevision: impact.treeRevision, moveParentId: movePath.at(-1)?.id ?? null })
           return
         }
         options = { confirmShare: true, expectedTreeRevision: impact.treeRevision }
@@ -462,12 +542,13 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     setView(nextView); setPath(nextPath); setParentScope(target.scope); setFilter('all')
     setExpandedRoots(roots => ({ ...roots, [nextView]: true }))
     setMountedRoots(roots => ({ ...roots, [nextView]: true }))
-    if (action === 'upload') setUploadTarget(target)
+    if (action === 'upload') { uploadFolderCache.current.clear(); uploadReusedFolders.current.clear(); setUploadTarget(target) }
     else openEdit(action, undefined, target)
   }
   const flatList = <div className={view === 'trash' ? css.treeRoot : css.flatList}>
     {loading && <p role="status">{t('loading')}</p>}
     {!loading && visibleItems.length === 0 && <p className={css.treeEmpty}>{filter !== 'all' ? t('noResults') : t('empty')}</p>}
+    {!loading && visibleItems.length === 0 && filter !== 'all' && <Button size="sm" onClick={() => { setFilter('all') }}>{t('allStatus')}</Button>}
     {visibleItems.map(item => view === 'trash' ? <div key={item.nodeId} className={css.treeRow} data-actions>
       <span className={css.treeToggleSpace} aria-hidden="true" />
       <button type="button" className={css.treeName} disabled title={item.name}>
@@ -476,7 +557,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       </button>
       <span className={css.treeActions}><RowActions item={item} view={view} busy={busy} t={t} onAction={rowAction} /></span>
     </div> : <div key={item.nodeId} className={css.flatRow}>
-      <FileTypeIcon path={item.name} size={16} />
+      {item.kind === 'FOLDER' ? <IconFolderCloseRegular size={16} /> : item.kind === 'LINK' ? <IconLinkOutlineRegular size={16} /> : <FileTypeIcon path={item.name} size={16} />}
       <button type="button" className={css.treeName} title={item.name} onClick={() => {
         if (item.kind === 'FOLDER') { chooseFolder(view === 'shared' ? 'shared' : 'mine', [...path, { id: item.nodeId, name: item.name }], item) }
         else void openSource(item)
@@ -501,9 +582,9 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       <div className={css.toolbar}>
         <div className={css.toolbarTools}>
           <Menu open={filterOpen} onClose={() => { setFilterOpen(false) }} portal minWidthFromAnchor autoFocus align="end" selectedId={filter} listClassName={css.filterList}
-            items={[{ id: 'ready', label: t('statusReady') }, { id: 'uncitable', label: t('statusDownloadOnly') }]}
-            onSelect={id => { setFilter(id === filter ? 'all' : id); setFilterOpen(false) }}
-            anchor={<Button variant="outline" className={css.filterButton} aria-label={t('filterStatus')} aria-haspopup="menu" aria-expanded={filterOpen} onClick={() => { setFilterOpen(!filterOpen) }} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setFilterOpen(true) } }}><span>{t(filterLabel(filter))}</span><IconChevronDownOutlineRegular size={14} /></Button>} />
+            items={[{ id: 'all', label: t('allStatus') }, { id: 'ready', label: t('statusReady') }, { id: 'uncitable', label: t('statusDownloadOnly') }]}
+            onSelect={id => { setFilter(id !== 'all' && id === filter ? 'all' : id); setFilterOpen(false) }}
+            anchor={<Button variant="outline" className={css.filterButton} aria-label={t('filterStatus')} title={t('filterStatusHint')} aria-haspopup="menu" aria-expanded={filterOpen} onClick={() => { setFilterOpen(!filterOpen) }} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setFilterOpen(true) } }}><span>{t(filterLabel(filter))}</span><IconChevronDownOutlineRegular size={14} /></Button>} />
           <Tooltip label={t('searchPlaceholder')}>
             <Button variant="outline" className={css.finderButton} aria-label={t('searchPlaceholder')} disabled={blocked !== null} onClick={() => { setFinderOpen(true) }} icon={<IconSearchOutlineRegular size={16} />} />
           </Tooltip>
@@ -534,14 +615,15 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
                 onCreate={action => { beginCreate(action, treeView, [], { parentId: null, scope: treeView === 'shared' ? 'ENTERPRISE' : 'PRIVATE', name: t(treeView) }) }} />}
             </div>
             {treeView && mountedRoots[treeView] && configReady && blocked === null && <div id={`enterprise-library-${treeView}-tree`} className={css.treeRoot}
-              hidden={!expandedRoots[treeView] || (view === treeView && filter !== 'all')}>
-              <LibraryTree key={memberTenantId ?? 'unselected'} revision={revision} view={treeView} t={t} origin={origin} fetchImpl={fetchImpl} path={[]}
+              hidden={!expandedRoots[treeView]}>
+              <LibraryTree key={memberTenantId ?? 'unselected'} revision={revision} view={treeView} t={t} origin={origin} fetchImpl={fetchImpl} path={[]} status={filter}
                 revealIds={located?.view === treeView ? located.ids : undefined}
                 selectedId={located?.view === treeView ? located.ids.at(-1) : view === treeView ? source?.nodeId ?? parentId ?? undefined : undefined}
                 onFolder={(next, item) => { setLocated(null); chooseFolder(treeView, next, item) }} onFile={item => { setLocated(null); if (view !== treeView) { setView(treeView); setPath([]) } void openSource(item) }}
                 onCreate={(action, next, item) => { beginCreate(action, treeView, next, { parentId: item.nodeId, scope: item.scope === 'ENTERPRISE' ? 'ENTERPRISE' : 'PRIVATE', name: item.name }) }} onAction={(action, item) => { if (view !== treeView) { closePreview(); setView(treeView); setPath([]) } rowAction(action, item) }} onDenied={closePreview} busy={busy} />
+              {filter !== 'all' && !loading && visibleItems.length === 0 && <div className={css.treeReset}><Button size="sm" onClick={() => { setFilter('all') }}>{t('allStatus')}</Button></div>}
             </div>}
-            {configReady && blocked === null && view === id && id !== 'recent' && (id === 'trash' || filter !== 'all') && flatList}
+            {configReady && blocked === null && view === id && id === 'trash' && flatList}
           </div>
         })}
       </nav>
@@ -579,6 +661,10 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
       {source?.bytes && !source.entries && <div className={css.previewBody} key={`${source.nodeId}:${source.versionId}`}>
         {renderFactorySlot('document.preview.bytes', { name: source.originalName ?? source.name ?? '', bytes: source.bytes, mimeType: source.mimeType ?? 'application/octet-stream', ...(source.missingFonts ? { missingFonts: source.missingFonts } : {}) })}
       </div>}
+      {source?.text && !source.bytes && !source.entries && <div className={css.previewBody} key={`${source.nodeId}:${source.versionId}:text`}>
+        <pre className={css.sourceText}>{source.text}</pre>
+        {source.truncated && <p className={css.previewNote}>{source.truncationNote ?? t('truncatedExcerpt')}</p>}
+      </div>}
       {source?.linkUrl && <div className={css.previewStatus}><IconLinkOutlineRegular size={32} /><p>{source.linkUrl}</p><a href={source.linkUrl} target="_blank" rel="noopener noreferrer">{t('openLink')}</a></div>}
       {source?.parseReason && <p className={css.previewNote}>{source.parseReason}</p>}
       {configReady && blocked === null && view === 'recent' && !source && !previewLoading && !previewError && <section ref={recentScroll} className={css.recentFiles} aria-label={t('recent')}><h2>{t('recent')}</h2>{flatList}</section>}
@@ -586,7 +672,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
         <IconFolderCloseRegular size={40} /><h2>{t('selectPreview')}</h2><p>{t('selectPreviewHint')}</p>
       </div>}
     </main>
-    {uploadTarget && <LibraryUploadDialog t={t} accept={limits?.allowedExtensions.join(',') ?? ACCEPT} single={!!uploadTarget.replacement} maxFileBytes={limits?.maxFileBytes} loadLimits={loadUploadLimits} uploadFile={uploadOne} onSaved={revealCreated} onClose={() => { setUploadTarget(undefined) }} />}
+    {uploadTarget && <LibraryUploadDialog t={t} accept={limits?.allowedExtensions.join(',') ?? ACCEPT} single={!!uploadTarget.replacement} maxFileBytes={limits?.maxFileBytes} loadLimits={loadUploadLimits} uploadFile={uploadOne} existingFolderNames={new Set(items.filter(item => item.kind === 'FOLDER' && item.canManage !== false).map(item => item.name))} existingFileNames={new Set(items.filter(item => item.kind === 'FILE' && item.canManage !== false).map(item => item.name))} onSaved={revealCreated} onClose={() => { uploadFolderCache.current.clear(); uploadReusedFolders.current.clear(); replacedVersion.current = null; setUploadTarget(undefined) }} />}
     <LibraryFinder open={finderOpen} origin={origin} fetchImpl={fetchImpl} t={t} onClose={() => { setFinderOpen(false) }} onLocate={(item) => {
       const treeView = item.location === 'shared' ? 'shared' : 'mine'
       const ids = [...(item.parentPath ?? []).map((part) => part.id), item.nodeId]

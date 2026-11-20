@@ -161,6 +161,10 @@ export function restoreLibrary(id: string) {
   return http<LibraryItem>(`/api/library/nodes/${id}/restore`, { method: 'POST' });
 }
 
+export function forgetLibraryRecent(id: string) {
+  return http<{ ok: boolean }>(`/api/library/nodes/${id}/forget-recent`, { method: 'POST' });
+}
+
 export function purgeLibrary(id: string) {
   return http<{ ok: boolean }>(`/api/library/nodes/${id}`, { method: 'DELETE' });
 }

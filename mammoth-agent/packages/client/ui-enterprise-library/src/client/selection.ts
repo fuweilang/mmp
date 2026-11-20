@@ -51,6 +51,16 @@ export function choiceBlock(item: LibraryChoice): { disabled: boolean; reason: s
   return { disabled: true, reason: item.parseReason ?? item.parseStatus ?? 'unavailable' }
 }
 
+/** Status-view membership: folders keep the tree structure; failed files stay hidden. */
+export function matchesStatus(item: LibraryChoice, filter: string): boolean {
+  if (item.kind === 'FOLDER') return true
+  if (item.kind === 'FILE' && item.parseStatus === 'FAILED') return false
+  if (filter === 'all') return true
+  if (filter === 'ready') return !choiceBlock(item).disabled
+  if (filter === 'uncitable') return item.kind === 'FILE' && choiceBlock(item).disabled
+  return false
+}
+
 /** Add one ready version. Duplicate versions stay once. This never marks the draft sent. */
 export function addLibraryChip(current: readonly LibraryChip[], item: LibraryChoice): { chips: LibraryChip[]; sent: false } {
   const block = choiceBlock(item)

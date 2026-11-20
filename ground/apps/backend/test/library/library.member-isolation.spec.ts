@@ -79,7 +79,7 @@ it('a library-member credential cannot be reused for Admin, auth, Console, custo
   for (const path of ['/api/admin/enterprises', '/api/auth/me', '/api/library/admin/tenants', '/api/library/members', '/api/library/managed/grant', '/api/tenants/current/members']) {
     await assert.rejects(guard.canActivate(request(path) as never), /不能访问管理功能/);
   }
-  for (const path of ['/api/library/context', '/api/library/config', '/api/library/search', '/api/library/nodes/file/source', '/api/library/open']) {
+  for (const path of ['/api/library/context', '/api/library/config', '/api/library/search', '/api/library/nodes/file/source', '/api/library/nodes/file/forget-recent', '/api/library/open']) {
     assert.equal(await guard.canActivate(request(path) as never), true);
   }
 });

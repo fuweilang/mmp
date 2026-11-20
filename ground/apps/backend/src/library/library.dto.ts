@@ -40,6 +40,12 @@ export class CreateFolderDto extends UploadFilesDto {
   @IsOptional()
   @IsString()
   parentId?: string;
+
+  /** Folder upload reuses an existing same-name sibling instead of creating a duplicate. */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value)
+  @IsBoolean()
+  reuseExisting?: boolean;
 }
 
 export class CreateLinkDto extends CreationScopeDto {
