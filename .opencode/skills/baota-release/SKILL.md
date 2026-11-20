@@ -1396,6 +1396,69 @@ pnpm --dir apps/desktop run package:mac:x64:unsigned
 | 回滚 | `.env.bak-20261119-101858`、`middle-web.bak-20261119-101858`、`website.bak-20261119-101858`、nginx `20261119-101858`；数据库回滚需用上面的 dump |
 | 遗留 | Mac 签名无 Apple 安全时间戳（TSA 被墙，已公证+staple+Gatekeeper 通过）；真实跨版本自动更新未实测；Windows 无签名/无自动更新；桌面 GUI 未人工点检 |
 
+## 4S. 2026-11-20 5.8 全栈 + 三平台：32 分钟中台上线，48 分钟客户端齐
+
+> 范围：Ground `5.6.0→5.8.0`（生产在发版前仍是 5.6 代码，不是 5.7）、桌面 `0.3.10→0.3.11`。中台 api+web+pg+knowledge、官网、mac-arm64 / mac-x64（签名+公证+`nightly` 更新源）、win-x64（未签名）。专家/技能/猛犸知识库保持生产原行；企业资料库只补本地多出来的差额。
+
+### 4S.1 实测时间（`state.json` `5.8.0-20261120-0039`，UTC；北京时间 +8）
+
+中台 16:39:14Z 预检 → 17:11:49Z smoke 通过，**32 分 35 秒**。三客户端齐（最后一份 x64 发布结束）约 **16:39Z→17:28Z，49 分钟**。双 Mac 与 `release.sh` 并行，关键路径在 Mac 打包，不在中台。
+
+| 节点 | 实测 | 性质 |
+|---|---|---|
+| preflight + 前端 + 官网 | 26 s | 必要 |
+| api 镜像 | 5 min 29 s | 必要（正常体积，不是 6.89GB） |
+| 服务器 web 镜像 | **11 min 53 s** | 必要，中台里最长 |
+| deploy：载入镜像 + `compose up` + 健康检查 | 5 min 27 s 后脚本 `exit 1` | **假失败** |
+| 迁移实际跑完（日志 `Nest application successfully started` 17:05:41Z） | 脚本退出后再约 3 min | 必要。`library_chunk` 约 180 万行上的 trigram + HNSW |
+| nginx reload | 2 s | 必要 |
+| smoke | **5 min 11 s** | 可省。当时公网还是旧 0.3.10，全量 GET 白下 |
+| mac-arm64 签名+公证+DMG+ZIP | 16 min 43 s（`elapsedMs` 1003021） | 必要。开打前有一次 6 秒失败，见坑 1 |
+| mac-x64 同上 | **23 min 11 s**（1391437） | 必要，全流程最长的一步。必须等 arm64 签完 |
+| 发布 arm64 / win / x64（含公网整包 GET） | 3 min 30 s / 2 min 40 s / 3 min 39 s | 必要，必须串行写 `downloads/` |
+
+可省的只有 smoke 那 5 分钟，以及开打前没探 TSA 造成的一次重开。索引那 3 分钟省不掉，只能避免把它当成部署失败去重建容器。
+
+### 4S.2 本轮坑（按下次还会再踩的顺序）
+
+| # | 现象 | 根因 | 下次 |
+|---|---|---|---|
+| 1 | arm64 打包 6 秒退出：`unsupported setting MMP_DESKTOP_MACOS_SKIP_TIMESTAMP` | 密钥文件里写了这个变量，但 `desktop-package-environment.mjs` 的 `MACOS_SETTING` 会丢掉不在白名单里的 `MMP_DESKTOP_MACOS_*`。进程根本看不到它 | 开打前 `curl --max-time 8 -o /dev/null -w '%{http_code}' https://timestamp.apple.com`。不是 200 就确认白名单已含 `SKIP_TIMESTAMP`（`0df100a3` 已写入）并且 `$HOME/mmp-ci/packaging/secrets/macos-signing.env` 有 `MMP_DESKTOP_MACOS_SKIP_TIMESTAMP=1`。不要 `source` 该文件（括号会撑破 zsh）。这个修复必须在两份 Mac 开打前提交；打到一半再提交会撞门禁 50 |
+| 2 | `release.sh` 报 `api 120 秒内未就绪`，`state.json` 的 deploy 一直是 `failed` | 就绪循环是 40×3 秒（`release.sh` 约 581 行）。本轮新增 `20261119120000_library_search_index`：给 `library_chunk` 加 `vector(1024)`、三条 trigram、一条 HNSW。180 万行上建这些索引超过 120 秒。容器没挂，迁移还在跑 | **不要** `--from deploy`（会在建索引时重建容器）。等 api 日志出现 `Nest application successfully started`，再 `--release-id <id> --only nginx,smoke --yes`。deploy 步保持 `failed` 没关系，以 `/api/version` 和四个容器 Up 为准 |
+| 3 | 差点用本地库覆盖生产专家 | 发版前生产代码是 **5.6**，不是同事已经发出的 5.7。生产 `official_agent` 134、`official_skill` 125、`kc_base` 67；本地 docker `127.0.0.1:5433` 只有专家 102。本地不是「5.7 数据」 | 先两边 `count(*)`。专家、技能、`kc_*`、用户**保持行数多的生产侧**，禁止整表替换。5.6 那种全表合并会改掉超管密码，不要再做 |
+| 4 | 资料库差额用 `wc -l` 把 15 行看成一万多行；`library_custody` 的 COPY 失败 | CSV 正文里有换行。`library_custody` 没有 `node_id`。`current_version_id` 不是外键 | 只 upsert 本地有、生产没有或内容变了的 `library_node` / `library_version` / `library_chunk` / `library_recent`，一个事务。本轮是 15 个 node、11 个 version、46 个 chunk、4 条 recent。文件 `rsync` 不加 `--delete`。已 PURGED、本地没有原件的 key 不要编造文件。本机没有 `psql`，用 `docker exec mammoth-postgres` 和服务器 `docker exec mmp-prod-v1-pg-1 psql -U mammoth -d mammoth_core` |
+| 5 | `gh run download` 报 `not a git repository` | 在 `/tmp` 里跑的 | 必须先 `cd` 到仓库根。Windows 的 `source_ref` 用已推送的分支；Mac 专用的时间戳白名单提交可以不进 Windows 包 |
+| 6 | 更新通道容易写成 `latest` | 0.3.10 和 0.3.11 的 `mac-*-release.json` 都是 `channel: nightly`。装好的 0.3.10 只拉 `feeds/mac-{arm64,x64}/nightly-mac.yml` | `publish-desktop-downloads.ts --feed --channel nightly --signed`。缺 ZIP 或 blockmap，或通道不一致，`--signed` 会直接失败或「立即更新」看不到新包。Windows 不传 `--feed`/`--signed`，`automatic_updates` 保持 false。不删旧的 0.3.10 文件 |
+| 7 | smoke 花了 5 分钟 | 中台 smoke 默认把三个安装包整包 GET 下来做 sha。当时 manifest 还是 0.3.10 | 中台先 `MMP_SMOKE_SKIP_DOWNLOAD_HASH=1`。三个 0.3.11 发布完，脚本自己的 `PUBLIC_VERIFIED` 已经对过 sha，不必再为旧包下 800MB |
+
+不算发版失败、不要连夜改代码的：`token-factory/deepseek-v4.1-flash` 没有系统参考价，企业计费不可用。本机 `pnpm run dev` 若报 `@mammoth/shared` 缺导出，是 `packages/shared/dist` 过期（gitignore），`pnpm --filter @mammoth/shared build` 即可；API 镜像从源码编译，不受这个 dist 影响。
+
+### 4S.3 新增门禁（续 4R.3，编号 57–62）
+
+57. **TSA 与白名单在开打前一起查**：`timestamp.apple.com` 不是 HTTP 200 时，`MACOS_SETTING` 必须包含 `SKIP_TIMESTAMP`，密钥文件必须有 `MMP_DESKTOP_MACOS_SKIP_TIMESTAMP=1`。两份 Mac 串行签。打完后每份都要 `stapler validate` 成功，并且 `spctl -a -vv -t install` 为 `Notarized Developer ID`。ZIP 里要有 `app-update.yml`，`channel: nightly`，`system.node` 架构与包一致，bundle id 为 `com.deepseek.harness`。
+58. **大索引迁移不要重跑 deploy**：新迁移里有 `library_chunk` 的 trigram 或 HNSW 时，120 秒健康检查会误失败。等 `Nest application successfully started`，再用 `--only nginx,smoke`。禁止 `--from deploy`。
+59. **目录数据按行数站队**：发版前数生产与本地的 `official_agent`、`official_skill`、`kc_base`、`library_node`。专家/技能/知识库/用户保持生产。资料库只 upsert 差额，不 `--delete`，不搬 `library_custody`（没有 `node_id`）。
+60. **Windows 产物在仓库根下载**：`gh run download` 的 cwd 必须是 git 仓库。`source_ref` 必填。Mac 专用提交可以不重打 Windows。
+61. **更新通道以打包记录为准**：`artifacts/<target>-release.json` 的 `channel` 是什么，发布就传什么。5.6/5.8 都是 `nightly`。先 `--dry-run` 看 DIFF 只动本平台，再 `--yes`。三平台串行。`mammoth-latest.json` 由每次发布在本平台校验通过后写入。
+62. **中台 smoke 不下载安装包**：客户端还没换成新版本时加 `MMP_SMOKE_SKIP_DOWNLOAD_HASH=1`。
+
+### 4S.4 下次可再省的两处（脚本还没改）
+
+1. `release.sh` 的 40×3 秒就绪等待，在「本版迁移含大索引」时不够。改脚本前，用 4S.2 坑 2 的等日志办法，不要加大等待后就去重建容器。
+2. 中台 smoke 与客户端发布分开（门禁 62）。5.8 白花了 5 分钟。
+
+### 4S.5 本轮基线（`5.8.0-20261120-0039` / 桌面 `0.3.11`）
+
+| 项 | 值 |
+|---|---|
+| 源码 | 分支 `5.8`。版本提交 `176c3405`（Ground 5.8.0）；Mac 时间戳白名单 `0df100a3`。Windows CI `44568519696` 用的是 `176c3405`，可用 |
+| 镜像 | api/web `5.8.0-20261120-0039`；上一版 `5.6.0-20261119-0944` |
+| 迁移 | 仓库 62 个迁移目录。发版前生产已完成 60；上线后 62，新增的 `20261119090000_catalog_category_management` 与 `20261119120000_library_search_index` 都已应用。没有清空专家表 |
+| DB | 专家 134、技能 125、`kc_base` 67 保持发版前。`library_node` 12164→12177（15 行 upsert）。原件只补了存在的 `访谈 007` txt |
+| 桌面 | arm64 `d0476262…` 270,489,458B；x64 `bb675b82…` 291,298,010B；均 signed、`automatic_updates: true`、feed `nightly-mac.yml`。win `593c15b6…` 314,402,209B，unsigned，`automatic_updates: false` |
+| 回滚 | `.env.bak-20261120-005812`、`middle-web.bak-20261120-005812`、`website.bak-20261120-005812`、nginx `20261120-005812`。回滚镜像不回滚已建的索引 |
+| 遗留 | Apple TSA 仍被墙，两份 Mac 无安全时间戳，但已公证并 staple；0.3.9 及更早不能应用内更新；Windows 仍手动安装；真实「立即更新」未在已装的 0.3.10 上点过 |
+
 ## 5. 网络与下载（最容易吃掉几小时）
 
 > 2026-11-04 这次发版，10h47m 里至少 3h 花在“拉文件”：GitHub 0 字节、Docker Hub 超时、

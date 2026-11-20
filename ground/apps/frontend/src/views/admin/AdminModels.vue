@@ -22,24 +22,31 @@
           class="page-filter"
           popper-class="models-filter-popper"
           aria-label="模型筛选"
+          clearable
           :filterable="false"
           :options="familySelectOptions"
           placeholder="全部模型"
-        />
+        >
+          <template #default="{ item }"><span class="mark"><i class="mark-dot" :style="{ backgroundColor: item.color }" /><span>{{ item.label }}</span></span></template>
+          <template #label="{ label, value }"><span class="mark"><i class="mark-dot" :style="{ backgroundColor: familyColor(value) }" /><span>{{ label }}</span></span></template>
+        </el-select-v2>
         <el-select-v2
           v-model="selectedProvider"
           class="page-filter"
           popper-class="models-filter-popper"
           aria-label="厂商筛选"
+          clearable
           :filterable="false"
           :options="providerSelectOptions"
           placeholder="全部厂商"
         />
         <el-select-v2
+          v-show="showPurposeFilter"
           v-model="selectedPurpose"
           class="page-filter"
           popper-class="models-filter-popper"
           aria-label="用途筛选"
+          clearable
           placeholder="全部用途"
           :filterable="false"
           :options="purposeOptions"
@@ -49,11 +56,30 @@
           class="page-filter"
           popper-class="models-filter-popper"
           aria-label="运行状态"
+          clearable
           :filterable="false"
           :options="statusSelectOptions"
           placeholder="全部状态"
-        />
-        <el-button @click="testEnabled">{{ bulkRunning ? '停止' : '测试已启用' }}</el-button>
+        >
+          <template #default="{ item }"><span class="mark"><i class="mark-dot" :style="{ backgroundColor: item.color }" /><span :style="{ color: item.color }">{{ item.label }}</span></span></template>
+          <template #label="{ label, value }"><span class="mark"><i class="mark-dot" :style="{ backgroundColor: statusColor(value) }" /><span :style="{ color: statusColor(value) }">{{ label }}</span></span></template>
+        </el-select-v2>
+        <el-select-v2
+          v-model="selectedEnabled"
+          class="page-filter"
+          popper-class="models-filter-popper"
+          aria-label="启用筛选"
+          clearable
+          :filterable="false"
+          :options="enabledSelectOptions"
+          placeholder="启用与禁用"
+        >
+          <template #default="{ item }"><span class="mark"><i class="mark-dot" :style="{ backgroundColor: item.color }" /><span :style="{ color: item.color }">{{ item.label }}</span></span></template>
+          <template #label="{ label, value }"><span class="mark"><i class="mark-dot" :style="{ backgroundColor: enabledColor(value) }" /><span :style="{ color: enabledColor(value) }">{{ label }}</span></span></template>
+        </el-select-v2>
+        <el-button @click="resetFilters">重置</el-button>
+        <el-button type="danger" :disabled="!selectedRows.length || deletingSelected" :loading="deletingSelected" @click="onDeleteSelected">{{ selectedRows.length ? `删除所选 (${selectedRows.length})` : '删除所选' }}</el-button>
+        <el-button type="primary" @click="testEnabled">{{ bulkRunning ? '停止' : '测试已启用' }}</el-button>
         <el-button @click="$router.push('/admin/knowledge-services')">检索服务</el-button>
         <el-button type="primary" @click="openCreate">新建模型</el-button>
       </div>
@@ -77,6 +103,7 @@
 
     <div v-else class="panel">
       <el-table
+        ref="tableRef"
         v-loading="loading"
         :data="pagedRows"
         border
@@ -84,7 +111,9 @@
         row-key="key"
         header-cell-class-name="model-table-header"
         empty-text="无匹配结果"
+        @selection-change="onSelectionChange"
       >
+        <el-table-column type="selection" width="48" reserve-selection />
         <el-table-column label="Model ID" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">{{ row.model.modelId }}</template>
         </el-table-column>
@@ -94,8 +123,7 @@
         <el-table-column label="用途" width="105" align="center"><template #default="{row}"><el-tag :type="isImage(row.model)?'warning':'info'">{{isImage(row.model)?'生成图片':'对话'}}</el-tag></template></el-table-column>
         <el-table-column label="厂商" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">
-            <el-button link class="prov-name" :aria-label="`设置供应商 ${row.provider.displayName}`" @click="openEditProvider(row.provider)">{{ row.provider.displayName }}</el-button>
-            <span class="prov-sub">{{ row.provider.name }}</span>
+            <el-button link class="prov-name" :style="{ color: familyColor(modelFamily(row.model.modelId, row.model.displayName)) }" :aria-label="`设置供应商 ${row.provider.displayName}`" @click="openEditProvider(row.provider)">{{ row.provider.displayName }}</el-button>
           </template>
         </el-table-column>
         <el-table-column v-if="selectedPurpose!=='image'" label="默认" width="120" align="center">
@@ -103,19 +131,23 @@
         </el-table-column>
         <el-table-column v-if="selectedPurpose!=='image'" label="优先级（小优先）" width="165"><template #default="{ row }"><span v-if="isImage(row.model)">—</span><el-input-number v-else :model-value="row.model.sortOrder" :min="0" :max="10000" :precision="0" :disabled="busyModelId === row.model.id" @change="(value: number | undefined) => value !== undefined && onRoutingChange(row.model,{sortOrder:value})" /></template></el-table-column>
         <el-table-column label="运行状态" min-width="195"><template #default="{ row }">
-          <el-tag :type="!row.model.enabled ? 'info' : row.model.health?.status === 'healthy' ? 'success' : 'warning'">{{ !row.model.enabled ? '手动禁用' : isImage(row.model)?'已启用':healthLabel(row.model.health?.status) }}</el-tag>
+          <span v-if="isImage(row.model)">—</span>
+          <span v-else class="mark"><i class="mark-dot" :style="{ backgroundColor: statusColor(row.model.health?.status) }" /><span :style="{ color: statusColor(row.model.health?.status) }">{{ healthLabel(row.model.health?.status) }}</span></span>
           <div v-if="!isImage(row.model)" class="prov-sub">{{ row.model.health?.reason }}</div>
           <div v-if="!isImage(row.model) && row.model.health?.checkedAt" class="prov-sub">{{ new Date(row.model.health.checkedAt).toLocaleString('zh-CN') }} · {{ row.model.health.latencyMs ?? '—' }}ms</div>
         </template></el-table-column>
         <el-table-column v-if="selectedPurpose!=='image'" label="工具调用" width="90" align="center"><template #default="{ row }"><el-switch v-if="!isImage(row.model)" :model-value="row.model.supportsTools" :disabled="busyModelId === row.model.id" @change="(value: boolean) => onRoutingChange(row.model,{supportsTools:value})" /></template></el-table-column>
         <el-table-column v-if="selectedPurpose!=='image'" label="图片输入" width="90" align="center"><template #default="{ row }"><el-switch v-if="!isImage(row.model)" :model-value="row.model.supportsVision" :disabled="busyModelId === row.model.id" @change="(value: boolean) => onRoutingChange(row.model,{supportsVision:value})" /></template></el-table-column>
-        <el-table-column label="启用" width="90" align="center">
+        <el-table-column label="启用" width="148" align="center">
           <template #default="{ row }">
-            <el-switch
-              :model-value="row.model.enabled"
-              :loading="busyModelId === row.model.id"
-              @change="(v: boolean) => onToggleModel(row.model, v)"
-            />
+            <span class="enable-cell">
+              <span class="mark"><i class="mark-dot" :style="{ backgroundColor: row.model.enabled ? enabledColor('enabled') : enabledColor('disabled') }" /><span :style="{ color: row.model.enabled ? enabledColor('enabled') : enabledColor('disabled') }">{{ row.model.enabled ? '已启用' : '已禁用' }}</span></span>
+              <el-switch
+                :model-value="row.model.enabled"
+                :loading="busyModelId === row.model.id"
+                @change="(v: boolean) => onToggleModel(row.model, v)"
+              />
+            </span>
           </template>
         </el-table-column>
         <el-table-column v-if="selectedPurpose!=='image'" label="普通对话思考" width="150" align="center">
@@ -315,12 +347,18 @@ type FlatRow = {
 };
 
 const loading = ref(false);
+const tableRef = ref<{ clearSelection: () => void } | null>(null);
+const selectedRows = ref<FlatRow[]>([]);
+const deletingSelected = ref(false);
+function onSelectionChange(rows: FlatRow[]) { selectedRows.value = rows; }
 const error = ref('');
 const keyword = ref('');
 const selectedFamily = ref('');
 const selectedProvider = ref('');
+const showPurposeFilter = false;
 const selectedPurpose = ref('');
 const selectedStatus = ref('');
+const selectedEnabled = ref('');
 const purposeOptions = [
   { value: '', label: '全部用途' },
   { value: 'chat', label: '对话' },
@@ -349,41 +387,73 @@ async function saveImageName() {
   }
 }
 const providers = ref<AdminLlmProviderRow[]>([]);
-// Preserve initial positions across settings changes and health refreshes.
-const rowPositions = new Map<string, number>();
 const busyModelId = ref<string | null>(null);
 const probes = new Map<string, AbortController>();
 const probingIds = ref<string[]>([]);
 const bulkRunning = ref(false);
 let bulkStop: AbortController | null = null;
 
+function autoUsable(row: FlatRow) {
+  const status = row.model.health?.status;
+  return row.model.enabled && row.provider.enabled !== false && row.provider.hasApiKey !== false && !isImage(row.model) && (status === 'healthy' || status === 'degraded');
+}
+function compareRows(a: FlatRow, b: FlatRow) {
+  return Number(!autoUsable(a)) - Number(!autoUsable(b))
+    || Number(Boolean(b.model.isPreferred)) - Number(Boolean(a.model.isPreferred))
+    || a.model.sortOrder - b.model.sortOrder
+    || (a.provider.sortOrder || 0) - (b.provider.sortOrder || 0)
+    || a.model.modelId.localeCompare(b.model.modelId);
+}
 const flatRows = computed<FlatRow[]>(() => {
   const out: FlatRow[] = [];
   for (const p of providers.value) {
-    for (const m of p.models) {
-      out.push({ key: m.id, provider: p, model: m });
-    }
+    for (const m of p.models) out.push({ key: m.id, provider: p, model: m });
   }
-  return out.sort((a, b) => rowPositions.get(a.key)! - rowPositions.get(b.key)!);
+  return out.sort(compareRows);
 });
 
 const familyOptions = computed(() => [...new Set(flatRows.value.map(row => modelFamily(row.model.modelId, row.model.displayName)))].sort((a, b) => a === '其他' ? 1 : b === '其他' ? -1 : a.localeCompare(b)));
+function familyColor(name?: string) {
+  if (!name) return '#909399';
+  const index = familyOptions.value.indexOf(name);
+  const hue = ((index >= 0 ? index : 0) * 47) % 360;
+  return `hsl(${hue} 62% 42%)`;
+}
 const familySelectOptions = computed(() => [
-  { value: '', label: '全部模型' },
-  ...familyOptions.value.map((family) => ({ value: family, label: family })),
+  { value: '', label: '全部模型', color: '#909399' },
+  ...familyOptions.value.map((family) => ({ value: family, label: family, color: familyColor(family) })),
 ]);
 const providerSelectOptions = computed(() => [
   { value: '', label: '全部厂商' },
   ...providers.value.map((provider) => ({ value: provider.id, label: provider.displayName || provider.name })),
 ]);
+const statusColors: Record<string, string> = {
+  '': '#909399',
+  unchecked: '#5b8def',
+  healthy: '#2f9e44',
+  degraded: '#e6a23c',
+  limited: '#7b61ff',
+  unavailable: '#e85d4c',
+};
+const enabledColors: Record<string, string> = {
+  '': '#909399',
+  enabled: '#2f9e44',
+  disabled: '#e85d4c',
+};
+function statusColor(value?: string) { return statusColors[value || 'unchecked'] || statusColors.unchecked; }
+function enabledColor(value?: string) { return enabledColors[value || ''] || enabledColors['']; }
 const statusSelectOptions = [
-  { value: '', label: '全部状态' },
-  { value: 'disabled', label: '手动禁用' },
-  { value: 'unchecked', label: '待检查' },
-  { value: 'healthy', label: '正常' },
-  { value: 'degraded', label: '波动观察中' },
-  { value: 'limited', label: '限流冷却' },
-  { value: 'unavailable', label: '故障隔离' },
+  { value: '', label: '全部状态', color: statusColors[''] },
+  { value: 'unchecked', label: '待检查', color: statusColors.unchecked },
+  { value: 'healthy', label: '正常', color: statusColors.healthy },
+  { value: 'degraded', label: '波动观察中', color: statusColors.degraded },
+  { value: 'limited', label: '限流冷却', color: statusColors.limited },
+  { value: 'unavailable', label: '故障隔离', color: statusColors.unavailable },
+];
+const enabledSelectOptions = [
+  { value: '', label: '启用与禁用', color: enabledColors[''] },
+  { value: 'enabled', label: '已启用', color: enabledColors.enabled },
+  { value: 'disabled', label: '已禁用', color: enabledColors.disabled },
 ];
 
 const probeToastText = computed(() => {
@@ -404,7 +474,9 @@ const filteredRows = computed(() => {
     if(selectedPurpose.value && (r.model.purpose || 'chat')!==selectedPurpose.value)return false;
     if (selectedFamily.value && modelFamily(r.model.modelId, r.model.displayName) !== selectedFamily.value) return false;
     if (selectedProvider.value && r.provider.id !== selectedProvider.value) return false;
-    if (selectedStatus.value && rowStatus(r) !== selectedStatus.value) return false;
+    if (selectedStatus.value && healthStatus(r) !== selectedStatus.value) return false;
+    if (selectedEnabled.value === 'enabled' && !r.model.enabled) return false;
+    if (selectedEnabled.value === 'disabled' && r.model.enabled) return false;
     const hay = `${r.model.modelId} ${r.model.displayName} ${r.provider.name} ${r.provider.displayName}`.toLowerCase();
     return hay.includes(q);
   });
@@ -416,7 +488,18 @@ const pagedRows = computed(() => {
   const start = (page.value - 1) * pageSize.value;
   return filteredRows.value.slice(start, start + pageSize.value);
 });
-watch([keyword, selectedFamily, selectedProvider, selectedPurpose, selectedStatus, pageSize], () => { page.value = 1; });
+function resetFilters() {
+  keyword.value = '';
+  selectedFamily.value = '';
+  selectedProvider.value = '';
+  selectedPurpose.value = '';
+  selectedStatus.value = '';
+  selectedEnabled.value = '';
+}
+watch([keyword, selectedFamily, selectedProvider, selectedPurpose, selectedStatus, selectedEnabled, pageSize], () => {
+  page.value = 1;
+  tableRef.value?.clearSelection();
+});
 watch(filteredRows, (rows) => {
   const last = Math.max(1, Math.ceil(rows.length / pageSize.value));
   if (page.value > last) page.value = last;
@@ -469,16 +552,7 @@ async function reload(quiet = false) {
   if (!quiet) loading.value = true;
   error.value = '';
   try {
-    const nextProviders = await adminLlmProviderApi.list();
-    const models = nextProviders.flatMap((provider) => provider.models);
-    if (rowPositions.size === 0) {
-      models.sort((a, b) => Number(b.isPreferred) - Number(a.isPreferred)
-        || a.sortOrder - b.sortOrder || a.modelId.localeCompare(b.modelId));
-    }
-    for (const model of models) {
-      if (!rowPositions.has(model.id)) rowPositions.set(model.id, rowPositions.size);
-    }
-    providers.value = nextProviders;
+    providers.value = await adminLlmProviderApi.list();
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : '加载失败';
   } finally {
@@ -740,7 +814,7 @@ async function testEnabled() {
   }
   try {
     await ElMessageBox.confirm(
-      `将测试 ${models.length} 个已启用模型。每个模型会向上游发送一次短对话，可能产生少量费用。同时最多 3 个。`,
+      `将测试 ${models.length} 个已启用模型。每个模型会向上游发送一次短对话，可能产生少量费用。测不通的会自动禁用。同时最多 3 个。`,
       '测试已启用',
       { confirmButtonText: '开始', cancelButtonText: '取消' },
     );
@@ -753,6 +827,7 @@ async function testEnabled() {
   let cursor = 0;
   let ok = 0;
   let bad = 0;
+  let disabled = 0;
   const worker = async () => {
     while (!stop.signal.aborted) {
       const model = models[cursor++];
@@ -760,7 +835,16 @@ async function testEnabled() {
       try {
         const result = await runProbe(model, stop.signal);
         if (result.kind === 'ok') ok += 1;
-        else if (result.kind === 'bad') bad += 1;
+        else if (result.kind === 'bad') {
+          bad += 1;
+          try {
+            await adminLlmProviderApi.updateModel(model.id, { enabled: false });
+            model.enabled = false;
+            disabled += 1;
+          } catch {
+            /* 探测已失败；禁用失败留给汇总说明。 */
+          }
+        }
       } catch {
         bad += 1;
       }
@@ -770,7 +854,7 @@ async function testEnabled() {
     await Promise.all(Array.from({ length: Math.min(3, models.length) }, () => worker()));
     await reload(true);
     if (stop.signal.aborted) ElMessage.info('已停止');
-    else ElMessage.success(`已测完：${ok} 通，${bad} 不通`);
+    else ElMessage.success(`已测完：${ok} 通，${bad} 不通${disabled ? `，已禁用 ${disabled}` : ''}`);
   } finally {
     bulkRunning.value = false;
     if (bulkStop === stop) bulkStop = null;
@@ -803,6 +887,38 @@ async function onToggleThinking(m: AdminLlmModelRow, thinkingEnabled: boolean) {
   }
 }
 
+async function onDeleteSelected() {
+  const rows = selectedRows.value;
+  if (!rows.length || deletingSelected.value) return;
+  const selectedIds = new Set(rows.map((row) => row.model.id));
+  const emptied = providers.value.filter((provider) => provider.models.length > 0 && provider.models.every((model) => selectedIds.has(model.id)));
+  try {
+    await confirmDelete({
+      title: '删除所选模型？',
+      name: rows.map((row) => row.model.modelId),
+      description: emptied.length
+        ? [`将删除 ${rows.length} 个模型。`, `厂商「${emptied.map((provider) => provider.displayName || provider.name).join('、')}」的模型会全部删掉。若仍被检索配置引用，将保留厂商。`]
+        : `将删除 ${rows.length} 个模型。`,
+      confirmText: '删除所选',
+    });
+  } catch {
+    return;
+  }
+  deletingSelected.value = true;
+  let failed = 0;
+  try {
+    for (const row of rows) {
+      try { await adminLlmProviderApi.removeModel(row.model.id); }
+      catch { failed += 1; }
+    }
+    tableRef.value?.clearSelection();
+    await reload();
+    ElMessage[failed ? 'error' : 'success'](failed ? `已删除 ${rows.length - failed} 个，${failed} 个失败` : `已删除 ${rows.length} 个模型`);
+  } finally {
+    deletingSelected.value = false;
+  }
+}
+
 async function onDeleteModel(m: AdminLlmModelRow) {
   const provider = providers.value.find((p) => p.models.some((x) => x.id === m.id));
   const lastOfProvider = Boolean(provider && provider.models.length <= 1);
@@ -830,11 +946,15 @@ async function onDeleteModel(m: AdminLlmModelRow) {
 }
 
 function healthLabel(status?: string) { return ({unchecked:'待检查',healthy:'正常',degraded:'波动观察中',limited:'限流冷却',unavailable:'故障隔离'} as Record<string,string>)[status || 'unchecked'] || '待检查'; }
-function rowStatus(row: FlatRow) { return row.model.enabled ? (row.model.health?.status || 'unchecked') : 'disabled'; }
+function healthStatus(row: FlatRow) { return isImage(row.model) ? '' : (row.model.health?.status || 'unchecked'); }
 async function onRoutingChange(model: AdminLlmModelRow, changes: Parameters<typeof adminLlmProviderApi.updateModel>[1]) {
   busyModelId.value=model.id;
+  if (changes.sortOrder !== undefined) model.sortOrder = changes.sortOrder;
+  if (changes.isPreferred === true) {
+    for (const provider of providers.value) for (const item of provider.models) item.isPreferred = item.id === model.id;
+  } else if (changes.isPreferred === false) model.isPreferred = false;
   try { await adminLlmProviderApi.updateModel(model.id,changes); await reload(); }
-  catch(e){ElMessage.error(e instanceof ApiError ? e.message : '设置失败');}
+  catch(e){ElMessage.error(e instanceof ApiError ? e.message : '设置失败'); await reload().catch(()=>{});}
   finally{busyModelId.value=null;}
 }
 let healthTimer: ReturnType<typeof setInterval> | undefined;
@@ -933,6 +1053,23 @@ onUnmounted(()=>{clearInterval(healthTimer);bulkStop?.abort();for(const ac of pr
 .page-filter :deep(.el-select__selected-item) {
   color: var(--el-text-color-regular);
   font-weight: var(--el-font-weight-primary);
+}
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.mark-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 8px;
+}
+.enable-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .page-alert {
   margin-bottom: 0;
