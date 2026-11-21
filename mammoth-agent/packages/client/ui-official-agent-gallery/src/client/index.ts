@@ -223,6 +223,7 @@ export function apply(ctx: ClientContext): void {
       if (!result.ok) {
         const message = result.error.message
         if (/GALLERY_EXECUTION_UNAVAILABLE/.test(message)) return 'executionUnavailable'
+        if (/MEMBERSHIP_REQUIRED/.test(message)) return 'membershipRequired'
         if (/OFFICIAL_AGENT_NOT_GRANTED|未开通|not enabled|unavailable for the current enterprise/i.test(message)) {
           return 'notGranted'
         }
@@ -235,6 +236,21 @@ export function apply(ctx: ClientContext): void {
      * frozen sessionSource (summary_only). Never mutates the current open session
      * and never injects SKILL.md into the transcript.
      */
+    membershipOffer: async () => {
+      const result = await ctx.remote.officialAgentGallery.membershipOffer()
+      if (!result.ok) throw new Error(result.error.message)
+      return result.value
+    },
+    membershipPay: async (plan, provider) => {
+      const result = await ctx.remote.officialAgentGallery.membershipPay(plan, provider)
+      if (!result.ok) throw new Error(result.error.message)
+      return result.value
+    },
+    membershipPayStatus: async (outTradeNo) => {
+      const result = await ctx.remote.officialAgentGallery.membershipPayStatus(outTradeNo)
+      if (!result.ok) throw new Error(result.error.message)
+      return result.value
+    },
     requestSkill: async (skillId,draft) => {
       const workspaceId = ctx.uiWorkspace.workspaceForNewSession()
       if (workspaceId === undefined) return 'workspaceRequired'

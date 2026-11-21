@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Button, IconAppsAddOutlineRegular, IconSearchOutlineRegular, Input, Tooltip } from '@mammoth-ai/mmp-client-ui-primitives';
 import type { Translate } from '@mammoth-ai/mmp-client-ui-slots';
-import type { CatalogQuery, CatalogFacets, ExpertCatalogPage, SkillCatalogPage, OfficialAgentCard, OfficialSkillCard, CatalogDetail } from '@mammoth-ai/mmp-official-agent-gallery/types';
+import type { CatalogQuery, CatalogFacets, ExpertCatalogPage, SkillCatalogPage, OfficialAgentCard, OfficialSkillCard, CatalogDetail, MembershipOffer, MembershipQr } from '@mammoth-ai/mmp-official-agent-gallery/types';
 import type { OfficialAgentGalleryLocaleKey } from './locales.ts';
 import { CAPABILITIES, EXPERT_CATEGORIES } from './skill-facets.ts';
 import { CatalogIcon } from './CatalogIcon.tsx';
 import css from './GalleryPage.module.css';
-export type StartAgentFailure = 'workspaceRequired' | 'startFailed' | 'notGranted' | 'executionUnavailable' | 'draftFailed';
+export type StartAgentFailure = 'workspaceRequired' | 'startFailed' | 'notGranted' | 'executionUnavailable' | 'draftFailed' | 'membershipRequired';
 export type StartSkillResult = 'pending' | 'workspaceRequired' | 'startFailed' | 'executionUnavailable' | 'draftFailed' | undefined;
 export type GalleryTab = 'experts' | 'skills';
 export interface GalleryFace {
@@ -21,6 +21,9 @@ export interface GalleryFace {
     readonly skillFacets: () => Promise<CatalogFacets>;
     readonly startAgent: (id: string, draft?: string) => Promise<StartAgentFailure | undefined>;
     readonly requestSkill: (id: string, draft?:string) => Promise<StartSkillResult>;
+    readonly membershipOffer?: () => Promise<MembershipOffer>;
+    readonly membershipPay?: (plan: 'pro' | 'flagship', provider: 'wechat' | 'alipay') => Promise<MembershipQr>;
+    readonly membershipPayStatus?: (outTradeNo: string) => Promise<{ paid: boolean }>;
 }
 export type GalleryPageProps = GalleryFace & {
     readonly t: Translate<OfficialAgentGalleryLocaleKey>;
@@ -32,6 +35,20 @@ type Page = {
     readonly hasMore: boolean;
     readonly nextCursor: string | null;
 };
+const PLAN_RANK = { standard: 1, pro: 2, flagship: 3 } as const;
+const PLAN_KEY = { standard: 'planStandard', pro: 'planPro', flagship: 'planFlagship' } as const;
+
+function orderCatalogItems(items: readonly Item[]): Item[] {
+    return items
+        .map((item, index) => ({ item, index, locked: 'locked' in item && item.locked === true ? 1 : 0 }))
+        .sort((left, right) => left.locked - right.locked || left.index - right.index)
+        .map(entry => entry.item);
+}
+
+function yuanText(yuan: number): string {
+    return yuan.toLocaleString('zh-CN');
+}
+
 type PageState = {
     items: Item[];
     total: number;
@@ -53,14 +70,18 @@ function FavouriteStar({ filled }: { readonly filled: boolean }): ReactNode {
  </svg>;
 }
 /** Both panels stay mounted, preserving their own query, pages and scroll position. */
-export function GalleryPage({ t, preferences, favourite, catalogDetail, pageExperts, pageSkills, openExperts, openSkills, expertFacets, skillFacets, startAgent, requestSkill }: GalleryPageProps): ReactNode {
+export function GalleryPage({ t, preferences, favourite, catalogDetail, pageExperts, pageSkills, openExperts, openSkills, expertFacets, skillFacets, startAgent, requestSkill, membershipOffer, membershipPay, membershipPayStatus }: GalleryPageProps): ReactNode {
     const [favourites,setFavourites]=useState<Set<string>>(new Set()),[favBusy,setFavBusy]=useState<Set<string>>(new Set());
     const favouriteLock=useRef(new Set<string>());
     useEffect(()=>{let active=true;if(preferences)void Promise.all([preferences('expert','favourites'),preferences('skill','favourites')]).then(([experts,skills])=>{if(active)setFavourites(new Set([...experts.map(row=>`expert:${row.resourceId}`),...skills.map(row=>`skill:${row.resourceId}`)]))}).catch(()=>{});return()=>{active=false}},[preferences]);
     const toggleFavourite=async(item:Item)=>{if(!favourite)return;const kind='executionGranted' in item?'expert':'skill',key=`${kind}:${item.id}`;if(favouriteLock.current.has(key))return;favouriteLock.current.add(key);setFavBusy(new Set(favouriteLock.current));try{const value=!favourites.has(key);await favourite(kind,item.id,value);setFavourites(old=>{const next=new Set(old);if(value)next.add(key);else next.delete(key);return next})}catch{setNotice(t('loadFailed'))}finally{favouriteLock.current.delete(key);setFavBusy(new Set(favouriteLock.current))}};
     const favouriteButton=(item:Item)=>{const key=`${'executionGranted'in item?'expert':'skill'}:${item.id}`;if(!favourite)return null;const on=favourites.has(key);const busy=favBusy.has(key);const label=t(on?'selectorUnfavourite':'selectorFavourite');const button=<Button className={`${css.favouriteAction}${on?` ${css.favouriteOn}`:''}`} variant="ghost" size="sm" disabled={busy} aria-pressed={on} aria-label={label} title={on?t('selectorUnfavourite'):undefined} icon={<FavouriteStar filled={on}/>} onClick={()=>{void toggleFavourite(item)}}>{t(on?'selectorFavourited':'selectorFavourite')}</Button>;return on?<Tooltip label={t('selectorUnfavourite')} side="top" delayMs={200}>{button}</Tooltip>:button;};
     const [selected,setSelected]=useState<{item:Item;categoryNames:readonly string[]}|null>(null);
+    const [upgrade,setUpgrade]=useState<OfficialAgentCard|null>(null);
+    const [catalogRevision,setCatalogRevision]=useState(0);
     const selectDetail=(item:Item,categoryNames:readonly string[])=>setSelected({item,categoryNames});
+    const explainUpgrade=(item:OfficialAgentCard)=>setUpgrade(item);
+    const onUpgraded=useCallback(()=>setCatalogRevision(value=>value+1),[]);
     const [tab, setTab] = useState<GalleryTab>('experts');
     const [starting, setStarting] = useState<string | undefined>();
     const [notice, setNotice] = useState<string | undefined>();
@@ -68,6 +89,10 @@ export function GalleryPage({ t, preferences, favourite, catalogDetail, pageExpe
     const start = async (item: Item, draft?:string): Promise<void> => {
         if (startLock.current)
             return;
+        if ('executionGranted' in item && item.locked) {
+            explainUpgrade(item);
+            return;
+        }
         if ('executionGranted' in item && !item.executionGranted) {
             setNotice(t('notGrantedHint'));
             return;
@@ -109,14 +134,15 @@ export function GalleryPage({ t, preferences, favourite, catalogDetail, pageExpe
   <div className={css.tabWrap}><div className={css.tabs} role="tablist" aria-label={t('title')}>
    {(['experts', 'skills'] as const).map(id => <button key={id} id={`gallery-tab-${id}`} type="button" role="tab" data-tab={id} className={`${css.tab} ${tab === id ? css.tabActive : ''}`} aria-controls={`gallery-panel-${id}`} aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} onKeyDown={tabKey} onClick={() => { setTab(id); setNotice(undefined); }}>{t(id === 'experts' ? 'tabExperts' : 'tabSkills')}</button>)}
   </div></div>
-  <CatalogPanel kind="experts" active={tab === 'experts'} loadPage={pageExperts} loadHome={openExperts} loadFacets={expertFacets} starting={starting} onStart={start} onDetail={selectDetail} renderFavourite={favouriteButton} t={t}/>
-  <CatalogPanel kind="skills" active={tab === 'skills'} loadPage={pageSkills} loadHome={openSkills} loadFacets={skillFacets} starting={starting} onStart={start} onDetail={selectDetail} renderFavourite={favouriteButton} t={t}/>
+  <CatalogPanel kind="experts" active={tab === 'experts'} loadPage={pageExperts} loadHome={openExperts} loadFacets={expertFacets} starting={starting} onStart={start} onDetail={(item, names) => { if ('locked' in item && item.locked) { explainUpgrade(item); return; } selectDetail(item, names); }} renderFavourite={favouriteButton} revision={catalogRevision} t={t}/>
+  <CatalogPanel kind="skills" active={tab === 'skills'} loadPage={pageSkills} loadHome={openSkills} loadFacets={skillFacets} starting={starting} onStart={start} onDetail={selectDetail} renderFavourite={favouriteButton} revision={catalogRevision} t={t}/>
   <p className={css.notice}>{t('selectorScopeHint')}</p>
   {selected ? <CatalogDetails key={selected.item.id} item={selected.item} categoryNames={selected.categoryNames} load={catalogDetail} onClose={()=>setSelected(null)} onStart={start} busy={starting!==undefined} t={t}/> : null}
   {notice ? <p className={css.notice} role="alert">{notice}</p> : null}
+  {upgrade ? <UpgradeDialog key={upgrade.id} item={upgrade} offer={membershipOffer} pay={membershipPay} payStatus={membershipPayStatus} onPaid={onUpgraded} onClose={() => setUpgrade(null)} t={t}/> : null}
  </main>;
 }
-function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, onStart, onDetail, renderFavourite, t }: {
+function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, onStart, onDetail, renderFavourite, revision, t }: {
     readonly kind: GalleryTab;
     readonly active: boolean;
     readonly loadPage: (query: CatalogQuery) => Promise<Page>;
@@ -126,6 +152,7 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
     readonly onStart: (item: Item) => Promise<void>;
     readonly onDetail:(item:Item,categoryNames:readonly string[])=>void;
     readonly renderFavourite:(item:Item)=>ReactNode;
+    readonly revision: number;
     readonly t: Translate<OfficialAgentGalleryLocaleKey>;
 }): ReactNode {
     const [input, setInput] = useState(''), [query, setQuery] = useState(''), [capability, setCapability] = useState('all'), [industry, setIndustry] = useState('all');
@@ -136,7 +163,7 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
     const current = useRef(state);
     current.current = state;
     activeRef.current = active;
-    const signature = JSON.stringify([query, capability, industry, refresh]);
+    const signature = JSON.stringify([query, capability, industry, refresh, revision]);
     const defaults = kind === 'experts' ? EXPERT_CATEGORIES : CAPABILITIES;
     const labels = useMemo(() => (facets?.capabilities ?? []).map((facet, index) => {
         const fallback = defaults.find(label => label.id === facet.id);
@@ -193,8 +220,8 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
             }
             setState(value => {
                 const seen = new Set<string>();
-                const items = [...append ? value.items : [], ...result.items].filter(item => { if (seen.has(item.id))
-                    return false; seen.add(item.id); return true; });
+                const items = orderCatalogItems([...append ? value.items : [], ...result.items].filter(item => { if (seen.has(item.id))
+                    return false; seen.add(item.id); return true; }));
                 return { items, total: result.total, hasMore: result.hasMore, cursor: result.nextCursor, loading: false, error: null, loaded: true };
             });
         }
@@ -284,13 +311,15 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
                 const capabilityTags = expert ? expert.capabilities.slice(0, 3) : [];
                 const isStarting = starting === item.id;
                 const summaryText = expert || (item.summary.trim() && !/^[- >|]+$/.test(item.summary.trim())) ? item.summary : t('skillSummaryMissing');
-                return <li key={item.id} className={css.card} data-catalog-key={item.key}>
-      <button type="button" className={`${css.cardAction} ${css.expertAction}`} disabled={starting !== undefined} aria-busy={isStarting} aria-label={`${t('viewDetails')} ${item.name}`} aria-describedby={`catalog-summary-${kind}-${item.id}`} onClick={() => { onDetail(item,categoryNames); }}>
+                const locked = expert?.locked === true;
+                const requiredPlan = expert?.minPlan === 'standard' || expert?.minPlan === 'pro' || expert?.minPlan === 'flagship' ? t(PLAN_KEY[expert.minPlan]) : t('lockedTag');
+                return <li key={item.id} className={`${css.card}${locked ? ` ${css.cardLocked}` : ''}`} data-catalog-key={item.key} data-locked={locked ? 'true' : undefined}>
+      <button type="button" className={`${css.cardAction} ${css.expertAction}`} disabled={starting !== undefined} aria-busy={isStarting} aria-label={`${t(locked ? 'upgradeOpen' : 'viewDetails')} ${item.name}`} aria-describedby={`catalog-summary-${kind}-${item.id}`} onClick={() => { onDetail(item,categoryNames); }}>
        <span className={css.cardBody}><CatalogIcon catalogKey={item.key} kind={primary?.icon ?? (expert ? 'case' : 'file')} src={item.avatarUrl}/><span className={css.cardText}><span className={css.cardTitle} title={item.name}>{item.name}</span><span id={`catalog-summary-${kind}-${item.id}`} className={css.expertSummary} title={summaryText}>{summaryText}</span></span></span>
-       <span className={css.cardFooter}><span className={css.tags}>{categoryNames.map(name => <span key={name} className={css.tag}>{name}</span>)}{capabilityTags.map(label => <span key={label} className={`${css.tag} ${css.tagMuted}`} title={label}>{label}</span>)}</span></span>
+       <span className={css.cardFooter}><span className={css.tags}>{locked ? <span className={`${css.tag} ${css.tagMuted}`}>{requiredPlan}</span> : null}{categoryNames.map(name => <span key={name} className={css.tag}>{name}</span>)}{capabilityTags.map(label => <span key={label} className={`${css.tag} ${css.tagMuted}`} title={label}>{label}</span>)}</span></span>
       </button>
       <div className={css.directStart}>
-        <Button className={css.startAction} variant="primary" size="sm" disabled={starting!==undefined} data-agent-key={item.key} aria-label={`${t(expert?'start':'useSkill')} ${item.name}`} onClick={()=>{void onStart(item);}}>{t(isStarting?'starting':expert?'start':'useSkill')}</Button>
+        <Button className={css.startAction} variant="primary" size="sm" disabled={starting!==undefined} data-agent-key={item.key} aria-label={`${t(locked ? 'upgradeOpen' : expert ? 'start' : 'useSkill')} ${item.name}`} onClick={()=>{void onStart(item);}}>{t(isStarting?'starting':locked?'upgradeOpen':expert?'start':'useSkill')}</Button>
         {renderFavourite(item)}
       </div>
       {expert?.linkedSkills?.length ? <details className={css.expertSkills} onClick={event => event.stopPropagation()}><summary>{t('linkedSkillsCount', { count: String(expert.linkedSkills.length) })}</summary><ul>{expert.linkedSkills.map(skill => <li key={skill.id}><strong>{skill.name}</strong><span>{skill.summary}</span></li>)}</ul></details> : null}
@@ -315,6 +344,98 @@ function randomStarter(choices: readonly string[]): string | undefined {
 
 function starterChoices(starters: readonly { readonly text: string }[]): string[] {
   return starters.map(starter => starter.text.trim()).filter(text => text !== '')
+}
+
+function UpgradeDialog({ item, offer, pay, payStatus, onPaid, onClose, t }: {
+    readonly item: OfficialAgentCard;
+    readonly offer: GalleryFace['membershipOffer'];
+    readonly pay: GalleryFace['membershipPay'];
+    readonly payStatus: GalleryFace['membershipPayStatus'];
+    readonly onPaid: () => void;
+    readonly onClose: () => void;
+    readonly t: Translate<OfficialAgentGalleryLocaleKey>;
+}): ReactNode {
+    const dialog = useRef<HTMLDialogElement>(null);
+    const [loaded, setLoaded] = useState<MembershipOffer | null>(null);
+    const [failed, setFailed] = useState(false);
+    const [qr, setQr] = useState<MembershipQr | null>(null);
+    const [paying, setPaying] = useState(false);
+    const [paid, setPaid] = useState(false);
+    const [payError, setPayError] = useState<string | undefined>();
+    const [step, setStep] = useState<'plan' | 'code'>('plan');
+    const [choice, setChoice] = useState<'pro' | 'flagship'>('pro');
+    useEffect(() => {
+        const node = dialog.current;
+        if (!node) return;
+        try { if (!node.open) node.showModal(); } catch { /* already open */ }
+        return () => { node.close(); };
+    }, []);
+    useEffect(() => {
+        if (!offer) return;
+        let alive = true;
+        void offer().then(value => {
+            if (!alive) return;
+            setLoaded(value);
+            const available = (['pro', 'flagship'] as const).filter(plan => PLAN_RANK[value.plan] <= PLAN_RANK[plan]);
+            const preferred = item.minPlan === 'pro' || item.minPlan === 'flagship' ? item.minPlan : available[0];
+            if (preferred && available.includes(preferred)) setChoice(preferred);
+        }).catch(() => { if (alive) setFailed(true); });
+        return () => { alive = false; };
+    }, [offer, item.minPlan]);
+    useEffect(() => {
+        if (!qr || !payStatus || paid) return;
+        let alive = true;
+        const timer = window.setInterval(() => {
+            void payStatus(qr.outTradeNo).then(status => { if (alive && status.paid) setPaid(true); }).catch(() => {});
+        }, 2000);
+        return () => { alive = false; window.clearInterval(timer); };
+    }, [qr, payStatus, paid]);
+    useEffect(() => { if (paid) onPaid(); }, [paid, onPaid]);
+    const buy = async (plan: 'pro' | 'flagship', provider: 'wechat' | 'alipay') => {
+        if (!pay || paying) return;
+        if (qr?.plan === plan && qr.provider === provider) return;
+        setPaying(true);
+        setPayError(undefined);
+        setQr(null);
+        try {
+            setQr(await pay(plan, provider));
+            setStep('code');
+        }
+        catch (error) { setPayError(error instanceof Error && error.message ? error.message : t('upgradePayFailed')); }
+        finally { setPaying(false); }
+    };
+    const plans = (['pro', 'flagship'] as const).filter(plan => !loaded || PLAN_RANK[loaded.plan] <= PLAN_RANK[plan]);
+    const selected = plans.includes(choice) ? choice : plans[0] ?? 'pro';
+    const canPay = Boolean(offer && loaded?.canPay);
+    const yuanOf = (plan: 'pro' | 'flagship') => plan === 'pro' ? loaded?.proPriceYuan ?? 0 : loaded?.flagshipPriceYuan ?? 0;
+    const summaryOf = (plan: 'pro' | 'flagship') => plan === 'pro' ? loaded?.proSummary : loaded?.flagshipSummary;
+    const channelsReady = Boolean(loaded && (loaded.wechatConfigured || loaded.alipayConfigured));
+    const payLine = loaded ? t('upgradePayLine', { plan: t(PLAN_KEY[selected]), price: yuanText(yuanOf(selected)) }) : '';
+    const channelButton = (provider: 'wechat' | 'alipay') => <Button key={provider} variant={provider === 'wechat' ? 'primary' : 'outline'} size="sm" disabled={paying || !pay} aria-pressed={step === 'code' && qr?.provider === provider} onClick={() => { void buy(selected, provider); }}>{t(provider === 'wechat' ? 'upgradeWechat' : 'upgradeAlipay')}</Button>;
+    return <dialog ref={dialog} className={`${css.detailDialog} ${css.upgradeDialog}`} role="dialog" aria-labelledby="membership-upgrade-heading" aria-modal="true" onCancel={event => { event.preventDefault(); if (!paying) onClose(); }}>
+  <header className={css.detailHeader}><h2 id="membership-upgrade-heading">{t('upgradeTitle')}</h2><Button variant="ghost" size="sm" disabled={paying} aria-label={t('closeDetails')} onClick={onClose}>{t('closeDetails')}</Button></header>
+  <div className={css.detailBody}>
+   {paid ? <p role="status">{t('upgradePaid')}</p> : !offer || (loaded && !loaded.canPay) ? <p>{t('upgradeContact')}</p> : failed ? <p role="alert">{t('loadFailed')}</p> : !loaded ? <p role="status">{t('upgradeLoading')}</p> : step === 'plan' ? <>
+    <p className={css.detailSummary}>{t('upgradeForExpert', { name: item.name })}</p>
+    <div className={css.payChoices}>{plans.map(plan => {
+        const yuan = yuanOf(plan);
+        const summary = summaryOf(plan);
+        return <button key={plan} type="button" className={css.payChoice} aria-pressed={plan === selected} onClick={() => setChoice(plan)}><strong>{t(PLAN_KEY[plan])}</strong>{summary ? <p>{summary}</p> : null}<p className={css.payPrice}>{yuan >= 1 ? t('upgradeYear', { price: yuanText(yuan) }) : t('upgradeUnset')}</p></button>;
+    })}</div>
+    {canPay && yuanOf(selected) >= 1 && channelsReady ? <div className={css.payActions}>{loaded.wechatConfigured ? channelButton('wechat') : null}{loaded.alipayConfigured ? channelButton('alipay') : null}</div> : canPay ? <p>{channelsReady ? t('upgradeUnset') : t('upgradeChannel')}</p> : null}
+    {payError ? <p role="alert">{payError}</p> : null}
+   </> : <>
+    <div className={css.payHero}><strong>{payLine}</strong><p>{t('upgradeForExpert', { name: item.name })}</p></div>
+    <div className={css.payActions}>{loaded.wechatConfigured ? channelButton('wechat') : null}{loaded.alipayConfigured ? channelButton('alipay') : null}</div>
+    <div className={css.qrBlock}>
+     {qr ? <img className={css.qrImage} alt={qr.provider === 'wechat' ? t('upgradeWechat') : t('upgradeAlipay')} src={qr.qrDataUrl}/> : null}
+     {qr ? <p>{qr.provider === 'wechat' ? t('upgradeScanWechat') : t('upgradeScanAlipay')}</p> : null}
+     {payError ? <p role="alert">{payError}</p> : null}
+     <Button variant="outline" size="sm" disabled={paying} onClick={() => { setStep('plan'); setQr(null); setPayError(undefined); }}>{t('upgradeBack')}</Button>
+    </div>
+   </>}
+  </div>
+ </dialog>;
 }
 
 function CatalogDetails({item,categoryNames,load,onClose,onStart,busy,t}:{readonly item:Item;readonly categoryNames:readonly string[];readonly load:(kind:'expert'|'skill',id:string)=>Promise<CatalogDetail>;readonly onClose:()=>void;readonly onStart:(item:Item,draft?:string)=>Promise<void>;readonly busy:boolean;readonly t:Translate<OfficialAgentGalleryLocaleKey>}):ReactNode {

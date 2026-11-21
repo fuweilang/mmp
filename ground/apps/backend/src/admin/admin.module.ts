@@ -20,9 +20,11 @@ import { OfficialAgentModule } from '../official-agent/official-agent.module';
 import { OfficialSkillModule } from '../official-skill/official-skill.module';
 import { AdminOfficialSkillsController } from './admin-official-skills.controller';
 import { AdminOfficialSkillsService } from './admin-official-skills.service';
+import { MembershipModule } from '../membership/membership.module';
+import { MembershipAdminController } from './membership-admin.controller';
 
 @Module({
-  imports: [AuthModule, OfficialAgentModule, OfficialSkillModule],
+  imports: [AuthModule, OfficialAgentModule, OfficialSkillModule, MembershipModule],
   controllers: [CatalogCategoryController, AdminCatalogCategoryController,
     AdminUserController,
     AdminEnterpriseController,
@@ -32,6 +34,7 @@ import { AdminOfficialSkillsService } from './admin-official-skills.service';
     AdminOfficialAgentsController,
     AdminOfficialKnowledgeController,
     AdminOfficialSkillsController,
+    MembershipAdminController,
   ],
   providers: [CatalogCategoryService,
     AdminSupportService,

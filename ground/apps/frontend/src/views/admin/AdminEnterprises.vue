@@ -107,6 +107,12 @@
           <span v-else class="admin-empty">无</span>
         </template>
       </el-table-column>
+      <el-table-column label="会员版本" width="150">
+        <template #default="{ row }">
+          <span v-if="row.type === 'PLATFORM'">—</span>
+          <span v-else>{{ membershipLabel(row) }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="账号状态" width="90">
         <template #default="{ row }">
           <el-tag size="small" :type="row.status === 'active' ? 'success' : 'info'">
@@ -241,6 +247,9 @@
         <el-descriptions-item label="账号状态">
           {{ statusLabel(viewingRow.status) }}
         </el-descriptions-item>
+        <el-descriptions-item v-if="viewingRow.type !== 'PLATFORM'" label="会员版本">
+          {{ membershipLabel(viewingRow) }}
+        </el-descriptions-item>
       </el-descriptions>
       <template #footer>
         <el-button @click="viewOpen = false">关闭</el-button>
@@ -269,6 +278,18 @@
             </el-radio-group>
           </el-form-item>
         </template>
+        <template v-else>
+          <el-form-item label="会员版本">
+            <el-select v-model="form.plan">
+              <el-option label="标准版" value="standard" />
+              <el-option label="专业版" value="pro" />
+              <el-option label="旗舰版" value="flagship" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="form.plan !== 'standard'" label="到期日">
+            <el-date-picker v-model="form.expiresAt" type="date" value-format="YYYY-MM-DD" placeholder="选择到期日" />
+          </el-form-item>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="open = false">取消</el-button>
@@ -287,7 +308,7 @@ import { confirmDelete } from '../../utils/confirm-delete';
 import { computed, h, onBeforeUnmount, onMounted, reactive, ref, type VNode } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { Search } from 'lucide-vue-next';
-import { adminEnterpriseApi, type AdminEnterpriseRow } from '../../api/admin';
+import { adminEnterpriseApi, adminMembershipApi, type AdminEnterpriseRow, type MembershipPlanName } from '../../api/admin';
 import EnterpriseUsageDrawer from '@/components/admin/EnterpriseUsageDrawer.vue';
 import EnterpriseFundsDrawer from '@/components/admin/wallets/EnterpriseFundsDrawer.vue';
 import { useAuthStore } from '../../stores/auth';
@@ -320,6 +341,8 @@ const form = reactive({
   name: '',
   slug: '',
   type: 'ENTERPRISE' as 'ENTERPRISE' | 'AGENCY',
+  plan: 'standard' as MembershipPlanName,
+  expiresAt: '',
 });
 
 const rules: FormRules = {
@@ -385,6 +408,19 @@ function statusLabel(status: string) {
   return status === 'active' ? '激活' : '停用';
 }
 
+const PLAN_LABEL: Record<MembershipPlanName, string> = { standard: '标准版', pro: '专业版', flagship: '旗舰版' };
+
+function shanghaiDate(iso: string) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
+}
+
+function membershipLabel(row: AdminEnterpriseRow) {
+  const plan = row.membershipPlan ?? 'standard';
+  if (plan === 'standard') return '标准版 · 长期';
+  const day = row.membershipExpiresAt ? shanghaiDate(row.membershipExpiresAt) : '未设到期';
+  return `${PLAN_LABEL[plan]} · ${day}`;
+}
+
 function enterpriseColor(id: string) {
   let hash = 0;
   for (const character of id) hash = ((hash * 31) + character.charCodeAt(0)) >>> 0;
@@ -413,6 +449,8 @@ function resetForm() {
   form.name = '';
   form.slug = '';
   form.type = 'ENTERPRISE';
+  form.plan = 'standard';
+  form.expiresAt = '';
   formRef.value?.clearValidate();
 }
 
@@ -426,6 +464,8 @@ function openEdit(row: AdminEnterpriseRow) {
   editingId.value = row.id;
   form.name = row.name;
   form.slug = row.slug;
+  form.plan = row.membershipPlan ?? 'standard';
+  form.expiresAt = row.membershipExpiresAt ? shanghaiDate(row.membershipExpiresAt) : '';
   open.value = true;
 }
 
@@ -440,9 +480,17 @@ async function onSave() {
   saving.value = true;
   try {
     if (editingId.value) {
+      if (form.plan !== 'standard' && !form.expiresAt) {
+        ElMessage.error('请选择到期日');
+        return;
+      }
       await adminEnterpriseApi.update(editingId.value, {
         name: form.name.trim(),
         slug: form.slug.trim(),
+      });
+      await adminMembershipApi.setEnterprise(editingId.value, {
+        plan: form.plan,
+        ...(form.plan === 'standard' ? {} : { expiresAt: new Date(`${form.expiresAt}T23:59:59+08:00`).toISOString() }),
       });
       ElMessage.success('已保存');
     } else {

@@ -39,20 +39,20 @@ export class OfficialAgentController {
 
   @Get(':id/catalog-detail')
   @Header('Cache-Control','private, no-store')
-  catalogDetail(@CurrentUser() user:User,@Param('id') id:string){return this.officialAgents.catalogDetail(user,id);}
+  catalogDetail(@CurrentUser() user:User,@CurrentTenantId() tenantId:string|null,@Param('id') id:string){return this.officialAgents.catalogDetail(user,id,tenantId);}
 
   @Get('catalog-page')
   @Header('Cache-Control','private, no-store')
-  page(@CurrentUser() user:User,@Query('q') q?:string,@Query('capability') capability?:string,@Query('industry') industry?:string,@Query('cursor') cursor?:string){return this.officialAgents.catalogPage(user,{q,capability,industry,cursor});}
+  page(@CurrentUser() user:User,@CurrentTenantId() tenantId:string|null,@Query('q') q?:string,@Query('capability') capability?:string,@Query('industry') industry?:string,@Query('cursor') cursor?:string){return this.officialAgents.catalogPage(user,{q,capability,industry,cursor},tenantId);}
   @Get('catalog-home')
   @Header('Cache-Control','private, no-store')
-  home(@CurrentUser() user:User,@Query('q') q?:string,@Query('capability') capability?:string,@Query('industry') industry?:string){return this.officialAgents.catalogHome(user,{q,capability,industry});}
+  home(@CurrentUser() user:User,@CurrentTenantId() tenantId:string|null,@Query('q') q?:string,@Query('capability') capability?:string,@Query('industry') industry?:string){return this.officialAgents.catalogHome(user,{q,capability,industry},tenantId);}
   @Get('catalog-facets')
   @Header('Cache-Control','private, no-store')
   facets(@CurrentUser() user:User){return this.officialAgents.catalogFacets(user);}
   @Get(':id/catalog-card')
   @Header('Cache-Control','private, no-store')
-  card(@CurrentUser() user:User,@Param('id') id:string){return this.officialAgents.catalogCard(user,id);}
+  card(@CurrentUser() user:User,@CurrentTenantId() tenantId:string|null,@Param('id') id:string){return this.officialAgents.catalogCard(user,id,tenantId);}
 
   @Get('console/scopes')
   @Header('Cache-Control', 'private, no-store')

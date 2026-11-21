@@ -16,6 +16,8 @@ export type AdminEnterpriseRow = {
   /** 上级：null = 直属企业（猛犸总部）。 */
   parentId: string | null;
   parentName: string | null;
+  membershipPlan?: 'standard' | 'pro' | 'flagship';
+  membershipExpiresAt?: string | null;
   balanceCoins?: number;
   totalCreditedCoins?: number;
   totalDebitedCoins?: number;

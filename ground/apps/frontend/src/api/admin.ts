@@ -6,6 +6,7 @@
 export * from './admin/types';
 export * from './admin/users';
 export * from './admin/enterprises';
+export * from './admin/membership';
 export * from './admin/roles';
 export * from './admin/billing';
 export * from './admin/audit';

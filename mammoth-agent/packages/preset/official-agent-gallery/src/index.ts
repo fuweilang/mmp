@@ -9,7 +9,7 @@ import type { AgentHandle } from '@mammoth-ai/mmp-agent'
 import {ManagedDocuments,managedRuntimeProjection,compositionOf,sha,type ManagedComposition,type GalleryReceipt} from './managed-runtime.ts'
 import type {} from '@mammoth-ai/mmp-agent-preset-registry'
 import type {} from '@mammoth-ai/mmp-agent-instructions'
-import type { CatalogQuery, CatalogFacets, ExpertCatalogPage, SkillCatalogPage, CatalogDetail, OfficialSkillAvailability } from './types.ts'
+import type { CatalogQuery, CatalogFacets, ExpertCatalogPage, SkillCatalogPage, CatalogDetail, OfficialSkillAvailability, MembershipOffer, MembershipQr, MembershipPayStatus } from './types.ts'
 /** Ground official Expert gallery, frozen Sessions, tool enforcement, and usage attribution. */
 import { randomUUID } from 'node:crypto'
 import { Context, Service } from '@mammoth-ai/cordis'
@@ -217,14 +217,26 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     this.ctx.on('agent/created', async ({ agent }) => {
       this.installProductIdentity(agent)
       const stored = this.bindingFor(agent.session)
-      const binding = stored?.preview ? await this.openableBinding(agent, stored) : stored
+      const blank = !agent.session.snapshotEvents().some(event => event.type === 'turn/start')
+      let binding = stored
+      // A new task reuses a blank Session. An expert that was taken offline must not veto that Session.
+      if (stored !== null && blank) {
+        try {
+          binding = stored.preview ? await this.openableBinding(agent, stored) : stored
+          if (!stored.preview) await this.resolveBinding(stored)
+        } catch (error) {
+          if (!this.expertUnavailable(error)) throw error
+          this.releaseUnavailableExpert(agent)
+          return
+        }
+      } else binding = stored?.preview ? await this.openableBinding(agent, stored) : stored
       const selected=this.skillBindingFor(agent.session)
       if(binding===null&&selected===null&&!agent.session.snapshotEvents().some(e=>e.type==='official-gallery/attempt'))return
       this.installCatalogRuntime(agent)
       if(this.runtimes.get(agent.id)?.active!==undefined)return
 
       if (binding !== null) {
-        await this.resolveBinding(binding)
+        if (!(stored !== null && blank && !stored.preview)) await this.resolveBinding(binding)
         // Linked skills: summary catalog only; bodies load via native `skill` tool.
         this.ctx.groundRequestAttribution.bind(agent.id, {
           ...this.attributionFor(binding),
@@ -325,6 +337,7 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     await this.assertStandardServices()
     const card=await this.ground.getCard(request.agentId)
     if(!card.executionGranted)throw Error('OFFICIAL_AGENT_NOT_GRANTED')
+    if(card.locked)throw Error('MEMBERSHIP_REQUIRED')
     const execution=await this.ground.resolve(request.agentId,card.versionId)
     if(execution.agentId!==request.agentId||execution.versionId!==card.versionId)throw Error('EXPERT_BINDING_CHANGED: reopen the expert')
     return this.createExpert(request,execution,card.name)
@@ -477,6 +490,18 @@ export default class OfficialAgentGallery extends TypertRemoteService {
   /** Public published card only; role instructions remain Host-only. */
   @Remote
   expertCard(id:string):Promise<OfficialAgentCard> { return this.ground.getCard(id) }
+
+  /** Current enterprise plan, prices, and whether this user can pay. */
+  @Remote
+  membershipOffer(): Promise<MembershipOffer> { return this.ground.membershipOffer() }
+
+  /** New WeChat or Alipay code. Does not write a membership order. */
+  @Remote
+  membershipPay(plan: 'pro' | 'flagship', provider: 'wechat' | 'alipay'): Promise<MembershipQr> { return this.ground.membershipPay(plan, provider) }
+
+  /** Asks the channel whether this code was paid. Unpaid writes nothing. */
+  @Remote
+  membershipPayStatus(outTradeNo: string): Promise<MembershipPayStatus> { return this.ground.membershipPayStatus(outTradeNo) }
 
   /**
    * The current expert owns the speaker identity; ordinary turns speak as 猛犸AI.
@@ -809,8 +834,26 @@ export default class OfficialAgentGallery extends TypertRemoteService {
     }
   }
   private previewUnavailable(error: unknown): boolean {
+    return this.expertUnavailable(error) || (error instanceof Error ? error.message : String(error)).includes('PREVIEW_EXPIRED_OR_FORBIDDEN')
+  }
+  /** Ground refused the frozen expert. A blank new task continues without it. */
+  private expertUnavailable(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error)
-    return message.includes('HTTP 403') || message.includes('PREVIEW_EXPIRED_OR_FORBIDDEN')
+    return message.includes('HTTP 403') || message.includes('EXPERT_OFFLINE') || message.includes('专家已下架') || message.includes('MEMBERSHIP_REQUIRED')
+  }
+  /** Drop a creation expert that Ground will not open, so later turns speak as 猛犸AI. */
+  private releaseUnavailableExpert(agent: Agent): void {
+    const selection = { protocol: 1 as const, selectionVersion: 0, expertRef: null, skillRef: null, skillRefs: [], expertRefs: [] }
+    const selectionHash = catalogHash(selection)
+    const authScope = { userId: 'released', scope: 'released' }
+    const released = { expert: null, skill: null, skillHash: null, skills: [], skillHashes: [], selectionHash, authScope }
+    const id = `released-${agent.id}`
+    agent.session.append('official-gallery/attempt', {
+      protocol: 1, requestId: id, messageId: id, selection,
+      inputHash: catalogHash({ selection, content: [], mode: 'queue' }),
+      compositionHash: compositionHashOf(released),
+      ...released,
+    })
   }
   private async adoptPublishedExpert(agent: Agent, binding: OfficialAgentBinding, cause: unknown): Promise<OfficialAgentBinding> {
     const card = await this.ground.getCard(binding.agentId).catch(() => undefined)

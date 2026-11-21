@@ -91,6 +91,20 @@
           <span v-else class="muted">未设置</span>
         </template>
       </el-table-column>
+      <el-table-column label="可用版本" width="130">
+        <template #default="{ row }">
+          <el-select
+            :model-value="row.minPlan || 'flagship'"
+            size="small"
+            :disabled="savingPlanId === row.id"
+            @change="onMinPlan(row, $event)"
+          >
+            <el-option label="标准版" value="standard" />
+            <el-option label="专业版" value="pro" />
+            <el-option label="旗舰版" value="flagship" />
+          </el-select>
+        </template>
+      </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
           <div class="status-cell">
@@ -178,9 +192,10 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
+import { ElMessage } from 'element-plus';
 import { useCatalogCategories } from '../../../composables/useCatalogCategories';
 import { Search, UserRound } from 'lucide-vue-next';
-import type { OfficialAgentCategory, OfficialAgentRow, OfficialAgentStatus, OfficialAgentStatusCounts } from '../../../api/admin';
+import { adminMembershipApi, type MembershipPlanName, type OfficialAgentCategory, type OfficialAgentRow, type OfficialAgentStatus, type OfficialAgentStatusCounts } from '../../../api/admin';
 import { categoryLabel, formatDate, statusLabel, statusType } from '../../../components/admin/official-agents/agent-display';
 
 const props = withDefaults(defineProps<{
@@ -228,6 +243,7 @@ const emit = defineEmits<{
 
 const { options: categoryOptions } = useCatalogCategories('expert');
 const tableRef = ref();
+const savingPlanId = ref('');
 const brokenAvatarIds = reactive<Record<string, boolean>>({});
 
 /** 缓存键含头像地址：换头像后 url 变化即重新尝试加载（原实现保存后清理缓存）。 */
@@ -251,6 +267,22 @@ function onCategoryChange(value: OfficialAgentCategory | '' | undefined) {
 
 function onAvatarError(row: OfficialAgentRow) {
   brokenAvatarIds[avatarCacheKey(row)] = true;
+}
+
+async function onMinPlan(row: OfficialAgentRow, minPlan: MembershipPlanName) {
+  const previous = row.minPlan || 'flagship';
+  if (minPlan === previous) return;
+  row.minPlan = minPlan;
+  savingPlanId.value = row.id;
+  try {
+    await adminMembershipApi.setAgentMinPlan(row.id, minPlan);
+    ElMessage.success('已更新可用版本');
+  } catch (e) {
+    row.minPlan = previous;
+    ElMessage.error(e instanceof Error ? e.message : '更新失败');
+  } finally {
+    savingPlanId.value = '';
+  }
 }
 
 function onSelectionChange(rowsSelected: OfficialAgentRow[]) {

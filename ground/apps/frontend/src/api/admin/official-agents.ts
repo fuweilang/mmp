@@ -70,6 +70,7 @@ export type OfficialAgentRow = {
   category: OfficialAgentCategory | null;
   capabilities: string[];
   status: OfficialAgentStatus;
+  minPlan?: 'standard' | 'pro' | 'flagship';
   /** True when a published online version exists and pending config differs. Not a 4th status. */
   hasUnpublishedChanges?: boolean;
   /** Public branding URL when an avatar file exists; null → first-character fallback. */

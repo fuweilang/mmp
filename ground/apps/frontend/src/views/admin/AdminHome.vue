@@ -55,7 +55,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { BarChart3, Building2, Coins, ScrollText, Shield, Users, Wallet } from 'lucide-vue-next';
+import { BarChart3, Building2, Coins, Crown, ScrollText, Shield, Users, Wallet } from 'lucide-vue-next';
 import { adminEnterpriseApi, adminUserApi } from '../../api/admin';
 import MetricCard from '../../components/MetricCard.vue';
 
@@ -113,6 +113,12 @@ const shortcuts = [
     title: '企业管理',
     desc: '维护企业、品牌，进入业务工作台',
     icon: Building2,
+  },
+  {
+    path: '/admin/membership',
+    title: '套餐与定价',
+    desc: '专业版和旗舰版的年费与说明',
+    icon: Crown,
   },
   {
     path: '/admin/enterprise-token-stats',

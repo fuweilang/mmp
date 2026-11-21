@@ -33,6 +33,11 @@ const router = createRouter({
           component: () => import('../views/admin/AdminEnterprises.vue'),
         },
         {
+          path: 'membership',
+          meta: { title: '套餐与定价' },
+          component: () => import('../views/admin/AdminMembership.vue'),
+        },
+        {
           path: 'enterprise-token-stats',
           meta: { title: 'token用量统计' },
           component: () => import('../views/admin/AdminEnterpriseTokenStats.vue'),
@@ -145,6 +150,7 @@ const router = createRouter({
         { path: 'roles', meta: { title: '角色管理', perm: 'portal.console.roles' }, component: () => import('../views/Roles.vue') },
         { path: 'usage', meta: { title: '操作审计', perm: 'portal.console.usage' }, component: () => import('../views/Usage.vue') },
         { path: 'billing', meta: { title: 'AI币充值', perm: 'portal.console.billing' }, component: () => import('../views/ConsoleBilling.vue') },
+        { path: 'membership', meta: { title: '专家广场' }, component: () => import('../views/ConsoleMembership.vue') },
         { path: 'ai-usage', meta: { title: 'AI币用量', perm: 'portal.console.workbench' }, component: () => import('../views/ConsoleAiUsage.vue') },
         { path: 'settings', meta: { title: '企业设置', perm: 'portal.console.settings' }, component: () => import('../views/Settings.vue') },
       ],

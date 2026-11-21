@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import type { LlmChatGatewayService } from '../llm/llm-chat.gateway.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertAgentMembership } from '../membership/access';
 import { OfficialTabularAnalyzeService, TABULAR_ANALYZE_TOOL } from './tabular-analyze.service';
 import { OfficialWebFetchService, WEB_FETCH_TOOL } from './web-fetch.service';
 import { OfficialWebSearchService, WEB_SEARCH_TOOL } from './web-search.service';
@@ -142,6 +143,7 @@ export class OfficialOrchestrateService {
     const childVersion = child.onlineVersion;
     const config=childVersion.executionConfig as {route?:string;retrievalPolicy?:string}|null;
     if(config?.route==='KNOWLEDGE_CORE' && config.retrievalPolicy!=='OFF')throw new BadRequestException('KNOWLEDGE_DIRECT_DELEGATION_UNSUPPORTED: open this expert in a protocol 2 Host session');
+    if (!previewOrigin) await assertAgentMembership(this.prisma, tenantId, child.minPlan);
     const childScope = stringList(childVersion.toolScope);
     const toolTrace: DelegateResult['toolTrace'] = [];
     const evidence: string[] = [];

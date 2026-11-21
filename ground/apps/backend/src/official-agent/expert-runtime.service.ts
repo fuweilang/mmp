@@ -15,6 +15,8 @@ import { assertSuperAdmin } from '../auth/super-admin';
 import { KnowledgeRetrievalService } from '../knowledge-core/retrieval.service';
 import { AuthorizedRelease, KnowledgeAccess, KnowledgeSourceReference } from '../knowledge-core/retrieval-access';
 import { expertExecutionPrompt } from './expert-definition';
+import { assertAgentMembership, loadMembershipView } from '../membership/access';
+import { isMembershipPlan, membershipLocked } from '../membership/plan';
 import type { ExpertExecutionConfig, FrozenExpertExecutionConfig } from '@mammoth/shared';
 /** Protocol2 clients strictly validate locators. Keep richer preparation metadata
  * in stored chunks/inspection and model context, and expose the established wire fields. */
@@ -163,6 +165,7 @@ export class ExpertRuntimeService {
         const agent = await this.db.officialAgent.findUnique({ where: { id: binding.agentId } });
         if (!agent || agent.status !== 'PUBLISHED' || !agent.onlineVersionId)
             throw new ForbiddenException('EXPERT_OFFLINE');
+        await assertAgentMembership(this.db, tenantId, agent.minPlan);
         const version = await this.db.officialAgentVersion.findFirst({ where: { id: binding.versionId, agentId: agent.id } });
         if (!version)
             throw new ForbiddenException('EXPERT_VERSION_FORBIDDEN');
@@ -251,6 +254,17 @@ export class ExpertRuntimeService {
         if (expected.userId !== user.id || expected.scope !== (tenantId ? `tenant:${tenantId}` : 'personal')) throw new ForbiddenException('EXPERT_SOURCE_ACCESS_CHANGED');
         if (!entries.length || entries.length > 1024 || entries.reduce((sum,entry)=>sum+entry.sources.length,0)>1024) fail('EXPERT_SOURCE_HISTORY_LIMIT');
         if (expected.verifyContent && entries.some(entry=>entry.sources.some(source=>typeof source.text!=='string'||source.text.length>32000))) fail('EXPERT_SOURCE_CONTENT_REQUIRED');
+        if (tenantId && typeof this.db.officialAgent?.findMany === 'function') {
+            const view = await loadMembershipView(this.db, tenantId);
+            if (view.enforced) {
+                const ids = [...new Set(entries.map(entry => entry.binding.agentId))];
+                const agents = await this.db.officialAgent.findMany({ where: { id: { in: ids } }, select: { minPlan: true } });
+                for (const agent of agents) {
+                    const required = isMembershipPlan(agent.minPlan) ? agent.minPlan : 'flagship';
+                    if (membershipLocked(view, required)) throw new ForbiddenException('MEMBERSHIP_REQUIRED');
+                }
+            }
+        }
         if (!await authorizeExpertHistoryDisclosure(this.db,user.id,tenantId,entries,expected.verifyContent===true)) throw new ForbiddenException('KNOWLEDGE_FORBIDDEN');
         return {authorized:true as const,...expected.verifyContent?{contentVerified:true as const}:{}};
     }

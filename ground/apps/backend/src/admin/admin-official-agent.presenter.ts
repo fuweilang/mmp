@@ -225,6 +225,7 @@ export class AdminOfficialAgentPresenter {
       category: row.category,
       capabilities: Array.isArray(row.capabilities) ? row.capabilities : [],
       status: row.status,
+      minPlan: row.minPlan,
       hasUnpublishedChanges: hasUnpublishedChanges(row),
       avatarUrl: this.resolveAvatarUrl(
         row.key,

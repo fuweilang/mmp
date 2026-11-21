@@ -36,6 +36,10 @@ export interface OfficialAgentCard {
   readonly avatarUrl: string | null
   /** Whether the current enterprise may execute this Agent; browse does not require it. */
   readonly executionGranted: boolean
+  /** Lowest plan that can use this expert. Omitted by older servers. */
+  readonly minPlan?: 'standard' | 'pro' | 'flagship' | undefined
+  /** True when the current enterprise plan is below minPlan. */
+  readonly locked?: boolean | undefined
   /** Enabled linked skill summaries from Ground; omitted or empty when none. */
   readonly linkedSkills?: readonly OfficialSkillSummary[] | undefined
   readonly discovery?: { readonly capability: string; readonly industries: readonly string[] } | undefined
@@ -213,6 +217,31 @@ export interface CatalogCount {
 }
 export interface CatalogFacets { readonly total:number; readonly capabilities:readonly CatalogCount[]; readonly industries:readonly CatalogCount[] }
 export interface ExpertCatalogPage { readonly items:readonly OfficialAgentCard[]; readonly total:number; readonly hasMore:boolean; readonly nextCursor:string|null }
+export interface MembershipOffer {
+  readonly plan: 'standard' | 'pro' | 'flagship'
+  readonly expiresAt: string | null
+  readonly enforced: boolean
+  readonly canPay: boolean
+  readonly proPriceYuan: number
+  readonly flagshipPriceYuan: number
+  readonly standardSummary: string
+  readonly proSummary: string
+  readonly flagshipSummary: string
+  readonly wechatConfigured: boolean
+  readonly alipayConfigured: boolean
+}
+export interface MembershipQr {
+  readonly outTradeNo: string
+  readonly qrDataUrl: string
+  readonly plan: 'pro' | 'flagship'
+  readonly amountYuan: number
+  readonly provider: 'wechat' | 'alipay'
+}
+export interface MembershipPayStatus {
+  readonly paid: boolean
+  readonly plan: 'standard' | 'pro' | 'flagship'
+  readonly expiresAt: string | null
+}
 export interface SkillCatalogPage { readonly items:readonly OfficialSkillCard[]; readonly total:number; readonly hasMore:boolean; readonly nextCursor:string|null }
 
 /** Public allowlisted discovery document; no role, package paths or tool configuration. */

@@ -13,6 +13,13 @@ enum TenantType {
   ENTERPRISE
 }
 
+/// 企业会员版本。标准版无到期；专业版、旗舰版看 membership_expires_at。
+enum MembershipPlan {
+  standard
+  pro
+  flagship
+}
+
 enum MemberRole {
   OWNER
   ADMIN
@@ -79,6 +86,9 @@ model Tenant {
   slug             String      @unique
   type             TenantType
   status           String      @default("active")
+  /// 购买版本。到期后有效版本仍是标准版，本字段保留到下次写入。
+  membershipPlan      MembershipPlan @default(standard) @map("membership_plan")
+  membershipExpiresAt DateTime?      @map("membership_expires_at")
   logoUrl          String?     @map("logo_url")
   welcomeMessage   String      @default("") @map("welcome_message")
   defaultAgentId   String?     @map("default_agent_id")
@@ -96,12 +106,60 @@ model Tenant {
   quota            Quota?
   aiWallet         TenantAiWallet?
   aiRechargeOrders AiRechargeOrder[]
+  membershipOrders MembershipOrder[]
+  membershipCheckouts MembershipCheckout[]
   tokenUsageTurns  TokenUsageTurn[]
   orgPresetOverrides OrgPresetOverride[]
   llmModelAssignments  LlmTenantModel[]
   officialAgentGrants OfficialAgentTenantGrant[]
 
   @@map("tenant")
+}
+
+/// 套餐与定价。单行，年费单位是元。标准版不标价。
+model MembershipCatalog {
+  id                 String   @id @default("default")
+  proPriceYuan       Int      @default(0) @map("pro_price_yuan")
+  flagshipPriceYuan  Int      @default(0) @map("flagship_price_yuan")
+  standardSummary    String   @default("") @map("standard_summary") @db.Text
+  proSummary         String   @default("") @map("pro_summary") @db.Text
+  flagshipSummary    String   @default("") @map("flagship_summary") @db.Text
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("membership_catalog")
+}
+
+/// 只有支付成功才写入。同一支付单号只升级一次。
+model MembershipOrder {
+  id              String         @id @default(cuid())
+  tenantId        String         @map("tenant_id")
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan            MembershipPlan
+  amountCents     Int            @map("amount_cents")
+  provider        String
+  providerTradeNo String         @unique @map("provider_trade_no")
+  paidAt          DateTime       @map("paid_at")
+  expiresAt       DateTime       @map("expires_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  @@index([tenantId, paidAt])
+  @@map("membership_order")
+}
+
+/// 付款码和商户单号的绑定。未支付不是失败，也不写 membership_order。
+model MembershipCheckout {
+  id          String         @id @default(cuid())
+  outTradeNo  String         @unique @map("out_trade_no")
+  tenantId    String         @map("tenant_id")
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan        MembershipPlan
+  amountCents Int            @map("amount_cents")
+  provider    String
+  codeUrl     String         @map("code_url") @db.Text
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@map("membership_checkout")
 }
 
 model OrgTree {
@@ -185,6 +243,8 @@ model OfficialAgent {
   /// 内容向能力标签（中文）；工具能力由线上 version.toolScope 派生后合并，最多展示 3 个。
   capabilities     Json                      @default("[]")
   status           OfficialAgentStatus       @default(DRAFT)
+  /// 从这个版本起可用。新专家默认旗舰，避免一发布就进标准版。
+  minPlan          MembershipPlan            @default(flagship) @map("min_plan")
   name             String
   summary          String                    @default("") @db.Text
   openingQuestions Json                      @default("[]") @map("opening_questions")

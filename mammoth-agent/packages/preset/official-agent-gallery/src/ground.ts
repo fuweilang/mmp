@@ -116,10 +116,16 @@ const cardSchema = z.object({
   avatarUrl: z.string().nullable(),
   executionGranted: z.boolean(),
   linkedSkills: z.array(skillSummarySchema).optional(),
+  minPlan: z.enum(['standard', 'pro', 'flagship']).optional(),
+  locked: z.boolean().optional(),
 }).strict()
 
 const discoverySchema=z.object({capability:z.string(),industries:z.array(z.string())}).strict()
-const expertPageSchema=z.object({items:z.array(cardSchema.extend({discovery:discoverySchema.optional()})),total:z.number(),hasMore:z.boolean(),nextCursor:z.string().nullable()}).strict()
+const membershipSchema=z.object({plan:z.enum(['standard','pro','flagship']),expiresAt:z.string().nullable(),enforced:z.boolean()}).strict()
+const membershipOfferSchema=z.object({plan:z.enum(['standard','pro','flagship']),expiresAt:z.string().nullable(),enforced:z.boolean(),canPay:z.boolean(),proPriceYuan:z.number().int(),flagshipPriceYuan:z.number().int(),standardSummary:z.string(),proSummary:z.string(),flagshipSummary:z.string(),wechatConfigured:z.boolean(),alipayConfigured:z.boolean()}).strict()
+const membershipQrSchema=z.object({outTradeNo:z.string().min(1),qrDataUrl:z.string().min(1),plan:z.enum(['pro','flagship']),amountYuan:z.number().int().positive(),provider:z.enum(['wechat','alipay'])}).strict()
+const membershipStatusSchema=z.object({paid:z.boolean(),plan:z.enum(['standard','pro','flagship']),expiresAt:z.string().nullable()}).strict()
+const expertPageSchema=z.object({items:z.array(cardSchema.extend({discovery:discoverySchema.optional()})),total:z.number(),hasMore:z.boolean(),nextCursor:z.string().nullable(),membership:membershipSchema.optional()}).strict()
 const skillPageSchema=z.object({items:z.array(skillCardSchema.extend({avatarUrl:z.string().nullable().optional()})),total:z.number(),hasMore:z.boolean(),nextCursor:z.string().nullable()}).strict()
 const facetSchema=z.object({total:z.number(),capabilities:z.array(z.object({id:z.string(),count:z.number(),name:z.string().min(1).optional(),sortOrder:z.number().int().nonnegative().optional()}).strict()),industries:z.array(z.object({id:z.string(),count:z.number()}).strict())}).strict()
 const expertHomeSchema=z.object({facets:facetSchema,page:expertPageSchema}).strict()
@@ -267,6 +273,9 @@ export class GroundOfficialAgentClient {
   expertFacets(){return this.request('/api/official-agents/catalog-facets',facetSchema,{})}
   skillFacets(){return this.request('/api/official-skills/catalog-facets',facetSchema,{})}
   getCard(id:string){return this.request(`/api/official-agents/${encodeURIComponent(id)}/catalog-card`,cardSchema,{})}
+  membershipOffer(){return this.request('/api/billing/membership',membershipOfferSchema,{})}
+  membershipPay(plan:'pro'|'flagship',provider:'wechat'|'alipay'){return this.request('/api/billing/membership/payQr',membershipQrSchema,{method:'POST',body:JSON.stringify({plan,provider})})}
+  membershipPayStatus(outTradeNo:string){return this.request('/api/billing/membership/status',membershipStatusSchema,{method:'POST',body:JSON.stringify({outTradeNo})})}
 
   /**
    * List all published public cards; phase-1 executionGranted is true for all published agents.

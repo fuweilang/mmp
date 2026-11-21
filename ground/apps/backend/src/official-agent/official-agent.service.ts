@@ -30,6 +30,8 @@ import { TenantService } from '../tenant/tenant.service';
 import { buildPublicCapabilities } from './gallery-presentation';
 import { loadOfficialAgentAssets, loadOfficialAgentAvatarRef } from './official-agent-assets';
 import { resolvePresentedOfficialAvatarUrl } from './gallery-avatars';
+import { assertAgentMembership, loadMembershipView } from '../membership/access';
+import { isMembershipPlan, membershipLocked, orderByMembershipAccess, type MembershipView } from '../membership/plan';
 
 const grantedAgentInclude = {
   agent: true,
@@ -60,8 +62,8 @@ export type OfficialAgentExecution = {
   }>;
 };
 
-const CATALOG_EXPERT_PAGE_SELECT={id:true,key:true,kind:true,category:true,capabilities:true,customAvatarPath:true,onlineVersion:{select:{id:true,version:true,name:true,summary:true,openingQuestions:true,toolScope:true,linkedSkillSummaries:true,customAvatarPath:true}}} as const;
-const CATALOG_EXPERT_SELECT={id:true,key:true,kind:true,category:true,capabilities:true,customAvatarPath:true,onlineVersion:{select:{id:true,version:true,name:true,summary:true,openingQuestions:true,toolScope:true,expertDefinition:true,linkedSkillSummaries:true,customAvatarPath:true}}} as const;
+const CATALOG_EXPERT_PAGE_SELECT={id:true,key:true,kind:true,category:true,capabilities:true,customAvatarPath:true,minPlan:true,onlineVersion:{select:{id:true,version:true,name:true,summary:true,openingQuestions:true,toolScope:true,linkedSkillSummaries:true,customAvatarPath:true}}} as const;
+const CATALOG_EXPERT_SELECT={id:true,key:true,kind:true,category:true,capabilities:true,customAvatarPath:true,minPlan:true,onlineVersion:{select:{id:true,version:true,name:true,summary:true,openingQuestions:true,toolScope:true,expertDefinition:true,linkedSkillSummaries:true,customAvatarPath:true}}} as const;
 
 @Injectable()
 export class OfficialAgentService {
@@ -83,8 +85,9 @@ export class OfficialAgentService {
    * grant 表仍保留供后续套餐使用，但不再作为可见/执行前置。
    * 公开字段不含 systemPrompt / toolScope / kbFolderIds。
    */
-  async list(user: User, _tenantId: string | null) {
+  async list(user: User, tenantId: string | null) {
     this.requireActiveAccount(user);
+    const membership = await loadMembershipView(this.prisma, tenantId);
     const agents = await this.prisma.officialAgent.findMany({
       where: {
         status: OfficialAgentStatus.PUBLISHED,
@@ -102,6 +105,7 @@ export class OfficialAgentService {
       if (!agent.onlineVersion) continue;
       cards.push({
         ...this.publicCatalogCard(agent, true, avatarByKey.get(agent.key) ?? null),
+        ...this.planFields(membership, agent.minPlan),
         linkedSkills: linked.get(agent.id) ?? [],
       });
     }
@@ -119,7 +123,7 @@ export class OfficialAgentService {
     versionId?: string,
     executionProtocol?: number,
   ): Promise<OfficialAgentExecution> {
-    const { agent, version } = await this.resolvePublishedVersion(user, agentId, versionId);
+    const { agent, version } = await this.resolvePublishedVersion(user, tenantId, agentId, versionId);
     if (executionProtocol === 2) return {...await this.runtime!.resolve(user,tenantId,{agentId,versionId:version.id}),linkedSkills:await this.versionLinkedSkills(agent.id,version)} as unknown as OfficialAgentExecution;
     if ((version.executionConfig as any)?.route === 'KNOWLEDGE_CORE' || (version.executionConfig as any)?.generationModel?.mode === 'FIXED') throw new BadRequestException('EXECUTION_PROTOCOL_UPGRADE_REQUIRED: upgrade client to executionProtocol 2');
     const linkedSkills = await this.versionLinkedSkills(agent.id, version);
@@ -141,26 +145,28 @@ export class OfficialAgentService {
     const facets = catalogFacets('expert', rows);
     return { ...facets, capabilities: await categoryFacets(this.prisma, 'expert', Object.fromEntries(facets.capabilities.map(item => [item.id, item.count]))) };
   }
-  async catalogHome(user:User,query:CatalogQuery){const [facets,page]=await Promise.all([this.catalogFacets(user),this.catalogPage(user,query)]);return {facets,page};}
-  async catalogCard(user:User,id:string){this.requireActiveAccount(user);const row=await this.prisma.officialAgent.findFirst({where:{id,status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}},select:CATALOG_EXPERT_SELECT});if(!row?.onlineVersion)throw new NotFoundException('专家不可用');return {...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),linkedSkills:await this.versionLinkedSkills(row.id,row.onlineVersion)};}
-  async catalogDetail(user:User,id:string){
-    const card=await this.catalogCard(user,id);
+  async catalogHome(user:User,query:CatalogQuery,tenantId:string|null=null){const [facets,page]=await Promise.all([this.catalogFacets(user),this.catalogPage(user,query,tenantId)]);return {facets,page};}
+  async catalogCard(user:User,id:string,tenantId:string|null=null){this.requireActiveAccount(user);const membership=await loadMembershipView(this.prisma,tenantId);const row=await this.prisma.officialAgent.findFirst({where:{id,status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}},select:CATALOG_EXPERT_SELECT});if(!row?.onlineVersion)throw new NotFoundException('专家不可用');return {...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),...this.planFields(membership,row.minPlan),linkedSkills:await this.versionLinkedSkills(row.id,row.onlineVersion)};}
+  async catalogDetail(user:User,id:string,tenantId:string|null=null){
+    const card=await this.catalogCard(user,id,tenantId);
     // Read the exact online version used by the card, never mutable draft metadata.
     const version=await this.prisma.officialAgentVersion.findFirst({where:{id:card.versionId,agentId:id,onlineFor:{status:OfficialAgentStatus.PUBLISHED}},select:{expertDefinition:true}});
     if(!version)throw new NotFoundException('专家公开版本已变更，请刷新');
     return {kind:'expert' as const,id:card.id,key:card.key,name:card.name,summary:displaySummary(card.key,card.summary),avatarUrl:card.avatarUrl,versionId:card.versionId,detail:expertDiscoveryDetail(version.expertDefinition,card.openingQuestions),linkedSkills:(card.linkedSkills??[]).map(skill=>({id:skill.id,name:skill.name,summary:skill.summary}))};
   }
 
-  async catalogPage(user:User,query:CatalogQuery){
-    this.requireActiveAccount(user);const f=catalogQuery(query,'expert');const filters:Prisma.OfficialAgentWhereInput[]=[{status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}}];
+  async catalogPage(user:User,query:CatalogQuery,tenantId:string|null=null){
+    this.requireActiveAccount(user);const membership=await loadMembershipView(this.prisma,tenantId);const f=catalogQuery(query,'expert');const filters:Prisma.OfficialAgentWhereInput[]=[{status:OfficialAgentStatus.PUBLISHED,onlineVersionId:{not:null}}];
     if(f.capability!=='all'||f.industry!=='all')filters.push(catalogDiscoveryWhere('expert',f.capability,f.industry));
     if(f.q)filters.push({OR:[{key:{contains:f.q,mode:'insensitive'}},{onlineVersion:{is:{OR:[{name:{contains:f.q,mode:'insensitive'}},{summary:{contains:f.q,mode:'insensitive'}}]}}},...Object.entries(DESCRIPTIONS).filter(([,v])=>v.summary.toLocaleLowerCase().includes(f.q.toLocaleLowerCase())).map(([key,v])=>({key,onlineVersion:{is:{summary:v.expectedOriginal}}}))]});
     const where:Prisma.OfficialAgentWhereInput={AND:filters};
-    const [total,rows]=await Promise.all([this.prisma.officialAgent.count({where}),this.prisma.officialAgent.findMany({where:{AND:[where,...f.after?[{key:{gt:f.after}}]:[]]},orderBy:{key:'asc'},take:21,select:CATALOG_EXPERT_PAGE_SELECT})]);
-    const page=rows.slice(0,20);
+    const rows=orderByMembershipAccess(await this.prisma.officialAgent.findMany({where,orderBy:{key:'asc'},select:CATALOG_EXPERT_PAGE_SELECT}),membership);
+    const start=f.after?rows.findIndex(row=>row.key===f.after)+1:0;
+    const window=rows.slice(start<0?0:start);
+    const page=window.slice(0,20);
     const linked=await this.linkedSkillsByAgent(page.flatMap(row=>row.onlineVersion?[{id:row.id,versionId:row.onlineVersion.id,linkedSkillSummaries:row.onlineVersion.linkedSkillSummaries}]:[]));
-    const items=page.map(row=>({...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),summary:displaySummary(row.key,row.onlineVersion!.summary),discovery:discoveryOf('expert',row.key,row.category),linkedSkills:linked.get(row.id)??[]}));
-    return {items,total,hasMore:rows.length>20,nextCursor:rows.length>20?nextCatalogCursor(page[page.length-1]!.key,f.signature):null};
+    const items=page.map(row=>({...this.publicCatalogCard(row,true,loadOfficialAgentAvatarRef(row.key)),summary:displaySummary(row.key,row.onlineVersion!.summary),discovery:discoveryOf('expert',row.key,row.category),...this.planFields(membership,row.minPlan),linkedSkills:linked.get(row.id)??[]}));
+    return {items,total:rows.length,hasMore:window.length>20,nextCursor:window.length>20?nextCatalogCursor(page[page.length-1]!.key,f.signature):null,membership:{plan:membership.plan,expiresAt:membership.expiresAt,enforced:membership.enforced}};
   }
 
   /** schemaVersion lives inside expertDefinition. The list only needs that one flag, not the document. */
@@ -239,7 +245,7 @@ export class OfficialAgentService {
     versionId: string | undefined,
     query: string,
   ) {
-    const { agent, version } = await this.resolvePublishedVersion(user, agentId, versionId);
+    const { agent, version } = await this.resolvePublishedVersion(user, tenantId, agentId, versionId);
     if ((version.executionConfig as any)?.route === 'KNOWLEDGE_CORE') throw new BadRequestException('EXECUTION_PROTOCOL_UPGRADE_REQUIRED');
     if (await this.officialKb.hasDocuments(agent.id)) {
       const result = await this.officialKb.search(agent.id, query);
@@ -276,7 +282,7 @@ export class OfficialAgentService {
     versionId: string | undefined,
     query: string,
   ) {
-    const { agent, version } = await this.resolvePublishedVersion(user, agentId, versionId);
+    const { agent, version } = await this.resolvePublishedVersion(user, tenantId, agentId, versionId);
     const scope = stringList(version.toolScope);
     if (!scope.includes(WEB_SEARCH_TOOL)) {
       throw new ForbiddenException('当前专家版本未授权联网搜索');
@@ -318,7 +324,7 @@ export class OfficialAgentService {
       goal?: string;
     },
   ) {
-    const { agent, version } = await this.resolvePublishedVersion(user, agentId, versionId);
+    const { agent, version } = await this.resolvePublishedVersion(user, tenantId, agentId, versionId);
     const scope = stringList(version.toolScope);
     if (!scope.includes(TABULAR_ANALYZE_TOOL)) {
       throw new ForbiddenException('当前专家版本未授权表格分析');
@@ -354,7 +360,7 @@ export class OfficialAgentService {
     versionId: string | undefined,
     url: string,
   ) {
-    const { agent, version } = await this.resolvePublishedVersion(user, agentId, versionId);
+    const { agent, version } = await this.resolvePublishedVersion(user, tenantId, agentId, versionId);
     const scope = stringList(version.toolScope);
     if (!scope.includes(WEB_FETCH_TOOL)) {
       throw new ForbiddenException('当前专家版本未授权网页读取');
@@ -394,7 +400,7 @@ export class OfficialAgentService {
       tabularFormat?: 'csv' | 'json' | 'auto';
     },
   ) {
-    const { agent, version } = await this.resolvePublishedVersion(user, agentId, versionId);
+    const { agent, version } = await this.resolvePublishedVersion(user, tenantId, agentId, versionId);
     const scope = stringList(version.toolScope);
     if (!scope.includes(DELEGATE_OFFICIAL_AGENT_TOOL)) {
       throw new ForbiddenException('当前专家版本未授权编排委派');
@@ -430,7 +436,7 @@ export class OfficialAgentService {
     versionId: string | undefined,
     documentId: string,
   ) {
-    const { agent, version } = await this.resolvePublishedVersion(user, agentId, versionId);
+    const { agent, version } = await this.resolvePublishedVersion(user, tenantId, agentId, versionId);
     if ((version.executionConfig as any)?.route === 'KNOWLEDGE_CORE') throw new BadRequestException('EXECUTION_PROTOCOL_UPGRADE_REQUIRED');
     if (await this.officialKb.hasDocuments(agent.id)) {
       return this.officialKb.file(agent.id, documentId);
@@ -591,7 +597,12 @@ export class OfficialAgentService {
     });
   }
 
-  private async resolvePublishedVersion(user: User, agentId: string, versionId?: string) {
+  private planFields(view: MembershipView, minPlan: unknown) {
+    const required = isMembershipPlan(minPlan) ? minPlan : 'flagship';
+    return { minPlan: required, locked: membershipLocked(view, required) };
+  }
+
+  private async resolvePublishedVersion(user: User, tenantId: string | null, agentId: string, versionId?: string) {
     this.requireActiveAccount(user);
     const agent = await this.prisma.officialAgent.findUnique({ where: { id: agentId } });
     if (!agent || agent.status !== OfficialAgentStatus.PUBLISHED || !agent.onlineVersionId) {
@@ -602,6 +613,7 @@ export class OfficialAgentService {
       where: { id: selectedVersionId, agentId },
     });
     if (!version) throw new ForbiddenException('会话绑定的专家版本无效，请重新从广场进入');
+    await assertAgentMembership(this.prisma, tenantId, agent.minPlan);
     return { agent, version };
   }
 

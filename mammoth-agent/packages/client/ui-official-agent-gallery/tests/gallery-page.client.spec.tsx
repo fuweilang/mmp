@@ -242,6 +242,54 @@ describe('GalleryPage', () => {
     await waitFor(() => { expect(screen.getByText('暂时还没有可用的专家')).toBeTruthy() })
   })
 
+  it('lists experts the enterprise can use before locked ones', async () => {
+    const below: OfficialAgentCard = { ...general, id: 'below', key: 'below', name: '旗舰专家', locked: true, minPlan: 'flagship' }
+    mount(vi.fn(async () => [below, general]))
+    await loaded()
+    expect([...document.querySelectorAll('[data-catalog-key]')].map(node => node.getAttribute('data-catalog-key'))).toEqual(['general', 'below'])
+  })
+
+  it('shows one payment code only after a plan and channel are chosen', async () => {
+    if (typeof HTMLDialogElement !== 'undefined') {
+      HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) { this.setAttribute('open', '') }
+      HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) { this.removeAttribute('open') }
+    }
+    const below: OfficialAgentCard = { ...general, id: 'king', key: 'king', name: '帝王论道', locked: true, minPlan: 'flagship' }
+    const pay = vi.fn<NonNullable<GalleryFace['membershipPay']>>(async (plan, provider) => ({ outTradeNo: 'trade-1', qrDataUrl: 'data:image/png;base64,xx', plan, amountYuan: plan === 'pro' ? 50000 : 100000, provider }))
+    const agents = firstPage(async () => [below])
+    render(<GalleryPage t={t} catalogDetail={detail}
+      pageExperts={async query => pageOf(await agents(), query, item => item.name)}
+      pageSkills={async () => ({ items: [], total: 0, hasMore: false, nextCursor: null })}
+      expertFacets={async () => facetsOf([below])}
+      skillFacets={async () => ({ total: 0, capabilities: [], industries: [] })}
+      startAgent={async () => undefined} requestSkill={async () => undefined}
+      membershipOffer={async () => ({ plan: 'standard', expiresAt: null, enforced: true, canPay: true, proPriceYuan: 50000, flagshipPriceYuan: 100000, standardSummary: '', proSummary: '专业说明', flagshipSummary: '旗舰说明', wechatConfigured: true, alipayConfigured: true })}
+      membershipPay={pay} />)
+    fireEvent.click((await screen.findAllByRole('button', { name: '升级使用 帝王论道' }))[0]!)
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('heading', { name: '升级套餐' })).toBeTruthy()
+    expect(within(dialog).getByText('升级后可使用「帝王论道」')).toBeTruthy()
+    expect(within(dialog).queryByRole('img')).toBeNull()
+    await waitFor(() => { expect(within(dialog).getByRole('button', { pressed: true }).textContent).toContain('旗舰版') })
+    fireEvent.click(within(dialog).getByRole('button', { name: '微信支付' }))
+    await waitFor(() => { expect(pay).toHaveBeenCalledExactlyOnceWith('flagship', 'wechat') })
+    expect(within(dialog).getByText('旗舰版 · 100,000 元/年')).toBeTruthy()
+    expect(within(dialog).getByRole('img', { name: '微信支付' })).toBeTruthy()
+    fireEvent.click(within(dialog).getByRole('button', { name: '上一步' }))
+    expect(within(dialog).queryByRole('img')).toBeNull()
+  })
+
+  it('explains upgrade for a below-plan expert and does not start a chat', async () => {
+    const below: OfficialAgentCard = { ...general, id: 'below', key: 'below', name: '旗舰专家', locked: true, minPlan: 'flagship' }
+    const { startAgent } = mount(vi.fn(async () => [below]))
+    await waitFor(() => { expect(screen.getByText('旗舰专家')).toBeTruthy() })
+    expect(screen.getByText('旗舰版')).toBeTruthy()
+    fireEvent.click(screen.getAllByRole('button', { name: '升级使用 旗舰专家' })[0]!)
+    const dialog = await waitFor(() => screen.getByRole('dialog'))
+    expect(within(dialog).getByText('请联系企业管理员')).toBeTruthy()
+    expect(startAgent).not.toHaveBeenCalled()
+  })
+
   it('blocks not-granted experts without creating a Session', async () => {
     const { startAgent } = mount(vi.fn(async () => [locked]))
     await waitFor(() => { expect(screen.getByText('未开通助手')).toBeTruthy() })

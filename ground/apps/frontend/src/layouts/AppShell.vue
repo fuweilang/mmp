@@ -172,6 +172,7 @@ import {
   Bot,
   Building2,
   Coins,
+  Crown,
   Wallet,
   Check,
   ChevronDown,
@@ -265,6 +266,7 @@ function onSwitchProduct(command: string) {
 type NavItem = { path: string; label: string; icon: Component; perm?: string; children?: readonly { path: string; label: string }[] };
 const businessItems: NavItem[] = [
   { path: '/console/', label: '工作台', icon: LayoutDashboard, perm: 'portal.console.workbench' },
+  { path: '/console/membership', label: '专家广场', icon: Bot },
   { path: '/console/library', label: '资料库', icon: Library, perm: 'portal.console.access', children: consoleLibraryViews },
   { path: '/console/members', label: '成员管理', icon: Users, perm: 'portal.console.members' },
   { path: '/console/roles', label: '角色管理', icon: KeyRound, perm: 'portal.console.roles' },
@@ -279,6 +281,7 @@ const platformItems: NavItem[] = [
   { path: '/admin/users', label: '用户管理', icon: Users },
   { path: '/admin/roles', label: '角色管理', icon: Shield },
   { path: '/admin/enterprises', label: '企业管理', icon: Building2 },
+  { path: '/admin/membership', label: '套餐与定价', icon: Crown },
   { path: '/admin/enterprise-wallets', label: '企业 AI 币', icon: Wallet },
   { path: '/admin/enterprise-token-stats', label: 'token用量统计', icon: BarChart3 },
   { path: '/admin/official-agents', label: '专家配置', icon: Bot },

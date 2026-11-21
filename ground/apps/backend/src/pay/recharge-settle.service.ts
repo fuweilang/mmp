@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { BillingService } from '../billing/billing.service';
+import { MembershipService } from '../membership/membership.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { computeEffectivePermissions } from '../permissions/effective';
 import { TenantService } from '../tenant/tenant.service';
@@ -36,6 +37,14 @@ import { WechatPayClient, createWechatOutTradeNo } from './wechat-pay.client';
 
 const lastQueryAt = new Map<string, number>();
 
+function yuanStringToCents(yuan: string) {
+  const cents = new Prisma.Decimal(yuan).mul(100);
+  if (!cents.isInteger()) throw new BadRequestException('支付金额无效');
+  const value = cents.toNumber();
+  if (!Number.isSafeInteger(value) || value <= 0) throw new BadRequestException('支付金额无效');
+  return value;
+}
+
 /** 下单时锁定的汇率（aiCoins / 元），用于 ledger.meta */
 function lockedRate(o: { aiCoins: number; amountYuan: Prisma.Decimal | string | number }) {
   const y = Number(new Prisma.Decimal(o.amountYuan as any).toFixed(2));
@@ -52,6 +61,7 @@ export class RechargeSettleService {
     private billing: BillingService,
     private wechat: WechatPayClient,
     private alipay: AlipayClient,
+    private membership: MembershipService,
   ) {}
 
   async markExpired(orderId: string) {
@@ -182,6 +192,14 @@ export class RechargeSettleService {
     if (payload.tradeState !== 'SUCCESS') {
       return { code: 'SUCCESS', message: '成功' };
     }
+    const membership = await this.membership.settleCheckout({
+      outTradeNo: payload.outTradeNo,
+      provider: 'wechat',
+      providerTradeNo: payload.transactionId,
+      amountCents: payload.amountFen,
+      paidAt: payload.successTime ? new Date(payload.successTime) : new Date(),
+    });
+    if (membership.handled) return { code: 'SUCCESS', message: '成功' };
     await this.settleByOutTradeNo({
       outTradeNo: payload.outTradeNo,
       channel: PAY_CHANNEL_WECHAT,
@@ -199,6 +217,14 @@ export class RechargeSettleService {
     if (payload.tradeStatus !== 'TRADE_SUCCESS' && payload.tradeStatus !== 'TRADE_FINISHED') {
       return 'success';
     }
+    const membership = await this.membership.settleCheckout({
+      outTradeNo: payload.outTradeNo,
+      provider: 'alipay',
+      providerTradeNo: payload.tradeNo,
+      amountCents: yuanStringToCents(payload.totalAmount),
+      paidAt: payload.gmtPayment ? new Date(payload.gmtPayment) : new Date(),
+    });
+    if (membership.handled) return 'success';
     await this.settleByOutTradeNo({
       outTradeNo: payload.outTradeNo,
       channel: PAY_CHANNEL_ALIPAY,
