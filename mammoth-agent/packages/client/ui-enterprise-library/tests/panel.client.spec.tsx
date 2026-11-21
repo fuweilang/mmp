@@ -709,7 +709,7 @@ describe('t188 lazy tree, media and upload feedback', () => {
 });
 
 it('removes a recent access record without recycling the file', async () => {
-  const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+  const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
     if (init?.method === 'POST') return Response.json({ ok: true })
     return Response.json({ items: [{ id: 'n1', name: '制度.md', kind: 'FILE', currentVersion: { id: 'v1', versionNo: 1, parseStatus: 'READY' } }], total: 1 })
   })
