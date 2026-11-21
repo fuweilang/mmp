@@ -70,9 +70,9 @@ it('lists people first and opens one member library without the owner column', a
   expect(row).toBeTruthy();
   click('查看资料', row);
   await vi.waitFor(() => expect(router.currentRoute.value.query.member).toBe('zhang'));
-  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('members', null, '', 1, false, 20, 'content', undefined, 'zhang'));
+  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('members', null, '', 1, false, 20, undefined, undefined, 'zhang', undefined));
   expect(fixture.folders).toHaveBeenCalledWith('members', 'zhang');
-  expect(document.body.textContent).not.toContain('所有者');
+  expect([...document.querySelectorAll('th')].some(cell => cell.textContent?.includes('所有者'))).toBe(false);
   expect(document.body.textContent).toContain('正在查看 张三 的资料');
   const upload = [...document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent?.trim() === '上传文件');
   expect(upload?.disabled).toBe(true);
@@ -97,5 +97,5 @@ it('adds the folder owner when an old members link has only a folder', async () 
   await mount('/console/library/members?folder=folder-1');
   await vi.waitFor(() => expect(router.currentRoute.value.query.member).toBe('zhang'));
   expect(router.currentRoute.value.query.folder).toBe('folder-1');
-  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('members', 'folder-1', '', 1, false, 20, 'content', undefined, 'zhang'));
+  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('members', 'folder-1', '', 1, false, 20, undefined, undefined, 'zhang', undefined));
 });

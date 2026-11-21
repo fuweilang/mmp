@@ -27,6 +27,12 @@
 .library-modal .el-dialog__body { min-height: 0; overflow-y: auto; overflow-wrap: anywhere; overscroll-behavior: contain; }
 .library-modal .el-dialog__footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 .library-modal .el-dialog__footer .el-button + .el-button { margin-left: 0; }
+.el-dialog.library-upload-modal { border-radius: 12px; overflow: hidden; }
+.el-dialog.library-upload-modal .el-dialog__header { margin: 0; padding: 20px 24px 16px; border-bottom: 1px solid var(--el-border-color-lighter); }
+.el-dialog.library-upload-modal .el-dialog__body { display: flex; flex-direction: column; gap: 16px; padding: 20px 24px; }
+.el-dialog.library-upload-modal .el-dialog__footer { padding: 16px 24px 20px; border-top: 1px solid var(--el-border-color-lighter); background: #fafbfc; }
+.el-dialog.library-upload-modal .el-button,
+.el-dialog.library-upload-modal .el-input__wrapper { border-radius: 8px !important; }
 .el-overlay-message-box:has(.library-message-box) {
   display: flex;
   align-items: center;

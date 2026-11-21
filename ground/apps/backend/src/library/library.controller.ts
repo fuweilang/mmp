@@ -139,7 +139,7 @@ export class LibraryController {
     const actor = await this.actor(user, tenantId);
     if (query.catalog === '1') return this.run(async () => this.library.catalog(actor, query.q, query.page ?? 1, query.pageSize ?? 10));
     const view = query.view ?? 'mine';
-    return this.run(async () => this.library.list(actor, view, query.parentId ?? null, query.q, query.flat === '1', query.page, query.pageSize, query.status, query.fileType, view === 'members' ? query.owner : undefined, query.agent === '1'));
+    return this.run(async () => this.library.list(actor, view, query.parentId ?? null, query.q, query.flat === '1', query.page, query.pageSize, query.status, query.fileType, view === 'members' ? query.owner : undefined, query.agent === '1', query.scope));
   }
 
   @Post('folders')

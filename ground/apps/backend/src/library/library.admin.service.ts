@@ -38,16 +38,18 @@ export class LibraryAdminService {
   const memberFiles=await this.prisma.libraryNode.findMany({where:{tenantId,kind:'FILE',state:'ACTIVE'},select:{ownerUserId:true}});
   const folders=await this.prisma.libraryNode.findMany({where:{tenantId,kind:'FOLDER',state:'ACTIVE'}});
   const ownerIds=await this.prisma.libraryNode.findMany({where:{tenantId,state:{not:'PURGED'}},distinct:['ownerUserId'],select:{ownerUserId:true}});const filterOwners=await this.prisma.user.findMany({where:{id:{in:ownerIds.map(n=>n.ownerUserId)}},select:{id:true,name:true}});
-  return {tenant,members:members.map(m=>({...m.user,fileCount:memberFiles.filter(n=>n.ownerUserId===m.user.id).length})),filterOwners,filterFolders:folders.map(f=>({id:f.id,name:f.name,parentId:f.parentId})),limits:createLibraryService({store:new PrismaLibraryStore(this.prisma)}).limitsView(),owners:members.map(m=>m.user),folders:folders.map(n=>({id:n.id,name:n.name,parentId:n.parentId,ownerUserId:n.ownerUserId,scope:n.scope}))};
+  const recycled=await this.prisma.libraryNode.findMany({where:{tenantId,state:'RECYCLED'},orderBy:[{updatedAt:'desc'},{id:'asc'}]});
+  const recycledVersions=await this.prisma.libraryVersion.findMany({where:{tenantId,id:{in:recycled.flatMap(n=>n.currentVersionId?[n.currentVersionId]:[])}}});const recycledVersionById=new Map(recycledVersions.map(v=>[v.id,v]));const ownerNameById=new Map(filterOwners.map(o=>[o.id,o.name]));
+  return {tenant,members:members.map(m=>({...m.user,fileCount:memberFiles.filter(n=>n.ownerUserId===m.user.id).length})),filterOwners,filterFolders:folders.map(f=>({id:f.id,name:f.name,parentId:f.parentId})),limits:createLibraryService({store:new PrismaLibraryStore(this.prisma)}).limitsView(),owners:members.map(m=>m.user),folders:folders.map(n=>({id:n.id,name:n.name,parentId:n.parentId,ownerUserId:n.ownerUserId,scope:n.scope,updatedAt:n.updatedAt.toISOString()})),recycled:recycled.map(n=>{const v=recycledVersionById.get(n.currentVersionId??'');return {id:n.id,name:n.name,kind:n.kind,scope:n.scope,parentId:n.parentId,ownerUserId:n.ownerUserId,ownerName:ownerNameById.get(n.ownerUserId)??null,updatedAt:n.updatedAt.toISOString(),fileType:fileType(n,v),currentVersion:v?brief(v):null,canWrite:tenant.status==='active'};})};
  }
  async items(user: Platform, tenantId: string, query: AdminLibraryQuery) {
   this.platform(user);const tenant=await this.tenant(this.prisma,tenantId);const canWrite=tenant.status==='active';
   const nodes=await this.prisma.libraryNode.findMany({where:{tenantId,state:{not:'PURGED'}},orderBy:[{updatedAt:'desc'},{id:'asc'}]});
   const versions=await this.prisma.libraryVersion.findMany({where:{tenantId,id:{in:nodes.flatMap(n=>n.currentVersionId?[n.currentVersionId]:[])}}});const byVersion=new Map(versions.map(v=>[v.id,v]));
   const byId=new Map(nodes.map(n=>[n.id,n]));const owners=await this.prisma.user.findMany({where:{id:{in:[...new Set(nodes.map(n=>n.ownerUserId))]}},select:{id:true,name:true}});const byOwner=new Map(owners.map(o=>[o.id,o.name]));
-  const state=query.state??'ACTIVE';
-  const matched=nodes.filter(n=>{const v=byVersion.get(n.currentVersionId??'');return n.state===state&&(!query.scope||n.scope===query.scope)&&(!query.ownerUserId||n.ownerUserId===query.ownerUserId)&&(!query.folderId||n.parentId===query.folderId)&&(!query.q||n.name.toLocaleLowerCase().includes(query.q.trim().toLocaleLowerCase()))&&(!query.fileType||fileType(n,v)===query.fileType)&&(!query.status||v?.parseStatus===query.status);});
-  const folderIds=new Set(nodes.filter(n=>n.state===state&&n.kind==='FOLDER'&&(!query.ownerUserId||n.ownerUserId===query.ownerUserId)).map(n=>n.id));
+  const state=query.state??'ACTIVE';const stateMatches=(n:{state:string})=>state==='ALL'?n.state!=='PURGED':n.state===state;const needle=query.q?.trim().toLocaleLowerCase();
+  const matched=nodes.filter(n=>{const v=byVersion.get(n.currentVersionId??'');return stateMatches(n)&&(!query.scope||n.scope===query.scope)&&(!query.ownerUserId||n.ownerUserId===query.ownerUserId)&&(!query.folderId||n.parentId===query.folderId)&&(!needle||n.name.toLocaleLowerCase().includes(needle)||(byOwner.get(n.ownerUserId)??'').toLocaleLowerCase().includes(needle))&&(!query.fileType||fileType(n,v)===query.fileType)&&(!query.status||v?.parseStatus===query.status);});
+  const folderIds=new Set(nodes.filter(n=>stateMatches(n)&&n.kind==='FOLDER'&&(!query.ownerUserId||n.ownerUserId===query.ownerUserId)).map(n=>n.id));
   const filtered=query.layer==='children'&&!query.folderId?matched.filter(n=>!n.parentId||!folderIds.has(n.parentId)):matched;
   const rows=filtered.slice((query.page-1)*query.pageSize,query.page*query.pageSize).map(n=>{
    const v=byVersion.get(n.currentVersionId??'');
@@ -94,7 +96,7 @@ export class LibraryAdminService {
   return this.operation(user,tenantId,input,file?'upload':'folder',null,payload,async(tx,domain,actor)=>{
    await this.owner(tx,tenantId,input.ownerUserId);await this.parent(tx,tenantId,input.parentId,input.ownerUserId);
    if(input.scope==='ENTERPRISE'&&input.confirmShare!==true)throw new LibraryError(400,'企业共享需要明确确认','CONFIRM_SHARE');
-   const result=file?await domain.uploadOwned(actor,input.ownerUserId,{originalName:file.originalname,mimeType:file.mimetype,bytes:file.buffer,parentId:input.parentId,scope:input.scope,confirmShare:input.confirmShare}):await domain.createOwnedFolder(actor,input.ownerUserId,input.name??'',input.parentId,input.scope);
+   const result=file?await domain.uploadOwned(actor,input.ownerUserId,{originalName:file.originalname,mimeType:file.mimetype,bytes:file.buffer,parentId:input.parentId,scope:input.scope,confirmShare:input.confirmShare}):await domain.createOwnedFolder(actor,input.ownerUserId,input.name??'',input.parentId,input.scope,{reuseExisting:input.reuseExisting===true});
    return {nodeId:result.id,versionId:result.currentVersion?.id??null};
   });
  }

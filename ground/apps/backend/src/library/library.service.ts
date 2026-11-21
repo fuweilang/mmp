@@ -59,8 +59,8 @@ export class LibraryService {
     return this.read.catalog(actor, q, page, pageSize);
   }
 
-  list(actor: Actor, view: LibraryView, parentId?: string | null, q?: string, flat = false, page = 1, pageSize?: number, status = 'all', fileType?: string, owner?: string, agent = false) {
-    return this.read.list(actor, view, parentId, q, flat, page, pageSize, status, fileType, owner, agent);
+  list(actor: Actor, view: LibraryView, parentId?: string | null, q?: string, flat = false, page = 1, pageSize?: number, status = 'all', fileType?: string, owner?: string, agent = false, scope?: LibraryScope) {
+    return this.read.list(actor, view, parentId, q, flat, page, pageSize, status, fileType, owner, agent, scope);
   }
 
   searchQuotes(actor: Actor, rawQuery: string) {

@@ -186,6 +186,7 @@ describe('enterprise library', () => {
     assert.equal(renamed.mimeType, wordMime);
     const replaced = await service.replaceVersion(owner, item.id, '替换版本.pdf', 'application/pdf', textPdf('Replacement document'));
     const second = replaced.currentVersion!.id;
+    assert.equal(replaced.name, '替换版本.pdf');
     await service.rename(owner, item.id, '误导标题.xlsx');
     const current = await service.preview(owner, item.id, second);
     assert.equal(current.name, '误导标题.xlsx');

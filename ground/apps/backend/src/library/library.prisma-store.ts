@@ -128,7 +128,7 @@ export class PrismaLibraryStore implements LibraryStore {
       }
       await tx.libraryNode.update({
         where: { id: input.nodeId },
-        data: { currentVersionId: input.version.id, updatedAt: new Date(input.updatedAt) },
+        data: { name: input.name, currentVersionId: input.version.id, updatedAt: new Date(input.updatedAt) },
       });
     });
   }

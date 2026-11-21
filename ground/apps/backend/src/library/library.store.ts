@@ -25,6 +25,7 @@ export type NewFileCommit = {
 export type ReplacementCommit = {
   tenantQuotaBytes?: number;
   nodeId: string;
+  name: string;
   version: VersionRecord;
   chunks: ChunkRecord[];
   updatedAt: number;
@@ -196,7 +197,7 @@ export class MemoryLibraryStore implements LibraryStore {
       if (!this.nodes.has(input.nodeId)) throw new Error('资料不存在');
       this.versions.set(input.version.id, input.version);
       await this.replaceChunks(input.version.id, input.version.tenantId, input.chunks);
-      await this.updateNode(input.nodeId, { currentVersionId: input.version.id, updatedAt: input.updatedAt });
+      await this.updateNode(input.nodeId, { name: input.name, currentVersionId: input.version.id, updatedAt: input.updatedAt });
     } catch (error) {
       this.restore(snapshot);
       throw error;

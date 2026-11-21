@@ -3,8 +3,9 @@ import type { LibraryPreview, LibraryVersion, LibraryScopeImpact } from './libra
 export type AdminVersion=Pick<LibraryVersion,'id'|'versionNo'|'mimeType'|'sizeBytes'|'parseStatus'|'parseReason'|'originalName'|'createdAt'>&{createdByUserId:string};
 export type AdminTenant={id:string;name:string;status:string;activeFiles:number;folderCount:number;linkCount:number;recycledCount:number;usedBytes:number;failed:number;memberCount:number;sharedFiles:number;admins?:{name:string;phone:string}[]};
 export type AdminPage<T>={items:T[];total:number;page:number;pageSize:number};
-export type AdminFolder={id:string;name:string;parentId:string|null;ownerUserId:string;scope:'PRIVATE'|'ENTERPRISE'};
-export type AdminOptions={members?:{id:string;name:string|null;phone?:string|null;fileCount:number}[];tenant:Pick<AdminTenant,'id'|'name'|'status'>;limits:{maxFileBytes:number;allowedExtensions:string[]};owners:{id:string;name:string|null}[];filterOwners?:{id:string;name:string|null}[];filterFolders?:{id:string;name:string;parentId:string|null}[];folders:AdminFolder[]};
+export type AdminFolder={id:string;name:string;parentId:string|null;ownerUserId:string;scope:'PRIVATE'|'ENTERPRISE';updatedAt?:string};
+export type AdminRecycledNode={id:string;name:string;kind:'FILE'|'FOLDER'|'LINK';scope:'PRIVATE'|'ENTERPRISE';parentId:string|null;ownerUserId:string;ownerName:string|null;updatedAt:string;fileType:string;currentVersion:AdminVersion|null;canWrite:boolean};
+export type AdminOptions={members?:{id:string;name:string|null;phone?:string|null;fileCount:number}[];tenant:Pick<AdminTenant,'id'|'name'|'status'>;limits:{maxFileBytes:number;allowedExtensions:string[]};owners:{id:string;name:string|null}[];filterOwners?:{id:string;name:string|null}[];filterFolders?:{id:string;name:string;parentId:string|null}[];folders:AdminFolder[];recycled?:AdminRecycledNode[]};
 export type AdminItem={id:string;name:string;kind:'FILE'|'FOLDER'|'LINK';scope:'PRIVATE'|'ENTERPRISE';state:'ACTIVE'|'RECYCLED';parentId:string|null;parentPath:string[];ownerUserId:string;ownerName:string|null;updatedAt:string;currentVersion:AdminVersion|null;fileType:string;canRead:boolean;canWrite:boolean;purgeBlockedReason:string|null};
 export type AdminTarget={ownerUserId:string;scope:'PRIVATE'|'ENTERPRISE';parentId:string;confirmShare:boolean};
 export type AdminContext={requestId:string};
@@ -22,7 +23,7 @@ export const adminLibraryImpact=(tenant:string,id:string)=>http<AdminImpact>(bas
 export const adminLibraryScopeImpact=(tenant:string,item:AdminItem,scope:'PRIVATE'|'ENTERPRISE')=>http<LibraryScopeImpact>(base(tenant)+'/nodes/'+encodeURIComponent(item.id)+'/scope-impact?'+query({scope}));
 export const adminLibraryPreview=(tenant:string,item:AdminItem,versionId?:string)=>http<LibraryPreview>(base(tenant)+'/nodes/'+encodeURIComponent(item.id)+'/preview?'+query({versionId:versionId??item.currentVersion?.id}));
 export const adminLibraryDownload=(tenant:string,item:AdminItem,versionId?:string,inline=false)=>apiUrl(base(tenant)+'/nodes/'+encodeURIComponent(item.id)+'/download?'+query({versionId:versionId??item.currentVersion?.id,...(inline?{inline:'1'}:{})}));
-export const adminLibraryFolder=(tenant:string,body:AdminTarget&{name:string;requestId:string})=>http<AdminResult>(base(tenant)+'/folders',{method:'POST',body:JSON.stringify({...body,parentId:body.parentId||undefined})});
+export const adminLibraryFolder=(tenant:string,body:AdminTarget&{name:string;requestId:string;reuseExisting?:boolean})=>http<AdminResult>(base(tenant)+'/folders',{method:'POST',body:JSON.stringify({...body,parentId:body.parentId||undefined})});
 export const adminLibraryCommand=(tenant:string,body:AdminCommand)=>http<AdminResult>(base(tenant)+'/commands',{method:'POST',body:JSON.stringify(body)});
 /** Uses the existing cookie transport and real byte progress, not a simulated percentage. */
 export function adminLibraryUpload(tenant:string,body:(AdminTarget&{requestId:string})|AdminCommand,file:File,progress:(ratio:number)=>void,replace=false):Promise<AdminResult>{

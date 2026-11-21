@@ -98,7 +98,7 @@ export type LibraryAnswer = {
   notices: string[];
 };
 
-export function listLibrary(view: LibraryView, parentId: string | null, q: string, page?: number, flat = false, pageSize = 20, fileType?: string, status?: 'ready' | 'failed' | 'download' | 'processing', owner?: string) {
+export function listLibrary(view: LibraryView, parentId: string | null, q: string, page?: number, flat = false, pageSize = 20, fileType?: string, status?: 'ready' | 'failed' | 'download' | 'processing', owner?: string, scope?: 'PRIVATE' | 'ENTERPRISE') {
   const params = new URLSearchParams({ view });
   if (page !== undefined) { params.set('page', String(page)); params.set('pageSize', String(pageSize)); }
   if (flat) params.set('flat', '1');
@@ -107,6 +107,7 @@ export function listLibrary(view: LibraryView, parentId: string | null, q: strin
   if (fileType) params.set('fileType', fileType);
   if (status) params.set('status', status);
   if (owner) params.set('owner', owner);
+  if (scope) params.set('scope', scope);
   return http<LibraryList>(`/api/library/items?${params.toString()}`);
 }
 
@@ -114,7 +115,7 @@ export function listLibraryMembers() {
   return http<{ members: LibraryMemberRow[] }>('/api/library/members');
 }
 
-export type LibraryCreationScope = { scope?: 'PRIVATE' | 'ENTERPRISE'; confirmShare?: boolean };
+export type LibraryCreationScope = { scope?: 'PRIVATE' | 'ENTERPRISE'; confirmShare?: boolean; reuseExisting?: boolean };
 export type LibraryScopeImpact = { total: number; changed: number; files: number; folders: number; links: number; treeRevision: string };
 
 export function libraryScopeImpact(id: string, scope: 'PRIVATE' | 'ENTERPRISE') {

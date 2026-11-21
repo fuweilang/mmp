@@ -75,7 +75,7 @@ export class LibraryReadService {
     return { items, total: rows.length, page, pageSize };
   }
 
-  async list(actor: Actor, view: LibraryView, parentId?: string | null, q?: string, flat = false, page = 1, pageSize?: number, status = 'all', fileType?: string, owner?: string, agent = false) {
+  async list(actor: Actor, view: LibraryView, parentId?: string | null, q?: string, flat = false, page = 1, pageSize?: number, status = 'all', fileType?: string, owner?: string, agent = false, scope?: LibraryScope) {
     this.auth.requireTenantActor(actor);
     if (view === 'members' && !(actor.isOrgAdmin && actor.activeMember)) {
       throw new LibraryError(403, '只有企业管理员可以查看成员资料', 'FORBIDDEN');
@@ -106,6 +106,7 @@ export class LibraryReadService {
       // enterprise share removes it from other members' recent lists, including admins.
       return recentAt.has(node.id) && (node.ownerUserId === actor.userId || node.scope === 'ENTERPRISE');
     });
+    if (scope) rows = rows.filter(node => node.scope === scope);
     if (view === 'trash' && !parentId) {
       // A recycled folder owns its recycled descendants. Show only the top-level trashed
       // branch so restoring one row restores the whole original tree instead of each file.

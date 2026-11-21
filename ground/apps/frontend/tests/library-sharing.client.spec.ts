@@ -73,11 +73,12 @@ it('uses the server parent scope for nested creation and retains the folder', as
   await vi.waitFor(() => expect(fixture.folder).toHaveBeenCalledWith('子目录', 'parent', { scope: 'ENTERPRISE', confirmShare: true }));
   expect(router.currentRoute.value.query.folder).toBe('parent');
 });
-it('keeps an owned shared folder under 我的资料 in the move dialog', async () => {
+it('opens a top-level folder picker for moving without a shared section', async () => {
   const folder = { id: 'feng', name: '冯静健康事业基础知识库', kind: 'FOLDER', scope: 'ENTERPRISE', canManage: true, parentId: null, updatedAt: '2026-11-19T00:00:00Z' };
+  const destination = { id: 'private-dest', name: '个人目录', kind: 'FOLDER', scope: 'PRIVATE', canManage: true, parentId: null, updatedAt: '2026-11-19T00:00:00Z' };
   const file = { id: 'file', name: '00_冯静.md', kind: 'FILE', scope: 'ENTERPRISE', canManage: true, parentId: 'feng', updatedAt: '2026-11-19T00:00:00Z', currentVersion: { id: 'v1', versionNo: 1, mimeType: 'text/markdown', sizeBytes: 4, parseStatus: 'READY', parseReason: null, extractTruncated: false, originalName: '00_冯静.md' } };
   fixture.list.mockResolvedValue({ items: [file], total: 1, breadcrumb: [{ id: 'feng', name: folder.name }], parentScope: 'ENTERPRISE' });
-  fixture.folders.mockImplementation(async (view?: string) => view === 'mine' || view === 'shared' ? [folder] : []);
+  fixture.folders.mockImplementation(async (view?: string) => view === 'mine' ? [destination, folder] : []);
   await mount('/console/library/mine?folder=feng');
   click('更多', root);
   const moveItem = await vi.waitFor(() => {
@@ -88,19 +89,24 @@ it('keeps an owned shared folder under 我的资料 in the move dialog', async (
   });
   moveItem.click();
   const dialog = await vi.waitFor(() => {
-    const node = [...document.querySelectorAll<HTMLElement>('.el-dialog')].find(item => item.textContent?.includes('移动资料'));
+    const node = [...document.querySelectorAll<HTMLElement>('.el-dialog')].find(item => item.textContent?.includes('移动「00_冯静.md」'));
     expect(node).toBeTruthy();
     return node!;
   });
-  const trees = dialog.querySelectorAll('.el-tree');
-  expect(trees[0]?.textContent).toContain('冯静健康事业基础知识库');
-  expect(trees[0]?.textContent).not.toContain('暂无数据');
-  expect(trees[1]?.textContent).toContain('冯静健康事业基础知识库');
+  expect(dialog.textContent).toContain('根目录');
+  expect(dialog.textContent).toContain('个人目录');
+  expect(dialog.textContent).toContain(folder.name);
+  expect(dialog.textContent).toContain('共 2 个文件夹');
+  expect(dialog.textContent).toContain('移入共享目录会共享该资料及其子项。');
+  expect(dialog.textContent).not.toContain('企业共享');
+  expect([...dialog.querySelectorAll<HTMLButtonElement>('button')].some(button => button.textContent?.trim() === '上一级')).toBe(false);
+  expect(dialog.querySelectorAll('.library-move-folder')).toHaveLength(2);
+  expect(dialog.querySelector('.library-move-shared')?.textContent).toContain('共享');
 });
 
 it('keeps personal root creation private', async () => {
   await mount('/console/library/mine'); const dialog = await folderDialog();
-  expect(dialog.textContent).toContain('仅自己可见'); name(dialog, '个人目录'); await nextTick(); click('创建', dialog);
+  expect(dialog.textContent).toContain('仅所有者可见'); name(dialog, '个人目录'); await nextTick(); click('创建', dialog);
   await vi.waitFor(() => expect(fixture.folder).toHaveBeenCalledWith('个人目录', null, { scope: 'PRIVATE', confirmShare: false }));
 });
 it('confirms all descendants using the server count and revision', async () => {
@@ -109,7 +115,7 @@ it('confirms all descendants using the server count and revision', async () => {
   await mount('/console/library/mine'); click('更多', root); await nextTick();
   await vi.waitFor(() => expect([...document.querySelectorAll('.el-dropdown-menu__item')].some(node => node.textContent?.includes('共享到企业'))).toBe(true));
   [...document.querySelectorAll<HTMLElement>('.el-dropdown-menu__item')].find(node => node.textContent?.includes('共享到企业'))!.click();
-  await vi.waitFor(() => expect(confirm).toHaveBeenCalledWith(expect.stringContaining('4 项'), '确认共享', expect.any(Object)));
+  await vi.waitFor(() => expect(confirm).toHaveBeenCalledWith(expect.stringContaining('3 项'), '确认共享', expect.any(Object)));
   await vi.waitFor(() => expect(fixture.scope).toHaveBeenCalledWith('folder', 'ENTERPRISE', true, { confirmUnshare: false, expectedTreeRevision: revision }));
   await vi.waitFor(() => expect(document.body.textContent).toContain('已共享到企业'));
 });
@@ -127,7 +133,7 @@ it('freezes the shared upload destination even if the user changes views before 
   await vi.waitFor(() => expect(fixture.upload).toHaveBeenCalledWith(expect.any(Array), null, expect.any(Function), { scope: 'ENTERPRISE', confirmShare: true }));
 });
 
-it('offers a parse-status filter on recent, mine, shared, and trash', async () => {
+it('offers a parse-status filter on mine and shared and hides it on recent and trash', async () => {
   const version = (parseStatus: string) => ({ id: 'v1', versionNo: 1, mimeType: 'text/plain', sizeBytes: 1, parseStatus, parseReason: null, extractTruncated: false, originalName: 'a.txt', createdAt: '2026-11-10T00:00:00Z' });
   fixture.list.mockResolvedValue({
     items: [
@@ -139,6 +145,8 @@ it('offers a parse-status filter on recent, mine, shared, and trash', async () =
     total: 4, breadcrumb: [], parentScope: null,
   });
   await mount('/console/library/mine');
+  click('更多筛选', root);
+  await vi.waitFor(() => expect(document.querySelector('[aria-label="处理状态"]')).toBeTruthy());
   const select = document.querySelector<HTMLElement>('[aria-label="处理状态"]');
   expect(select).toBeTruthy();
   select!.click();
@@ -156,16 +164,55 @@ it('offers a parse-status filter on recent, mine, shared, and trash', async () =
   expect(new Set(options.map(option => option.color)).size).toBe(4);
   const cells = [...root!.querySelectorAll('td')].map(cell => cell.textContent?.replace(/\s+/g, '') ?? '');
   for (const label of ['可供AI引用', '仅保存', '处理中', '失败']) expect(cells.some(cell => cell.startsWith(label))).toBe(true);
-  for (const path of ['/console/library/recent', '/console/library/shared', '/console/library/trash']) {
+  await router.push('/console/library/shared');
+  await vi.waitFor(() => expect(document.querySelector('[aria-label="处理状态"]')).toBeTruthy());
+  for (const path of ['/console/library/recent', '/console/library/trash']) {
     await router.push(path);
-    await vi.waitFor(() => expect(document.querySelector('[aria-label="处理状态"]')).toBeTruthy());
+    await vi.waitFor(() => expect(document.querySelector('[aria-label="处理状态"]')).toBeNull());
   }
+});
+
+it('uploads a selected folder into the current destination and reuses nested folders', async () => {
+  fixture.folder.mockImplementation(async (name: string) => ({ id: `folder-${name}`, scope: 'PRIVATE' }));
+  fixture.list.mockResolvedValue({ items: [], total: 0, breadcrumb: [], parentScope: null });
+  await mount('/console/library/mine');
+  click('上传文件', root);
+  const dialog = await vi.waitFor(() => { const node = document.querySelector<HTMLElement>('.el-dialog'); expect(node).toBeTruthy(); return node!; });
+  expect(dialog.textContent).toContain('选择文件夹');
+  Object.defineProperty(HTMLInputElement.prototype, 'webkitdirectory', { configurable: true, value: true });
+  const folderInput = dialog.querySelector<HTMLInputElement>('input[aria-label="选择文件夹"]')!;
+  const first = new File(['a'], 'a.md'); Object.defineProperty(first, 'webkitRelativePath', { configurable: true, value: '团队资料/a.md' });
+  const second = new File(['b'], 'b.md'); Object.defineProperty(second, 'webkitRelativePath', { configurable: true, value: '团队资料/子目录/b.md' });
+  Object.defineProperty(folderInput, 'files', { configurable: true, value: [first, second] });
+  folderInput.dispatchEvent(new Event('change', { bubbles: true }));
+  await nextTick();
+  expect(dialog.textContent).toContain('团队资料/a.md');
+  click('开始上传', dialog);
+  await vi.waitFor(() => expect(fixture.folder).toHaveBeenCalledWith('团队资料', null, { scope: 'PRIVATE', confirmShare: false, reuseExisting: true }));
+  await vi.waitFor(() => expect(fixture.folder).toHaveBeenCalledWith('子目录', 'folder-团队资料', { scope: 'PRIVATE', confirmShare: false, reuseExisting: true }));
+  await vi.waitFor(() => expect(fixture.upload).toHaveBeenCalledTimes(2));
+  expect(fixture.upload.mock.calls[0]?.[1]).toBe('folder-团队资料');
+  expect((fixture.upload.mock.calls[0]?.[0] as File[])[0]?.name).toBe('a.md');
+  expect(fixture.upload.mock.calls[1]?.[1]).toBe('folder-子目录');
+});
+
+it('keeps visibility, file type and parse status collapsed behind 更多筛选', async () => {
+  await mount('/console/library/mine');
+  expect(document.querySelector('[aria-label="可见范围"]')).toBeNull();
+  expect(document.querySelector('[aria-label="文件类型"]')).toBeNull();
+  expect(document.querySelector('[aria-label="处理状态"]')).toBeNull();
+  click('更多筛选', root);
+  await vi.waitFor(() => expect(document.querySelector('[aria-label="可见范围"]')).toBeTruthy());
+  await vi.waitFor(() => expect(document.querySelector('[aria-label="文件类型"]')).toBeTruthy());
+  await vi.waitFor(() => expect(document.querySelector('[aria-label="处理状态"]')).toBeTruthy());
+  click('收起筛选', root);
+  await vi.waitFor(() => expect(document.querySelector('[aria-label="可见范围"]')).toBeNull());
 });
 
 it('pages recent use by 10, 20, 50, or 100 and starts at 10', async () => {
   fixture.list.mockResolvedValue({ items: [], total: 25, breadcrumb: [], parentScope: null });
   await mount('/console/library/recent');
-  expect(fixture.list).toHaveBeenCalledWith('recent', null, '', 1, false, 10, undefined, undefined, undefined);
+  expect(fixture.list).toHaveBeenCalledWith('recent', null, '', 1, false, 10, undefined, undefined, undefined, undefined);
   const sizes = root!.querySelector<HTMLElement>('.el-pagination__sizes');
   expect(sizes).toBeTruthy();
   sizes!.click();
@@ -176,10 +223,25 @@ it('pages recent use by 10, 20, 50, or 100 and starts at 10', async () => {
   });
   expect([...menu.querySelectorAll('.el-select-dropdown__item')].map(node => node.textContent?.replace(/\s+/g, ''))).toEqual(['10/page', '20/page', '50/page', '100/page']);
   [...menu.querySelectorAll<HTMLElement>('.el-select-dropdown__item')].find(node => node.textContent?.includes('50'))!.click();
-  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('recent', null, '', 1, false, 50, undefined, undefined, undefined));
+  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('recent', null, '', 1, false, 50, undefined, undefined, undefined, undefined));
   await router.push('/console/library/shared');
-  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('shared', null, '', 1, false, 20, 'content', undefined, undefined));
+  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('shared', null, '', 1, false, 20, undefined, undefined, undefined, undefined));
   expect(root!.querySelector('.el-pagination__sizes')).toBeNull();
+});
+
+it('shows current-level folders and filters visibility across levels', async () => {
+  const folder = { id: 'folder-a', name: '项目资料', kind: 'FOLDER', scope: 'PRIVATE', canManage: true, parentId: null, updatedAt: '2026-11-19T00:00:00Z' };
+  const shared = { id: 'folder-s', name: '共享目录', kind: 'FOLDER', scope: 'ENTERPRISE', canManage: true, parentId: null, updatedAt: '2026-11-19T00:00:00Z' };
+  fixture.folders.mockResolvedValue([folder, shared]);
+  fixture.list.mockResolvedValue({ items: [folder, shared], total: 2, breadcrumb: [], parentScope: null });
+  await mount('/console/library/mine');
+  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('mine', null, '', 1, false, 10, undefined, undefined, undefined, undefined));
+  const rows = [...root!.querySelectorAll('tr')];
+  expect(rows.find(node => node.textContent?.includes('项目资料'))?.textContent).toContain('仅所有者');
+  expect(rows.find(node => node.textContent?.includes('共享目录'))?.textContent).toContain('企业共享');
+  expect(root!.querySelector('.library-scope-badge')?.textContent).toContain('共享');
+  await router.push('/console/library/mine?scope=ENTERPRISE');
+  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('mine', null, '', 1, true, 10, undefined, undefined, undefined, 'ENTERPRISE'));
 });
 
 it('asks before recycling and only sends the request after confirmation', async () => {
@@ -299,12 +361,12 @@ it('does not mutate visibility when recursive confirmation is cancelled', async 
   await vi.waitFor(() => expect(fixture.impact).toHaveBeenCalled()); await nextTick();
   expect(fixture.scope).not.toHaveBeenCalled();
 });
-it('puts folder actions on the tree and hides 范围 only on the shared list', async () => {
+it('puts folder actions on the tree and hides 可见范围 only on the shared list', async () => {
   const folder = { id: 'feng', name: '冯静健康事业基础知识库', kind: 'FOLDER', scope: 'ENTERPRISE', canManage: true, parentId: null, updatedAt: '2026-11-19T00:00:00Z' };
   fixture.folders.mockResolvedValue([folder]);
   fixture.list.mockResolvedValue({ items: [folder], total: 1, breadcrumb: [], parentScope: null });
   await mount('/console/library/mine');
-  expect([...root!.querySelectorAll('th')].some(cell => cell.textContent?.includes('范围'))).toBe(true);
+  expect([...root!.querySelectorAll('th')].some(cell => cell.textContent?.includes('可见范围'))).toBe(true);
   const more = await vi.waitFor(() => {
     const button = root!.querySelector<HTMLButtonElement>('[aria-label="冯静健康事业基础知识库 更多"]');
     expect(button).toBeTruthy();
@@ -316,8 +378,7 @@ it('puts folder actions on the tree and hides 范围 only on the shared list', a
     expect(items).toContain('改名');
     return items;
   });
-  expect(mineLabels).toEqual(expect.arrayContaining(['改名', '移动', '移入回收站']));
-  expect(mineLabels.some(text => text?.includes('撤销共享'))).toBe(false);
+  expect(mineLabels).toEqual(expect.arrayContaining(['改名', '移动', '撤销共享', '移入回收站']));
   document.querySelectorAll('.el-popper').forEach(node => node.remove());
   await router.push('/console/library/shared');
   await vi.waitFor(() => expect(root!.textContent).toContain('冯静健康事业基础知识库'));
@@ -330,8 +391,8 @@ it('puts folder actions on the tree and hides 范围 only on the shared list', a
   expect(sharedLabels).toEqual(expect.arrayContaining(['改名', '移动', '撤销共享', '移入回收站']));
   document.querySelectorAll('.el-popper').forEach(node => node.remove());
   await router.push('/console/library/shared');
-  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('shared', null, '', 1, false, 20, 'content', undefined, undefined));
-  expect([...root!.querySelectorAll('th')].some(cell => cell.textContent?.includes('范围'))).toBe(false);
+  await vi.waitFor(() => expect(fixture.list).toHaveBeenCalledWith('shared', null, '', 1, false, 20, undefined, undefined, undefined, undefined));
+  expect([...root!.querySelectorAll('th')].some(cell => cell.textContent?.includes('可见范围'))).toBe(false);
   fixture.list.mockResolvedValue({ items: [{ ...folder, kind: 'FILE', name: '合同.pdf' }], total: 1, breadcrumb: [], parentScope: null });
   document.querySelectorAll('.el-popper').forEach(node => node.remove());
   await router.push('/console/library/trash');
@@ -343,5 +404,6 @@ it('puts folder actions on the tree and hides 范围 only on the shared list', a
     return items;
   });
   expect(trash.some(text => text.includes('撤销共享'))).toBe(false);
+  expect(trash.some(text => text.includes('改名'))).toBe(false);
   expect(trash.some(text => text.includes('恢复'))).toBe(true);
 });

@@ -235,6 +235,11 @@ export class ListQuery {
   @IsOptional()
   @IsIn(['folder', 'link', 'image', 'video', 'pdf', 'word', 'excel', 'ppt', 'text', 'other', 'content'])
   fileType?: string;
+
+  /** 可见范围筛选；搜索/筛选结果是全层级清单，不改变目录树本身。 */
+  @IsOptional()
+  @IsIn(['PRIVATE', 'ENTERPRISE'])
+  scope?: 'PRIVATE' | 'ENTERPRISE';
 }
 
 export const libraryUploadLimit = libraryLimitsFromEnv().maxFileBytes;

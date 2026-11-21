@@ -159,15 +159,24 @@ export class LibraryMutateService {
           || current.scope !== node.scope || current.parentId !== node.parentId || current.updatedAt !== node.updatedAt) {
           throw new LibraryError(409, '资料已变化，请刷新后重试替换', 'VERSION_CONFLICT');
         }
+        const nameTaken = (await service.ctx.store.listNodes(actor.tenantId)).some(row => row.id !== node.id
+          && row.kind === 'FILE'
+          && row.state === 'ACTIVE'
+          && row.ownerUserId === node.ownerUserId
+          && (row.parentId ?? null) === (node.parentId ?? null)
+          && row.scope === node.scope
+          && row.name === name);
+        if (nameTaken) throw new LibraryError(409, '同一目录下已存在同名文件，请改名或替换新版本', 'NAME_TAKEN');
         await service.ctx.store.commitReplacement({
           tenantQuotaBytes: this.ctx.limits.tenantQuotaBytes,
           nodeId: node.id,
+          name,
           version: prepared.version,
           chunks: prepared.chunks,
           updatedAt,
         });
         await service.auth.writeAudit(actor, 'library_replace', { nodeId: node.id, versionId: prepared.version.id, versionNo });
-        return toLibraryItem(service.ctx, actor, { ...current, currentVersionId: prepared.version.id, updatedAt }, await service.auth.custodiesFor(actor), null);
+        return toLibraryItem(service.ctx, actor, { ...current, name, currentVersionId: prepared.version.id, updatedAt }, await service.auth.custodiesFor(actor), null);
       });
     } catch (error) {
       await this.ctx.store.deleteBlob(prepared.version.storageKey);
@@ -237,7 +246,7 @@ export class LibraryMutateService {
     node.updatedAt = this.ctx.now();
     await this.ctx.store.updateNode(node.id, { parentId, updatedAt: node.updatedAt });
     const stored = await this.ctx.store.getNode(node.id);
-    if (!stored || stored.scope !== previousScope) {
+    if (!stored || stored.scope !== node.scope) {
       throw new LibraryError(500, '移动改变了可见性', 'SCOPE_DRIFT');
     }
     await this.auth.writeAudit(actor, 'library_move', { nodeId: node.id, parentId });

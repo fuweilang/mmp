@@ -43,6 +43,20 @@ describe('library sharing inheritance', () => {
     await assert.rejects(service.rename(mate, document.id, '不能编辑他人文件'), { status: 403 });
   });
 
+  it('filters owned and member lists by visibility across every level', async () => {
+    const { service, owner, admin, file } = setup();
+    const privateFolder = await service.createFolder(owner, '私有目录');
+    const sharedFolder = await service.createFolder(owner, '共享目录', null, { scope: 'ENTERPRISE', confirmShare: true });
+    const privateFile = await file(privateFolder.id);
+    const sharedFile = await file(sharedFolder.id);
+    const scoped = (actor: Actor, view: 'mine' | 'members', scope: 'PRIVATE' | 'ENTERPRISE', member?: string) =>
+      service.list(actor, view, null, '', true, 1, 100, 'all', undefined, member, false, scope);
+    assert.deepEqual((await scoped(owner, 'mine', 'PRIVATE')).items.map(row => row.id).sort(), [privateFile.id, privateFolder.id].sort());
+    assert.deepEqual((await scoped(owner, 'mine', 'ENTERPRISE')).items.map(row => row.id).sort(), [sharedFile.id, sharedFolder.id].sort());
+    assert.deepEqual((await scoped(admin, 'members', 'PRIVATE', owner.userId)).items.map(row => row.id).sort(), [privateFile.id, privateFolder.id].sort());
+    assert.deepEqual((await scoped(admin, 'members', 'ENTERPRISE', owner.userId)).items.map(row => row.id).sort(), [sharedFile.id, sharedFolder.id].sort());
+  });
+
   it('clears other members recent entries when a shared file becomes private', async () => {
     const { service, owner, mate, admin, file } = setup();
     const item = await file();

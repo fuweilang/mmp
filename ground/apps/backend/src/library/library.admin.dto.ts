@@ -4,7 +4,7 @@ export class AdminLibraryQuery {
  @IsOptional() @IsString() @MaxLength(180) q?: string;
  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;
  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize = 20;
- @IsOptional() @IsIn(['ACTIVE','RECYCLED']) state?: 'ACTIVE' | 'RECYCLED';
+ @IsOptional() @IsIn(['ALL','ACTIVE','RECYCLED']) state?: 'ALL' | 'ACTIVE' | 'RECYCLED';
  @IsOptional() @IsIn(['PRIVATE','ENTERPRISE']) scope?: 'PRIVATE' | 'ENTERPRISE';
  @IsOptional() @IsString() ownerUserId?: string;
  @IsOptional() @IsString() folderId?: string;
@@ -26,6 +26,7 @@ export class AdminLibraryCreate extends AdminLibraryContext {
  @IsOptional() @IsString() parentId?: string;
  @IsOptional() @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value) @IsBoolean() confirmShare?: boolean;
  @IsOptional() @IsString() @MinLength(1) @MaxLength(180) name?: string;
+ @IsOptional() @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value) @IsBoolean() reuseExisting?: boolean;
 }
 export class AdminLibraryCommand extends AdminLibraryContext {
  @IsString() @MinLength(1) nodeId!: string;
