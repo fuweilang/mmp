@@ -77,11 +77,14 @@ export class ClientEntries {
 
   /**
    * Create the initial roster and retain its entry identities for subsequent reconciliation.
+   * A foreground set activates and settles before this promise resolves. The other rows
+   * continue on the same queue so the shell can mount while they load.
    * @param loader - Page Loader, already configured with the module system.
    * @param manifest - Initial roster audited by the boot caller.
-   * @returns after initial entries and their activation settle; boot owns its activation audit.
+   * @param foreground - Package ids that must be active before the promise resolves. Omit to wait for every row.
+   * @returns after the foreground entries settle; boot owns their activation audit.
    */
-  start(loader: Loader, manifest: BootManifest): Promise<void> {
+  start(loader: Loader, manifest: BootManifest, foreground?: ReadonlySet<string>): Promise<void> {
     if (this.loader !== undefined) throw new Error('client-modules: entries already started')
     this.loader = loader
     this.desired = manifest
@@ -91,11 +94,26 @@ export class ClientEntries {
       return this.queue
     }, 'client-modules: entry reconciliation')
     return this.enqueue(async () => {
-      await Promise.all(this.desired.plugins.map(async ({ id }) => {
+      const plugins = this.desired.plugins
+      const first = foreground === undefined ? plugins : plugins.filter(row => foreground.has(row.id))
+      const rest = foreground === undefined ? [] : plugins.filter(row => !foreground.has(row.id))
+      await Promise.all(first.map(async ({ id }) => {
         await this.create(loader, id)
       }))
       await loader.await()
-      for (const row of this.modules.manifest.modules) this.revisions.set(row.id, row.rev)
+      for (const row of this.modules.manifest.modules) {
+        if (foreground !== undefined && !foreground.has(row.id)) continue
+        this.revisions.set(row.id, row.rev)
+      }
+      if (rest.length === 0) return
+      void this.enqueue(async () => {
+        if (this.stopped || this.loader !== loader) return
+        await Promise.all(rest.map(async ({ id }) => {
+          await this.create(loader, id)
+        }))
+        await loader.await()
+        for (const row of this.modules.manifest.modules) this.revisions.set(row.id, row.rev)
+      })
     })
   }
 

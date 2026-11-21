@@ -35,6 +35,8 @@ export function redirectToAgentWeb(): boolean {
   return true;
 }
 
+export { prefetchAgentShell } from './agent-shell-prefetch';
+
 /** 只允许回到配置的终端源，避免登录页的任意外部跳转。 */
 export function trustedAgentReturn(next: string | null): string | null {
   if (!next || !agentWebUrl || (!next.startsWith('http://') && !next.startsWith('https://'))) return null;

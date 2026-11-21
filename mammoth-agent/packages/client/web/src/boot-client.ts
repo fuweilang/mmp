@@ -1,7 +1,8 @@
 /**
  * Production client composition without the page: mount the Loader over a
- * module system, create every manifest row, wait for quiescence, and audit
- * activation. `AppWebEntry` and the whole-client test carrier both call it.
+ * module system, activate the foreground rows, and audit those rows.
+ * Rows outside that set keep loading after the promise resolves.
+ * `AppWebEntry` and the whole-client test carrier both call it.
  * @module @mammoth-ai/mmp-client-web/src/boot-client
  */
 import type { Context } from '@mammoth-ai/cordis'
@@ -20,21 +21,24 @@ export interface ClientBootOptions {
   readonly modules: ClientModuleLoader
   /** Parsed manifest whose `plugins` rows become Loader entries (entry name = row id). */
   readonly manifest: BootManifest
+  /** Package ids that must be active before the shell mounts. Omit to wait for every row. */
+  readonly foreground?: ReadonlySet<string>
   /** Per-entry state reporting (the boot page); omitted when no one renders progress. */
   readonly onEntryState?: (name: string, state: EntryStateLabel) => void
 }
 
 /**
  * Compose the client: `ctx.plugin(Loader)`, `loader.internal = modules`, one
- * `loader.create({ name })` per manifest row, `loader.await()`, then
- * {@link assertEntriesActive}. A row whose module cannot be imported is marked
+ * `loader.create({ name })` per foreground row, `loader.await()`, then
+ * {@link assertEntriesActive}. The other rows are created after this promise resolves.
+ * A row whose module cannot be imported is marked
  * failed; the Loader logs its import error, the module system records it, and
  * the audit rejects startup with that error text per entry.
  * @param options - context, module system, manifest, optional progress sink.
- * @returns resolves after every entry is active; rejects with the audit report otherwise.
+ * @returns resolves after the foreground entries are active; rejects with the audit report otherwise.
  */
 export async function bootClient(options: ClientBootOptions): Promise<void> {
-  const { ctx, manifest, onEntryState } = options
+  const { ctx, manifest, onEntryState, foreground } = options
   await ctx.plugin(Loader)
   const loader = ctx.loader
   loader.internal = options.modules as never
@@ -46,14 +50,18 @@ export async function bootClient(options: ClientBootOptions): Promise<void> {
   })
 
   const rows = manifest.plugins.map(row => row.id)
-  for (const name of rows) onEntryState?.(name, 'loading')
-  await options.modules.entries.start(loader, manifest)
+  for (const name of rows) {
+    if (foreground !== undefined && !foreground.has(name)) continue
+    onEntryState?.(name, 'loading')
+  }
+  await options.modules.entries.start(loader, manifest, foreground)
   for (const entry of loader.entries()) {
+    if (foreground !== undefined && !foreground.has(entry.options.name)) continue
     if (entry.fiber === undefined) onEntryState?.(entry.options.name, 'failed')
   }
 
   await loader.await()
-  assertEntriesActive(ctx, options.modules)
+  assertEntriesActive(ctx, options.modules, foreground)
 }
 
 /**
@@ -63,10 +71,15 @@ export async function bootClient(options: ClientBootOptions): Promise<void> {
  *   has no fiber; a row with no record points at the console.
  * @throws {Error} listing every non-active entry with its reason.
  */
-export function assertEntriesActive(ctx: Context, modules: Pick<ClientModuleLoader, 'importError'>): void {
+export function assertEntriesActive(
+  ctx: Context,
+  modules: Pick<ClientModuleLoader, 'importError'>,
+  foreground?: ReadonlySet<string>,
+): void {
   const failures: string[] = []
   for (const entry of ctx.loader.entries()) {
     const name = entry.options.name
+    if (foreground !== undefined && !foreground.has(name)) continue
     if (entry.fiber === undefined) {
       const importError = modules.importError(name)
       failures.push(importError === undefined

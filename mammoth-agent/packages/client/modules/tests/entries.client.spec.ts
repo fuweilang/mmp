@@ -189,6 +189,17 @@ describe('client manifest entries', () => {
     expect(document.querySelectorAll('style[data-plugin=pet]')).toHaveLength(1)
   })
 
+  it('resolves after the foreground plugin and then activates the rest', async () => {
+    let later = false
+    const b = await bench(graph(row('shell'), row('later')), {
+      shell: () => ({ apply() {} }),
+      later: () => ({ apply() { later = true } }),
+    }, false)
+    await b.modules.entries.start(b.ctx.loader, b.modules.manifest, new Set(['shell']))
+    expect(later).toBe(false)
+    await vi.waitFor(() => { expect(later).toBe(true) })
+  })
+
   it('rejects malformed graphs before mutating active entries', async () => {
     const b = await bench(graph(row('a')), { a: () => ({ apply() {} }) })
     expect(() => b.modules.entries.sync({ rev: 'bad', entries: [{ id: 'a' }], batches: [] })).toThrow('string id/url/rev')

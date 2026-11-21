@@ -2,7 +2,7 @@
  * Web boot kernel. It owns only the module system, Cordis loader, and a
  * framework-free boot page; plugin composition and the renderer handoff are
  * `bootClient` and `mountClient`. The dynamic UI renderer receives the mount
- * point after every client entry activates.
+ * point after the shell and welcome plugins activate. The remaining plugins continue loading.
  * @module @mammoth-ai/mmp-client-web/src/boot
  */
 import { Context } from '@mammoth-ai/cordis'
@@ -10,6 +10,7 @@ import type {
   BootManifest, ClientModuleCreateOptions, ClientModuleSystem, MmpWindow,
 } from '@mammoth-ai/mmp-client-modules/client'
 import { bootClient } from './boot-client.ts'
+import { foregroundPluginIds } from './foreground-plugins.ts'
 import { BootPage } from './boot-page.ts'
 import { mountClient } from './mount.ts'
 import { getStaticModules } from './seed.ts'
@@ -77,15 +78,21 @@ export class AppWebEntry {
       })
       this.manifest = this.modules.manifest
 
-      const prefetching = this.prefetchImmediateTier()
+      const foreground = foregroundPluginIds(this.manifest.plugins)
+      const gate = foreground.size > 0 ? foreground : undefined
+      const prefetching = Promise.all([
+        this.prefetchImmediateTier(),
+        this.prefetchForeground(gate),
+      ])
       const ctx = new Context()
       this.ctx = ctx
-      this.page.setTotal(this.manifest.plugins.length)
+      this.page.setTotal(gate?.size ?? this.manifest.plugins.length)
       await prefetching
       await bootClient({
         ctx,
         modules: this.modules,
         manifest: this.manifest,
+        foreground: gate,
         onEntryState: (name, state) => {
           if (onFailure === undefined || state !== 'failed') this.page.setState(name, state)
         },
@@ -111,6 +118,14 @@ export class AppWebEntry {
     this.ctx = undefined
     if (ctx !== undefined) await ctx.fiber.dispose()
     this.page.dispose()
+  }
+
+  /** Prefetch the bundles the shell and welcome guide import before the boot page waits on them. */
+  private async prefetchForeground(ids: ReadonlySet<string> | undefined): Promise<void> {
+    if (ids === undefined) return
+    await Promise.all([...ids].map(id => this.modules.prefetch(id).catch((_prefetchError: unknown) => {
+      // Prefetch only starts transport early; the Loader import retries and reports this bundle failure.
+    })))
   }
 
   /** Prefetch stage-one bundles and their dynamic requests before concurrent plugin imports. */

@@ -112,7 +112,7 @@ import { canAccessConsole } from '@mammoth/shared';
 import { useAuthStore } from '../stores/auth';
 import ClientDownloadLink from '../components/ClientDownloadLink.vue';
 import { sanitizeText } from '../utils/sanitizeText';
-import { redirectToAgentWeb, trustedAgentReturn } from '../utils/agent';
+import { agentWebUrl, prefetchAgentShell, redirectToAgentWeb, trustedAgentReturn } from '../utils/agent';
 
 const CONSOLE_HOME = '/console';
 const auth = useAuthStore();
@@ -184,7 +184,7 @@ onMounted(async () => {
     history.replaceState(null, '', `/login${qs ? `?${qs}` : ''}`);
     try {
       await auth.consumeBrowserSso(sso);
-      goAfterLogin();
+      await goAfterLogin();
       return;
     } catch {
       ElMessage.error('登录已失效，请重新登录');
@@ -195,7 +195,7 @@ onMounted(async () => {
   try {
     await auth.load();
     if (auth.session) {
-      goAfterLogin();
+      await goAfterLogin();
       return;
     }
   } catch {
@@ -203,22 +203,24 @@ onMounted(async () => {
   }
   booting.value = false;
 });
-function goAgent() {
+async function goAgent() {
+  await prefetchAgentShell(agentWebUrl);
   if (!redirectToAgentWeb()) ElMessage.error('猛犸专家地址未配置，请联系管理员');
 }
 
-function goConsoleOrAgent() {
+async function goConsoleOrAgent() {
   if (canAccessConsole(auth.session)) {
     window.location.href = CONSOLE_HOME;
     return;
   }
-  goAgent();
+  await goAgent();
 }
 
-function goAfterLogin() {
+async function goAfterLogin() {
   const next = nextParam();
   const agentReturn = trustedAgentReturn(next);
   if (agentReturn) {
+    await prefetchAgentShell(agentReturn);
     window.location.replace(agentReturn);
     return;
   }
@@ -234,13 +236,13 @@ function goAfterLogin() {
         }
         if (pathname === '/admin' || pathname.startsWith('/admin/')) {
           if (auth.session?.user.isPlatformAdmin) window.location.href = target.href;
-          else goConsoleOrAgent();
+          else await goConsoleOrAgent();
           return;
         }
         const legacyConsole = pathname === '/middle' || pathname.startsWith('/middle/');
         if (legacyConsole || pathname === '/console' || pathname.startsWith('/console/')) {
           if (auth.session?.user.isPlatformAdmin && !auth.session.currentTenant) window.location.href = '/admin';
-          else if (!canAccessConsole(auth.session)) goAgent();
+          else if (!canAccessConsole(auth.session)) await goAgent();
           else window.location.href = legacyConsole ? `/console${pathname.slice('/middle'.length)}${search}${hash}` : target.href;
           return;
         }
@@ -249,7 +251,7 @@ function goAfterLogin() {
       // Invalid return URLs fall through to the Web home.
     }
   }
-  goAgent();
+  await goAgent();
 }
 
 async function onSubmit() {
@@ -303,7 +305,7 @@ async function onSubmit() {
       await auth.login(form.phone, form.password);
       ElMessage.success('登录成功');
     }
-    goAfterLogin();
+    await goAfterLogin();
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : mode.value === 'register' ? '注册失败' : '登录失败');
   } finally {
