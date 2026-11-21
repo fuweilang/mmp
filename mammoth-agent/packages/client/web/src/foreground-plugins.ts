@@ -27,7 +27,7 @@ export interface ForegroundPluginRow {
 export function foregroundPluginIds(plugins: readonly ForegroundPluginRow[]): Set<string> {
   const known = new Map(plugins.map(row => [row.id, row.inject ?? []]))
   const seen = new Set<string>()
-  const stack = FOREGROUND_SEEDS.filter(id => known.has(id))
+  const stack: string[] = FOREGROUND_SEEDS.filter(id => known.has(id))
   while (stack.length > 0) {
     const id = stack.pop()
     if (id === undefined || seen.has(id)) continue

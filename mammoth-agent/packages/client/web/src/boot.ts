@@ -92,7 +92,7 @@ export class AppWebEntry {
         ctx,
         modules: this.modules,
         manifest: this.manifest,
-        foreground: gate,
+        ...gate === undefined ? {} : { foreground: gate },
         onEntryState: (name, state) => {
           if (onFailure === undefined || state !== 'failed') this.page.setState(name, state)
         },
