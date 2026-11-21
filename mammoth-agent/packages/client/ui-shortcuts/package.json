@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-shortcuts",
   "description": "Keyboard shortcut reference, recording, and local preference editing",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-spill-local",
   "description": "Local-filesystem implementation of the DeepSeek Harness spill storage seam (private session-scoped files)",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "publishConfig": {
     "access": "public"
   },

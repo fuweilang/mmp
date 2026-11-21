@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-plugin-recommendations",
   "description": "Official plugin suggestions with explicit user activation and persistent conversation decisions",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "publishConfig": {
     "access": "public"
   },

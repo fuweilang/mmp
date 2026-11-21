@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-computer-use",
   "description": "Exclusive named computer-use provider registration",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-hmr",
   "description": "Coordinated module and profile configuration hot reload",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "publishConfig": {
     "access": "public"
   },

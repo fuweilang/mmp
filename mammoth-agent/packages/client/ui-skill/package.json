@@ -1,7 +1,7 @@
 {
   "name": "@mammoth-ai/mmp-client-ui-skill",
   "description": "Web skill references and the dedicated skill tool row",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "publishConfig": {
     "access": "public"
   },
