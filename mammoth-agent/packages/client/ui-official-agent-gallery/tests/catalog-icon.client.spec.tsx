@@ -21,7 +21,7 @@ describe('CatalogIcon', () => {
     )
     const artwork = container.querySelector('[class*="artwork"]') as HTMLElement
     expect(artwork.getAttribute('data-has-image')).toBe('true')
-    expect(container.querySelector('img[src="https://example.test/vivo-logo.png"]')).toBeTruthy()
+    expect(container.querySelector('img[src="https://example.test/vivo-logo.png"]')?.getAttribute('fetchpriority')).toBe('low')
     expect(container.querySelector('svg')).toBeNull()
   })
 

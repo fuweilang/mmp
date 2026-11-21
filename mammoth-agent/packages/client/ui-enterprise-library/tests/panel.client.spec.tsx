@@ -8,13 +8,14 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { allowAllAccess, contextMenuHook } from '@mammoth-ai/mmp-client-test-runtime'
 import type { GlobalStandardProps } from '@mammoth-ai/mmp-client-ui-slots'
+import { clearLibraryPageCache } from '../src/client/api.ts'
 import { LibraryTree } from '../src/client/LibraryTree.tsx'
 import { LibraryIcon } from '../src/client/LibraryIcon.tsx'
 import { LibraryPanel as RawLibraryPanel, type LibraryPanelProps } from '../src/client/LibraryPanel.tsx'
 import type { LibraryChoice } from '../src/client/selection.ts'
 import { zh, type LibraryKey } from '../src/client/locales.ts'
 
-afterEach(() => { cleanup() })
+afterEach(() => { cleanup(); clearLibraryPageCache() })
 
 const t = (key: LibraryKey) => zh[key]
 const listing = () => within(document.querySelector('aside [data-group="recent"][data-active="true"]') ? document.querySelector('main')! : document.querySelector('aside [data-active="true"]')!)

@@ -194,6 +194,7 @@ export async function libraryRequest(origin: string, path: string, method: strin
     ...(data === undefined ? {} : form ? { body: data } : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }),
   })
   if (!response.ok) throw await failure(response)
+  if (method !== 'GET') clearLibraryPageCache()
   return response.json()
 }
 
@@ -211,15 +212,35 @@ export async function fetchLibraryCatalog(origin: string, q: string, page: numbe
   return { items: readLibraryItems(payload).filter((item) => item.kind === 'FILE'), total }
 }
 /** A single authorized page; paging is explicit so old flat pickers keep all their candidates. */
-export async function fetchLibraryPage(origin: string, view: LibraryView, q: string, fetchImpl: LibraryFetch, signal?: AbortSignal, parentId?: string | null, page = 1, status = 'all'): Promise<LibraryPage> {
+export function libraryPageUrl(origin: string, view: LibraryView, q: string, parentId?: string | null, page = 1, status = 'all'): string {
   const requested = status === 'download' ? 'uncitable' : status
-  const url = libraryItemsUrl(origin, view, q, parentId) + `&page=${page}&pageSize=20&status=${encodeURIComponent(requested)}&agent=1`;
+  return libraryItemsUrl(origin, view, q, parentId) + `&page=${page}&pageSize=20&status=${encodeURIComponent(requested)}&agent=1`
+}
+
+const libraryPages = new Map<string, LibraryPage>()
+
+/** Drop remembered lists after a library change or an explicit refresh. */
+export function clearLibraryPageCache(): void {
+  libraryPages.clear()
+}
+
+/** Last successful page for this exact list, if this session already loaded it. */
+export function cachedLibraryPage(url: string): LibraryPage | undefined {
+  return libraryPages.get(url)
+}
+
+export async function fetchLibraryPage(origin: string, view: LibraryView, q: string, fetchImpl: LibraryFetch, signal?: AbortSignal, parentId?: string | null, page = 1, status = 'all'): Promise<LibraryPage> {
+  const url = libraryPageUrl(origin, view, q, parentId, page, status)
+  const remembered = libraryPages.get(url)
+  if (remembered) return remembered
   const response = await fetchImpl(url, { credentials: 'include', ...(signal ? { signal } : {}) });
   if (!response.ok) throw await failure(response, 'library list');
   const payload: unknown = await response.json();
   const items = readLibraryItems(payload);
   const raw = payload as { total?: unknown; breadcrumb?: { id: string; name: string }[]; parentScope?: unknown };
-  return { items, total: typeof raw.total === 'number' ? raw.total : items.length, breadcrumb: Array.isArray(raw.breadcrumb) ? raw.breadcrumb : [], ...(raw.parentScope === 'PRIVATE' || raw.parentScope === 'ENTERPRISE' ? { parentScope: raw.parentScope } : {}) };
+  const result: LibraryPage = { items, total: typeof raw.total === 'number' ? raw.total : items.length, breadcrumb: Array.isArray(raw.breadcrumb) ? raw.breadcrumb : [], ...(raw.parentScope === 'PRIVATE' || raw.parentScope === 'ENTERPRISE' ? { parentScope: raw.parentScope } : {}) }
+  libraryPages.set(url, result)
+  return result
 }
 
 /** Read the authorized recursive count and revision before changing visibility.

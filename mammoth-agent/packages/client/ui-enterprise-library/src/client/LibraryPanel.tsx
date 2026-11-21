@@ -4,7 +4,7 @@ import type { LibraryKey } from './locales.ts'
 import type { HostObservable, InjectFace, PropsLocale, PropsRuntime, PropsRenderFactories } from '@mammoth-ai/mmp-client-ui-slots'
 import type {} from '@mammoth-ai/mmp-client-ui-layout/client'
 import type {} from '@mammoth-ai/mmp-client-ui-sidebar-documentpreview/client'
-import { fetchLibraryItems, fetchLibrarySource, fetchLibraryPage, fetchLibraryScopeImpact, fetchLibraryPreviewBytes, LibraryRequestError, libraryRequest, libraryTransport, type LibraryFetch, type LibraryView } from './api.ts'
+import { cachedLibraryPage, clearLibraryPageCache, fetchLibraryItems, fetchLibrarySource, fetchLibraryPage, fetchLibraryScopeImpact, fetchLibraryPreviewBytes, LibraryRequestError, libraryPageUrl, libraryRequest, libraryTransport, type LibraryFetch, type LibraryView } from './api.ts'
 import { matchesStatus, type LibraryChoice } from './selection.ts'
 import { RowActions } from './LibraryRowActions.tsx'
 import { LibraryTree } from './LibraryTree.tsx'
@@ -197,7 +197,7 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
   const [moveFolders, setMoveFolders] = useState<readonly LibraryChoice[]>([])
   const [movePath, setMovePath] = useState<readonly { id: string; name: string; scope?: string | undefined }[]>([])
   const parentId = path.at(-1)?.id ?? null
-  const refresh = () => { setRevision(n => n + 1) }
+  const refresh = () => { clearLibraryPageCache(); setRevision(n => n + 1) }
   /** The signed-in enterprise owns this library. A lone membership with no session enterprise is entered in place. */
   const [memberTenantId, setMemberTenantId] = useState<string | null>(null)
   const entering = useRef(false)
@@ -258,9 +258,17 @@ export function LibraryPanel({ t, origin, fetchImpl, onUse, onUseMany, useSource
     return () => { current = false }
   }, [origin, fetchImpl, revision])
   useEffect(() => {
-    if (!configReady || blocked !== null) { setLoading(false); setItems([]); setTotal(0); return }
+    if (blocked !== null) { setLoading(false); setItems([]); setTotal(0); return }
+    if (!configReady) return
     const control = new AbortController()
     const append = view === 'recent' && page > 1
+    const remembered = cachedLibraryPage(libraryPageUrl(origin, view, '', parentId, page, filter))
+    if (remembered && !append) {
+      setItems(remembered.items); setTotal(remembered.total); setParentScope(remembered.parentScope)
+      if (parentId && remembered.breadcrumb.length) setPath(remembered.breadcrumb)
+      setError(''); setLoading(false)
+      return () => { control.abort() }
+    }
     setLoading(true)
     if (!append) setItems([])
     void fetchLibraryPage(origin, view, '', fetchImpl, control.signal, parentId, page, filter).then(next => {

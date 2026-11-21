@@ -48,6 +48,7 @@ export function CatalogIcon({ catalogKey, kind, src }: {
             alt=""
             loading="lazy"
             decoding="async"
+            {...{ fetchpriority: 'low' }}
             onError={() => setFailed(imageSrc)}
           />
         ) : (

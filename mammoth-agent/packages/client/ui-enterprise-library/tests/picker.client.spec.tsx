@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { clearLibraryPageCache } from '../src/client/api.ts'
 import { LibraryPicker } from '../src/client/LibraryPicker.tsx'
 import type { LibraryChoice } from '../src/client/selection.ts'
 import { zh, type LibraryKey } from '../src/client/locales.ts'
 
-afterEach(cleanup)
+afterEach(() => { cleanup(); clearLibraryPageCache() })
 const t = ((key: LibraryKey, values?: Record<string, string | number>) => Object.entries(values ?? {}).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), zh[key])) as never
 const file = (id: string, version = 'v1') => ({ id, name: `${id}.pdf`, kind: 'FILE', currentVersion: { id: version, versionNo: 1, parseStatus: 'READY', sizeBytes: 2048 } })
 const select = (id: string) => fireEvent.click(screen.getByRole('checkbox', { name: `${zh.select} ${id}.pdf` }))

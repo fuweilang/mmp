@@ -3,12 +3,13 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, expect, it, vi } from 'vitest'
 import { allowAllAccess, contextMenuHook } from '@mammoth-ai/mmp-client-test-runtime'
 import type { GlobalStandardProps } from '@mammoth-ai/mmp-client-ui-slots'
+import { clearLibraryPageCache } from '../src/client/api.ts'
 import { LibraryPanel, type LibraryPanelProps } from '../src/client/LibraryPanel.tsx'
 import { zh, type LibraryKey } from '../src/client/locales.ts'
 
 import { renderPreviewFactory } from './preview-factory.fixture.tsx'
 
-afterEach(cleanup)
+afterEach(() => { cleanup(); clearLibraryPageCache() })
 const unused = (): never => { throw new Error('unused framework seat') }
 const standard: GlobalStandardProps = {
   usePanelInfo: unused, useSessions: unused, useSessionStatus: unused, useSessionRetainInfo: unused,

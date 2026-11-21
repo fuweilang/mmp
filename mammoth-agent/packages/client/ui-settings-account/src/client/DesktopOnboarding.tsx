@@ -34,6 +34,17 @@ export function DesktopOnboarding({
   const progress = state.progress
   const targetStep = progress.step
   const [step, setStep] = useState(targetStep)
+  const skippedWebWelcome = useRef(false)
+  useEffect(() => {
+    if (skippedWebWelcome.current || 'mmpDesktop' in globalThis) return
+    if (!state.visible || state.status !== 'ready' || progress.step !== 'welcome') return
+    let pending = false
+    try { pending = sessionStorage.getItem('mmp-web-welcome-done') === '1' } catch { return }
+    if (!pending) return
+    skippedWebWelcome.current = true
+    try { sessionStorage.removeItem('mmp-web-welcome-done') } catch { /* the step change still proceeds */ }
+    void update({ step: 'credit' })
+  }, [state.visible, state.status, progress.step, update])
   const busy = state.status === 'loading' || state.status === 'saving' || exiting || step !== targetStep
   useEffect(() => {
     if (step === targetStep) return

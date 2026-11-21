@@ -42,6 +42,22 @@ type PageState = {
     loaded: boolean;
 };
 const EMPTY: PageState = { items: [], total: 0, hasMore: false, cursor: null, loading: false, error: null, loaded: false };
+type GalleryListSnapshot = { state: PageState; facets: CatalogFacets | null };
+const galleryLists = new Map<string, GalleryListSnapshot>();
+const defaultGallerySignature = JSON.stringify(['', 'all', 'all', 0]);
+
+/** Drop remembered plaza lists between visits that must hit the network again, including tests. */
+export function clearGalleryListCache(): void {
+    galleryLists.clear();
+}
+
+function rememberGalleryList(kind: GalleryTab, signature: string, state: PageState, facets: CatalogFacets | null): void {
+    if (!state.loaded || state.error)
+        return;
+    const key = `${kind}:${signature}`;
+    const prior = galleryLists.get(key);
+    galleryLists.set(key, { state, facets: facets ?? prior?.facets ?? null });
+}
 
 /** Fixed five-point star; viewBox 24 keeps a complete glyph at 16px without flex squash. */
 const FAVOURITE_STAR_PATH = 'M12 2.5l2.9 5.88 6.49.94-4.7 4.58 1.11 6.46L12 17.02 6.2 20.36l1.11-6.46-4.7-4.58 6.49-.94L12 2.5z';
@@ -130,13 +146,18 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
 }): ReactNode {
     const [input, setInput] = useState(''), [query, setQuery] = useState(''), [capability, setCapability] = useState('all'), [industry, setIndustry] = useState('all');
     const [expanded, setExpanded] = useState(false), [visibleCount, setVisibleCount] = useState(5), [refresh, setRefresh] = useState(0);
-    const [state, setState] = useState<PageState>(EMPTY), [facets, setFacets] = useState<CatalogFacets | null>(null), [facetError, setFacetError] = useState(false);
+    const opening = galleryLists.get(`${kind}:${defaultGallerySignature}`);
+    const [state, setState] = useState<PageState>(opening?.state.loaded && !opening.state.error ? opening.state : EMPTY), [facets, setFacets] = useState<CatalogFacets | null>(opening?.facets ?? null), [facetError, setFacetError] = useState(false);
     const root = useRef<HTMLDivElement>(null), sentinel = useRef<HTMLDivElement>(null), facetList = useRef<HTMLDivElement>(null), scroll = useRef(0);
-    const generation = useRef(0), lock = useRef(false), mounted = useRef(true), activeRef = useRef(active), loadedSignature = useRef(''), facetGeneration = useRef(0), facetsLoaded = useRef(false);
+    const generation = useRef(0), lock = useRef(false), mounted = useRef(true), activeRef = useRef(active), loadedSignature = useRef(opening?.state.loaded && !opening.state.error ? defaultGallerySignature : ''), facetGeneration = useRef(0), facetsLoaded = useRef(Boolean(opening?.facets));
     const current = useRef(state);
     current.current = state;
     activeRef.current = active;
     const signature = JSON.stringify([query, capability, industry, refresh]);
+    const signatureRef = useRef(signature);
+    signatureRef.current = signature;
+    const facetsRef = useRef(facets);
+    facetsRef.current = facets;
     const defaults = kind === 'experts' ? EXPERT_CATEGORIES : CAPABILITIES;
     const labels = useMemo(() => (facets?.capabilities ?? []).map((facet, index) => {
         const fallback = defaults.find(label => label.id === facet.id);
@@ -162,8 +183,15 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
         setFacetError(false);
         try {
             const value = await loadFacets();
-            if (mounted.current && request === facetGeneration.current)
+            if (mounted.current && request === facetGeneration.current) {
+                facetsRef.current = value;
                 setFacets(value);
+                const prefix = `${kind}:`;
+                for (const [key, existing] of galleryLists) {
+                    if (key.startsWith(prefix) && existing.state.loaded && !existing.state.error)
+                        galleryLists.set(key, { ...existing, facets: value });
+                }
+            }
         }
         catch {
             if (mounted.current && request === facetGeneration.current) {
@@ -195,7 +223,9 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
                 const seen = new Set<string>();
                 const items = [...append ? value.items : [], ...result.items].filter(item => { if (seen.has(item.id))
                     return false; seen.add(item.id); return true; });
-                return { items, total: result.total, hasMore: result.hasMore, cursor: result.nextCursor, loading: false, error: null, loaded: true };
+                const next: PageState = { items, total: result.total, hasMore: result.hasMore, cursor: result.nextCursor, loading: false, error: null, loaded: true };
+                rememberGalleryList(kind, signature, next, opened ? opened.facets : facetsRef.current);
+                return next;
             });
         }
         catch (error) {
@@ -216,18 +246,36 @@ function CatalogPanel({ kind, active, loadPage, loadHome, loadFacets, starting, 
     useEffect(() => {
         if (!active)
             return;
+        if (loadedSignature.current !== signature) {
+            const hit = galleryLists.get(`${kind}:${signature}`);
+            if (hit?.state.loaded && !hit.state.error) {
+                generation.current++;
+                lock.current = false;
+                loadedSignature.current = signature;
+                setState(hit.state);
+                if (hit.facets) {
+                    setFacets(hit.facets);
+                    facetsRef.current = hit.facets;
+                    setFacetError(false);
+                    facetsLoaded.current = true;
+                }
+                scroll.current = 0;
+                if (root.current)
+                    root.current.scrollTop = 0;
+            }
+            else {
+                generation.current++;
+                lock.current = false;
+                loadedSignature.current = signature;
+                scroll.current = 0;
+                if (root.current)
+                    root.current.scrollTop = 0;
+                void fetchPage(false);
+            }
+        }
         if (!loadHome && !facetsLoaded.current)
             void fetchFacets();
-        if (loadedSignature.current !== signature) {
-            generation.current++;
-            lock.current = false;
-            loadedSignature.current = signature;
-            scroll.current = 0;
-            if (root.current)
-                root.current.scrollTop = 0;
-            void fetchPage(false);
-        }
-    }, [active, signature, fetchPage, fetchFacets, loadHome]);
+    }, [active, signature, fetchPage, fetchFacets, loadHome, kind]);
     useLayoutEffect(() => { if (active && root.current)
         root.current.scrollTop = scroll.current; }, [active]);
     useLayoutEffect(() => {

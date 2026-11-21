@@ -96,13 +96,14 @@ export async function startGroundWebRouter(options: {
     if (requestOrigin !== undefined && requestOrigin !== `http://${host}` && requestOrigin !== `https://${host}`) return false
     return req.headers['sec-fetch-site'] !== 'cross-site'
   }
-  const identify = async (req: IncomingMessage): Promise<GroundWebIdentity | undefined> => {
+  const identify = async (req: IncomingMessage): Promise<{ identity: GroundWebIdentity; welcomeSeen: boolean | null } | undefined> => {
     const token = groundWebCookie({ headers: req.headers }, options.cookieName)
     if (token === undefined) return undefined
     // Verify on each request so revocation and enterprise status are never inferred from browser claims.
     const verified = await verifyGroundWebSession(ground.origin, token,
       AbortSignal.any([lifetime.signal, AbortSignal.timeout(options.requestTimeoutMs)]))
-    return verified.identity
+    const welcomeSeen = verified.session.welcomeSeen === true ? true : verified.session.welcomeSeen === false ? false : null
+    return { identity: verified.identity, welcomeSeen }
   }
   const activeSlots = (): number => {
     let count = 0
@@ -306,6 +307,48 @@ async function probe(){
 }
 probe();
 </script></html>`
+  // New accounts see the guide's first step at once. The identity Host keeps booting behind it.
+  const welcomeHtml = `<!doctype html><html lang="zh-CN"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>猛犸AI</title>
+<style>
+:root{color-scheme:light}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f5f6fb;color:#333946;font:16px/1.6 system-ui,-apple-system,"PingFang SC",sans-serif}
+main{width:min(560px,calc(100% - 48px));padding:8px}h1{font-size:32px;font-weight:600;line-height:1.3;margin:0}h1 em{color:#5b5bd6;font-style:normal}
+p{color:#667085;margin:12px 0 0}button{margin-top:28px;border:0;border-radius:8px;background:#5b5bd6;color:#fff;padding:10px 22px;font:inherit;cursor:pointer}
+button:disabled{background:#c5c8f6;cursor:default}#status{margin-top:12px;font-size:13px}
+</style>
+<main><h1>欢迎使用 <em>猛犸AI</em></h1>
+<p>猛犸AI会以本地文件夹作为工作区，通过调用各种工具，读写本机文件，完成搜索整理资料、制作文档表格、编写代码、排查问题等各种任务。</p>
+<button id="start" type="button" disabled>开始设置</button>
+<p id="status">正在准备智能体，你可以先看完这段说明</p>
+<button id="retry" type="button" hidden onclick="location.reload()">重新加载</button></main>
+<script>
+const status=document.getElementById('status'),start=document.getElementById('start'),retry=document.getElementById('retry');
+const started=Date.now();
+const readyUrl=new URL('.mmp/ready',location.href);
+const appUrl=new URL('./',location.href);
+let open=false;
+function enter(){
+  if(!open)return;
+  try{sessionStorage.setItem('mmp-web-welcome-done','1')}catch(e){}
+  location.replace(appUrl);
+}
+start.addEventListener('click',enter);
+async function probe(){
+  try{
+    const response=await fetch(readyUrl,{cache:'no-store'});
+    if(response.ok||response.status===401||response.status===403){
+      open=true;start.disabled=false;status.textContent='可以开始设置了';return;
+    }
+    if(response.status>=500){status.textContent='启动失败，请稍后重试';retry.hidden=false;return}
+    throw new Error('not ready');
+  }catch{
+    if(Date.now()-started>45000){status.textContent='准备时间较长，请点重新加载';retry.hidden=false;return}
+    setTimeout(probe,600);
+  }
+}
+probe();
+</script></html>`
   const isDocumentRequest = (req: IncomingMessage): boolean => req.method === 'GET'
     && (req.headers.accept ?? '').includes('text/html')
   const warmupProbe = (req: IncomingMessage): boolean => {
@@ -333,12 +376,13 @@ probe();
       let releaseHold = (): void => {}
       try {
         if (await servePublicPwaAsset(req, res)) return
-        const identity = await identify(req)
-        if (identity === undefined) {
+        const admitted = await identify(req)
+        if (admitted === undefined) {
           if (rootRequest(req)) redirect(res)
           else send(res, 401, '请先从 Web 首页登录')
           return
         }
+        const { identity, welcomeSeen } = admitted
         const held = await hold(identity)
         releaseHold = releaseOnce(held.release)
         res.once('finish', releaseHold)
@@ -352,7 +396,7 @@ probe();
         }
         if (rootRequest(req) && isDocumentRequest(req)) {
           if (await readyOrPending(pending) === 'pending') {
-            sendHtml(res, warmupHtml)
+            sendHtml(res, welcomeSeen === false ? welcomeHtml : warmupHtml)
             return
           }
         }
@@ -382,8 +426,9 @@ probe();
       if (!trusted(req)) { refuse(403); return }
       let releaseHold = (): void => {}
       try {
-        const identity = await identify(req)
-        if (identity === undefined) { refuse(401); return }
+        const admitted = await identify(req)
+        if (admitted === undefined) { refuse(401); return }
+        const { identity } = admitted
         const held = await hold(identity)
         releaseHold = releaseOnce(held.release)
         const worker = await held.worker

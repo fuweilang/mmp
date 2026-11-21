@@ -16,8 +16,9 @@ async function close(server: Server): Promise<void> {
   server.closeAllConnections()
   await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
 }
+const tokenExpiresAt = Math.floor(Date.now() / 1000) + 300
 function token(identity: GroundWebIdentity, nonce = ''): string {
-  return `header.${Buffer.from(JSON.stringify({ sub: identity.userId, tenantId: identity.tenantId, exp: Math.floor(Date.now() / 1000) + 300, nonce })).toString('base64url')}.signature`
+  return `header.${Buffer.from(JSON.stringify({ sub: identity.userId, tenantId: identity.tenantId, exp: tokenExpiresAt, nonce })).toString('base64url')}.signature`
 }
 
 it('isolates three browsers, preserves same-user sessions and proxies upgrades only to the matching Host', async () => {
@@ -139,6 +140,38 @@ it('paints a progress page while a cold identity Host starts, then proxies once 
   expect(splashHtml).not.toContain("fetch('/.mmp/ready'")
   expect(splashHtml).not.toContain("location.replace('/')")
   expect((await fetch(`${router.origin}/.mmp/ready`, { headers })).status).toBe(204)
+  expect(await (await fetch(router.origin, { headers })).text()).toBe('warm-worker')
+})
+
+it('shows the welcome step at once for a new account while the Host is still starting', async () => {
+  const identity = { userId: 'new-user', tenantId: 'new-enterprise' }
+  const jwt = token(identity)
+  const ground = createServer((_req, res) => {
+    res.setHeader('content-type', 'application/json')
+    res.end(JSON.stringify({
+      user: { id: identity.userId }, currentTenant: { id: identity.tenantId, status: 'active' }, welcomeSeen: false,
+    }))
+  })
+  const groundOrigin = await listen(ground)
+  cleanup.push(() => close(ground))
+  const worker = createServer((_req, res) => res.end('warm-worker'))
+  const workerOrigin = await listen(worker)
+  cleanup.push(() => close(worker))
+  const router = await startGroundWebRouter({ host: '127.0.0.1', port: 0, groundOrigin,
+    cookieName: 'mammothai_access_token', maxWorkers: 1, requestTimeoutMs: 1000,
+    async startWorker() {
+      await new Promise(resolve => setTimeout(resolve, 800))
+      return { origin: workerOrigin, close: async () => {} }
+    } })
+  cleanup.push(router.close)
+  const headers = { cookie: `mammothai_access_token=${jwt}`, accept: 'text/html' }
+  const splashHtml = await (await fetch(router.origin, { headers })).text()
+  expect(splashHtml).toContain('欢迎使用')
+  expect(splashHtml).toContain('开始设置')
+  expect(splashHtml).toContain('mmp-web-welcome-done')
+  expect(splashHtml).toContain("new URL('.mmp/ready',location.href)")
+  expect(splashHtml).not.toContain('正在启动你的智能体')
+  expect(splashHtml).not.toContain("location.replace('/')")
   expect(await (await fetch(router.origin, { headers })).text()).toBe('warm-worker')
 })
 

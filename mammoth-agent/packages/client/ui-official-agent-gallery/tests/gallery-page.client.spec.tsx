@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { makeTranslate } from '@mammoth-ai/mmp-client-test-runtime'
 import type { CatalogDetail, CatalogFacets, CatalogQuery, OfficialAgentCard, OfficialSkillCard } from '@mammoth-ai/mmp-official-agent-gallery/types'
-import { GalleryPage, type GalleryFace, type StartAgentFailure } from '../src/client/GalleryPage.tsx'
+import { clearGalleryListCache, GalleryPage, type GalleryFace, type StartAgentFailure } from '../src/client/GalleryPage.tsx'
 import { zh } from '../src/client/locales.ts'
 
 const general: OfficialAgentCard = {
@@ -28,7 +28,7 @@ const locked: OfficialAgentCard = {
 
 const t = makeTranslate(zh)
 
-afterEach(cleanup)
+afterEach(() => { cleanup(); clearGalleryListCache() })
 
 type LoadAgents = () => Promise<readonly OfficialAgentCard[]>
 type LoadSkills = () => Promise<readonly OfficialSkillCard[]>
@@ -295,6 +295,18 @@ describe('GalleryPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '召唤专家 文案润色' }))
     await waitFor(() => { expect(screen.getByRole('alert').textContent).toBe('无法开始对话，请重试') })
     expect(screen.queryByText('private Ground failure')).toBeNull()
+  })
+
+  it('shows the last expert list again without requesting it', async () => {
+    mount(vi.fn(async () => [general]))
+    await loaded()
+    await waitFor(() => { expect(screen.getByRole('button', { name: /内容营销/ })).toBeTruthy() })
+    cleanup()
+    const loadAgents = vi.fn<LoadAgents>(async () => { throw new Error('offline') })
+    mount(loadAgents)
+    expect(screen.getByRole('button', { name: '召唤专家 文案润色' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /内容营销/ })).toBeTruthy()
+    expect(loadAgents).not.toHaveBeenCalled()
   })
 
   it('offers a working retry after loading fails', async () => {

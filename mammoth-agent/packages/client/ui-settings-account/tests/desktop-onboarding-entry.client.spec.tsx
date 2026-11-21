@@ -35,11 +35,12 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   appRoot.remove()
+  sessionStorage.clear()
   vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
-function mount(initiallyDone = false, initiallyLoading = false) {
+function mount(initiallyDone = false, initiallyLoading = false, update: () => Promise<boolean> = async () => true) {
   let state: DesktopOnboardingState = {
     creditFunded: false,
     visible: !initiallyDone && !initiallyLoading, status: initiallyLoading ? 'loading' : 'ready', error: null,
@@ -55,7 +56,7 @@ function mount(initiallyDone = false, initiallyLoading = false) {
   const setVisible = vi.fn()
   const element = () => <DesktopOnboardingEntry {...globals}
     setVisible={setVisible} useOnboarding={select => select(state)} useAccount={select => select(account)}
-    update={async () => true} complete={async () => true} retry={async () => true}
+    update={update} complete={async () => true} retry={async () => true}
     t={key => key in zh ? zh[key as AccountKey] : key} />
   const view = render(element())
   act(() => { vi.runOnlyPendingTimers() })
@@ -81,6 +82,23 @@ function mount(initiallyDone = false, initiallyLoading = false) {
     },
   }
 }
+
+it('continues web onboarding after the welcome step was already shown', () => {
+  sessionStorage.setItem('mmp-web-welcome-done', '1')
+  const update = vi.fn(async () => true)
+  mount(false, false, update)
+  expect(update).toHaveBeenCalledExactlyOnceWith({ step: 'credit' })
+  expect(sessionStorage.getItem('mmp-web-welcome-done')).toBeNull()
+})
+
+it('keeps the desktop welcome step even when a web handoff flag is present', () => {
+  vi.stubGlobal('mmpDesktop', {})
+  sessionStorage.setItem('mmp-web-welcome-done', '1')
+  const update = vi.fn(async () => true)
+  mount(false, false, update)
+  expect(update).not.toHaveBeenCalled()
+  expect(screen.getByRole('heading', { name: `${zh.onboardingWelcome} ${zh.onboardingBrand}` })).toBeTruthy()
+})
 
 it('retains the last page while successful completion reveals the workspace', () => {
   const view = mount()
